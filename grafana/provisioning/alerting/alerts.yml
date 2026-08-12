@@ -1,0 +1,655 @@
+apiVersion: 1
+groups:
+- orgId: 1
+  name: usv-alarms
+  folder: USV Alerts
+  interval: 30s
+  rules:
+  - uid: usv-low-battery
+    title: Low Battery SOC
+    condition: C
+    for: 1m
+    noDataState: Alerting
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: "Battery state of charge below 25% \u2014 consider Return-to-Home."
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"electrical\" and r._field == \"soc\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 25
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-low-batt-voltage
+    title: Low Battery Voltage
+    condition: C
+    for: 1m
+    noDataState: Alerting
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: Battery voltage below 11.8 V.
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"electrical\" and r._field == \"battery_voltage\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 11.8
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-gps-loss
+    title: GPS Signal Loss
+    condition: C
+    for: 30s
+    noDataState: Alerting
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: "GPS satellites below 4 \u2014 position solution unreliable."
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"nav\" and r._field == \"satellites\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 4
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-can-failure
+    title: CAN Bus Failure
+    condition: C
+    for: 30s
+    noDataState: Alerting
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: CAN interface down or no frames received.
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"canbus\" and r._field == \"interface_up\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-engine-overtemp
+    title: Engine Over Temperature
+    condition: C
+    for: 1m
+    noDataState: Alerting
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: "Engine coolant temperature above 105 \xB0C."
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"engine\" and r._field == \"coolant_temp\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 105
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-low-fuel
+    title: Low Fuel Level
+    condition: C
+    for: 1m
+    noDataState: Alerting
+    execErrState: Alerting
+    labels:
+      severity: warning
+      system: usv
+    annotations:
+      summary: Fuel level below 15%.
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"engine\" and r._field == \"fuel_level\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 15
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-radar-offline
+    title: Radar Offline
+    condition: C
+    for: 1m
+    noDataState: Alerting
+    execErrState: Alerting
+    labels:
+      severity: warning
+      system: usv
+    annotations:
+      summary: "Radar is offline \u2014 collision avoidance degraded."
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"radar\" and r._field == \"online\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-camera-offline
+    title: Camera Offline
+    condition: C
+    for: 1m
+    noDataState: Alerting
+    execErrState: Alerting
+    labels:
+      severity: warning
+      system: usv
+    annotations:
+      summary: Camera disconnected.
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"camera\" and r._field == \"connected\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-signalk-disc
+    title: Signal K Disconnected
+    condition: C
+    for: 30s
+    noDataState: Alerting
+    execErrState: Alerting
+    labels:
+      severity: warning
+      system: usv
+    annotations:
+      summary: Signal K WebSocket stream is down.
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"comms\" and r._field == \"signalk_ws_up\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-moos-disc
+    title: MOOS Disconnected
+    condition: C
+    for: 30s
+    noDataState: Alerting
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: "No MOOS traffic \u2014 autonomy stack may be down."
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"comms\" and r._field == \"moos_msg_rate\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-comms-failure
+    title: Communication Failure
+    condition: C
+    for: 30s
+    noDataState: Alerting
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: "Internet/Starlink link down \u2014 remote monitoring degraded."
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"comms\" and r._field == \"internet_up\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-geofence
+    title: Geofence Violation
+    condition: C
+    for: 0s
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: Vessel crossed the geofence boundary.
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"events\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"events\" and r._field == \"value\")\n  |> filter(fn: (r) => r.type == \"geofence\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query

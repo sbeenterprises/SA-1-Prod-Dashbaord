@@ -1,0 +1,15 @@
+[Unit]
+Description=USV telemetry simulator (bench testing only — do not enable on the vessel)
+After=influxdb.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/usv/usv.env
+ExecStart=/usr/local/bin/usv_simulator
+Restart=always
+RestartSec=5
+User=usv
+Group=usv
+
+[Install]
+WantedBy=multi-user.target

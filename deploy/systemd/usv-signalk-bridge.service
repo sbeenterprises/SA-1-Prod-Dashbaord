@@ -1,0 +1,16 @@
+[Unit]
+Description=USV Signal K -> InfluxDB telemetry bridge
+After=network-online.target influxdb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/usv/usv.env
+ExecStart=/usr/local/bin/signalk_bridge
+Restart=always
+RestartSec=5
+User=usv
+Group=usv
+
+[Install]
+WantedBy=multi-user.target

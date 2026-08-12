@@ -1,0 +1,232 @@
+# Swift Autonomous Dashboard — Deployment Technical Note
+
+Field reference for installing the **Swift Autonomous Dashboard** (Grafana \+
+InfluxDB monitoring stack) on the USV onboard computer. Native deployment,
+no Docker. All vessel\-side code is C\+\+. The Grafana workspace presents as
+"Swift Autonomous Dashboard" with the Swiftships logo top\-left and 11
+tab\-navigable dashboards. Companion docs: `deployment.md` (full guide),
+`schema.md`, `traceability.md`.
+
+* * *
+
+## 1\. Architecture at a glance
+
+```
+                 ONBOARD COMPUTER (Debian/Ubuntu)
+ ┌──────────────────────────────────────────────────────────────┐
+ │  pAntler (your mission file)                                 │
+ │    MOOSDB ── pHelmIvP ── pMarinePID ── ... ── grafana_bridge─┼─┐
+ │                                                              │ │
+ │  systemd services                                            │ │
+ │    signalk_bridge  ◄── Signal K server (ws :3001)      ──────┼─┤
+ │    can_bridge      ◄── SocketCAN can0 (NMEA 2000 250k) ──────┼─┤
+ │    telegraf        ◄── host metrics, ping, systemd units ────┼─┤
+ │                                                              │ ▼
+ │    InfluxDB 2.x (:8086)  buckets: telemetry / events /       │
+ │                          telemetry_1m (downsampled)          │
+ │    Grafana (:3000)       11 dashboards + 12 alert rules      │
+ └──────────────────────────────────────────────────────────────┘
+      Operator access: http://<obc>:3000 (Tailscale recommended)
+```
+
+Data path: all writers batch line protocol to InfluxDB over localhost HTTP;
+Grafana reads via Flux. Everything auto\-reconnects and restarts
+(`Restart=always` for services, pAntler for the MOOS app).
+
+* * *
+
+## 2\. Pre\-deployment checklist
+
+Confirm before starting; each item is required.
+
+- [ ] OBC runs Debian 12 / Ubuntu 22.04\+ (amd64 or arm64), root access
+- [ ] Internet available dockside (apt repos \+ one GitHub clone). The
+  vessel does NOT need internet after install
+- [ ] MOOS\-IvP built on the OBC; note the path to `MOOSConfig.cmake`
+  (source tree: `~/moos-ivp/build/MOOS/MOOSCore`)
+- [ ] Signal K server running; confirm `ws://localhost:3001/signalk/v1/stream`
+- [ ] CAN interface present: `ip link show can0`. Bring up with
+  `sudo ip link set can0 up type can bitrate 250000` and persist it
+  (systemd\-networkd or /etc/network/interfaces)
+- [ ] \~2 GB free disk for packages \+ \~100 MB/day telemetry growth budget
+- [ ] Clock sane (NTP or GPS time) — InfluxDB timestamps depend on it
+
+## 3\. Installation procedure
+
+```bash
+# 0. OPTIONAL but recommended: drop the official Swiftships logo (SVG,
+#    square aspect) over the placeholder BEFORE installing:
+#    deploy/branding/swiftships_logo.svg
+
+# 1. Unpack the repo on the OBC, then:
+sudo deploy/install.sh            # creates /etc/usv/usv.env, exits
+
+# 2. Edit secrets. Generate a token first:
+openssl rand -hex 32
+sudo nano /etc/usv/usv.env        # INFLUX_TOKEN, both passwords, VESSEL_ID
+
+# 3. Run the installer for real:
+sudo deploy/install.sh
+#    If MOOS isn't auto-found:
+sudo MOOS_DIR=$HOME/moos-ivp/build/MOOS/MOOSCore deploy/install.sh
+```
+
+The installer is idempotent. Re\-run it after editing `/etc/usv/usv.env`,
+regenerating dashboards, changing alert rules, replacing the logo, or any
+Grafana package upgrade (upgrades restore Grafana's stock logo; the
+installer re\-applies the Swiftships branding).
+
+## 4\. MOOS integration (manual step, you own this)
+
+1. Merge `ingestion/moos-cpp/example.moos` into your mission file:
+   `Run = grafana_bridge @ NewConsole = false` in ANTLER, plus the
+   `ProcessConfig = grafana_bridge` block.
+
+2. **Critical:** in the ProcessConfig block write the URL without a scheme
+   (`influx_url = localhost:8086`). `//` starts a MOOS comment and will
+   silently truncate `http://...`.
+
+3. **Critical:** align the variable maps with your helm. Run
+   `umm --spy` (or uMS) during a sim run and compare against
+   `kNumericVars` / `kStringVars` in `ingestion/moos-cpp/moos_bridge.cpp`.
+   Defaults assume NAV\_*, DESIRED\_*, and MISSION\_*/WPT\_* conventions;
+   rename to what your community actually publishes, then:
+   
+   ```bash
+   cmake --build ingestion/moos-cpp/build -j
+   sudo cmake --install ingestion/moos-cpp/build
+   ```
+
+## 5\. Configuration quick reference
+
+| Item | Location |
+| --- | --- |
+| Secrets, vessel id, retention | `/etc/usv/usv.env` (then re\-run install.sh) |
+| MOOS variable map | `ingestion/moos-cpp/moos_bridge.cpp` |
+| Signal K path map | `ingestion/signalk-cpp/signalk_bridge.cpp` (kPaths) |
+| NMEA 2000 PGN decoders | `ingestion/can-cpp/main.cpp` (decode\_pgn) |
+| Alert thresholds | `tools/gen_alerts.py` → regenerate → re\-run install.sh |
+| Alert email recipients | `grafana/provisioning/alerting/contact-points.yml` |
+| Series colors / panels / tabs | `tools/gen_dashboards.py` → regenerate |
+| Swiftships logo | `deploy/branding/swiftships_logo.svg` → re\-run install.sh |
+| Workspace (folder) name | `grafana/provisioning/dashboards/dashboards.yml` |
+| Telegraf inputs | `telegraf/telegraf.conf` (template; installer fills tokens) |
+
+Dev\-side regeneration (workstation, Python 3):
+`python3 tools/gen_dashboards.py && python3 tools/gen_alerts.py`, copy the
+repo to the OBC, re\-run install.sh.
+
+## 6\. Commissioning checklist (in order)
+
+| \# | Check | Command | Expect |
+| --- | --- | --- | --- |
+| 1 | Services up | `systemctl status influxdb grafana-server telegraf usv-signalk-bridge usv-can-bridge` | all `active (running)` |
+| 2 | DB reachable | `influx ping` | `OK` |
+| 3 | Bench data (no vessel) | `sudo systemctl start usv-simulator` | dashboards populate in \~10 s |
+| 4 | Grafana login | browse `http://<obc>:3000` | folder "Swift Autonomous Dashboard", 11 dashboards; Swiftships logo in the top\-left nav |
+| 5 | Tab navigation | open any dashboard; click the link chips across the top | one click switches dashboard; time range and vessel selection carry over |
+| 6 | Theme toggle | click the "☀ Light" / "☾ Dark" chips at the end of the tab row | dashboard re\-opens in that theme, time range kept |
+| 7 | Tablet check | open any dashboard on a tablet (landscape) | grid scales; below \~768 px panels stack single\-column |
+| 8 | Alert rules loaded | Grafana → Alerting → Alert rules | 12 rules, folder "USV Alerts" |
+| 9 | Stop simulator | `sudo systemctl stop usv-simulator` | required before real ops |
+| 10 | MOOS feed | launch mission with grafana\_bridge; watch Autopilot dashboard | desired/actual heading move |
+| 11 | Signal K feed | Navigation \+ Vessel Health dashboards | position, engine, battery live |
+| 12 | CAN feed | `candump can0` shows frames; CAN Bus dashboard | msg rate \> 0, interface UP |
+| 13 | Alert fire test | unplug GPS antenna (or stop Signal K) for 1 min | alarm appears on Alarms dashboard \+ email |
+| 14 | Reboot test | `sudo reboot` | everything returns without manual action |
+
+Logs while commissioning:
+`journalctl -u usv-can-bridge -u usv-signalk-bridge -f`
+and the grafana\_bridge console output under pAntler.
+
+## 7\. Security notes
+
+- `/etc/usv/usv.env` is root\-only (600). The Influx token also sits in your
+  mission file's ProcessConfig — keep mission files off public repos.
+- Bind exposure: Grafana (3000) and InfluxDB (8086) listen on all
+  interfaces by default. On a Starlink/Tailscale vessel, firewall them to
+  the tailnet: `ufw allow in on tailscale0 to any port 3000` and deny WAN.
+- Change the Grafana admin password at first login even though the
+  installer sets one.
+- The `usv` service user is unprivileged; can\_bridge gets only CAP\_NET\_RAW.
+
+## 8\. Known limitations and gotchas
+
+1. **MOOS `//` comment rule** truncates URLs in .moos files (see §4.2).
+2. **Variable maps are conventions** until you align them (§4.3). Empty
+   Mission/Autopilot panels almost always mean a naming mismatch.
+3. **Fast\-packet PGNs are not decoded** by can\_bridge (counted in stats
+   only). Position/engine data arrive via single\-frame PGNs and Signal K,
+   so no dashboard gap; extend `decode_pgn()` if you need 129029 etc.
+4. **Radar (FR\-6) and camera (FR\-7) need feed adapters.** Dashboards and
+   schema exist; something must write the `radar` and `camera`
+   measurements (vendor API / ONVIF probe). Simulator covers them for demo.
+5. **starlink\_up / vpn\_up / internet\_up** are fed by the simulator only.
+   Real probes (Starlink gRPC at 192.168.100.1, `tailscale status`) are a
+   small addition, not yet implemented. Latency/packet loss ARE real
+   (Telegraf ping).
+6. **Alert rule provisioning is Grafana\-version\-sensitive.** Validated as
+   YAML; confirm the 12 rules appear in the UI on your installed Grafana
+   version during commissioning step 8.
+7. **Mission replay** is Grafana\-native time\-range scrubbing, not a
+   play/pause button.
+8. **Retention:** raw 30 d, events \+ 1\-min downsample 365 d. Missions older
+   than 30 d replay at 1\-min resolution.
+9. **Branding is an asset overwrite, not a supported OSS feature.** Grafana
+   OSS has no white\-label config, so the installer overwrites the shipped
+   nav logo and favicon. An `apt upgrade grafana` restores the stock logo
+   until the installer is re\-run. The browser tab title still reads
+   "Grafana" (changing it requires Grafana Enterprise); irrelevant on
+   kiosk\-mode wall displays where the chrome is hidden.
+10. **Logo assets are the official Swiftships mark.**
+    `deploy/branding/swiftships_logo.svg` (nav icon, vessel mark) and
+    `swiftships_wordmark.png` (full horizontal logo) are built from the
+    official artwork. To update branding later, replace these files and
+    re\-run the installer. The mark is dark navy: crisp on the light
+    theme, subtler on dark; kiosk wall displays hide the nav bar anyway.
+11. **Tab row is tag\-driven.** The chips list every dashboard tagged
+    `usv`; a new dashboard saved with that tag automatically appears as a
+    tab on all dashboards. The current dashboard is not highlighted in the
+    row (Grafana OSS renders all chips identically).
+12. **Theme toggle is per\-view.** The ☀/☾ chips use Grafana's `?theme=`
+    URL override; navigating on via the tab chips returns to the user's
+    default theme. Set the lasting default per user (Profile → Theme:
+    light / dark / system) — e.g. dark for night ops accounts, light for
+    a daylight tablet account. The series palette is validated for both
+    themes.
+13. **Responsive behavior is Grafana\-native.** PC and tablet\-landscape
+    render the full 24\-column grid scaled to width; below \~768 px
+    (tablet portrait / phone) panels stack in one column in dashboard
+    order. No configuration needed; there are no separate mobile
+    dashboards to maintain.
+
+## 9\. Rollback / uninstall
+
+```bash
+sudo systemctl disable --now usv-signalk-bridge usv-can-bridge usv-simulator
+sudo rm /etc/systemd/system/usv-*.service && sudo systemctl daemon-reload
+sudo apt remove influxdb2 grafana telegraf     # add --purge to drop data
+sudo rm -rf /etc/usv /usr/local/bin/{can_bridge,signalk_bridge,usv_simulator,moos_bridge}
+# and remove the grafana_bridge lines from your mission file
+```
+
+Data lives in /var/lib/influxdb and /var/lib/grafana — back up before purge:
+`influx backup /path/backup --token $INFLUX_TOKEN`.
+
+## 10\. Quick command reference
+
+```bash
+journalctl -u usv-can-bridge -f            # bridge logs
+systemctl restart usv-signalk-bridge       # restart a bridge
+influx query 'from(bucket:"telemetry") |> range(start:-1m) |> count()' \
+  --org usv --token $INFLUX_TOKEN          # is data arriving?
+candump can0 | head                        # raw CAN sanity
+umm --spy                                  # live MOOS variables
+du -sh /var/lib/influxdb                   # disk growth
+```
+
+Grafana wall display: append `?kiosk` to any dashboard URL.
+
+```
+http://<obc>:3000/d/usv-mission?kiosk
+```

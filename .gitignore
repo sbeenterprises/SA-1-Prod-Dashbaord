@@ -1,0 +1,11 @@
+# build outputs
+**/build/
+preview/
+# secrets — never commit a filled-in env
+usv.env
+*.env
+!deploy/usv.env.example
+# editor / OS noise
+.DS_Store
+*.swp
+__pycache__/

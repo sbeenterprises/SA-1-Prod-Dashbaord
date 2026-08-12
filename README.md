@@ -1,1 +1,48 @@
-# Swift-Autonmous_Dashbaord
+# USV Monitoring & Analytics Dashboard
+
+Grafana + InfluxDB monitoring stack for a MOOS-IvP / Signal K / NMEA 2000
+unmanned surface vehicle. Implements SRS FR-1..FR-11.
+
+**Deployment model: fully native, no Docker.** InfluxDB, Grafana and
+Telegraf run as apt-installed systemd services on the onboard computer.
+All vessel-side telemetry code is C++: `grafana_bridge` runs under pAntler
+as a regular MOOS community app, `can_bridge` and `signalk_bridge` as
+systemd services.
+
+```
+deploy/
+  install.sh                 # one-shot native installer (Debian/Ubuntu)
+  usv.env.example            # -> /etc/usv/usv.env (secrets, vessel id)
+  systemd/                   # service units (signalk, can, simulator)
+influxdb/init/               # bucket/downsample reference (installer does this)
+telegraf/telegraf.conf       # OBC metrics, ping, systemd unit supervision
+ingestion/                   # all C++
+  cpp-common/                #   shared Influx line-protocol writer
+  moos-cpp/                  #   grafana_bridge (CMOOSApp) + example.moos
+  can-cpp/                   #   SocketCAN / NMEA 2000 bridge
+  signalk-cpp/               #   Signal K WebSocket delta bridge
+simulator/                   # C++ bench-test telemetry generator
+grafana/
+  provisioning/              # datasource, dashboards provider, alerting
+  dashboards/*.json          # 11 generated dashboards
+tools/                       # dev-side generators (Python, never on vessel)
+  gen_dashboards.py          #   regenerate dashboard JSON
+  gen_alerts.py              #   regenerate alert rules
+  render_preview.py          #   render dashboard preview images
+docs/                        # schema, deployment, user guide, traceability
+```
+
+Install on the onboard computer:
+```bash
+sudo deploy/install.sh          # first run creates /etc/usv/usv.env
+sudo nano /etc/usv/usv.env      # set secrets
+sudo deploy/install.sh          # installs everything
+```
+Then add `Run = grafana_bridge` to your mission file
+(`ingestion/moos-cpp/example.moos`). Grafana: http://\<obc\>:3000,
+folder "USV Monitoring".
+
+Bench test without the vessel: `sudo systemctl start usv-simulator`.
+
+See `docs/deployment.md` for details and `docs/traceability.md` for
+requirement coverage.

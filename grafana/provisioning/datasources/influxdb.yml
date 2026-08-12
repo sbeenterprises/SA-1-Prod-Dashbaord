@@ -1,0 +1,16 @@
+apiVersion: 1
+datasources:
+  - name: InfluxDB-USV
+    uid: influxdb-usv
+    type: influxdb
+    access: proxy
+    url: http://localhost:8086
+    isDefault: true
+    jsonData:
+      version: Flux
+      organization: __INFLUX_ORG__
+      defaultBucket: telemetry
+      tlsSkipVerify: true
+    secureJsonData:
+      token: __INFLUX_TOKEN__
+    editable: false

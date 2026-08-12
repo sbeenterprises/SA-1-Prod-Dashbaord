@@ -1,0 +1,19 @@
+[Unit]
+Description=USV CAN / NMEA 2000 -> InfluxDB bridge
+After=network-online.target influxdb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/usv/usv.env
+ExecStart=/usr/local/bin/can_bridge
+Restart=always
+RestartSec=5
+# Raw CAN sockets need CAP_NET_RAW; runs unprivileged otherwise
+User=usv
+Group=usv
+AmbientCapabilities=CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_RAW
+
+[Install]
+WantedBy=multi-user.target

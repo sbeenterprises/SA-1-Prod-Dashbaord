@@ -1,0 +1,30 @@
+// Example mission-file integration for grafana_bridge.
+// Merge these blocks into your vessel's mission (.moos) file.
+
+ServerHost = localhost
+ServerPort = 9000
+Community  = usv-01
+
+ProcessConfig = ANTLER
+{
+  MSBetweenLaunches = 200
+  Run = MOOSDB          @ NewConsole = false
+  // ... your existing apps (pHelmIvP, pMarinePID, pNodeReporter, ...) ...
+  Run = grafana_bridge  @ NewConsole = false
+}
+
+ProcessConfig = grafana_bridge
+{
+  AppTick   = 10
+  CommsTick = 20
+
+  // InfluxDB connection (shore or onboard).
+  // No scheme here: "//" starts a MOOS comment. Set influx_tls for https.
+  influx_url    = localhost:8086
+  influx_tls    = false
+  influx_token  = CHANGE_ME_token
+  influx_org    = usv
+  influx_bucket = telemetry
+  events_bucket = events
+  vessel_id     = usv-01
+}

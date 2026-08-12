@@ -1,0 +1,467 @@
+#!/usr/bin/env python3
+"""Render pixel-faithful Grafana-dark previews of the generated dashboards.
+
+Reads the real dashboard JSON (layout, titles, panel types, units) and emits
+a self-contained HTML page per dashboard with plausible simulator-like data,
+for screenshotting. Preview only — the deployed product is Grafana itself.
+"""
+import json
+import math
+import os
+import random
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+DASH = os.path.join(HERE, "..", "grafana", "dashboards")
+OUT = os.path.join(HERE, "..", "preview")
+
+W = 1600          # set per render() call (PC 1600, tablet 1024)
+COL = W / 24.0
+ROW = 38          # grid row unit incl. gap
+GAP = 8
+
+THEMES = {
+    "dark": dict(BG="#111217", PANEL="#181b1f", BORDER="#22252b",
+                 TEXT="#ccccdc", DIM="#9da0a8", FAINT="#7b7f87",
+                 GRID="#212327", GREEN="#73bf69", YELLOW="#fade2a",
+                 RED="#f2495c", WATER="#0d1720", LAND="#1c2a20",
+                 MAPGRID="#16202a"),
+    "light": dict(BG="#f4f5f6", PANEL="#ffffff", BORDER="#d5d9de",
+                  TEXT="#24292e", DIM="#57606a", FAINT="#8b949e",
+                  GRID="#e8eaed", GREEN="#1f8a3b", YELLOW="#b58b00",
+                  RED="#c62f42", WATER="#dbe9f2", LAND="#dde9d5",
+                  MAPGRID="#c9d6df"),
+}
+# Applied per render() call:
+BG = PANEL = BORDER = TEXT = DIM = FAINT = GRID = GREEN = YELLOW = RED = ""
+WATER = LAND = MAPGRID = ""
+# Series palette: validated for both light and dark surfaces
+TEAL, BLUE, AMBER, PURPLE = "#0f9e92", "#2f6fd8", "#c47b06", "#9256b8"
+SERIES = [TEAL, BLUE, AMBER, PURPLE]
+
+rng = random.Random(42)
+
+
+def C(v):
+    """Resolve a theme color name ('GREEN') or pass a literal '#hex' through."""
+    return globals().get(v, v) if isinstance(v, str) else v
+
+
+def walk(n=140, lo=0.0, hi=1.0, start=None, drift=0.02, noise=0.05):
+    v = start if start is not None else (lo + hi) / 2
+    out = []
+    for _ in range(n):
+        v += rng.uniform(-1, 1) * (hi - lo) * noise + drift * (hi - lo) / n
+        v = max(lo, min(hi, v))
+        out.append(v)
+    return out
+
+
+def ramp(n=140, lo=0, hi=100, jitter=0.5):
+    return [min(hi, lo + (hi - lo) * i / (n - 1) + rng.uniform(-jitter, jitter))
+            for i in range(n)]
+
+
+def saw(n=140, lo=0, hi=2000, teeth=3):
+    out = []
+    for i in range(n):
+        f = (i * teeth / n) % 1.0
+        out.append(hi - (hi - lo) * f + rng.uniform(-hi * 0.01, hi * 0.01))
+    return out
+
+
+# ---- per-panel data: matched by (dashboard uid, panel title) or title only
+def series_for(uid, title):
+    t = title.lower()
+    if "progress over" in t:
+        return [("progress %", ramp(lo=42, hi=62))]
+    if "distance to" in t or "next waypoint" in t:
+        return [("distance m", saw(lo=30, hi=1800))]
+    if "desired vs actual heading" in t:
+        a = walk(lo=30, hi=90, start=55, noise=0.04)
+        return [("desired_heading", [x + rng.uniform(-2, 2) for x in a]),
+                ("actual_heading", a)]
+    if "desired vs actual speed" in t:
+        a = walk(lo=4.1, hi=4.9, start=4.5, noise=0.06)
+        return [("desired_speed", [4.5] * 140), ("actual_speed", a)]
+    if "heading / cog" in t:
+        a = walk(lo=30, hi=90, start=55, noise=0.04)
+        return [("heading", a), ("cog", [x + rng.uniform(-3, 3) for x in a])]
+    if "speed over ground" in t or t == "speed history":
+        return [("SOG", walk(lo=4.1, hi=4.9, start=4.5, noise=0.06))]
+    if "attitude" in t:
+        return [("roll", walk(lo=-4, hi=4, start=0, noise=0.2)),
+                ("pitch", walk(lo=-1, hi=3, start=1, noise=0.15))]
+    if "cross-track" in t:
+        return [("XTE", walk(lo=-8, hi=8, start=0, noise=0.15))]
+    if "rudder" in t:
+        return [("rudder", walk(lo=-14, hi=14, start=0, noise=0.2))]
+    if "throttle" in t:
+        return [("throttle", walk(lo=55, hi=75, start=64, noise=0.1))]
+    if "pid error" in t:
+        return [("heading_error", walk(lo=-8, hi=8, start=0, noise=0.2)),
+                ("speed_error", walk(lo=-0.5, hi=0.5, start=0, noise=0.2))]
+    if "pid controller" in t:
+        return [("pid_heading_out", walk(lo=-0.5, hi=0.5, start=0, noise=0.2)),
+                ("pid_speed_out", walk(lo=0.5, hi=0.8, start=0.64, noise=0.08))]
+    if "engine rpm" in t:
+        return [("RPM", walk(lo=2350, hi=2750, start=2550, noise=0.07))]
+    if "coolant" in t and "oil" in t:
+        return [("coolant °C", walk(lo=82, hi=88, start=85, noise=0.05)),
+                ("oil kPa", walk(lo=390, hi=410, start=400, noise=0.05))]
+    if "battery voltage / current" in t:
+        return [("voltage", walk(lo=12.8, hi=13.0, start=12.9, noise=0.05)),
+                ("current", walk(lo=-10, hi=8, start=5, noise=0.1))]
+    if "power consumption" in t:
+        return [("power W", walk(lo=220, hi=265, start=240, noise=0.08)),
+                ("sys V", walk(lo=12.8, hi=13.0, start=12.9, noise=0.04))]
+    if "state of charge" in t:
+        return [("SOC", [88 - i * 0.008 + rng.uniform(-0.05, 0.05)
+                          for i in range(140)])]
+    if "fuel level" in t:
+        return [("level %", [91.4 - i * 0.004 for i in range(140)]),
+                ("rate L/h", walk(lo=13, hi=16, start=14.5, noise=0.08))]
+    if "message rate" in t:
+        return [("msgs/s", walk(lo=350, hi=410, start=380, noise=0.1))]
+    if "utilization" in t:
+        return [("util %", walk(lo=30, hi=38, start=34, noise=0.1))]
+    if "heading history" in t:
+        return [("heading", walk(lo=30, hi=90, start=55, noise=0.04))]
+    return [("value", walk(lo=0, hi=1, start=0.5, noise=0.1))]
+
+
+STATS = {
+    "Mission Name": ("DELTA-RUN-042", "TEXT"), "Mission ID": ("M-2026-042", "TEXT"),
+    "Mission State": ("Autonomous", "GREEN"), "Elapsed Time": ("47.2 min", "GREEN"),
+    "ETA to Waypoint": ("5.9 min", "GREEN"), "Current Waypoint": ("4", "GREEN"),
+    "Waypoints Total": ("5", "GREEN"), "Distance to Waypoint": ("812 m", "GREEN"),
+    "Distance Traveled": ("8.42 km", "GREEN"),
+    "Latitude": ("29.618452", "GREEN"), "Longitude": ("-91.207310", "GREEN"),
+    "SOG": ("4.5 kn", "GREEN"), "COG": ("57°", "GREEN"), "Heading": ("55°", "GREEN"),
+    "GPS Fix": ("RTK Fixed", "GREEN"), "Satellites": ("12", "GREEN"),
+    "Cross-Track Error": ("2.1 m", "GREEN"),
+    "Active Behavior": ("waypt_survey", "TEXT"), "Station Keeping": ("OFF", "TEXT"),
+    "Heading Error": ("1.8°", "GREEN"), "Speed Error": ("0.04 kn", "GREEN"),
+    "Rudder Cmd": ("3.2°", "GREEN"), "Throttle Cmd": ("64%", "GREEN"),
+    "Engine RPM": ("2547 rpm", "GREEN"), "Coolant Temp": ("85.2 °C", "GREEN"),
+    "Oil Pressure": ("402 kPa", "GREEN"), "Fuel Rate": ("14.4 L/h", "GREEN"),
+    "Engine Runtime": ("512.6 h", "GREEN"),
+    "Battery Voltage": ("12.91 V", "GREEN"), "Battery Current": ("5.2 A", "GREEN"),
+    "Charging Status": ("CHARGING", "GREEN"), "Alternator Voltage": ("14.2 V", "GREEN"),
+    "Total Power": ("243 W", "GREEN"),
+    "Interface": ("UP", "GREEN"), "Messages / s": ("382", "GREEN"),
+    "Error Frames (5s)": ("0", "GREEN"), "Dropped Frames": ("0", "GREEN"),
+    "Active PGNs": ("27", "GREEN"),
+    "Radar Status": ("ONLINE", "GREEN"), "Tracked Targets": ("3", "GREEN"),
+    "Closest Target": ("1240 m", "GREEN"), "CPA": ("980 m", "GREEN"),
+    "TCPA": ("410 s", "GREEN"),
+    "Internet": ("ONLINE", "GREEN"), "Starlink": ("ONLINE", "GREEN"),
+    "VPN / Tailscale": ("ONLINE", "GREEN"), "Signal K WebSocket": ("ONLINE", "GREEN"),
+    "Latency": ("46 ms", "GREEN"), "Packet Loss": ("0.3%", "GREEN"),
+}
+GAUGES = {
+    "Mission Progress": (62, TEAL), "Fuel Level": (91, "GREEN"),
+    "State of Charge": (87, "GREEN"), "Bus Utilization": (34, "GREEN"),
+    "CPU": (23, "GREEN"), "Memory": (41, "GREEN"), "Disk": (37, "GREEN"),
+}
+EVENTS = [
+    ("14:32:08", "Waypoint 4 reached", "waypoint", "info"),
+    ("14:27:51", "MISSION_STATE=Autonomous", "state_change", "info"),
+    ("14:27:49", "ACTIVE_BEHAVIOR=waypt_survey", "state_change", "info"),
+    ("14:19:03", "Waypoint 3 reached", "waypoint", "info"),
+    ("14:05:44", "GPS fix quality degraded to 3D", "alarm", "warning"),
+    ("14:04:12", "Waypoint 2 reached", "waypoint", "info"),
+    ("13:51:30", "Waypoint 1 reached", "waypoint", "info"),
+    ("13:45:02", "Mission DELTA-RUN-042 started", "mission", "info"),
+]
+
+
+def svg_line_chart(series, w, h, unit=""):
+    pad_l, pad_r, pad_t, pad_b = 46, 10, 8, 34
+    cw, ch = w - pad_l - pad_r, h - pad_t - pad_b
+    allv = [v for _, d in series for v in d]
+    lo, hi = min(allv), max(allv)
+    if hi - lo < 1e-9:
+        hi = lo + 1
+    span = hi - lo
+    nonneg = lo >= 0
+    lo -= span * 0.08
+    hi += span * 0.08
+    if nonneg:
+        lo = max(0.0, lo)
+    parts = [f'<svg width="{w}" height="{h}">']
+    for g in range(5):
+        y = pad_t + ch * g / 4
+        val = hi - (hi - lo) * g / 4
+        parts.append(f'<line x1="{pad_l}" y1="{y:.1f}" x2="{w-pad_r}" '
+                     f'y2="{y:.1f}" stroke="{GRID}" stroke-width="1"/>')
+        parts.append(f'<text x="{pad_l-6}" y="{y+4:.1f}" fill="{FAINT}" '
+                     f'font-size="11" text-anchor="end">{val:.4g}</text>')
+    times = ["14:00", "14:10", "14:20", "14:30"]
+    for i, tl in enumerate(times):
+        x = pad_l + cw * (i + 0.5) / len(times)
+        parts.append(f'<text x="{x:.0f}" y="{h-18}" fill="{FAINT}" '
+                     f'font-size="11" text-anchor="middle">{tl}</text>')
+    for si, (name, data) in enumerate(series):
+        color = SERIES[si % len(SERIES)]
+        pts = []
+        n = len(data)
+        for i, v in enumerate(data):
+            x = pad_l + cw * i / (n - 1)
+            y = pad_t + ch * (1 - (v - lo) / (hi - lo))
+            pts.append(f"{x:.1f},{y:.1f}")
+        path = " ".join(pts)
+        first_x, last_x = pad_l, pad_l + cw
+        base_y = pad_t + ch
+        parts.append(f'<polygon points="{first_x},{base_y} {path} '
+                     f'{last_x},{base_y}" fill="{color}" opacity="0.08"/>')
+        parts.append(f'<polyline points="{path}" fill="none" '
+                     f'stroke="{color}" stroke-width="2"/>')
+    lx = pad_l
+    for si, (name, _) in enumerate(series):
+        color = SERIES[si % len(SERIES)]
+        parts.append(f'<rect x="{lx}" y="{h-10}" width="14" height="3" '
+                     f'rx="1.5" fill="{color}"/>')
+        parts.append(f'<text x="{lx+18}" y="{h-6}" fill="{DIM}" '
+                     f'font-size="11">{name}</text>')
+        lx += 18 + 7 * len(name) + 22
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def svg_gauge(pct, color, w, h):
+    r = min(w, h * 2) * 0.33
+    cx, cy = w / 2, h * 0.62
+    a0, a1 = math.pi * 1.25, math.pi * -0.25
+    def arc(frac_from, frac_to, col, sw):
+        b0 = a0 + (a1 - a0) * frac_from
+        b1 = a0 + (a1 - a0) * frac_to
+        x0, y0 = cx + r * math.cos(b0), cy - r * math.sin(b0)
+        x1, y1 = cx + r * math.cos(b1), cy - r * math.sin(b1)
+        large = 1 if abs(b1 - b0) > math.pi else 0
+        return (f'<path d="M {x0:.1f} {y0:.1f} A {r:.1f} {r:.1f} 0 {large} 1 '
+                f'{x1:.1f} {y1:.1f}" fill="none" stroke="{col}" '
+                f'stroke-width="{sw}" stroke-linecap="round"/>')
+    return (f'<svg width="{w}" height="{h}">'
+            + arc(0, 1, "#2c3235", 10) + arc(0, pct / 100, color, 10)
+            + f'<text x="{cx}" y="{cy+6}" fill="{color}" font-size="26" '
+            f'font-weight="600" text-anchor="middle">{pct}%</text></svg>')
+
+
+def svg_map(w, h):
+    p = [f'<svg width="{w}" height="{h}" style="background:{WATER}">']
+    p.append(f'<rect x="0" y="0" width="{w}" height="{h*0.22:.0f}" '
+             f'fill="{LAND}"/>')
+    p.append(f'<path d="M0 {h*0.22:.0f} Q {w*0.3:.0f} {h*0.30:.0f} '
+             f'{w*0.55:.0f} {h*0.24:.0f} T {w} {h*0.28:.0f} L {w} 0 L 0 0 Z" '
+             f'fill="{LAND}"/>')
+    for i in range(1, 6):
+        p.append(f'<line x1="{w*i/6:.0f}" y1="0" x2="{w*i/6:.0f}" y2="{h}" '
+                 f'stroke="{MAPGRID}" stroke-width="1"/>')
+        p.append(f'<line x1="0" y1="{h*i/6:.0f}" x2="{w}" y2="{h*i/6:.0f}" '
+                 f'stroke="{MAPGRID}" stroke-width="1"/>')
+    wps = [(0.18, 0.78), (0.38, 0.52), (0.60, 0.68), (0.78, 0.42),
+           (0.62, 0.30)]
+    pts = []
+    for i in range(len(wps) - 1):
+        (x0, y0), (x1, y1) = wps[i], wps[i + 1]
+        for tstep in range(20):
+            f = tstep / 20
+            x = (x0 + (x1 - x0) * f) * w
+            y = (y0 + (y1 - y0) * f) * h + math.sin(f * 6.3) * 4
+            pts.append(f"{x:.0f},{y:.0f}")
+    p.append(f'<polyline points="{" ".join(pts)}" fill="none" '
+             f'stroke="{AMBER}" stroke-width="2.5" opacity="0.9"/>')
+    for i, (fx, fy) in enumerate(wps):
+        p.append(f'<circle cx="{fx*w:.0f}" cy="{fy*h:.0f}" r="5" '
+                 f'fill="none" stroke="{YELLOW}" stroke-width="2"/>')
+        p.append(f'<text x="{fx*w+9:.0f}" y="{fy*h+4:.0f}" fill="{DIM}" '
+                 f'font-size="11">WP{i+1}</text>')
+    vx, vy = wps[-1][0] * w, wps[-1][1] * h
+    p.append(f'<circle cx="{vx:.0f}" cy="{vy:.0f}" r="8" fill="{TEAL}" '
+             f'stroke="#fff" stroke-width="2"/>')
+    p.append(f'<rect x="{w-118}" y="{h-24}" width="114" height="20" rx="3" '
+             f'fill="#00000066"/><text x="{w-110}" y="{h-10}" fill="{FAINT}" '
+             f'font-size="10">© OpenStreetMap</text>')
+    p.append(f'<rect x="10" y="10" width="26" height="52" rx="4" '
+             f'fill="{PANEL}dd" stroke="{BORDER}"/>'
+             f'<text x="23" y="30" fill="{TEXT}" font-size="16" '
+             f'text-anchor="middle">+</text>'
+             f'<text x="23" y="52" fill="{TEXT}" font-size="16" '
+             f'text-anchor="middle">−</text>')
+    p.append("</svg>")
+    return "".join(p)
+
+
+def svg_timeline(w, h):
+    segs = [("Idle", 0.06, "#5a5d63"), ("Autonomous", 0.38, "GREEN"),
+            ("StationKeeping", 0.14, BLUE), ("Autonomous", 0.42, "GREEN")]
+    p = [f'<svg width="{w}" height="{h}">']
+    x = 8.0
+    bar_h = min(46, h - 42)
+    for name, frac, col in segs:
+        col = C(col)
+        seg_w = (w - 16) * frac - 2
+        p.append(f'<rect x="{x:.0f}" y="10" width="{seg_w:.0f}" '
+                 f'height="{bar_h}" rx="3" fill="{col}" opacity="0.85"/>')
+        if seg_w > 80:
+            p.append(f'<text x="{x+seg_w/2:.0f}" y="{10+bar_h/2+4}" '
+                     f'fill="#111" font-size="12" font-weight="600" '
+                     f'text-anchor="middle">{name}</text>')
+        x += seg_w + 2
+    for i, tl in enumerate(["13:45", "14:00", "14:15", "14:30"]):
+        p.append(f'<text x="{8 + (w-16)*i/3.2:.0f}" y="{10+bar_h+18}" '
+                 f'fill="{FAINT}" font-size="11">{tl}</text>')
+    p.append("</svg>")
+    return "".join(p)
+
+
+def table_html(headers, rows):
+    th = "".join(f'<th>{h}</th>' for h in headers)
+    trs = ""
+    for r in rows:
+        tds = "".join(f'<td>{c}</td>' for c in r)
+        trs += f"<tr>{tds}</tr>"
+    return (f'<table class="gtable"><thead><tr>{th}</tr></thead>'
+            f'<tbody>{trs}</tbody></table>')
+
+
+def render_panel(uid, p):
+    x = p["gridPos"]["x"] * COL
+    y = p["gridPos"]["y"] * ROW
+    w = p["gridPos"]["w"] * COL - GAP
+    h = p["gridPos"]["h"] * ROW - GAP
+    title = p.get("title", "")
+    ptype = p["type"]
+    iw, ih = int(w) - 16, int(h) - 38
+    if ptype == "stat":
+        val, col = STATS.get(title, ("—", "TEXT"))
+        col = C(col)
+        fs = 30 if len(str(val)) < 10 else (22 if len(str(val)) < 14 else 17)
+        body = (f'<div class="statv" style="color:{col};font-size:{fs}px">'
+                f'{val}</div>')
+    elif ptype == "gauge":
+        pct, col = GAUGES.get(title, (50, "GREEN"))
+        col = C(col)
+        body = svg_gauge(pct, col, iw, ih)
+    elif ptype == "timeseries":
+        body = svg_line_chart(series_for(uid, title), iw, ih)
+    elif ptype == "geomap":
+        body = svg_map(iw, ih)
+    elif ptype == "state-timeline":
+        body = svg_timeline(iw, ih)
+    elif ptype == "table":
+        if "PGN" in title:
+            rows = [("127488", "10.0"), ("129025", "10.0"), ("129026", "4.0"),
+                    ("127250", "10.0"), ("127508", "1.5"), ("127505", "0.5"),
+                    ("127245", "5.0")]
+            body = table_html(["pgn", "rate"], rows)
+        else:
+            body = table_html(["Time", "Message", "Type", "Severity"],
+                              [(f"2026-08-12 {t}", m, ty, sv)
+                               for t, m, ty, sv in EVENTS])
+    elif ptype == "text":
+        body = f'<div class="ptext">{p["options"].get("content","")}</div>'
+    elif ptype == "alertlist":
+        body = ('<div class="ptext" style="color:' + DIM + '">'
+                '<div style="padding:24px;text-align:center">No firing alerts'
+                '<br><span style="font-size:11px;color:' + FAINT +
+                '">12 rules evaluated — all normal</span></div></div>')
+    else:
+        body = ""
+    return (f'<div class="panel" style="left:{x:.0f}px;top:{y:.0f}px;'
+            f'width:{w:.0f}px;height:{h:.0f}px">'
+            f'<div class="ptitle">{title}</div>{body}</div>')
+
+
+def render(uid, theme="dark", width=1600):
+    globals().update(THEMES[theme])
+    global W, COL
+    W, COL = width, width / 24.0
+    path = os.path.join(DASH, f"{uid}.json")
+    d = json.load(open(path))
+    max_y = max(p["gridPos"]["y"] + p["gridPos"]["h"] for p in d["panels"])
+    height = int(max_y * ROW) + 120
+    panels = "".join(render_panel(uid, p) for p in d["panels"])
+    title = d["title"]
+    # Tab row: all usv dashboards, current one highlighted
+    all_titles = []
+    for f in sorted(os.listdir(DASH)):
+        if f.endswith(".json"):
+            dd = json.load(open(os.path.join(DASH, f)))
+            all_titles.append((f[:-5], dd["title"]))
+    order = ["usv-mission", "usv-navigation", "usv-autopilot", "usv-health",
+             "usv-canbus", "usv-radar", "usv-camera", "usv-comms",
+             "usv-system", "usv-replay", "usv-alarms"]
+    all_titles.sort(key=lambda t: order.index(t[0]) if t[0] in order else 99)
+    tabs = "".join(
+        f'<span class="tab{" active" if u == uid else ""}">{t}</span>'
+        for u, t in all_titles)
+    tabs += (f'<span style="flex:1"></span>'
+             f'<span class="tab theme{" on" if theme == "light" else ""}">'
+             f'☀ Light</span>'
+             f'<span class="tab theme{" on" if theme == "dark" else ""}">'
+             f'☾ Dark</span>')
+    html = f"""<!doctype html><html><head><meta charset="utf-8"><style>
+* {{ box-sizing: border-box; margin: 0; }}
+body {{ background:{BG}; font-family: Inter,-apple-system,'Segoe UI',
+  Roboto,Arial,sans-serif; width:{W + 32}px; }}
+.topnav {{ height:52px; display:flex; align-items:center; gap:10px;
+  padding:0 20px; border-bottom:1px solid {BORDER}; color:{DIM};
+  font-size:13px; }}
+.topnav .crumb b {{ color:{TEXT}; font-weight:600; }}
+.controls {{ margin-left:auto; display:flex; gap:8px; align-items:center; }}
+.ctrl {{ border:1px solid {BORDER}; border-radius:2px; padding:5px 10px;
+  color:{TEXT}; font-size:12px; background:{PANEL}; }}
+.varrow {{ padding:8px 20px; color:{DIM}; font-size:12px; }}
+.varrow .ctrl {{ margin-left:6px; }}
+.tabs {{ display:flex; flex-wrap:wrap; gap:6px; padding:2px 20px 10px; }}
+.tab {{ border:1px solid {BORDER}; border-radius:2px; padding:4px 12px;
+  color:{DIM}; font-size:12px; background:{PANEL}; }}
+.tab.active {{ color:#fff; background:{TEAL}; border-color:{TEAL};
+  font-weight:600; }}
+.tab.theme {{ color:{TEXT}; }}
+.tab.theme.on {{ border-color:{TEAL}; color:{TEAL}; font-weight:600; }}
+.canvas {{ position:relative; margin:4px 16px; }}
+.panel {{ position:absolute; background:{PANEL};
+  border:1px solid {BORDER}; border-radius:2px; padding:6px 8px;
+  overflow:hidden; }}
+.ptitle {{ color:{TEXT}; font-size:13px; font-weight:500; padding:2px 4px 6px; }}
+.statv {{ display:flex; align-items:center; justify-content:center;
+  height:calc(100% - 30px); font-weight:600; }}
+.gtable {{ width:100%; border-collapse:collapse; font-size:12px;
+  color:{TEXT}; }}
+.gtable th {{ text-align:left; color:{BLUE}; font-weight:500;
+  padding:5px 8px; border-bottom:1px solid {BORDER}; }}
+.gtable td {{ padding:4px 8px; border-bottom:1px solid {GRID}; }}
+.ptext {{ color:{DIM}; font-size:12px; padding:4px; line-height:1.5; }}
+</style></head><body>
+<div class="topnav">
+<img src="_mark.png" height="30" style="flex:none" alt="Swiftships"/>
+<span class="crumb"><b>Swift Autonomous Dashboard</b> &rsaquo;
+{title} ☆</span>
+<div class="controls"><span class="ctrl">🖵 Last 30 minutes ▾</span>
+<span class="ctrl">⟳ 5s ▾</span></div></div>
+<div class="varrow">Vessel <span class="ctrl">usv-01 ▾</span></div>
+<div class="tabs">{tabs}</div>
+<div class="canvas" style="height:{height}px">{panels}</div>
+</body></html>"""
+    os.makedirs(OUT, exist_ok=True)
+    suffix = ("" if theme == "dark" else f"-{theme}") + \
+        ("" if width >= 1400 else "-tablet")
+    out = os.path.join(OUT, f"{uid}{suffix}.html")
+    with open(out, "w") as f:
+        f.write(html)
+    print(f"wrote {out} ({height}px tall)")
+    return out, height
+
+
+if __name__ == "__main__":
+    # args: uid[:theme[:width]]   e.g. usv-mission:light  usv-mission:dark:1024
+    specs = sys.argv[1:] or ["usv-mission", "usv-navigation", "usv-health"]
+    for spec in specs:
+        parts = spec.split(":")
+        uid = parts[0]
+        theme = parts[1] if len(parts) > 1 else "dark"
+        width = int(parts[2]) if len(parts) > 2 else 1600
+        render(uid, theme, width)
