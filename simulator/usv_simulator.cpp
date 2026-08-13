@@ -218,6 +218,7 @@ int main() {
         tel.field("comms", "", "up_mbps", 8 + gauss(0, 1));
         tel.field("comms", "", "down_mbps", 60 + gauss(0, 8));
         tel.field("comms", "", "moos_msg_rate", 120 + gauss(0, 10));
+        tel.field("comms", "", "moos_connected", 1);
         tel.field("comms", "", "signalk_msg_rate", 85 + gauss(0, 8));
         tel.flush();
 

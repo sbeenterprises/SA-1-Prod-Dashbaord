@@ -128,7 +128,10 @@ protected:
         for (const auto& [var, _] : kStringVars) Register(var, 0.0);
         MOOSTrace("grafana_bridge: connected, %zu vars registered\n",
                   kNumericVars.size() + kStringVars.size());
-        if (telemetry_) telemetry_->field("comms", "", "moos_connected", 1);
+        // No telemetry write here on purpose: this callback can fire before
+        // OnStartUp() has built the writers, so a one-shot write would be
+        // silently dropped — and a "1" never followed by a "0" could not
+        // signal a disconnect anyway. Iterate() emits the live state.
         return true;
     }
 
@@ -171,6 +174,10 @@ protected:
         if (now - last_rate_emit_ >= 5.0) {
             const double rate = msg_count_ / (now - last_rate_emit_);
             telemetry_->field("comms", "", "moos_msg_rate", rate);
+            // Live link state (not a one-shot): 1 while the MOOSDB session is
+            // up, 0 if it drops, so a stale/zero series means "disconnected".
+            telemetry_->field("comms", "", "moos_connected",
+                              m_Comms.IsConnected() ? 1 : 0);
             msg_count_ = 0;
             last_rate_emit_ = now;
         }

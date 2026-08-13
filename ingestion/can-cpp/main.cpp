@@ -145,7 +145,16 @@ int main() {
 
     while (!g_stop) {
         int sock = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-        if (sock < 0) { std::cerr << "socket() failed\n"; sleep(5); continue; }
+        if (sock < 0) {
+            // Common causes: missing CAP_NET_RAW (see the systemd unit), or a
+            // kernel without CAN support (`modprobe can can_raw vcan`).
+            std::cerr << "socket(PF_CAN) failed: " << std::strerror(errno)
+                      << " — retry in 5s\n";
+            writer.field("canbus", "", "interface_up", 0);
+            writer.flush();
+            sleep(5);
+            continue;
+        }
 
         can_err_mask_t err_mask = CAN_ERR_MASK;
         setsockopt(sock, SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &err_mask, sizeof(err_mask));
@@ -153,7 +162,10 @@ int main() {
         struct ifreq ifr {};
         std::strncpy(ifr.ifr_name, ifname.c_str(), IFNAMSIZ - 1);
         if (ioctl(sock, SIOCGIFINDEX, &ifr) < 0) {
-            std::cerr << "interface " << ifname << " not found — retry in 5s\n";
+            std::cerr << "interface " << ifname << " not found ("
+                      << std::strerror(errno) << ") — is it up? "
+                      << "`ip link set " << ifname
+                      << " up type can bitrate 250000` — retry in 5s\n";
             writer.field("canbus", "", "interface_up", 0);
             writer.flush();
             close(sock);
@@ -164,7 +176,11 @@ int main() {
         addr.can_family = AF_CAN;
         addr.can_ifindex = ifr.ifr_ifindex;
         if (bind(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
-            std::cerr << "bind() failed\n"; close(sock); sleep(5); continue;
+            std::cerr << "bind(" << ifname << ") failed: "
+                      << std::strerror(errno) << " — retry in 5s\n";
+            writer.field("canbus", "", "interface_up", 0);
+            writer.flush();
+            close(sock); sleep(5); continue;
         }
         std::cerr << "listening on " << ifname << "\n";
         writer.field("canbus", "", "interface_up", 1);

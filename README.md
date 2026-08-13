@@ -1,7 +1,24 @@
-# USV Monitoring & Analytics Dashboard
+<p align="center">
+  <img src="deploy/branding/swiftships_wordmark.png" alt="Swiftships" width="420"/>
+</p>
+
+# Swift Autonomous Dashboard
 
 Grafana + InfluxDB monitoring stack for a MOOS-IvP / Signal K / NMEA 2000
 unmanned surface vehicle. Implements SRS FR-1..FR-11.
+
+![Mission dashboard (dark theme)](docs/images/dashboard-dark.png)
+
+<table>
+  <tr>
+    <td><img src="docs/images/dashboard-light.png" alt="Light theme"/></td>
+    <td><img src="docs/images/dashboard-tablet.png" alt="Tablet layout"/></td>
+  </tr>
+  <tr>
+    <td align="center">Light theme (one-click ☀/☾ toggle)</td>
+    <td align="center">Tablet layout (responsive grid)</td>
+  </tr>
+</table>
 
 **Deployment model: fully native, no Docker.** InfluxDB, Grafana and
 Telegraf run as apt-installed systemd services on the onboard computer.
