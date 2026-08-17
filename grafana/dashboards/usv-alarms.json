@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 119,
+      "id": 133,
       "type": "alertlist",
       "title": "Active Alerts",
       "datasource": {
@@ -111,7 +111,7 @@
       }
     },
     {
-      "id": 120,
+      "id": 134,
       "type": "table",
       "title": "Alarm History (events bucket)",
       "datasource": {
@@ -147,7 +147,7 @@
       }
     },
     {
-      "id": 121,
+      "id": 135,
       "type": "stat",
       "title": "Battery SOC",
       "datasource": {
@@ -209,7 +209,7 @@
       }
     },
     {
-      "id": 122,
+      "id": 136,
       "type": "stat",
       "title": "GPS Sats",
       "datasource": {
@@ -270,7 +270,7 @@
       }
     },
     {
-      "id": 123,
+      "id": 137,
       "type": "stat",
       "title": "CAN Bus",
       "datasource": {
@@ -339,7 +339,7 @@
       }
     },
     {
-      "id": 124,
+      "id": 138,
       "type": "stat",
       "title": "Coolant",
       "datasource": {
@@ -401,7 +401,7 @@
       }
     },
     {
-      "id": 125,
+      "id": 139,
       "type": "stat",
       "title": "Fuel",
       "datasource": {
@@ -463,7 +463,7 @@
       }
     },
     {
-      "id": 126,
+      "id": 140,
       "type": "stat",
       "title": "Radar",
       "datasource": {
@@ -532,7 +532,7 @@
       }
     },
     {
-      "id": 127,
+      "id": 141,
       "type": "stat",
       "title": "Camera",
       "datasource": {
@@ -601,7 +601,7 @@
       }
     },
     {
-      "id": 128,
+      "id": 142,
       "type": "stat",
       "title": "Signal K",
       "datasource": {
@@ -670,7 +670,7 @@
       }
     },
     {
-      "id": 129,
+      "id": 143,
       "type": "stat",
       "title": "MOOS Rate",
       "datasource": {
@@ -731,7 +731,7 @@
       }
     },
     {
-      "id": 130,
+      "id": 144,
       "type": "stat",
       "title": "Comms Link",
       "datasource": {
@@ -800,7 +800,7 @@
       }
     },
     {
-      "id": 131,
+      "id": 145,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -862,7 +862,7 @@
       }
     },
     {
-      "id": 132,
+      "id": 146,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -906,6 +906,457 @@
               {
                 "color": "red",
                 "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 147,
+      "type": "stat",
+      "title": "Mission State",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "Idle": {
+                  "text": "Idle",
+                  "color": "text",
+                  "index": 0
+                },
+                "Autonomous": {
+                  "text": "Autonomous",
+                  "color": "green",
+                  "index": 1
+                },
+                "Paused": {
+                  "text": "Paused",
+                  "color": "yellow",
+                  "index": 2
+                },
+                "StationKeeping": {
+                  "text": "StationKeeping",
+                  "color": "blue",
+                  "index": 3
+                },
+                "ReturnToHome": {
+                  "text": "ReturnToHome",
+                  "color": "orange",
+                  "index": 4
+                },
+                "EnteringRegion": {
+                  "text": "EnteringRegion",
+                  "color": "super-light-blue",
+                  "index": 5
+                },
+                "AwaitingRearm": {
+                  "text": "AwaitingRearm",
+                  "color": "orange",
+                  "index": 6
+                },
+                "CommsLost": {
+                  "text": "CommsLost",
+                  "color": "red",
+                  "index": 7
+                },
+                "Parked": {
+                  "text": "Parked",
+                  "color": "text",
+                  "index": 8
+                },
+                "Completed": {
+                  "text": "Completed",
+                  "color": "purple",
+                  "index": 9
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 148,
+      "type": "stat",
+      "title": "Operator Link",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 18,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"comms_lost\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OK",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "FAILSAFE",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 149,
+      "type": "stat",
+      "title": "Mission Armed",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 18,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"armed\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DISARMED",
+                  "color": "orange",
+                  "index": 0
+                },
+                "1": {
+                  "text": "ARMED",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 150,
+      "type": "stat",
+      "title": "Geofence",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 18,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"geofence_breached\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "INSIDE",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "BREACH",
+                  "color": "red",
+                  "index": 1
+                },
+                "2": {
+                  "text": "RECOVERING",
+                  "color": "yellow",
+                  "index": 2
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 151,
+      "type": "stat",
+      "title": "Helm All-Stop",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 18,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"allstop\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "CLEAR",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "ALLSTOP",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 152,
+      "type": "stat",
+      "title": "Obstacles",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 18,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"obstacle_alerts\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "orange",
+                "value": 3
               }
             ]
           }

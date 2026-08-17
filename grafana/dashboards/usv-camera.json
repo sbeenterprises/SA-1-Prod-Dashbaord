@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 78,
+      "id": 90,
       "type": "stat",
       "title": "Connection",
       "datasource": {
@@ -141,7 +141,7 @@
       }
     },
     {
-      "id": 79,
+      "id": 91,
       "type": "stat",
       "title": "Live Stream",
       "datasource": {
@@ -210,7 +210,7 @@
       }
     },
     {
-      "id": 80,
+      "id": 92,
       "type": "stat",
       "title": "Recording",
       "datasource": {
@@ -279,7 +279,7 @@
       }
     },
     {
-      "id": 81,
+      "id": 93,
       "type": "stat",
       "title": "Frame Rate",
       "datasource": {
@@ -341,7 +341,7 @@
       }
     },
     {
-      "id": 82,
+      "id": 94,
       "type": "stat",
       "title": "Bitrate",
       "datasource": {
@@ -395,7 +395,7 @@
       }
     },
     {
-      "id": 83,
+      "id": 95,
       "type": "stat",
       "title": "Camera Temp",
       "datasource": {
@@ -457,7 +457,7 @@
       }
     },
     {
-      "id": 84,
+      "id": 96,
       "type": "timeseries",
       "title": "Frame Rate",
       "datasource": {
@@ -524,7 +524,7 @@
       }
     },
     {
-      "id": 85,
+      "id": 97,
       "type": "timeseries",
       "title": "Bitrate",
       "datasource": {
@@ -592,7 +592,7 @@
       }
     },
     {
-      "id": 86,
+      "id": 98,
       "type": "timeseries",
       "title": "PTZ Position",
       "datasource": {
@@ -674,7 +674,7 @@
       }
     },
     {
-      "id": 87,
+      "id": 99,
       "type": "timeseries",
       "title": "Camera Temperature",
       "datasource": {

@@ -609,7 +609,8 @@ groups:
       severity: critical
       system: usv
     annotations:
-      summary: Vessel crossed the geofence boundary.
+      summary: "Vessel outside the operating region (OPR_BREACHED) \u2014 opr24 recovery in progress.\
+        \ Self-clears 30 s after recovery."
     data:
     - refId: A
       relativeTimeRange:
@@ -618,8 +619,173 @@ groups:
       datasourceUid: influxdb-usv
       model:
         refId: A
-        query: "from(bucket: \"events\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
-          \ == \"events\" and r._field == \"value\")\n  |> filter(fn: (r) => r.type == \"geofence\")\n"
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"autonomy\" and r._field == \"geofence_breached\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-comms-failsafe
+    title: Operator Link Lost (Failsafe Engaged)
+    condition: C
+    for: 0s
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: "iWebSocket operator-link watchdog tripped \u2014 failsafe action in force, mission disarmed.\
+        \ Boat holds at the loss position."
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"autonomy\" and r._field == \"comms_lost\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-helm-allstop
+    title: Helm All-Stop (Unexpected)
+    condition: C
+    for: 30s
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: "IVPHELM_ALLSTOP with an unexpected reason (e.g. MissingDecVars) \u2014 helm frozen while\
+        \ a mission may be active."
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"autonomy\" and r._field == \"allstop\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-awaiting-rearm
+    title: "Survey Held \u2014 Awaiting Operator Re-Arm"
+    condition: C
+    for: 1m
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: warning
+      system: usv
+    annotations:
+      summary: 'Operator link is back but MISSION_ARMED is false: the survey will NOT resume until an
+        operator AUTONOMOUS_START/RESUME.'
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"autonomy\" and r._field == \"awaiting_rearm\")\n"
     - refId: B
       datasourceUid: __expr__
       model:

@@ -102,12 +102,30 @@ RULES = [
          q("comms", "internet_up"), "lt", 1, "critical",
          "Internet/Starlink link down — remote monitoring degraded.",
          for_="30s"),
+    # ------------------------------------------------- Alpha mission rules
+    # These fire on the live autonomy fields grafana_bridge derives from the
+    # Alpha mission (alpha.bhv). noDataState=OK: the fields only exist while
+    # the bridge runs, and "MOOS Disconnected" already covers absence.
     rule("usv-geofence", "Geofence Violation",
-         q("events", "value", bucket="events",
-           extra='  |> filter(fn: (r) => r.type == "geofence")'),
-         "gt", 0, "critical",
-         "Vessel crossed the geofence boundary.", for_="0s",
-         no_data="OK"),
+         q("autonomy", "geofence_breached"), "gt", 0, "critical",
+         "Vessel outside the operating region (OPR_BREACHED) — opr24 "
+         "recovery in progress. Self-clears 30 s after recovery.",
+         for_="0s", no_data="OK"),
+    rule("usv-comms-failsafe", "Operator Link Lost (Failsafe Engaged)",
+         q("autonomy", "comms_lost"), "gt", 0, "critical",
+         "iWebSocket operator-link watchdog tripped — failsafe action in "
+         "force, mission disarmed. Boat holds at the loss position.",
+         for_="0s", no_data="OK"),
+    rule("usv-helm-allstop", "Helm All-Stop (Unexpected)",
+         q("autonomy", "allstop"), "gt", 0, "critical",
+         "IVPHELM_ALLSTOP with an unexpected reason (e.g. MissingDecVars) — "
+         "helm frozen while a mission may be active.",
+         for_="30s", no_data="OK"),
+    rule("usv-awaiting-rearm", "Survey Held — Awaiting Operator Re-Arm",
+         q("autonomy", "awaiting_rearm"), "gt", 0, "warning",
+         "Operator link is back but MISSION_ARMED is false: the survey will "
+         "NOT resume until an operator AUTONOMOUS_START/RESUME.",
+         for_="1m", no_data="OK"),
 ]
 
 

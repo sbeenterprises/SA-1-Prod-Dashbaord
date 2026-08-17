@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 41,
+      "id": 53,
       "type": "stat",
       "title": "Engine RPM",
       "datasource": {
@@ -134,7 +134,7 @@
       }
     },
     {
-      "id": 42,
+      "id": 54,
       "type": "stat",
       "title": "Coolant Temp",
       "datasource": {
@@ -196,7 +196,7 @@
       }
     },
     {
-      "id": 43,
+      "id": 55,
       "type": "stat",
       "title": "Oil Pressure",
       "datasource": {
@@ -258,7 +258,7 @@
       }
     },
     {
-      "id": 44,
+      "id": 56,
       "type": "gauge",
       "title": "Fuel Level",
       "datasource": {
@@ -318,7 +318,7 @@
       }
     },
     {
-      "id": 45,
+      "id": 57,
       "type": "stat",
       "title": "Fuel Rate",
       "datasource": {
@@ -372,7 +372,7 @@
       }
     },
     {
-      "id": 46,
+      "id": 58,
       "type": "stat",
       "title": "Engine Runtime",
       "datasource": {
@@ -426,7 +426,7 @@
       }
     },
     {
-      "id": 47,
+      "id": 59,
       "type": "timeseries",
       "title": "Engine RPM",
       "datasource": {
@@ -494,7 +494,7 @@
       }
     },
     {
-      "id": 48,
+      "id": 60,
       "type": "timeseries",
       "title": "Coolant Temp / Oil Pressure",
       "datasource": {
@@ -601,7 +601,7 @@
       }
     },
     {
-      "id": 49,
+      "id": 61,
       "type": "stat",
       "title": "Battery Voltage",
       "datasource": {
@@ -663,7 +663,7 @@
       }
     },
     {
-      "id": 50,
+      "id": 62,
       "type": "stat",
       "title": "Battery Current",
       "datasource": {
@@ -717,7 +717,7 @@
       }
     },
     {
-      "id": 51,
+      "id": 63,
       "type": "gauge",
       "title": "State of Charge",
       "datasource": {
@@ -777,7 +777,7 @@
       }
     },
     {
-      "id": 52,
+      "id": 64,
       "type": "stat",
       "title": "Charging Status",
       "datasource": {
@@ -846,7 +846,7 @@
       }
     },
     {
-      "id": 53,
+      "id": 65,
       "type": "stat",
       "title": "Alternator Voltage",
       "datasource": {
@@ -900,7 +900,7 @@
       }
     },
     {
-      "id": 54,
+      "id": 66,
       "type": "stat",
       "title": "Total Power",
       "datasource": {
@@ -954,7 +954,7 @@
       }
     },
     {
-      "id": 55,
+      "id": 67,
       "type": "timeseries",
       "title": "Battery Voltage / Current",
       "datasource": {
@@ -1062,7 +1062,7 @@
       }
     },
     {
-      "id": 56,
+      "id": 68,
       "type": "timeseries",
       "title": "Power Consumption / System Voltage",
       "datasource": {
@@ -1170,7 +1170,7 @@
       }
     },
     {
-      "id": 57,
+      "id": 69,
       "type": "timeseries",
       "title": "State of Charge",
       "datasource": {
@@ -1240,7 +1240,7 @@
       }
     },
     {
-      "id": 58,
+      "id": 70,
       "type": "timeseries",
       "title": "Fuel Level / Consumption",
       "datasource": {

@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 15,
+      "id": 23,
       "type": "geomap",
       "title": "Live Position & Track",
       "datasource": {
@@ -167,7 +167,7 @@
       }
     },
     {
-      "id": 16,
+      "id": 24,
       "type": "stat",
       "title": "Latitude",
       "datasource": {
@@ -220,7 +220,7 @@
       }
     },
     {
-      "id": 17,
+      "id": 25,
       "type": "stat",
       "title": "Longitude",
       "datasource": {
@@ -273,7 +273,7 @@
       }
     },
     {
-      "id": 18,
+      "id": 26,
       "type": "stat",
       "title": "SOG",
       "datasource": {
@@ -327,7 +327,7 @@
       }
     },
     {
-      "id": 19,
+      "id": 27,
       "type": "stat",
       "title": "COG",
       "datasource": {
@@ -381,7 +381,7 @@
       }
     },
     {
-      "id": 20,
+      "id": 28,
       "type": "stat",
       "title": "Heading",
       "datasource": {
@@ -435,7 +435,7 @@
       }
     },
     {
-      "id": 21,
+      "id": 29,
       "type": "stat",
       "title": "GPS Fix",
       "datasource": {
@@ -487,7 +487,7 @@
       }
     },
     {
-      "id": 22,
+      "id": 30,
       "type": "stat",
       "title": "Satellites",
       "datasource": {
@@ -548,7 +548,7 @@
       }
     },
     {
-      "id": 23,
+      "id": 31,
       "type": "stat",
       "title": "Cross-Track Error",
       "datasource": {
@@ -610,7 +610,7 @@
       }
     },
     {
-      "id": 24,
+      "id": 32,
       "type": "timeseries",
       "title": "Speed Over Ground",
       "datasource": {
@@ -678,7 +678,7 @@
       }
     },
     {
-      "id": 25,
+      "id": 33,
       "type": "timeseries",
       "title": "Heading / COG",
       "datasource": {
@@ -762,7 +762,7 @@
       }
     },
     {
-      "id": 26,
+      "id": 34,
       "type": "timeseries",
       "title": "Attitude (Roll / Pitch / Yaw)",
       "datasource": {
@@ -844,7 +844,7 @@
       }
     },
     {
-      "id": 27,
+      "id": 35,
       "type": "timeseries",
       "title": "Cross-Track Error",
       "datasource": {
@@ -912,7 +912,7 @@
       }
     },
     {
-      "id": 28,
+      "id": 36,
       "type": "timeseries",
       "title": "Distance to Next Waypoint",
       "datasource": {

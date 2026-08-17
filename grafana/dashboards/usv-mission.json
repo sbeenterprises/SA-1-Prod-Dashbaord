@@ -74,117 +74,13 @@
     {
       "id": 1,
       "type": "stat",
-      "title": "Mission Name",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 0,
-        "w": 5,
-        "h": 4
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"mission_name\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "value",
-        "graphMode": "none",
-        "colorMode": "value"
-      }
-    },
-    {
-      "id": 2,
-      "type": "stat",
-      "title": "Mission ID",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 5,
-        "y": 0,
-        "w": 4,
-        "h": 4
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"mission_id\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "value",
-        "graphMode": "none",
-        "colorMode": "value"
-      }
-    },
-    {
-      "id": 3,
-      "type": "stat",
       "title": "Mission State",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 9,
+        "x": 0,
         "y": 0,
         "w": 5,
         "h": 4
@@ -227,20 +123,198 @@
                   "color": "green",
                   "index": 1
                 },
+                "Paused": {
+                  "text": "Paused",
+                  "color": "yellow",
+                  "index": 2
+                },
                 "StationKeeping": {
                   "text": "StationKeeping",
                   "color": "blue",
-                  "index": 2
+                  "index": 3
                 },
                 "ReturnToHome": {
                   "text": "ReturnToHome",
                   "color": "orange",
-                  "index": 3
+                  "index": 4
+                },
+                "EnteringRegion": {
+                  "text": "EnteringRegion",
+                  "color": "super-light-blue",
+                  "index": 5
+                },
+                "AwaitingRearm": {
+                  "text": "AwaitingRearm",
+                  "color": "orange",
+                  "index": 6
+                },
+                "CommsLost": {
+                  "text": "CommsLost",
+                  "color": "red",
+                  "index": 7
+                },
+                "Parked": {
+                  "text": "Parked",
+                  "color": "text",
+                  "index": 8
                 },
                 "Completed": {
                   "text": "Completed",
                   "color": "purple",
+                  "index": 9
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Helm",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 5,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"helm_state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "DRIVE": {
+                  "text": "DRIVE",
+                  "color": "green",
+                  "index": 0
+                },
+                "PARK": {
+                  "text": "PARK",
+                  "color": "text",
+                  "index": 1
+                },
+                "STANDBY": {
+                  "text": "STANDBY",
+                  "color": "yellow",
+                  "index": 2
+                },
+                "DISABLED": {
+                  "text": "DISABLED",
+                  "color": "orange",
+                  "index": 3
+                },
+                "MALCONFIG": {
+                  "text": "MALCONFIG",
+                  "color": "red",
                   "index": 4
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Mission Armed",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"armed\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DISARMED",
+                  "color": "orange",
+                  "index": 0
+                },
+                "1": {
+                  "text": "ARMED",
+                  "color": "green",
+                  "index": 1
                 }
               }
             }
@@ -262,6 +336,389 @@
     {
       "id": 4,
       "type": "stat",
+      "title": "Operator Link",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 13,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"comms_lost\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "LINK OK",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "LOST \u2014 FAILSAFE",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Geofence",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 17,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"geofence_breached\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "INSIDE",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "BREACH",
+                  "color": "red",
+                  "index": 1
+                },
+                "2": {
+                  "text": "RECOVERING",
+                  "color": "yellow",
+                  "index": 2
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Obstacle Alerts",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 0,
+        "w": 3,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"obstacle_alerts\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "orange",
+                "value": 3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Mission Name",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 5,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"mission_name\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Mission ID",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 5,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"mission_id\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Helm All-Stop",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 4,
+        "w": 5,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"allstop_reason\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "clear": {
+                  "text": "CLEAR",
+                  "color": "green",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "regex",
+              "options": {
+                "pattern": "(.+)",
+                "result": {
+                  "text": "$1",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 10,
+      "type": "stat",
       "title": "Elapsed Time",
       "datasource": {
         "type": "influxdb",
@@ -269,7 +726,7 @@
       },
       "gridPos": {
         "x": 14,
-        "y": 0,
+        "y": 4,
         "w": 5,
         "h": 4
       },
@@ -314,7 +771,7 @@
       }
     },
     {
-      "id": 5,
+      "id": 11,
       "type": "stat",
       "title": "ETA to Waypoint",
       "datasource": {
@@ -323,7 +780,7 @@
       },
       "gridPos": {
         "x": 19,
-        "y": 0,
+        "y": 4,
         "w": 5,
         "h": 4
       },
@@ -368,7 +825,7 @@
       }
     },
     {
-      "id": 6,
+      "id": 12,
       "type": "gauge",
       "title": "Mission Progress",
       "datasource": {
@@ -377,7 +834,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 4,
+        "y": 8,
         "w": 5,
         "h": 5
       },
@@ -420,7 +877,7 @@
       }
     },
     {
-      "id": 7,
+      "id": 13,
       "type": "stat",
       "title": "Current Waypoint",
       "datasource": {
@@ -429,7 +886,7 @@
       },
       "gridPos": {
         "x": 5,
-        "y": 4,
+        "y": 8,
         "w": 4,
         "h": 5
       },
@@ -473,7 +930,7 @@
       }
     },
     {
-      "id": 8,
+      "id": 14,
       "type": "stat",
       "title": "Waypoints Total",
       "datasource": {
@@ -482,7 +939,7 @@
       },
       "gridPos": {
         "x": 9,
-        "y": 4,
+        "y": 8,
         "w": 4,
         "h": 5
       },
@@ -526,16 +983,16 @@
       }
     },
     {
-      "id": 9,
+      "id": 15,
       "type": "stat",
-      "title": "Distance to Waypoint",
+      "title": "Distance to Next Waypoint",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
       },
       "gridPos": {
         "x": 13,
-        "y": 4,
+        "y": 8,
         "w": 5,
         "h": 5
       },
@@ -560,8 +1017,16 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "orange",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 100
+              },
+              {
+                "color": "green",
+                "value": 500
               }
             ]
           }
@@ -580,7 +1045,7 @@
       }
     },
     {
-      "id": 10,
+      "id": 16,
       "type": "stat",
       "title": "Distance Traveled",
       "datasource": {
@@ -589,7 +1054,7 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 4,
+        "y": 8,
         "w": 6,
         "h": 5
       },
@@ -634,7 +1099,296 @@
       }
     },
     {
-      "id": 11,
+      "id": 17,
+      "type": "timeseries",
+      "title": "Approach Profile \u2014 Distance to Next Waypoint vs SOG",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission\" and (r._field == \"dist_to_waypoint\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n",
+          "refId": "A",
+          "alias": "distance m"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n",
+          "refId": "B",
+          "alias": "SOG kn"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "lengthm",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 20
+              },
+              {
+                "color": "orange",
+                "value": 100
+              },
+              {
+                "color": "green",
+                "value": 500
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": 60000,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "velocityknot"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#2f6fd8"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*distance.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#0f9e92"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "state-timeline",
+      "title": "Autonomy Flags",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"waypoint\" or r._field == \"pause\" or r._field == \"stationing\" or r._field == \"returning\" or r._field == \"armed\" or r._field == \"comms_lost\" or r._field == \"manual_override\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: 5s, fn: last, createEmpty: false)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "\u2014",
+                  "color": "rgba(110, 120, 130, 0.12)",
+                  "index": 0
+                },
+                "1": {
+                  "text": "ON",
+                  "color": "#0f9e92",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "custom": {
+            "fillOpacity": 70,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "never",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 19,
+      "type": "state-timeline",
+      "title": "Mission State Timeline",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: 10s, fn: last, createEmpty: false)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "Idle": {
+                  "text": "Idle",
+                  "color": "text",
+                  "index": 0
+                },
+                "Autonomous": {
+                  "text": "Autonomous",
+                  "color": "green",
+                  "index": 1
+                },
+                "Paused": {
+                  "text": "Paused",
+                  "color": "yellow",
+                  "index": 2
+                },
+                "StationKeeping": {
+                  "text": "StationKeeping",
+                  "color": "blue",
+                  "index": 3
+                },
+                "ReturnToHome": {
+                  "text": "ReturnToHome",
+                  "color": "orange",
+                  "index": 4
+                },
+                "EnteringRegion": {
+                  "text": "EnteringRegion",
+                  "color": "super-light-blue",
+                  "index": 5
+                },
+                "AwaitingRearm": {
+                  "text": "AwaitingRearm",
+                  "color": "orange",
+                  "index": 6
+                },
+                "CommsLost": {
+                  "text": "CommsLost",
+                  "color": "red",
+                  "index": 7
+                },
+                "Parked": {
+                  "text": "Parked",
+                  "color": "text",
+                  "index": 8
+                },
+                "Completed": {
+                  "text": "Completed",
+                  "color": "purple",
+                  "index": 9
+                }
+              }
+            }
+          ],
+          "custom": {
+            "fillOpacity": 70,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "auto",
+        "legend": {
+          "showLegend": true,
+          "placement": "bottom",
+          "displayMode": "list"
+        }
+      }
+    },
+    {
+      "id": 20,
       "type": "timeseries",
       "title": "Mission Progress Over Time",
       "datasource": {
@@ -643,9 +1397,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 9,
+        "y": 26,
         "w": 12,
-        "h": 7
+        "h": 6
       },
       "targets": [
         {
@@ -704,18 +1458,18 @@
       }
     },
     {
-      "id": 12,
+      "id": 21,
       "type": "timeseries",
-      "title": "Distance to Waypoint",
+      "title": "Distance to Next Waypoint",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
       },
       "gridPos": {
         "x": 12,
-        "y": 9,
+        "y": 26,
         "w": 12,
-        "h": 7
+        "h": 6
       },
       "targets": [
         {
@@ -772,84 +1526,7 @@
       }
     },
     {
-      "id": 13,
-      "type": "state-timeline",
-      "title": "Mission State Timeline",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 16,
-        "w": 24,
-        "h": 5
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: 10s, fn: last, createEmpty: false)\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "Idle": {
-                  "text": "Idle",
-                  "color": "text",
-                  "index": 0
-                },
-                "Autonomous": {
-                  "text": "Autonomous",
-                  "color": "green",
-                  "index": 1
-                },
-                "StationKeeping": {
-                  "text": "StationKeeping",
-                  "color": "blue",
-                  "index": 2
-                },
-                "ReturnToHome": {
-                  "text": "ReturnToHome",
-                  "color": "orange",
-                  "index": 3
-                },
-                "Completed": {
-                  "text": "Completed",
-                  "color": "purple",
-                  "index": 4
-                }
-              }
-            }
-          ],
-          "custom": {
-            "fillOpacity": 70,
-            "lineWidth": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showValue": "auto",
-        "legend": {
-          "showLegend": true,
-          "placement": "bottom",
-          "displayMode": "list"
-        }
-      }
-    },
-    {
-      "id": 14,
+      "id": 22,
       "type": "table",
       "title": "Mission Event Timeline",
       "datasource": {
@@ -858,7 +1535,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 21,
+        "y": 32,
         "w": 24,
         "h": 8
       },

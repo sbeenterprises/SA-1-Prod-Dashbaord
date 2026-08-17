@@ -152,6 +152,20 @@ def updown_map(down_text="OFFLINE", up_text="ONLINE"):
         "1": {"text": up_text, "color": "green", "index": 1}}}]
 
 
+def alert_map(ok_text, alert_text, alert_color="red"):
+    """Inverse of updown_map: 0 is the good state, 1 the alert state."""
+    return [{"type": "value", "options": {
+        "0": {"text": ok_text, "color": "green", "index": 0},
+        "1": {"text": alert_text, "color": alert_color, "index": 1}}}]
+
+
+def value_color_map(triples):
+    """[(value, text, color), ...] -> Grafana value mappings."""
+    return [{"type": "value",
+             "options": {str(v): {"text": t, "color": c, "index": i}
+                         for i, (v, t, c) in enumerate(triples)}}]
+
+
 def dashboard(uid, title, panels, tags, refresh="5s", time_from="now-30m"):
     return {
         "uid": uid, "title": title, "tags": ["usv"] + tags,
@@ -204,44 +218,129 @@ def last_str(measurement, field, bucket="telemetry"):
 DASHBOARDS = []
 
 # ---------------------------------------------------------------- FR-1 Mission
+# States derived by grafana_bridge from the Alpha mission's mode flags
+# (see docs/alpha-mission-integration.md, table in §3).
 mission_state_mappings = state_map([
-    ("Idle", "text"), ("Autonomous", "green"), ("StationKeeping", "blue"),
-    ("ReturnToHome", "orange"), ("Completed", "purple"),
+    ("Idle", "text"), ("Autonomous", "green"), ("Paused", "yellow"),
+    ("StationKeeping", "blue"), ("ReturnToHome", "orange"),
+    ("EnteringRegion", "super-light-blue"), ("AwaitingRearm", "orange"),
+    ("CommsLost", "red"), ("Parked", "text"), ("Completed", "purple"),
 ])
+helm_state_mappings = state_map([
+    ("DRIVE", "green"), ("PARK", "text"), ("STANDBY", "yellow"),
+    ("DISABLED", "orange"), ("MALCONFIG", "red"),
+])
+allstop_mappings = [
+    {"type": "value", "options": {
+        "clear": {"text": "CLEAR", "color": "green", "index": 0}}},
+    {"type": "regex", "options": {
+        "pattern": "(.+)",
+        "result": {"text": "$1", "color": "red", "index": 1}}},
+]
+geofence_mappings = value_color_map([
+    (0, "INSIDE", "green"), (1, "BREACH", "red"),
+    (2, "RECOVERING", "yellow"),
+])
+flag_timeline_mappings = [{"type": "value", "options": {
+    "0": {"text": "—", "color": "rgba(110, 120, 130, 0.12)", "index": 0},
+    "1": {"text": "ON", "color": ACCENT, "index": 1}}}]
+
+# Approach-tier thresholds mirror the speed governor in alpha.bhv:
+# full UI speed beyond 500 m, tier-1 zone 100–500 m, tier-2 inside 100 m,
+# capture_radius 20 m.
+approach_thresholds = [(None, "orange"), (100, "yellow"), (500, "green")]
+
 DASHBOARDS.append(dashboard("usv-mission", "Mission", [
-    stat("Mission Name", last_str("mission_state", "mission_name"), 0, 0, 5, 4,
-         text_mode="value"),
-    stat("Mission ID", last_str("mission_state", "mission_id"), 5, 0, 4, 4,
-         text_mode="value"),
-    stat("Mission State", last_str("mission_state", "state"), 9, 0, 5, 4,
+    # Row 0 — the operational picture at a glance.
+    stat("Mission State", last_str("mission_state", "state"), 0, 0, 5, 4,
          mappings=mission_state_mappings, text_mode="value"),
-    stat("Elapsed Time", flux("mission", "elapsed_s", last=True), 14, 0, 5, 4,
+    stat("Helm", last_str("mission_state", "helm_state"), 5, 0, 4, 4,
+         mappings=helm_state_mappings, text_mode="value"),
+    stat("Mission Armed", flux("autonomy", "armed", last=True), 9, 0, 4, 4,
+         mappings=[{"type": "value", "options": {
+             "0": {"text": "DISARMED", "color": "orange", "index": 0},
+             "1": {"text": "ARMED", "color": "green", "index": 1}}}],
+         text_mode="value"),
+    stat("Operator Link", flux("autonomy", "comms_lost", last=True),
+         13, 0, 4, 4, mappings=alert_map("LINK OK", "LOST — FAILSAFE"),
+         text_mode="value"),
+    stat("Geofence", flux("autonomy", "geofence_breached", last=True),
+         17, 0, 4, 4, mappings=geofence_mappings, text_mode="value"),
+    stat("Obstacle Alerts", flux("autonomy", "obstacle_alerts", last=True),
+         21, 0, 3, 4, decimals=0,
+         thresholds=[(None, "green"), (1, "yellow"), (3, "orange")]),
+    # Row 1 — identity, helm detail, timers.
+    stat("Mission Name", last_str("mission_state", "mission_name"), 0, 4, 5, 4,
+         text_mode="value"),
+    stat("Mission ID", last_str("mission_state", "mission_id"), 5, 4, 4, 4,
+         text_mode="value"),
+    stat("Helm All-Stop", last_str("mission_state", "allstop_reason"),
+         9, 4, 5, 4, mappings=allstop_mappings, text_mode="value"),
+    stat("Elapsed Time", flux("mission", "elapsed_s", last=True), 14, 4, 5, 4,
          unit="s", decimals=0),
-    stat("ETA to Waypoint", flux("mission", "eta_s", last=True), 19, 0, 5, 4,
+    stat("ETA to Waypoint", flux("mission", "eta_s", last=True), 19, 4, 5, 4,
          unit="s", decimals=0),
+    # Row 2 — route progress.
     gauge("Mission Progress", flux("mission", "progress_pct", last=True),
-          0, 4, 5, 5, thresholds=[(None, ACCENT)]),
+          0, 8, 5, 5, thresholds=[(None, ACCENT)]),
     stat("Current Waypoint", flux("mission", "waypoint_index", last=True),
-         5, 4, 4, 5, decimals=0),
+         5, 8, 4, 5, decimals=0),
     stat("Waypoints Total", flux("mission", "waypoints_total", last=True),
-         9, 4, 4, 5, decimals=0),
-    stat("Distance to Waypoint", flux("mission", "dist_to_waypoint", last=True),
-         13, 4, 5, 5, unit="lengthm", decimals=0),
+         9, 8, 4, 5, decimals=0),
+    stat("Distance to Next Waypoint",
+         flux("mission", "dist_to_waypoint", last=True),
+         13, 8, 5, 5, unit="lengthm", decimals=0,
+         thresholds=approach_thresholds),
     stat("Distance Traveled", flux("mission", "distance_traveled", last=True),
-         18, 4, 6, 5, unit="lengthm", decimals=0),
-    ts("Mission Progress Over Time",
-       [target(flux("mission", "progress_pct"), "progress %")],
-       0, 9, 12, 7, unit="percent", min_=0, max_=100),
-    ts("Distance to Waypoint",
-       [target(flux("mission", "dist_to_waypoint"), "distance m")],
-       12, 9, 12, 7, unit="lengthm"),
+         18, 8, 6, 5, unit="lengthm", decimals=0),
+    # Row 3 — approach profile (governor tiers) + autonomy flag activity.
+    panel("timeseries", "Approach Profile — Distance to Next Waypoint vs SOG",
+          [target(flux("mission", "dist_to_waypoint"), "distance m"),
+           target(flux("nav", "sog"), "SOG kn", ref="B")],
+          0, 13, 12, 8, unit="lengthm",
+          thresholds=[(None, "transparent"), (20, "red"), (100, "orange"),
+                      (500, "green")],
+          custom={"drawStyle": "line", "lineWidth": 2, "fillOpacity": 8,
+                  "showPoints": "never", "spanNulls": 60000,
+                  "thresholdsStyle": {"mode": "line"}},
+          overrides=[
+              {"matcher": {"id": "byFrameRefID", "options": "B"},
+               "properties": [{"id": "unit", "value": "velocityknot"},
+                              {"id": "custom.axisPlacement", "value": "right"},
+                              {"id": "color",
+                               "value": {"mode": "fixed",
+                                         "fixedColor": PALETTE[1]}}]},
+              {"matcher": {"id": "byRegexp", "options": ".*distance.*"},
+               "properties": [{"id": "color",
+                               "value": {"mode": "fixed",
+                                         "fixedColor": PALETTE[0]}}]}],
+          options={"legend": {"displayMode": "list", "placement": "bottom",
+                              "showLegend": True},
+                   "tooltip": {"mode": "multi"}}),
+    panel("state-timeline", "Autonomy Flags",
+          [target(flux("autonomy",
+                       ["waypoint", "pause", "stationing", "returning",
+                        "armed", "comms_lost", "manual_override"],
+                       every="5s", fn="last"))],
+          12, 13, 12, 8, mappings=flag_timeline_mappings,
+          custom={"fillOpacity": 70, "lineWidth": 0},
+          options={"showValue": "never",
+                   "legend": {"showLegend": False},
+                   "tooltip": {"mode": "single"}}),
+    # Row 4 — history.
     panel("state-timeline", "Mission State Timeline",
           [target(flux("mission_state", "state", every="10s", fn="last"))],
-          0, 16, 24, 5, mappings=mission_state_mappings,
+          0, 21, 24, 5, mappings=mission_state_mappings,
           custom={"fillOpacity": 70, "lineWidth": 0},
           options={"showValue": "auto", "legend": {"showLegend": True,
                                                     "placement": "bottom",
                                                     "displayMode": "list"}}),
+    ts("Mission Progress Over Time",
+       [target(flux("mission", "progress_pct"), "progress %")],
+       0, 26, 12, 6, unit="percent", min_=0, max_=100),
+    ts("Distance to Next Waypoint",
+       [target(flux("mission", "dist_to_waypoint"), "distance m")],
+       12, 26, 12, 6, unit="lengthm"),
     panel("table", "Mission Event Timeline",
           [target('from(bucket: "events")\n'
                   '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
@@ -249,7 +348,7 @@ DASHBOARDS.append(dashboard("usv-mission", "Mission", [
                   '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
                   '  |> keep(columns: ["_time", "_value", "type", "severity"])\n'
                   '  |> sort(columns: ["_time"], desc: true)\n')],
-          0, 21, 24, 8,
+          0, 32, 24, 8,
           options={"showHeader": True,
                    "sortBy": [{"displayName": "_time", "desc": True}]}),
 ], ["mission"]))
@@ -313,12 +412,13 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
 
 # -------------------------------------------------------------- FR-3 Autopilot
 DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot (MOOS-IvP)", [
-    stat("Active Behavior", last_str("mission_state", "active_behavior"),
+    stat("Active Behaviors", last_str("mission_state", "active_behavior"),
          0, 0, 6, 4, text_mode="value"),
-    stat("Station Keeping", last_str("mission_state", "station_keep"), 6, 0, 4, 4,
+    stat("Station Keeping", flux("autonomy", "stationing", last=True),
+         6, 0, 4, 4,
          mappings=[{"type": "value", "options": {
-             "true": {"text": "ACTIVE", "color": "blue", "index": 0},
-             "false": {"text": "OFF", "color": "text", "index": 1}}}],
+             "0": {"text": "OFF", "color": "text", "index": 0},
+             "1": {"text": "ACTIVE", "color": "blue", "index": 1}}}],
          text_mode="value"),
     stat("Heading Error", flux("autopilot", "heading_error", last=True),
          10, 0, 4, 4, unit="degree", decimals=1,
@@ -330,22 +430,39 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot (MOOS-IvP)", [
          unit="degree", decimals=1),
     stat("Throttle Cmd", flux("autopilot", "throttle_cmd", last=True), 21, 0, 3, 4,
          unit="percent", decimals=0),
+    # Helm health row — IVPHELM_STATE / IVPHELM_ALLSTOP and the Alpha
+    # mission's safety latches (entry gate, explicit re-arm hold).
+    stat("Helm State", last_str("mission_state", "helm_state"), 0, 4, 6, 4,
+         mappings=helm_state_mappings, text_mode="value"),
+    stat("All-Stop Reason", last_str("mission_state", "allstop_reason"),
+         6, 4, 6, 4, mappings=allstop_mappings, text_mode="value"),
+    stat("Survey Entry Gate", flux("autonomy", "entry_gate_open", last=True),
+         12, 4, 6, 4,
+         mappings=[{"type": "value", "options": {
+             "0": {"text": "CLOSED — RECOVER FIRST", "color": "yellow",
+                   "index": 0},
+             "1": {"text": "OPEN", "color": "green", "index": 1}}}],
+         text_mode="value"),
+    stat("Re-Arm Hold", flux("autonomy", "awaiting_rearm", last=True),
+         18, 4, 6, 4,
+         mappings=alert_map("—", "AWAITING RE-ARM", "orange"),
+         text_mode="value"),
     ts("Desired vs Actual Heading",
        [target(flux("autopilot", ["desired_heading", "actual_heading"]))],
-       0, 4, 12, 8, unit="degree", min_=0, max_=360),
+       0, 8, 12, 8, unit="degree", min_=0, max_=360),
     ts("Desired vs Actual Speed",
        [target(flux("autopilot", ["desired_speed", "actual_speed"]))],
-       12, 4, 12, 8, unit="velocityknot"),
+       12, 8, 12, 8, unit="velocityknot"),
     ts("Rudder Output", [target(flux("autopilot", "rudder_cmd"), "rudder")],
-       0, 12, 8, 7, unit="degree", min_=-35, max_=35),
+       0, 16, 8, 7, unit="degree", min_=-35, max_=35),
     ts("Throttle Output", [target(flux("autopilot", "throttle_cmd"), "throttle")],
-       8, 12, 8, 7, unit="percent", min_=0, max_=100),
+       8, 16, 8, 7, unit="percent", min_=0, max_=100),
     ts("PID Error Trends",
        [target(flux("autopilot", ["heading_error", "speed_error"]))],
-       16, 12, 8, 7),
+       16, 16, 8, 7),
     ts("PID Controller Outputs",
        [target(flux("autopilot", ["pid_heading_out", "pid_speed_out"]))],
-       0, 19, 24, 6),
+       0, 23, 24, 6),
 ], ["autopilot"]))
 
 # ---------------------------------------------------------- FR-4 Vessel Health
@@ -653,6 +770,18 @@ DASHBOARDS.append(dashboard("usv-replay", "Mission Replay", [
        0, 26, 12, 6),
     ts("Cross-Track Error", [target(flux("nav", "cross_track_error"), "XTE")],
        12, 26, 12, 6, unit="lengthm"),
+    panel("state-timeline", "Autonomy Flags",
+          [target(flux("autonomy",
+                       ["waypoint", "pause", "stationing", "returning",
+                        "armed", "comms_lost", "manual_override"],
+                       every="30s", fn="last"))],
+          0, 32, 12, 6, mappings=flag_timeline_mappings,
+          custom={"fillOpacity": 70, "lineWidth": 0},
+          options={"showValue": "never", "legend": {"showLegend": False},
+                   "tooltip": {"mode": "single"}}),
+    ts("Distance to Next Waypoint",
+       [target(flux("mission", "dist_to_waypoint"), "distance m")],
+       12, 32, 12, 6, unit="lengthm"),
 ], ["replay"], refresh="", time_from="now-6h"))
 
 # ------------------------------------------------------------- FR-11 Alarms
@@ -702,6 +831,24 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms & Notifications", [
     stat("Packet Loss", flux("comms", "packet_loss_pct", last=True), 20, 14, 4, 4,
          unit="percent", decimals=1,
          thresholds=[(None, "green"), (2, "yellow"), (10, "red")]),
+    # Autonomy / mission safety row (Alpha mission).
+    stat("Mission State", last_str("mission_state", "state"), 0, 18, 4, 4,
+         mappings=mission_state_mappings, text_mode="value"),
+    stat("Operator Link", flux("autonomy", "comms_lost", last=True),
+         4, 18, 4, 4, mappings=alert_map("OK", "FAILSAFE"),
+         text_mode="value"),
+    stat("Mission Armed", flux("autonomy", "armed", last=True), 8, 18, 4, 4,
+         mappings=[{"type": "value", "options": {
+             "0": {"text": "DISARMED", "color": "orange", "index": 0},
+             "1": {"text": "ARMED", "color": "green", "index": 1}}}],
+         text_mode="value"),
+    stat("Geofence", flux("autonomy", "geofence_breached", last=True),
+         12, 18, 4, 4, mappings=geofence_mappings, text_mode="value"),
+    stat("Helm All-Stop", flux("autonomy", "allstop", last=True), 16, 18, 4, 4,
+         mappings=alert_map("CLEAR", "ALLSTOP"), text_mode="value"),
+    stat("Obstacles", flux("autonomy", "obstacle_alerts", last=True),
+         20, 18, 4, 4, decimals=0,
+         thresholds=[(None, "green"), (1, "yellow"), (3, "orange")]),
 ], ["alarms"]))
 
 

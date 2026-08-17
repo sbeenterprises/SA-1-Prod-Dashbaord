@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 88,
+      "id": 100,
       "type": "stat",
       "title": "Internet",
       "datasource": {
@@ -141,7 +141,7 @@
       }
     },
     {
-      "id": 89,
+      "id": 101,
       "type": "stat",
       "title": "Starlink",
       "datasource": {
@@ -210,7 +210,7 @@
       }
     },
     {
-      "id": 90,
+      "id": 102,
       "type": "stat",
       "title": "VPN / Tailscale",
       "datasource": {
@@ -279,7 +279,7 @@
       }
     },
     {
-      "id": 91,
+      "id": 103,
       "type": "stat",
       "title": "Signal K WebSocket",
       "datasource": {
@@ -348,7 +348,7 @@
       }
     },
     {
-      "id": 92,
+      "id": 104,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -410,7 +410,7 @@
       }
     },
     {
-      "id": 93,
+      "id": 105,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -472,7 +472,7 @@
       }
     },
     {
-      "id": 94,
+      "id": 106,
       "type": "timeseries",
       "title": "Latency",
       "datasource": {
@@ -540,7 +540,7 @@
       }
     },
     {
-      "id": 95,
+      "id": 107,
       "type": "timeseries",
       "title": "Packet Loss",
       "datasource": {
@@ -609,7 +609,7 @@
       }
     },
     {
-      "id": 96,
+      "id": 108,
       "type": "timeseries",
       "title": "Bandwidth",
       "datasource": {
@@ -691,7 +691,7 @@
       }
     },
     {
-      "id": 97,
+      "id": 109,
       "type": "timeseries",
       "title": "Telemetry Message Rates",
       "datasource": {

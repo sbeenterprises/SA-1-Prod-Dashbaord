@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 109,
+      "id": 121,
       "type": "text",
       "title": "How to replay",
       "datasource": {
@@ -100,7 +100,7 @@
       }
     },
     {
-      "id": 110,
+      "id": 122,
       "type": "geomap",
       "title": "GPS Track",
       "datasource": {
@@ -161,7 +161,7 @@
       }
     },
     {
-      "id": 111,
+      "id": 123,
       "type": "state-timeline",
       "title": "Mission State",
       "datasource": {
@@ -203,20 +203,45 @@
                   "color": "green",
                   "index": 1
                 },
+                "Paused": {
+                  "text": "Paused",
+                  "color": "yellow",
+                  "index": 2
+                },
                 "StationKeeping": {
                   "text": "StationKeeping",
                   "color": "blue",
-                  "index": 2
+                  "index": 3
                 },
                 "ReturnToHome": {
                   "text": "ReturnToHome",
                   "color": "orange",
-                  "index": 3
+                  "index": 4
+                },
+                "EnteringRegion": {
+                  "text": "EnteringRegion",
+                  "color": "super-light-blue",
+                  "index": 5
+                },
+                "AwaitingRearm": {
+                  "text": "AwaitingRearm",
+                  "color": "orange",
+                  "index": 6
+                },
+                "CommsLost": {
+                  "text": "CommsLost",
+                  "color": "red",
+                  "index": 7
+                },
+                "Parked": {
+                  "text": "Parked",
+                  "color": "text",
+                  "index": 8
                 },
                 "Completed": {
                   "text": "Completed",
                   "color": "purple",
-                  "index": 4
+                  "index": 9
                 }
               }
             }
@@ -233,7 +258,7 @@
       }
     },
     {
-      "id": 112,
+      "id": 124,
       "type": "table",
       "title": "Mission Events",
       "datasource": {
@@ -269,7 +294,7 @@
       }
     },
     {
-      "id": 113,
+      "id": 125,
       "type": "timeseries",
       "title": "Heading History",
       "datasource": {
@@ -339,7 +364,7 @@
       }
     },
     {
-      "id": 114,
+      "id": 126,
       "type": "timeseries",
       "title": "Speed History",
       "datasource": {
@@ -407,7 +432,7 @@
       }
     },
     {
-      "id": 115,
+      "id": 127,
       "type": "timeseries",
       "title": "Rudder Commands",
       "datasource": {
@@ -475,7 +500,7 @@
       }
     },
     {
-      "id": 116,
+      "id": 128,
       "type": "timeseries",
       "title": "Throttle Commands",
       "datasource": {
@@ -543,7 +568,7 @@
       }
     },
     {
-      "id": 117,
+      "id": 129,
       "type": "timeseries",
       "title": "CAN Bus Activity",
       "datasource": {
@@ -610,7 +635,7 @@
       }
     },
     {
-      "id": 118,
+      "id": 130,
       "type": "timeseries",
       "title": "Cross-Track Error",
       "datasource": {
@@ -653,6 +678,137 @@
             "matcher": {
               "id": "byRegexp",
               "options": ".*cross_track_error.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#0f9e92"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 131,
+      "type": "state-timeline",
+      "title": "Autonomy Flags",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"waypoint\" or r._field == \"pause\" or r._field == \"stationing\" or r._field == \"returning\" or r._field == \"armed\" or r._field == \"comms_lost\" or r._field == \"manual_override\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: 30s, fn: last, createEmpty: false)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "\u2014",
+                  "color": "rgba(110, 120, 130, 0.12)",
+                  "index": 0
+                },
+                "1": {
+                  "text": "ON",
+                  "color": "#0f9e92",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "custom": {
+            "fillOpacity": 70,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "never",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 132,
+      "type": "timeseries",
+      "title": "Distance to Next Waypoint",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission\" and (r._field == \"dist_to_waypoint\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n",
+          "refId": "A",
+          "alias": "distance m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "lengthm",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": 60000
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*dist_to_waypoint.*"
             },
             "properties": [
               {

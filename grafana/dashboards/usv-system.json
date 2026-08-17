@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 98,
+      "id": 110,
       "type": "gauge",
       "title": "CPU",
       "datasource": {
@@ -132,7 +132,7 @@
       }
     },
     {
-      "id": 99,
+      "id": 111,
       "type": "gauge",
       "title": "Memory",
       "datasource": {
@@ -192,7 +192,7 @@
       }
     },
     {
-      "id": 100,
+      "id": 112,
       "type": "gauge",
       "title": "Disk",
       "datasource": {
@@ -252,7 +252,7 @@
       }
     },
     {
-      "id": 101,
+      "id": 113,
       "type": "stat",
       "title": "CPU Temp",
       "datasource": {
@@ -314,7 +314,7 @@
       }
     },
     {
-      "id": 102,
+      "id": 114,
       "type": "stat",
       "title": "Signal K Service",
       "datasource": {
@@ -390,7 +390,7 @@
       }
     },
     {
-      "id": 103,
+      "id": 115,
       "type": "stat",
       "title": "MOOS Service",
       "datasource": {
@@ -466,7 +466,7 @@
       }
     },
     {
-      "id": 104,
+      "id": 116,
       "type": "timeseries",
       "title": "CPU Utilization",
       "datasource": {
@@ -560,7 +560,7 @@
       }
     },
     {
-      "id": 105,
+      "id": 117,
       "type": "timeseries",
       "title": "Memory",
       "datasource": {
@@ -630,7 +630,7 @@
       }
     },
     {
-      "id": 106,
+      "id": 118,
       "type": "timeseries",
       "title": "Disk I/O",
       "datasource": {
@@ -722,7 +722,7 @@
       }
     },
     {
-      "id": 107,
+      "id": 119,
       "type": "timeseries",
       "title": "Network I/O",
       "datasource": {
@@ -814,7 +814,7 @@
       }
     },
     {
-      "id": 108,
+      "id": 120,
       "type": "table",
       "title": "Services (systemd)",
       "datasource": {
