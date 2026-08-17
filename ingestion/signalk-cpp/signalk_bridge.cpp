@@ -57,8 +57,12 @@ const std::map<std::string, Mapping> kPaths = {
      {"nav", "hdop", [](double v) { return v; }}},
     {"navigation.courseRhumbline.crossTrackError",
      {"nav", "cross_track_error", [](double v) { return v; }}},
+    // The SK course computer's next point is whatever course the Signal K
+    // server holds (Freeboard manual planning) — NOT the autonomy route.
+    // Kept as its own field; mission.dist_to_waypoint has exactly one
+    // producer (grafana_bridge, from DIST_TO_NEXT_WPT).
     {"navigation.courseRhumbline.nextPoint.distance",
-     {"mission", "dist_to_waypoint", [](double v) { return v; }}},
+     {"nav", "course_next_point", [](double v) { return v; }}},
     // Engine (FR-4), instance 0
     {"propulsion.0.revolutions",
      {"engine", "rpm", [](double v) { return v * 60.0; }}},          // Hz->RPM
