@@ -5,7 +5,12 @@
 # Swift Autonomous Dashboard
 
 Grafana + InfluxDB monitoring stack for a MOOS-IvP / Signal K / NMEA 2000
-unmanned surface vehicle. Implements SRS FR-1..FR-11.
+unmanned surface vehicle. Implements SRS FR-1..FR-11, integrated with the
+**Alpha mission** (`alpha.bhv`): the bridge subscribes to the mission's real
+variable set (mode flags, comms-loss failsafe + explicit re-arm, entry
+gate, distance-governed approach, geofence, obstacle alerts, helm health)
+and derives the operational mission state onboard — see
+`docs/alpha-mission-integration.md`.
 
 ![Mission dashboard (dark theme)](docs/images/dashboard-dark.png)
 
@@ -36,9 +41,11 @@ telegraf/telegraf.conf       # OBC metrics, ping, systemd unit supervision
 ingestion/                   # all C++
   cpp-common/                #   shared Influx line-protocol writer
   moos-cpp/                  #   grafana_bridge (CMOOSApp) + example.moos
+                             #   + mission_logic.hpp (Alpha state machine,
+                             #     unit-tested) + moos_poke utility
   can-cpp/                   #   SocketCAN / NMEA 2000 bridge
   signalk-cpp/               #   Signal K WebSocket delta bridge
-simulator/                   # C++ bench-test telemetry generator
+simulator/                   # C++ bench generator (scripted Alpha mission)
 grafana/
   provisioning/              # datasource, dashboards provider, alerting
   dashboards/*.json          # 11 generated dashboards

@@ -5,7 +5,8 @@ InfluxDB monitoring stack) on the USV onboard computer. Native deployment,
 no Docker. All vessel\-side code is C\+\+. The Grafana workspace presents as
 "Swift Autonomous Dashboard" with the Swiftships logo top\-left and 11
 tab\-navigable dashboards. Companion docs: `deployment.md` (full guide),
-`schema.md`, `traceability.md`.
+`schema.md`, `traceability.md`, `alpha-mission-integration.md` (the Alpha
+mission variable map, derived state machine and design rationale).
 
 * * *
 
@@ -24,7 +25,7 @@ tab\-navigable dashboards. Companion docs: `deployment.md` (full guide),
  │                                                              │ ▼
  │    InfluxDB 2.x (:8086)  buckets: telemetry / events /       │
  │                          telemetry_1m (downsampled)          │
- │    Grafana (:3000)       11 dashboards + 12 alert rules      │
+ │    Grafana (:3000)       11 dashboards + 15 alert rules      │
  └──────────────────────────────────────────────────────────────┘
       Operator access: http://<obc>:3000 (Tailscale recommended)
 ```
@@ -86,12 +87,22 @@ installer re\-applies the Swiftships branding).
    (`influx_url = localhost:8086`). `//` starts a MOOS comment and will
    silently truncate `http://...`.
 
-3. **Critical:** align the variable maps with your helm. Run
-   `umm --spy` (or uMS) during a sim run and compare against
-   `kNumericVars` / `kStringVars` in `ingestion/moos-cpp/moos_bridge.cpp`.
-   Defaults assume NAV\_*, DESIRED\_*, and MISSION\_*/WPT\_* conventions;
-   rename to what your community actually publishes, then:
-   
+3. The variable map is **pre\-aligned with the Alpha mission**
+   (`alpha.bhv`): mode flags, COMMS\_LOST failsafe \+ MISSION\_ARMED
+   re\-arm latch, SURVEY\_ENTRY\_GATE, DIST\_TO\_NEXT\_WPT / WPT\_INDEX /
+   VIEW\_SEGLIST, OPR\_BREACHED geofence, OBSTACLE\_ALERT and IVPHELM\_\*
+   are all subscribed; the operational mission state is derived onboard
+   (see `alpha-mission-integration.md`). Verify with `umm --spy` during a
+   sim run, or poke a scenario by hand:
+
+   ```bash
+   moos_poke WAYPOINT=true DIST_TO_NEXT_WPT=350     # state -> Autonomous
+   moos_poke COMMS_LOST=loiter MISSION_ARMED=false  # state -> CommsLost
+   ```
+
+   If your community publishes additional variables, extend the maps in
+   `ingestion/moos-cpp/moos_bridge.cpp`, then:
+
    ```bash
    cmake --build ingestion/moos-cpp/build -j
    sudo cmake --install ingestion/moos-cpp/build
@@ -122,12 +133,12 @@ repo to the OBC, re\-run install.sh.
 | --- | --- | --- | --- |
 | 1 | Services up | `systemctl status influxdb grafana-server telegraf usv-signalk-bridge usv-can-bridge` | all `active (running)` |
 | 2 | DB reachable | `influx ping` | `OK` |
-| 3 | Bench data (no vessel) | `sudo systemctl start usv-simulator` | dashboards populate in \~10 s |
+| 3 | Bench data (no vessel) | `sudo systemctl start usv-simulator` | dashboards populate in \~10 s; the scripted Alpha scenario cycles all mission states and fires the geofence/comms alerts once per \~25 min loop (that IS the alert bench test) |
 | 4 | Grafana login | browse `http://<obc>:3000` | folder "Swift Autonomous Dashboard", 11 dashboards; Swiftships logo in the top\-left nav |
 | 5 | Tab navigation | open any dashboard; click the link chips across the top | one click switches dashboard; time range and vessel selection carry over |
 | 6 | Theme toggle | click the "☀ Light" / "☾ Dark" chips at the end of the tab row | dashboard re\-opens in that theme, time range kept |
 | 7 | Tablet check | open any dashboard on a tablet (landscape) | grid scales; below \~768 px panels stack single\-column |
-| 8 | Alert rules loaded | Grafana → Alerting → Alert rules | 12 rules, folder "USV Alerts" |
+| 8 | Alert rules loaded | Grafana → Alerting → Alert rules | 15 rules, folder "USV Alerts" |
 | 9 | Stop simulator | `sudo systemctl stop usv-simulator` | required before real ops |
 | 10 | MOOS feed | launch mission with grafana\_bridge; watch Autopilot dashboard | desired/actual heading move |
 | 11 | Signal K feed | Navigation \+ Vessel Health dashboards | position, engine, battery live |
@@ -153,8 +164,11 @@ and the grafana\_bridge console output under pAntler.
 ## 8\. Known limitations and gotchas
 
 1. **MOOS `//` comment rule** truncates URLs in .moos files (see §4.2).
-2. **Variable maps are conventions** until you align them (§4.3). Empty
-   Mission/Autopilot panels almost always mean a naming mismatch.
+2. **Variable maps are aligned with alpha.bhv** (§4.3). Empty
+   Mission/Autopilot panels on a different mission file almost always mean
+   a naming mismatch — `moos_poke` + `umm --spy` localize it in minutes.
+   The derived-state logic itself is unit-tested (`mission_logic_test`,
+   also run by `tools/smoke_test.sh`).
 3. **Fast\-packet PGNs are not decoded** by can\_bridge (counted in stats
    only). Position/engine data arrive via single\-frame PGNs and Signal K,
    so no dashboard gap; extend `decode_pgn()` if you need 129029 etc.
@@ -166,7 +180,7 @@ and the grafana\_bridge console output under pAntler.
    small addition, not yet implemented. Latency/packet loss ARE real
    (Telegraf ping).
 6. **Alert rule provisioning is Grafana\-version\-sensitive.** Validated as
-   YAML; confirm the 12 rules appear in the UI on your installed Grafana
+   YAML; confirm the 15 rules appear in the UI on your installed Grafana
    version during commissioning step 8.
 7. **Mission replay** is Grafana\-native time\-range scrubbing, not a
    play/pause button.

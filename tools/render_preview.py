@@ -75,6 +75,19 @@ def series_for(uid, title):
     t = title.lower()
     if "progress over" in t:
         return [("progress %", ramp(lo=42, hi=62))]
+    if "approach profile" in t:
+        # Distance saw-tooth with the matching governor staircase:
+        # cruise > 500 m, tier-1 to 100 m, tier-2 below (alpha.bhv).
+        d = saw(lo=30, hi=1800)
+        sog = []
+        v = 16.0
+        for dist in d:
+            tgt = 16.0 if dist > 500 else (9.0 if dist > 100 else 4.0)
+            v += max(-1.2, min(0.8, tgt - v)) + rng.uniform(-0.15, 0.15)
+            sog.append(max(0.0, v))
+        # Right-axis series approximated by scaling onto the meter axis
+        # (the real dashboard uses a proper second axis).
+        return [("distance m", d), ("SOG kn", [s * 100 for s in sog])]
     if "distance to" in t or "next waypoint" in t:
         return [("distance m", saw(lo=30, hi=1800))]
     if "desired vs actual heading" in t:
@@ -131,11 +144,19 @@ def series_for(uid, title):
 
 
 STATS = {
-    "Mission Name": ("DELTA-RUN-042", "TEXT"), "Mission ID": ("M-2026-042", "TEXT"),
+    "Mission Name": ("ALPHA-SURVEY", "TEXT"), "Mission ID": ("M-2026-042", "TEXT"),
     "Mission State": ("Autonomous", "GREEN"), "Elapsed Time": ("47.2 min", "GREEN"),
     "ETA to Waypoint": ("5.9 min", "GREEN"), "Current Waypoint": ("4", "GREEN"),
     "Waypoints Total": ("5", "GREEN"), "Distance to Waypoint": ("812 m", "GREEN"),
+    "Distance to Next Waypoint": ("812 m", "GREEN"),
     "Distance Traveled": ("8.42 km", "GREEN"),
+    "Helm": ("DRIVE", "GREEN"), "Helm State": ("DRIVE", "GREEN"),
+    "Mission Armed": ("ARMED", "GREEN"), "Operator Link": ("LINK OK", "GREEN"),
+    "Geofence": ("INSIDE", "GREEN"), "Obstacle Alerts": ("0", "GREEN"),
+    "Obstacles": ("0", "GREEN"),
+    "Helm All-Stop": ("CLEAR", "GREEN"), "All-Stop Reason": ("CLEAR", "GREEN"),
+    "Survey Entry Gate": ("OPEN", "GREEN"), "Re-Arm Hold": ("—", "TEXT"),
+    "Active Behaviors": ("waypt_survey, opr24", "TEXT"),
     "Latitude": ("29.618452", "GREEN"), "Longitude": ("-91.207310", "GREEN"),
     "SOG": ("4.5 kn", "GREEN"), "COG": ("57°", "GREEN"), "Heading": ("55°", "GREEN"),
     "GPS Fix": ("RTK Fixed", "GREEN"), "Satellites": ("12", "GREEN"),
@@ -165,14 +186,23 @@ GAUGES = {
     "CPU": (23, "GREEN"), "Memory": (41, "GREEN"), "Disk": (37, "GREEN"),
 }
 EVENTS = [
-    ("14:32:08", "Waypoint 4 reached", "waypoint", "info"),
-    ("14:27:51", "MISSION_STATE=Autonomous", "state_change", "info"),
-    ("14:27:49", "ACTIVE_BEHAVIOR=waypt_survey", "state_change", "info"),
-    ("14:19:03", "Waypoint 3 reached", "waypoint", "info"),
-    ("14:05:44", "GPS fix quality degraded to 3D", "alarm", "warning"),
-    ("14:04:12", "Waypoint 2 reached", "waypoint", "info"),
-    ("13:51:30", "Waypoint 1 reached", "waypoint", "info"),
-    ("13:45:02", "Mission DELTA-RUN-042 started", "mission", "info"),
+    ("14:29:44", "Mission state: Autonomous", "state_change", "info"),
+    ("14:29:40", "Mission re-armed by operator (AUTONOMOUS_RESUME)",
+     "mission", "info"),
+    ("14:27:02", "Operator link restored — survey held until operator re-arm",
+     "alarm", "info"),
+    ("14:25:31", "Operator link LOST — failsafe 'loiter' engaged, mission "
+     "disarmed", "alarm", "critical"),
+    ("14:19:03", "Waypoint 3 captured — heading to 4 of 5", "waypoint",
+     "info"),
+    ("14:12:44", "Geofence clear — inside region", "geofence", "info"),
+    ("14:12:12", "Geofence BREACHED — outside operating region", "geofence",
+     "critical"),
+    ("14:04:12", "Waypoint 2 captured — heading to 3 of 5", "waypoint",
+     "info"),
+    ("13:51:30", "Waypoint 1 captured — heading to 2 of 5", "waypoint",
+     "info"),
+    ("13:45:02", "Survey started (5 waypoints)", "mission", "info"),
 ]
 
 
@@ -294,8 +324,20 @@ def svg_map(w, h):
 
 
 def svg_timeline(w, h):
-    segs = [("Idle", 0.06, "#5a5d63"), ("Autonomous", 0.38, "GREEN"),
-            ("StationKeeping", 0.14, BLUE), ("Autonomous", 0.42, "GREEN")]
+    # The scripted Alpha scenario: start parked, enter region, survey with
+    # pause + station-keep, comms-loss failsafe + re-arm hold, resume,
+    # return-to-base, completed.
+    segs = [("Parked", 0.035, "#5a5d63"),
+            ("EnteringRegion", 0.05, "#6ed0e0"),
+            ("Autonomous", 0.185, "GREEN"),
+            ("Paused", 0.06, "YELLOW"),
+            ("Autonomous", 0.06, "GREEN"),
+            ("StationKeeping", 0.075, BLUE),
+            ("CommsLost", 0.06, "RED"),
+            ("AwaitingRearm", 0.06, AMBER),
+            ("Autonomous", 0.26, "GREEN"),
+            ("ReturnToHome", 0.09, AMBER),
+            ("Completed", 0.065, PURPLE)]
     p = [f'<svg width="{w}" height="{h}">']
     x = 8.0
     bar_h = min(46, h - 42)
@@ -311,6 +353,41 @@ def svg_timeline(w, h):
         x += seg_w + 2
     for i, tl in enumerate(["13:45", "14:00", "14:15", "14:30"]):
         p.append(f'<text x="{8 + (w-16)*i/3.2:.0f}" y="{10+bar_h+18}" '
+                 f'fill="{FAINT}" font-size="11">{tl}</text>')
+    p.append("</svg>")
+    return "".join(p)
+
+
+def svg_flags(w, h):
+    """Multi-row autonomy flag activity strip (matches the state timeline)."""
+    rows = [
+        ("waypoint",        [(0.035, 0.845)]),
+        ("pause",           [(0.27, 0.33)]),
+        ("stationing",      [(0.39, 0.465), (0.465, 0.525)]),
+        ("returning",       [(0.845, 0.935)]),
+        ("armed",           [(0.0, 0.465), (0.585, 1.0)]),
+        ("comms_lost",      [(0.465, 0.525)]),
+        ("manual_override", [(0.0, 0.035), (0.935, 1.0)]),
+    ]
+    p = [f'<svg width="{w}" height="{h}">']
+    label_w = 118
+    track_w = w - label_w - 12
+    row_h = min(30.0, (h - 34) / len(rows))
+    for i, (name, spans) in enumerate(rows):
+        y = 8 + i * row_h
+        p.append(f'<text x="{label_w-8}" y="{y+row_h/2+3:.0f}" fill="{DIM}" '
+                 f'font-size="11" text-anchor="end">{name}</text>')
+        p.append(f'<rect x="{label_w}" y="{y:.0f}" width="{track_w:.0f}" '
+                 f'height="{row_h-5:.0f}" rx="2" fill="{GRID}" '
+                 f'opacity="0.55"/>')
+        for a, b in spans:
+            p.append(f'<rect x="{label_w+track_w*a:.0f}" y="{y:.0f}" '
+                     f'width="{max(3, track_w*(b-a)):.0f}" '
+                     f'height="{row_h-5:.0f}" rx="2" fill="{TEAL}" '
+                     f'opacity="0.85"/>')
+    base = 8 + len(rows) * row_h + 16
+    for i, tl in enumerate(["13:45", "14:00", "14:15", "14:30"]):
+        p.append(f'<text x="{label_w + track_w*i/3.2:.0f}" y="{base:.0f}" '
                  f'fill="{FAINT}" font-size="11">{tl}</text>')
     p.append("</svg>")
     return "".join(p)
@@ -349,7 +426,8 @@ def render_panel(uid, p):
     elif ptype == "geomap":
         body = svg_map(iw, ih)
     elif ptype == "state-timeline":
-        body = svg_timeline(iw, ih)
+        body = (svg_flags(iw, ih) if "flags" in title.lower()
+                else svg_timeline(iw, ih))
     elif ptype == "table":
         if "PGN" in title:
             rows = [("127488", "10.0"), ("129025", "10.0"), ("129026", "4.0"),
@@ -366,7 +444,7 @@ def render_panel(uid, p):
         body = ('<div class="ptext" style="color:' + DIM + '">'
                 '<div style="padding:24px;text-align:center">No firing alerts'
                 '<br><span style="font-size:11px;color:' + FAINT +
-                '">12 rules evaluated — all normal</span></div></div>')
+                '">15 rules evaluated — all normal</span></div></div>')
     else:
         body = ""
     return (f'<div class="panel" style="left:{x:.0f}px;top:{y:.0f}px;'

@@ -57,10 +57,21 @@ ProcessConfig = grafana_bridge
 }
 ```
 `grafana_bridge` starts, restarts and stops with the rest of the community
-under pAntler. Align the variable maps in
-`ingestion/moos-cpp/moos_bridge.cpp` (kNumericVars / kStringVars) with what
-your helm publishes, then rebuild:
+under pAntler. The variable map is **pre-aligned with the Alpha mission**
+(`alpha.bhv`): mode flags (WAYPOINT/RETURN/STATIONING/PAUSE), the comms
+failsafe (COMMS_LOST + MISSION_ARMED re-arm latch), SURVEY_ENTRY_GATE,
+DIST_TO_NEXT_WPT / WPT_INDEX / VIEW_SEGLIST, geofence (OPR_BREACHED),
+obstacle alerts and helm health (IVPHELM_*) are all subscribed, and the
+operational mission state is derived onboard (unit-tested in
+`mission_logic_test`; see docs/alpha-mission-integration.md). Legacy
+generic variables (WPT_DIST, MISSION_PROGRESS, ...) still work and take
+precedence if something publishes them. To extend the map, edit
+`ingestion/moos-cpp/moos_bridge.cpp`, then rebuild:
 `cmake --build ingestion/moos-cpp/build -j && sudo cmake --install ingestion/moos-cpp/build`.
+
+Poke variables during commissioning with the bundled utility, e.g.
+`moos_poke WAYPOINT=true DIST_TO_NEXT_WPT=350` (values parse as numbers
+when numeric, strings otherwise).
 
 ## Services
 | Unit | Role |
@@ -80,6 +91,12 @@ your helm publishes, then rebuild:
 sudo systemctl start usv-simulator     # full fake telemetry stream
 sudo systemctl stop usv-simulator      # stop before real operations
 ```
+The simulator loops a scripted Alpha mission (survey with tiered
+deceleration, pause, station-keep, obstacle spawn, operator-link loss +
+failsafe + explicit re-arm, geofence excursion + recovery, survey complete,
+return-to-base). It intentionally fires the geofence / operator-link /
+comms alerts once per cycle — that IS the FR-11 bench test. Expect alert
+emails while it runs; always stop it before real operations.
 
 ## Configuration points
 | What | Where |

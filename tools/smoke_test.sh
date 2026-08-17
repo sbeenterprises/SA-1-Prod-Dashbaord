@@ -52,6 +52,21 @@ for d in ingestion/moos-cpp ingestion/can-cpp ingestion/signalk-cpp simulator; d
   fi
 done
 
+hdr "Mission-logic unit tests (Alpha state machine)"
+MLT="$REPO/ingestion/moos-cpp/build/mission_logic_test"
+if [[ ! -x $MLT ]]; then
+  # MOOS absent -> the full configure failed; build the tests alone.
+  cmake -S "$REPO/ingestion/moos-cpp" -B "$REPO/ingestion/moos-cpp/build-tests" \
+    -DMISSION_LOGIC_TESTS_ONLY=ON >/dev/null 2>&1 \
+    && cmake --build "$REPO/ingestion/moos-cpp/build-tests" -j"$(nproc)" >/dev/null 2>&1
+  MLT="$REPO/ingestion/moos-cpp/build-tests/mission_logic_test"
+fi
+if [[ -x $MLT ]] && OUT=$("$MLT"); then
+  ok "mission_logic_test: ${OUT##*: }"
+else
+  bad "mission_logic_test failed"; echo "$OUT" | tail -5
+fi
+
 hdr "Simulator -> InfluxDB line protocol"
 start_stub
 timeout 6 "$REPO/simulator/build/usv_simulator" >/dev/null 2>&1
@@ -104,16 +119,19 @@ for g in d["groups"]:
                 for f in pf.findall(s):
                     if m not in external and (m, f) not in have:
                         missing.append((r["title"], m, f))
+n = sum(len(g["rules"]) for g in d["groups"])
 if missing:
     print("  [FAIL] alert queries with no data source:")
     for t,m,f in missing: print(f"      {t}: {m}.{f}")
     sys.exit(1)
-print("  [PASS] all 12 alert rules query fields the stack actually writes")
+print(f"  [PASS] all {n} alert rules query fields the stack actually writes")
 PY
 [ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
 
 hdr "Signal K bridge (mock WebSocket server)"
-if command -v node >/dev/null && node -e "require('ws')" 2>/dev/null; then
+if [[ ! -x "$REPO/ingestion/signalk-cpp/build/signalk_bridge" ]]; then
+  skip "Signal K test (bridge not built — IXWebSocket missing on this host)"
+elif command -v node >/dev/null && node -e "require('ws')" 2>/dev/null; then
   cat > "$TMP/sk.js" <<'EOF'
 const { WebSocketServer } = require('ws');
 const wss = new WebSocketServer({ port: 3111 });
@@ -185,7 +203,28 @@ EOF
   nohup umm --moos_port=9010 --moos_quiet --moos_name=smokepoke \
       -p=NAV_SPEED@5.0,NAV_HEADING@5.0,DESIRED_RUDDER@5.0,MISSION_PROGRESS@5.0 >/dev/null 2>&1 & UM=$!
   sleep 6
-  kill $UM $DB 2>/dev/null; pkill -f moos_bridge 2>/dev/null; stop_stub
+  kill $UM 2>/dev/null
+
+  # ---- Alpha mission scenario replay (alpha.bhv variable sequence) ----
+  POKE="$REPO/ingestion/moos-cpp/build/moos_poke"
+  if [[ -x $POKE ]]; then
+    P() { "$POKE" --port=9010 "$@" >/dev/null 2>&1; }
+    P IVPHELM_STATE=DRIVE IVPHELM_ALLSTOP=clear \
+      'VIEW_SEGLIST=pts={0,0:800,0:800,800:0,800:0,400},label=alpha_waypt_survey' \
+      WAYPOINT=true DEPLOY=true DIST_TO_NEXT_WPT=650 WPT_INDEX=0 \
+      'IVPHELM_SUMMARY=iter=10,active_bhvs=waypt_survey$0.6$100$4$0$0/0$1:opr24$0.6$300$5$0$0/0$1,idle_bhvs=station_keep'
+    sleep 2
+    P COMMS_LOST=loiter MISSION_ARMED=false STATIONING=true    # link watchdog trips
+    sleep 2
+    P COMMS_LOST=false STATIONING=false                        # link back, NOT re-armed
+    sleep 2
+    P MISSION_ARMED=true                                       # operator re-arm
+    sleep 1
+    P OPR_BREACHED=poly 'OBSTACLE_ALERT=name=ob_7#pts={60,60:70,60:70,70},label=ob_7'
+    sleep 2
+  fi
+  kill $DB 2>/dev/null; pkill -f moos_bridge 2>/dev/null; stop_stub
+
   grep -q "vessel=usv-moos" "$LINES"        && ok "mission-file vessel_id applied" || bad "ProcessConfig vessel_id not applied"
   grep -q "influx=http://127.0.0.1:8086" "$TMP/bridge.log" && ok "scheme-less influx_url expanded" || bad "influx_url not expanded"
   grep -q "nav,.* sog=" "$LINES"            && ok "NAV_SPEED -> nav.sog"          || bad "NAV_SPEED not mapped"
@@ -193,6 +232,23 @@ EOF
   grep -q "autopilot,.* rudder_cmd=" "$LINES" && ok "DESIRED_RUDDER -> autopilot" || bad "DESIRED_RUDDER not mapped"
   grep -q "mission,.* progress_pct=" "$LINES" && ok "MISSION_PROGRESS -> mission" || bad "MISSION_PROGRESS not mapped"
   grep -q "moos_connected=1" "$LINES"       && ok "MOOS connect heartbeat"        || bad "no connect heartbeat"
+  if [[ -x $POKE ]]; then
+    grep -q 'state="Autonomous"' "$LINES"     && ok "WAYPOINT=true -> state Autonomous"     || bad "derived state Autonomous missing"
+    grep -q 'state="CommsLost"' "$LINES"      && ok "COMMS_LOST -> state CommsLost"         || bad "derived state CommsLost missing"
+    grep -q 'state="AwaitingRearm"' "$LINES"  && ok "link back w/o re-arm -> AwaitingRearm" || bad "derived state AwaitingRearm missing"
+    grep -q "mission,.* dist_to_waypoint=650" "$LINES" && ok "DIST_TO_NEXT_WPT -> mission.dist_to_waypoint" || bad "DIST_TO_NEXT_WPT not mapped"
+    grep -q "mission,.* waypoints_total=5" "$LINES"    && ok "VIEW_SEGLIST -> waypoints_total=5"            || bad "seglist waypoint count missing"
+    grep -q "autonomy,.* comms_lost=1" "$LINES"        && ok "autonomy.comms_lost flag written"             || bad "autonomy.comms_lost missing"
+    grep -q "autonomy,.* awaiting_rearm=1" "$LINES"    && ok "autonomy.awaiting_rearm hold visible"         || bad "awaiting_rearm missing"
+    grep -q "autonomy,.* geofence_breached=1" "$LINES" && ok "OPR_BREACHED -> geofence_breached=1"          || bad "geofence level missing"
+    grep -q 'active_behavior="waypt_survey, opr24"' "$LINES" && ok "IVPHELM_SUMMARY -> active behaviors"    || bad "active behavior parse missing"
+    grep -q "Geofence BREACHED" "$LINES"      && ok "geofence breach event emitted"         || bad "geofence event missing"
+    grep -q "Obstacle avoidance active: ob_7" "$LINES" && ok "obstacle alert event emitted" || bad "obstacle event missing"
+    grep -q "Operator link LOST" "$LINES"     && ok "comms-loss failsafe event emitted"     || bad "comms-loss event missing"
+    grep -q "Mission re-armed" "$LINES"       && ok "re-arm event emitted"                  || bad "re-arm event missing"
+  else
+    skip "Alpha scenario replay (moos_poke not built)"
+  fi
 else
   skip "MOOS bridge test (MOOSDB/umm not on PATH)"
 fi

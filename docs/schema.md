@@ -24,14 +24,35 @@ fleet expansion.
 | fix_type | string | | e.g. "RTK Fixed", "3D" |
 | cross_track_error | float | m | |
 | x, y | float | m | MOOS local grid |
+| course_next_point | float | m | Signal K course computer (Freeboard manual courses) — NOT the autonomy route; that is mission.dist_to_waypoint |
 
 ### mission (FR-1) — source: MOOS bridge
 progress_pct (%), waypoint_index, waypoints_total, dist_to_waypoint (m),
-eta_s (s), distance_traveled (m), elapsed_s (s)
+eta_s (s), distance_traveled (m), elapsed_s (s).
+`dist_to_waypoint` comes from the Alpha mission's `DIST_TO_NEXT_WPT`;
+`waypoints_total`/`progress_pct`/`eta_s`/`distance_traveled` are derived by
+the bridge (VIEW_SEGLIST count, index/total, dist/speed, NAV_X/Y odometry)
+and yield automatically to any external publisher of the legacy
+`WPT_TOTAL`/`MISSION_PROGRESS`/`WPT_ETA`/`DIST_TRAVELED` variables.
 
 ### mission_state (FR-1/FR-3) — source: MOOS bridge (strings)
-mission_name, mission_id, state (Idle | Autonomous | StationKeeping |
-ReturnToHome | Completed), active_behavior, station_keep, helm_summary
+mission_name, mission_id, state (derived: Idle | Autonomous | Paused |
+StationKeeping | ReturnToHome | EnteringRegion | AwaitingRearm | CommsLost |
+Parked | Completed), state_external (a MISSION_STATE published by another
+app, if any), active_behavior (parsed from IVPHELM_SUMMARY), station_keep,
+helm_state (IVPHELM_STATE), allstop_reason (IVPHELM_ALLSTOP),
+comms_failsafe ("ok" or the failsafe action, e.g. "loiter"), entry_gate
+(open | closed), opr_status, helm_summary.
+See docs/alpha-mission-integration.md for the state derivation rules.
+
+### autonomy (FR-1/FR-3/FR-11) — source: MOOS bridge, 1 Hz snapshot
+Numeric mirrors of the Alpha mission flags so they can be graphed and
+alerted on (0/1 unless noted): deploy, waypoint, returning, stationing,
+pause, armed, comms_lost, entry_gate_open, manual_override,
+survey_complete, awaiting_rearm, helm_drive, allstop (1 only for
+unexpected all-stop reasons; ManualOverride/NothingToDo are benign),
+geofence_breached (0 ok | 1 breach | 2 recovering; decays to 0 after 30 s
+without an OPR_BREACHED post), obstacle_alerts (count, 120 s TTL).
 
 ### autopilot (FR-3) — sources: MOOS bridge, CAN bridge
 desired_heading, actual_heading (deg), desired_speed, actual_speed (kn),
@@ -77,12 +98,13 @@ tag `vessel`.
 
 ### events (FR-1/FR-11)
 Tags: `vessel`, `type` (state_change | waypoint | mission | alarm |
-geofence), `severity` (info | warning | critical), `source`.
+geofence | obstacle), `severity` (info | warning | critical), `source`.
 Fields: message (string), value (1)
 
 ## Conventions
 - Units are display units (kn, deg, °C, %) — conversion from SI happens in
-  the bridges, not in dashboards.
+  the bridges, not in dashboards. The MOOS bridge converts NAV_SPEED /
+  DESIRED_SPEED / PID_SPEED_ERROR from m/s to knots.
 - Booleans are written as 0/1 floats so they can be graphed and alerted on.
 - New sensors: add a measurement or field here first, then extend a bridge
   and regenerate dashboards (`tools/gen_dashboards.py`).

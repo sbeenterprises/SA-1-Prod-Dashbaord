@@ -9,9 +9,9 @@ the vessel (fleet-ready).
 ## Dashboards
 | Dashboard | What you watch |
 |---|---|
-| Mission | Name/ID, state, progress, waypoints, ETA, event timeline |
+| Mission | State, helm, armed/link/geofence/obstacles status row, progress, waypoints, ETA, approach profile, autonomy flags, event timeline |
 | Navigation | Live map + track, GPS quality, SOG/COG/heading, attitude, XTE |
-| Autopilot (MOOS-IvP) | Desired vs actual heading/speed, rudder/throttle, PID errors, active behavior |
+| Autopilot (MOOS-IvP) | Desired vs actual heading/speed, rudder/throttle, PID errors, active behaviors, helm state / all-stop, entry gate, re-arm hold |
 | Vessel Health | Engine (RPM, temps, oil, fuel), electrical (V/A/SOC), power |
 | CAN Bus | Utilization, msgs/s, error/dropped frames, PGN table |
 | Radar | Online status, targets, closest range, CPA/TCPA |
@@ -20,6 +20,25 @@ the vessel (fleet-ready).
 | System Health (OBC) | CPU/RAM/disk/temp, service reachability, systemd services |
 | Mission Replay | Historical playback: set the time range, scrub with crosshair |
 | Alarms | Active alerts + alarm history + at-a-glance status wall |
+
+## Mission states (Mission dashboard)
+Derived onboard from the autonomy stack's own variables:
+
+| State | Meaning |
+|---|---|
+| Autonomous | Survey running (waypt_survey driving) |
+| Paused | Operator pause — boat holds at zero speed |
+| StationKeeping | Holding a station point (operator request or station waypoint) |
+| ReturnToHome | Driving back to the base/return point |
+| EnteringRegion | Mission started outside the region — recovering inside before the survey may run |
+| AwaitingRearm | Operator link is back but the mission is NOT re-armed; the survey stays held until an operator AUTONOMOUS_START/RESUME |
+| CommsLost | Operator-link failsafe in force (action shown in the events table); boat holds at the loss position |
+| Parked | Helm parked (manual override) — thrust actively zeroed |
+| Completed | Survey finished; boat stopped at the final waypoint / parked |
+| Idle | No mission requested |
+
+`AwaitingRearm` and `CommsLost` are the two states that need operator
+action — both also raise alerts.
 
 ## Mission replay
 1. Open **USV / Mission Replay**.
