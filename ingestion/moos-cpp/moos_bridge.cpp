@@ -111,6 +111,7 @@ const std::set<std::string> kSpecialVars = {
     "OPR_BREACHED", "VIEW_SEGLIST", "OBSTACLE_ALERT",
     "DIST_TO_NEXT_WPT", "WPT_INDEX",
     "ACTIVE_BEHAVIOR", "STATION_KEEP_STATUS",
+    "BHV_WARNING", "BHV_ERROR",
 };
 
 // alpha.bhv initializes DIST_TO_NEXT_WPT = 99999 before any behavior posts
@@ -339,6 +340,10 @@ private:
             if (obstacles_.post(id, now))
                 Event("obstacle", "warning",
                       "Obstacle avoidance active: " + id);
+        } else if (key == "BHV_WARNING" && msg.IsString()) {
+            HandleBhvNotice("warning", msg.GetString());
+        } else if (key == "BHV_ERROR" && msg.IsString()) {
+            HandleBhvNotice("critical", msg.GetString());
         } else if (key == "ACTIVE_BEHAVIOR" && msg.IsString()) {
             external_active_behavior_ = true;
             WriteActiveBehavior(msg.GetString());
@@ -433,6 +438,18 @@ private:
             Event("alarm", "critical", "Helm ALLSTOP: " + reason);
         else if (was_bad)
             Event("alarm", "info", "Helm all-stop cleared (" + reason + ")");
+    }
+
+    // Helm behavior diagnostics (BHV_WARNING / BHV_ERROR). The class of
+    // failure the Alpha mission has actually hit — e.g. the compound
+    // condition the IvP parser rejected (MALCONFIG, alpha.bhv §AvdColregs
+    // note) — surfaces here first. pHelmIvP may re-post the same text every
+    // iteration, so only a CHANGED text is event-worthy.
+    void HandleBhvNotice(const char* severity, const std::string& text) {
+        const std::string t = usv::trim(text);
+        if (t.empty() || t == last_bhv_notice_) return;
+        last_bhv_notice_ = t;
+        Event("alarm", severity, "Helm behavior: " + t);
     }
 
     void HandleHelmSummary(const std::string& summary) {
@@ -574,6 +591,7 @@ private:
     std::string helm_state_str_;
     std::string allstop_str_ = "clear";
     std::string last_active_behavior_;
+    std::string last_bhv_notice_;
 
     usv::DecayLatch geofence_{30.0};
     int last_geofence_ = 0;

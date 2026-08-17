@@ -1,7 +1,7 @@
 # Operator User Guide
 
 ## Getting in
-Browse to http://<host>:3000, log in, open folder **USV Monitoring**.
+Browse to http://<host>:3001, log in, open folder **Swift Autonomous Dashboard**. (The vessel's Signal K server owns port 3000; Grafana runs on 3001 — set GRAFANA_PORT in /etc/usv/usv.env to change.)
 All dashboards default to dark theme and a 5 s refresh (change per dashboard
 via the refresh picker, 1–5 s supported). The **Vessel** dropdown selects
 the vessel (fleet-ready).

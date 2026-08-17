@@ -379,7 +379,7 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "LINK TILE_OK",
+                  "text": "LINK OK",
                   "color": "#175d8d",
                   "index": 0
                 },

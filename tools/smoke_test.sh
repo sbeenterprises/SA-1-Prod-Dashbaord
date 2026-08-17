@@ -222,6 +222,8 @@ EOF
     sleep 1
     P OPR_BREACHED=poly 'OBSTACLE_ALERT=name=ob_7#pts={60,60:70,60:70,70},label=ob_7'
     sleep 2
+    P 'BHV_WARNING=Behavior avdcol_: unrecognized condition (MALCONFIG)'
+    sleep 2
   fi
   kill $DB 2>/dev/null; pkill -f moos_bridge 2>/dev/null; stop_stub
 
@@ -246,6 +248,7 @@ EOF
     grep -q "Obstacle avoidance active: ob_7" "$LINES" && ok "obstacle alert event emitted" || bad "obstacle event missing"
     grep -q "Operator link LOST" "$LINES"     && ok "comms-loss failsafe event emitted"     || bad "comms-loss event missing"
     grep -q "Mission re-armed" "$LINES"       && ok "re-arm event emitted"                  || bad "re-arm event missing"
+    grep -q "Helm behavior: " "$LINES"        && ok "BHV_WARNING event emitted"             || bad "BHV_WARNING event missing"
   else
     skip "Alpha scenario replay (moos_poke not built)"
   fi

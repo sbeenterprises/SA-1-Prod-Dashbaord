@@ -65,8 +65,8 @@ sudo nano /etc/usv/usv.env      # set secrets
 sudo deploy/install.sh          # installs everything
 ```
 Then add `Run = grafana_bridge` to your mission file
-(`ingestion/moos-cpp/example.moos`). Grafana: http://\<obc\>:3000,
-folder "USV Monitoring".
+(`ingestion/moos-cpp/example.moos`). Grafana: http://\<obc\>:3001,
+folder "Swift Autonomous Dashboard".
 
 Bench test without the vessel: `sudo systemctl start usv-simulator`.
 

@@ -9,7 +9,7 @@ systemd services.
 - Debian/Ubuntu onboard computer (amd64 or arm64) with internet access for
   the one-time install (apt repos of InfluxData and Grafana).
 - MOOS-IvP built on the machine (for linking `moos_bridge`).
-- Signal K server running (default port 3001).
+- Signal K server running (vessel standard: port 3000 — Grafana therefore runs on 3001).
 - SocketCAN interface up for NMEA 2000:
   `ip link set can0 up type can bitrate 250000` (persist via systemd-networkd
   or /etc/network/interfaces).
@@ -94,7 +94,7 @@ when numeric, strings otherwise).
 | Unit | Role |
 |---|---|
 | influxdb.service | time-series database (localhost:8086) |
-| grafana-server.service | dashboards + alerting (port 3000) |
+| grafana-server.service | dashboards + alerting (port 3001; GRAFANA_PORT in usv.env) |
 | telegraf.service | OBC metrics, ping, service supervision |
 | usv-signalk-bridge.service | Signal K deltas -> Influx |
 | usv-can-bridge.service | CAN/N2K frames -> Influx (CAP_NET_RAW) |
@@ -147,5 +147,5 @@ Administration -> Users.
 | Empty dashboards | `systemctl status usv-*` ; Influx Data Explorer at :8086 |
 | No MOOS data | grafana_bridge in pAntler list? `umm --spy` shows the vars? token/org in ProcessConfig correct? |
 | No CAN data | `candump can0`; `journalctl -u usv-can-bridge -f` |
-| Signal K panel red | Signal K on :3001? URL in /etc/usv/usv.env correct? |
+| Signal K panel red | Signal K on :3000? URL in /etc/usv/usv.env correct? |
 | Alerts not firing | Grafana -> Alerting -> Rules; datasource health |

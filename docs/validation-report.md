@@ -207,3 +207,42 @@ based on the alpha.bhv iWebSocket contract and the stack's existing
 Signal K path map. If UI inspection surfaces different variable names or
 theme hexes, the touch points are kNumericVars/kStringPassthrough in
 moos_bridge.cpp and PALETTE in tools/gen_dashboards.py.
+
+## 8. Addendum: independent re-validation and hardening pass (2026-08-17)
+
+The full stack was re-validated from a clean checkout on a second rig
+(Ubuntu 24.04, g++ 13.3, CMake 3.28, core-MOOS v10 and IXWebSocket built
+from source exactly as the installer does). Everything reproduced:
+79/79 mission-logic assertions, all four C++ builds clean, and the full
+smoke test green. Fixes and changes applied in this pass:
+
+1. **Status-tile label regression fixed.** A theming refactor had leaked
+   the color constant name into four displayed labels: the Mission
+   dashboard's Operator Link tile read "LINK TILE_OK", and the Alarms
+   dashboard's CAN Bus / Comms Link / Operator Link tiles read "TILE_OK",
+   instead of "OK". Fixed in gen_dashboards.py; dashboards regenerated
+   (regeneration confirmed byte-stable for the nine unaffected dashboards,
+   which also proves the checked-in JSON matches the generator).
+2. **Port alignment to the vessel (operator-confirmed): Signal K owns
+   port 3000.** The stack previously assumed Signal K on 3001 and put
+   Grafana on 3000, which would collide on the OBC. Signal K defaults now
+   use 3000 (signalk_bridge.cpp, usv.env.example, Telegraf net_response
+   probe) and Grafana moves to 3001 via a new GRAFANA_PORT setting in
+   /etc/usv/usv.env, applied by install.sh (grafana.ini http_port).
+   All operator URLs in README/docs updated to :3001.
+3. **BHV_WARNING / BHV_ERROR bridged to alarm events.** The helm's
+   behavior diagnostics (the MALCONFIG condition-parse class of failure
+   that the Alpha mission has actually hit) now land in the events bucket
+   as warning/critical alarms, deduplicated on repeated identical posts.
+   Covered by a new smoke-test assertion.
+4. **Grafana folder naming unified** to "Swift Autonomous Dashboard"
+   (README, user guide and installer said 'USV Monitoring' while
+   provisioning created 'Swift Autonomous Dashboard').
+5. **Preview images regenerated** from the updated dashboard JSON
+   (docs/images/dashboard-{dark,light,tablet}.png).
+
+Smoke test after this pass: **41 PASS, 0 FAIL, 1 SKIP** (the one SKIP
+remains the live SocketCAN capture, unavailable in the sandbox; the CAN
+failure-path assertions all pass). InfluxDB/Grafana apt repositories are
+not reachable from this rig, so — as in section 1 — server-side rendering
+on the installed Grafana version remains commissioning steps 4–8.

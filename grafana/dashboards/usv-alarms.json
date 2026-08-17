@@ -319,7 +319,7 @@
                   "index": 0
                 },
                 "1": {
-                  "text": "TILE_OK",
+                  "text": "OK",
                   "color": "#175d8d",
                   "index": 1
                 }
@@ -787,7 +787,7 @@
                   "index": 0
                 },
                 "1": {
-                  "text": "TILE_OK",
+                  "text": "OK",
                   "color": "#175d8d",
                   "index": 1
                 }
@@ -1088,7 +1088,7 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "TILE_OK",
+                  "text": "OK",
                   "color": "#175d8d",
                   "index": 0
                 },

@@ -168,6 +168,10 @@ chown -R grafana:grafana /var/lib/grafana/dashboards
 grafana-cli admin reset-admin-password "$GRAFANA_ADMIN_PASSWORD" \
   --homepath /usr/share/grafana --config /etc/grafana/grafana.ini 2>/dev/null || true
 sed -i 's/^;*default_theme =.*/default_theme = dark/' /etc/grafana/grafana.ini
+# The vessel's Signal K server owns port 3000, so Grafana moves to
+# GRAFANA_PORT (default 3001). Set GRAFANA_PORT in /etc/usv/usv.env to
+# change it; re-run this installer to apply.
+sed -i "s/^;*http_port =.*/http_port = ${GRAFANA_PORT:-3001}/" /etc/grafana/grafana.ini
 
 # Branding: Swiftships logo in the top-left nav + favicon.
 # OSS Grafana has no white-label config, so we overwrite the shipped image
@@ -190,5 +194,5 @@ fi
 systemctl enable --now grafana-server
 systemctl restart grafana-server
 
-say "Done. Grafana: http://$(hostname -I | awk '{print $1}'):3000 (folder 'USV Monitoring')"
+say "Done. Grafana: http://$(hostname -I | awk '{print $1}'):${GRAFANA_PORT:-3001} (folder 'Swift Autonomous Dashboard')"
 say "Reminder: merge ingestion/moos-cpp/example.moos into your mission file."

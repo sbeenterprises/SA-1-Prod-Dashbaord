@@ -19,15 +19,15 @@ mission variable map, derived state machine and design rationale).
  │    MOOSDB ── pHelmIvP ── pMarinePID ── ... ── grafana_bridge─┼─┐
  │                                                              │ │
  │  systemd services                                            │ │
- │    signalk_bridge  ◄── Signal K server (ws :3001)      ──────┼─┤
+ │    signalk_bridge  ◄── Signal K server (ws :3000)      ──────┼─┤
  │    can_bridge      ◄── SocketCAN can0 (NMEA 2000 250k) ──────┼─┤
  │    telegraf        ◄── host metrics, ping, systemd units ────┼─┤
  │                                                              │ ▼
  │    InfluxDB 2.x (:8086)  buckets: telemetry / events /       │
  │                          telemetry_1m (downsampled)          │
- │    Grafana (:3000)       11 dashboards + 15 alert rules      │
+ │    Grafana (:3001)       11 dashboards + 15 alert rules      │
  └──────────────────────────────────────────────────────────────┘
-      Operator access: http://<obc>:3000 (Tailscale recommended)
+      Operator access: http://<obc>:3001 (Tailscale recommended)
 ```
 
 Data path: all writers batch line protocol to InfluxDB over localhost HTTP;
@@ -47,7 +47,7 @@ Confirm before starting; each item is required.
   `tools/gen_dashboards.py --classic` (no plugin needed)
 - [ ] MOOS\-IvP built on the OBC; note the path to `MOOSConfig.cmake`
   (source tree: `~/moos-ivp/build/MOOS/MOOSCore`)
-- [ ] Signal K server running; confirm `ws://localhost:3001/signalk/v1/stream`
+- [ ] Signal K server running; confirm `ws://localhost:3000/signalk/v1/stream`
 - [ ] CAN interface present: `ip link show can0`. Bring up with
   `sudo ip link set can0 up type can bitrate 250000` and persist it
   (systemd\-networkd or /etc/network/interfaces)
@@ -138,7 +138,7 @@ repo to the OBC, re\-run install.sh.
 | 1 | Services up | `systemctl status influxdb grafana-server telegraf usv-signalk-bridge usv-can-bridge` | all `active (running)` |
 | 2 | DB reachable | `influx ping` | `OK` |
 | 3 | Bench data (no vessel) | `sudo systemctl start usv-simulator` | dashboards populate in \~10 s; the scripted Alpha scenario cycles all mission states and fires the geofence/comms alerts once per \~25 min loop (that IS the alert bench test) |
-| 4 | Grafana login | browse `http://<obc>:3000` | folder "Swift Autonomous Dashboard", 11 dashboards; Swiftships logo in the top\-left nav |
+| 4 | Grafana login | browse `http://<obc>:3001` | folder "Swift Autonomous Dashboard", 11 dashboards; Swiftships logo in the top\-left nav |
 | 5 | Tab navigation | open any dashboard; click the link chips across the top | one click switches dashboard; time range and vessel selection carry over |
 | 6 | Theme toggle | click the "☀ Light" / "☾ Dark" chips at the end of the tab row | dashboard re\-opens in that theme, time range kept |
 | 7 | Tablet check | open any dashboard on a tablet (landscape) | grid scales; below \~768 px panels stack single\-column |
@@ -158,9 +158,9 @@ and the grafana\_bridge console output under pAntler.
 
 - `/etc/usv/usv.env` is root\-only (600). The Influx token also sits in your
   mission file's ProcessConfig — keep mission files off public repos.
-- Bind exposure: Grafana (3000) and InfluxDB (8086) listen on all
+- Bind exposure: Grafana (3001) and InfluxDB (8086) listen on all
   interfaces by default. On a Starlink/Tailscale vessel, firewall them to
-  the tailnet: `ufw allow in on tailscale0 to any port 3000` and deny WAN.
+  the tailnet: `ufw allow in on tailscale0 to any port 3001` and deny WAN.
 - Change the Grafana admin password at first login even though the
   installer sets one.
 - The `usv` service user is unprivileged; can\_bridge gets only CAP\_NET\_RAW.
@@ -257,5 +257,5 @@ du -sh /var/lib/influxdb                   # disk growth
 Grafana wall display: append `?kiosk` to any dashboard URL.
 
 ```
-http://<obc>:3000/d/usv-mission?kiosk
+http://<obc>:3001/d/usv-mission?kiosk
 ```

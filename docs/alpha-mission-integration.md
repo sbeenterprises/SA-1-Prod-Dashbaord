@@ -37,6 +37,7 @@ pHelmIvP outputs + the community apps referenced by the behavior comments —
 | `OPR_BREACHED` | `opr24` (BHV_OpRegionV24 flags) | `poly` on boundary breach, `recovering` beyond save_dist |
 | `OPR_STATUS` | opr24 status (forwarded to the UI by iWebSocket) | Geofence status detail |
 | `OBSTACLE_ALERT` | pObstacleMgr | Spawns one `avoid_obstacle_` behavior per charted danger in range |
+| `BHV_WARNING`, `BHV_ERROR` | pHelmIvP behaviors | Behavior diagnostics (e.g. the MALCONFIG condition-parse class of failure) — bridged to `alarm` events on first occurrence |
 | `NAV_*`, `DESIRED_*` | iM/simulation + helm + planchaPID | Navigation / autopilot (already bridged) |
 | `WPT_UPDATE`, `RETURN_UPDATE`, `STATION_UPDATES`, `OPR_UPDATES` | iWebSocket | Behavior update channels (route, return point + speed, station point, region) |
 

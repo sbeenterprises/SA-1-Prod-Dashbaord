@@ -173,7 +173,7 @@ int main() {
     ix::initNetSystem();
 
     const std::string url = usv::env_or(
-        "SIGNALK_URL", "ws://localhost:3001/signalk/v1/stream?subscribe=all");
+        "SIGNALK_URL", "ws://localhost:3000/signalk/v1/stream?subscribe=all");
 
     Bridge bridge;
     ix::WebSocket ws;
