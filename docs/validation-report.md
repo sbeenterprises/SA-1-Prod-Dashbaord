@@ -160,3 +160,43 @@ commissioning.
    desired/actual pairs work without them).
 4. Live CAN capture (vcan skip above) and the radar/camera adapters,
    unchanged from the base delivery.
+
+## 7. Addendum: analog instrument and tile update
+
+A second pass restyled the dashboards (analog instrument cluster + status
+tiles) after the initial validation above. Revalidated end to end on the
+same rig; results unchanged: 40 PASS, 0 FAIL, 1 SKIP, and the two
+structural cross-checks still hold with the new panels included (every
+field queried by the 11 instrument panels is produced by the stack; all
+15 alert rules remain backed by live fields).
+
+What changed and how it was validated:
+
+- 11 analog instrument panels (compass with HDG/COG needles, SOG meter,
+  rudder angle indicator, throttle, heading-error meter, tachometer,
+  coolant, oil pressure, fuel, battery voltage, SOC) generated as
+  volkovlabs-echarts-panel panels. JSON validated; each carries its Flux
+  target, so the smoke test's dashboard-vs-producer check covers them.
+- Instrument band colors are the same semantic thresholds as the alert
+  rules (e.g. fuel red below 15, battery red below 11.8 V), so a needle
+  in a red band and a firing alert can never disagree.
+- Status tiles switched to background color mode (Grafana native); the
+  inactive states use explicit neutral hexes so nothing washes out in
+  either theme.
+- Classic mode verified: `gen_dashboards.py --classic` emits zero
+  plugin-dependent panels (native gauges take the instrument slots) for
+  plugin-free or offline installs.
+- The plugin itself (signed, React-based Business Charts) is installed by
+  deploy/install.sh; on-vessel rendering of the ECharts option code is a
+  commissioning check (browse Vessel Health after step 4) since Grafana
+  was not installed on this rig.
+- Previews of Mission, Navigation, Autopilot and Vessel Health were
+  re-rendered (dark, light, tablet) from the generated JSON and committed
+  under docs/images/.
+
+Note: the Signal K Freeboard UI archive (Swiftships-UI_.tar.gz) had not
+arrived in the workspace by delivery time, so the UI cross-check remains
+based on the alpha.bhv iWebSocket contract and the stack's existing
+Signal K path map. If UI inspection surfaces different variable names or
+theme hexes, the touch points are kNumericVars/kStringPassthrough in
+moos_bridge.cpp and PALETTE in tools/gen_dashboards.py.

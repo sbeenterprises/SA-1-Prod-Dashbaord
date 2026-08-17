@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 81,
+      "id": 82,
       "type": "stat",
       "title": "Radar Status",
       "datasource": {
@@ -137,11 +137,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 82,
+      "id": 83,
       "type": "stat",
       "title": "Tracked Targets",
       "datasource": {
@@ -190,11 +191,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 83,
+      "id": 84,
       "type": "stat",
       "title": "Closest Target",
       "datasource": {
@@ -252,11 +254,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 84,
+      "id": 85,
       "type": "stat",
       "title": "CPA",
       "datasource": {
@@ -314,11 +317,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 85,
+      "id": 86,
       "type": "stat",
       "title": "TCPA",
       "datasource": {
@@ -376,11 +380,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 86,
+      "id": 87,
       "type": "timeseries",
       "title": "Tracked Targets",
       "datasource": {
@@ -447,7 +452,7 @@
       }
     },
     {
-      "id": 87,
+      "id": 88,
       "type": "timeseries",
       "title": "Closest Target / CPA",
       "datasource": {
@@ -529,7 +534,7 @@
       }
     },
     {
-      "id": 88,
+      "id": 89,
       "type": "timeseries",
       "title": "Detection Rate",
       "datasource": {
@@ -599,7 +604,7 @@
       }
     },
     {
-      "id": 89,
+      "id": 90,
       "type": "timeseries",
       "title": "TCPA",
       "datasource": {

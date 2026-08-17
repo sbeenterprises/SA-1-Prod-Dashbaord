@@ -14,6 +14,8 @@ and derives the operational mission state onboard — see
 
 ![Mission dashboard (dark theme)](docs/images/dashboard-dark.png)
 
+![Analog instrument cluster — Vessel Health](docs/images/instruments-dark.png)
+
 <table>
   <tr>
     <td><img src="docs/images/dashboard-light.png" alt="Light theme"/></td>

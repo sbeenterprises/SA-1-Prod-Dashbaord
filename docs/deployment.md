@@ -31,8 +31,25 @@ telegraf, grafana; runs `influx setup` and creates the `events` and
 IXWebSocket once from source, then builds and installs the C++ programs
 `can_bridge`, `signalk_bridge`, `usv_simulator` and `moos_bridge` to
 /usr/local/bin; deploys systemd units under a `usv` service user;
-provisions the Grafana datasource, dashboards and alert rules; enables
-everything at boot.
+installs the Business Charts (Apache ECharts) Grafana plugin for the
+analog instrument panels; provisions the Grafana datasource, dashboards
+and alert rules; enables everything at boot.
+
+## Analog instruments
+The Navigation, Autopilot and Vessel Health dashboards carry an analog
+instrument cluster (compass with HDG/COG needles, speed meter, rudder
+angle indicator with port/starboard convention, throttle, heading-error
+meter, tachometer, coolant, oil pressure, fuel, battery voltage and SOC
+meters). These render through the signed `volkovlabs-echarts-panel`
+plugin, installed by `install.sh` (pin a version via
+`ECHARTS_PANEL_VERSION` in `/etc/usv/usv.env`). The instruments follow
+Grafana's dark/light theme automatically and use the same semantic band
+colors as the rest of the stack.
+
+No internet at install time / plugin-free install: regenerate the
+dashboards without instruments on your workstation
+(`python3 tools/gen_dashboards.py --classic`, native gauges take their
+place), copy the repo over and re-run `install.sh`.
 
 ## MOOS integration (the part you own)
 Merge `ingestion/moos-cpp/example.moos` into your mission file:

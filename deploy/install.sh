@@ -134,6 +134,24 @@ systemctl enable --now usv-signalk-bridge usv-can-bridge
 # usv-simulator.service installed but NOT enabled (bench testing only)
 
 # ---------------------------------------------------------------- grafana
+say "Installing Grafana panel plugins (analog instruments)"
+# Business Charts (Apache ECharts) renders the analog needle gauges,
+# compass and rudder indicator. Signed + React-based (safe on Grafana 11+).
+# Pin a version via ECHARTS_PANEL_VERSION in /etc/usv/usv.env if desired.
+if grafana-cli plugins ls 2>/dev/null | grep -q volkovlabs-echarts-panel; then
+  say "volkovlabs-echarts-panel already installed"
+elif grafana-cli plugins install volkovlabs-echarts-panel \
+       ${ECHARTS_PANEL_VERSION:-} 2>/dev/null; then
+  chown -R grafana:grafana /var/lib/grafana/plugins 2>/dev/null || true
+else
+  echo "WARNING: could not install volkovlabs-echarts-panel (no internet?)."
+  echo "         Analog instrument panels will show 'panel not found'."
+  echo "         Either re-run install.sh with internet, or regenerate"
+  echo "         plugin-free dashboards on your workstation:"
+  echo "           python3 tools/gen_dashboards.py --classic"
+  echo "         and re-run install.sh to provision them."
+fi
+
 say "Provisioning Grafana"
 mkdir -p /var/lib/grafana/dashboards
 cp "$REPO"/grafana/dashboards/*.json /var/lib/grafana/dashboards/

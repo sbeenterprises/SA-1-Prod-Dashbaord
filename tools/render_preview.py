@@ -155,13 +155,14 @@ STATS = {
     "Geofence": ("INSIDE", "GREEN"), "Obstacle Alerts": ("0", "GREEN"),
     "Obstacles": ("0", "GREEN"),
     "Helm All-Stop": ("CLEAR", "GREEN"), "All-Stop Reason": ("CLEAR", "GREEN"),
-    "Survey Entry Gate": ("OPEN", "GREEN"), "Re-Arm Hold": ("—", "TEXT"),
+    "Survey Entry Gate": ("OPEN", "GREEN"), "Re-Arm Hold": ("—", "#3d434b"),
     "Active Behaviors": ("waypt_survey, opr24", "TEXT"),
+    "Station Keeping": ("OFF", "#3d434b"),
     "Latitude": ("29.618452", "GREEN"), "Longitude": ("-91.207310", "GREEN"),
     "SOG": ("4.5 kn", "GREEN"), "COG": ("57°", "GREEN"), "Heading": ("55°", "GREEN"),
     "GPS Fix": ("RTK Fixed", "GREEN"), "Satellites": ("12", "GREEN"),
     "Cross-Track Error": ("2.1 m", "GREEN"),
-    "Active Behavior": ("waypt_survey", "TEXT"), "Station Keeping": ("OFF", "TEXT"),
+    "Active Behavior": ("waypt_survey", "TEXT"),
     "Heading Error": ("1.8°", "GREEN"), "Speed Error": ("0.04 kn", "GREEN"),
     "Rudder Cmd": ("3.2°", "GREEN"), "Throttle Cmd": ("64%", "GREEN"),
     "Engine RPM": ("2547 rpm", "GREEN"), "Coolant Temp": ("85.2 °C", "GREEN"),
@@ -393,6 +394,146 @@ def svg_flags(w, h):
     return "".join(p)
 
 
+# ---------------------------------------------------------------- analog
+def _pol(cx, cy, r, deg):
+    return (cx + r * math.cos(math.radians(deg)),
+            cy - r * math.sin(math.radians(deg)))
+
+
+def _arc(cx, cy, r, a0, a1, color, width):
+    """Clockwise arc (math angles, a0 > a1) as an SVG stroke path."""
+    x0, y0 = _pol(cx, cy, r, a0)
+    x1, y1 = _pol(cx, cy, r, a1)
+    large = 1 if (a0 - a1) > 180 else 0
+    return (f'<path d="M {x0:.1f} {y0:.1f} A {r:.1f} {r:.1f} 0 {large} 1 '
+            f'{x1:.1f} {y1:.1f}" fill="none" stroke="{color}" '
+            f'stroke-width="{width}" stroke-linecap="butt"/>')
+
+
+def _needle(cx, cy, deg, length, color, width=4):
+    x1, y1 = _pol(cx, cy, length, deg)
+    xt, yt = _pol(cx, cy, length * 0.18, deg + 180)
+    return (f'<line x1="{xt:.1f}" y1="{yt:.1f}" x2="{x1:.1f}" y2="{y1:.1f}" '
+            f'stroke="{color}" stroke-width="{width}" '
+            f'stroke-linecap="round"/>')
+
+
+def svg_meter_analog(meta, w, h):
+    """240° needle meter mirroring the ECharts instrument styling."""
+    mn, mx = meta["min"], meta["max"]
+    v = max(mn, min(mx, meta.get("preview", mn)))
+    zones = meta.get("zones") or []
+    unit, dec = meta.get("unit", ""), meta.get("decimals", 0)
+    split = meta.get("split", 6)
+    labels = meta.get("labels")
+    a_start, sweep = 210.0, 240.0
+    ang = lambda x: a_start - sweep * (x - mn) / (mx - mn)
+    cx, cy = w / 2, h * 0.56
+    r = min(w * 0.44, h * 0.42)
+    p = [f'<svg width="{w}" height="{h}">']
+    if zones:
+        prev = mn
+        for hi, colz in zones:
+            p.append(_arc(cx, cy, r, ang(prev), ang(hi), colz, 9))
+            prev = hi
+    else:
+        p.append(_arc(cx, cy, r, a_start, a_start - sweep,
+                      "rgba(204,212,220,0.14)" if BG == "#111217"
+                      else "rgba(36,41,46,0.10)", 9))
+        p.append(_arc(cx, cy, r, a_start, ang(v), TEAL, 9))
+    for i in range(split + 1):
+        val = mn + (mx - mn) * i / split
+        a = ang(val)
+        x0, y0 = _pol(cx, cy, r - 13, a)
+        x1, y1 = _pol(cx, cy, r - 5, a)
+        p.append(f'<line x1="{x0:.1f}" y1="{y0:.1f}" x2="{x1:.1f}" '
+                 f'y2="{y1:.1f}" stroke="{FAINT}" stroke-width="2"/>')
+        lx, ly = _pol(cx, cy, r - 24, a)
+        if labels is not None:
+            lbl = ""
+            for k in (val, int(val), str(int(val)), f"{val:g}"):
+                try:
+                    if k in labels:
+                        lbl = labels[k]
+                        break
+                except TypeError:
+                    pass
+        else:
+            lbl = f"{val:g}"
+        if lbl != "":
+            p.append(f'<text x="{lx:.1f}" y="{ly+3.5:.1f}" fill="{DIM}" '
+                     f'font-size="10" text-anchor="middle">{lbl}</text>')
+    needle_c = "#e8ebee" if BG == "#111217" else "#24292e"
+    p.append(_needle(cx, cy, ang(v), r - 22, needle_c))
+    p.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="6" fill="{TEAL}" '
+             f'stroke="{needle_c}" stroke-width="2"/>')
+    txt = meta.get("value_text") or f"{v:.{dec}f} {unit}"
+    p.append(f'<text x="{cx:.1f}" y="{cy + r*0.52:.1f}" fill="{TEXT}" '
+             f'font-size="16" font-weight="600" '
+             f'text-anchor="middle">{txt}</text>')
+    if meta.get("sub"):
+        p.append(f'<text x="{cx:.1f}" y="{cy + r*0.52 + 15:.1f}" '
+                 f'fill="{FAINT}" font-size="9" letter-spacing="1" '
+                 f'text-anchor="middle">{meta["sub"]}</text>')
+    p.append("</svg>")
+    return "".join(p)
+
+
+def svg_compass(meta, w, h):
+    hdg = meta.get("preview", 0) % 360
+    cog = meta.get("preview2", hdg) % 360
+    cx, cy = w / 2, h * 0.52
+    r = min(w * 0.42, h * 0.40)
+    ang = lambda head: 90.0 - head
+    p = [f'<svg width="{w}" height="{h}">']
+    rail = ("rgba(204,212,220,0.16)" if BG == "#111217"
+            else "rgba(36,41,46,0.12)")
+    p.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.1f}" fill="none" '
+             f'stroke="{rail}" stroke-width="4"/>')
+    for d in range(0, 360, 30):
+        a = ang(d)
+        x0, y0 = _pol(cx, cy, r - 9, a)
+        x1, y1 = _pol(cx, cy, r - 2, a)
+        p.append(f'<line x1="{x0:.1f}" y1="{y0:.1f}" x2="{x1:.1f}" '
+                 f'y2="{y1:.1f}" stroke="{FAINT}" stroke-width="2"/>')
+        lx, ly = _pol(cx, cy, r - 20, a)
+        card = {0: "N", 90: "E", 180: "S", 270: "W"}
+        lbl = card.get(d, str(d))
+        weight = 700 if d in card else 400
+        colr = TEXT if d in card else DIM
+        p.append(f'<text x="{lx:.1f}" y="{ly+3.5:.1f}" fill="{colr}" '
+                 f'font-size="10" font-weight="{weight}" '
+                 f'text-anchor="middle">{lbl}</text>')
+    needle_c = "#e8ebee" if BG == "#111217" else "#24292e"
+    p.append(_needle(cx, cy, ang(cog), r * 0.55, BLUE, 3))
+    p.append(_needle(cx, cy, ang(hdg), r * 0.70, TEAL, 5))
+    p.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="6" fill="{TEAL}" '
+             f'stroke="{needle_c}" stroke-width="2"/>')
+    p.append(f'<text x="{cx:.1f}" y="{cy + r*0.30:.1f}" fill="{TEXT}" '
+             f'font-size="17" font-weight="600" text-anchor="middle">'
+             f'{hdg:.0f}&#176;</text>')
+    p.append(f'<text x="{cx:.1f}" y="{cy + r*0.30 + 13:.1f}" fill="{FAINT}" '
+             f'font-size="9" letter-spacing="1" text-anchor="middle">'
+             f'HDG &#8212; COG {cog:.0f}&#176;</text>')
+    p.append("</svg>")
+    return "".join(p)
+
+
+def svg_rudder(meta, w, h):
+    v = max(-35, min(35, meta.get("preview", 0)))
+    side = "PORT " if v < -0.5 else ("STBD " if v > 0.5 else "")
+    m = dict(meta)
+    m.update({"min": -35, "max": 35,
+              "zones": [(0, "rgba(242,73,92,0.85)"),
+                        (35, "rgba(115,191,105,0.85)")],
+              "unit": "°", "decimals": 0, "split": 7,
+              "labels": {-35: "35", -25: "25", -15: "15", -5: "5",
+                         5: "5", 15: "15", 25: "25", 35: "35"},
+              "sub": "PORT ‹ RUDDER › STBD",
+              "value_text": f"{side}{abs(v):.0f}°"})
+    return svg_meter_analog(m, w, h)
+
+
 def table_html(headers, rows):
     th = "".join(f'<th>{h}</th>' for h in headers)
     trs = ""
@@ -403,6 +544,24 @@ def table_html(headers, rows):
             f'<tbody>{trs}</tbody></table>')
 
 
+def sparkline(w, h, color, seed):
+    r = random.Random(seed)
+    n = 40
+    vals = []
+    v = 0.5
+    for _ in range(n):
+        v = max(0.05, min(0.95, v + r.uniform(-0.09, 0.09)))
+        vals.append(v)
+    pts = " ".join(f"{w*i/(n-1):.1f},{h*(1-v*0.9):.1f}"
+                   for i, v in enumerate(vals))
+    return (f'<svg width="{w}" height="{h}" style="position:absolute;'
+            f'left:0;bottom:0;opacity:0.55">'
+            f'<polygon points="0,{h} {pts} {w},{h}" fill="{color}" '
+            f'opacity="0.25"/>'
+            f'<polyline points="{pts}" fill="none" stroke="{color}" '
+            f'stroke-width="1.5"/></svg>')
+
+
 def render_panel(uid, p):
     x = p["gridPos"]["x"] * COL
     y = p["gridPos"]["y"] * ROW
@@ -411,12 +570,27 @@ def render_panel(uid, p):
     title = p.get("title", "")
     ptype = p["type"]
     iw, ih = int(w) - 16, int(h) - 38
+    pstyle = ""
+    tstyle = ""
     if ptype == "stat":
         val, col = STATS.get(title, ("—", "TEXT"))
         col = C(col)
         fs = 30 if len(str(val)) < 10 else (22 if len(str(val)) < 14 else 17)
-        body = (f'<div class="statv" style="color:{col};font-size:{fs}px">'
-                f'{val}</div>')
+        opts = p.get("options", {})
+        if opts.get("colorMode") == "background":
+            # Solid status tile: colored panel, high-contrast text.
+            txt = "#101214" if col in (C("YELLOW"), "#fade2a") else "#ffffff"
+            pstyle = (f";background:linear-gradient(135deg,{col} 0%,"
+                      f"{col}d9 100%);border-color:transparent")
+            tstyle = f';color:{txt};opacity:0.82'
+            body = (f'<div class="statv" style="color:{txt};'
+                    f'font-size:{fs}px;font-weight:650">{val}</div>')
+        else:
+            spark = (sparkline(int(w) - 4, int(ih * 0.55), col, title)
+                     if opts.get("graphMode") == "area" else "")
+            body = (spark +
+                    f'<div class="statv" style="color:{col};'
+                    f'font-size:{fs}px">{val}</div>')
     elif ptype == "gauge":
         pct, col = GAUGES.get(title, (50, "GREEN"))
         col = C(col)
@@ -425,6 +599,15 @@ def render_panel(uid, p):
         body = svg_line_chart(series_for(uid, title), iw, ih)
     elif ptype == "geomap":
         body = svg_map(iw, ih)
+    elif ptype == "volkovlabs-echarts-panel":
+        meta = p.get("swiftMeta", {})
+        kind = meta.get("kind", "meter")
+        if kind == "compass":
+            body = svg_compass(meta, iw, ih)
+        elif kind == "rudder":
+            body = svg_rudder(meta, iw, ih)
+        else:
+            body = svg_meter_analog(meta, iw, ih)
     elif ptype == "state-timeline":
         body = (svg_flags(iw, ih) if "flags" in title.lower()
                 else svg_timeline(iw, ih))
@@ -448,8 +631,9 @@ def render_panel(uid, p):
     else:
         body = ""
     return (f'<div class="panel" style="left:{x:.0f}px;top:{y:.0f}px;'
-            f'width:{w:.0f}px;height:{h:.0f}px">'
-            f'<div class="ptitle">{title}</div>{body}</div>')
+            f'width:{w:.0f}px;height:{h:.0f}px{pstyle}">'
+            f'<div class="ptitle" style="{tstyle.lstrip(";")}">{title}</div>'
+            f'{body}</div>')
 
 
 def render(uid, theme="dark", width=1600):

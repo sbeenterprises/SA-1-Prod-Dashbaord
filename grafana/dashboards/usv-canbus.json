@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 71,
+      "id": 72,
       "type": "stat",
       "title": "Interface",
       "datasource": {
@@ -137,11 +137,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 72,
+      "id": 73,
       "type": "gauge",
       "title": "Bus Utilization",
       "datasource": {
@@ -201,7 +202,7 @@
       }
     },
     {
-      "id": 73,
+      "id": 74,
       "type": "stat",
       "title": "Messages / s",
       "datasource": {
@@ -249,12 +250,13 @@
           ]
         },
         "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 74,
+      "id": 75,
       "type": "stat",
       "title": "Error Frames (5s)",
       "datasource": {
@@ -311,11 +313,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 75,
+      "id": 76,
       "type": "stat",
       "title": "Dropped Frames",
       "datasource": {
@@ -368,11 +371,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 76,
+      "id": 77,
       "type": "stat",
       "title": "Active PGNs",
       "datasource": {
@@ -421,11 +425,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 77,
+      "id": 78,
       "type": "timeseries",
       "title": "Message Rate",
       "datasource": {
@@ -492,7 +497,7 @@
       }
     },
     {
-      "id": 78,
+      "id": 79,
       "type": "timeseries",
       "title": "Bus Utilization",
       "datasource": {
@@ -562,7 +567,7 @@
       }
     },
     {
-      "id": 79,
+      "id": 80,
       "type": "timeseries",
       "title": "Error / Dropped Frames",
       "datasource": {
@@ -643,7 +648,7 @@
       }
     },
     {
-      "id": 80,
+      "id": 81,
       "type": "table",
       "title": "PGN Frequency (msgs/s)",
       "datasource": {

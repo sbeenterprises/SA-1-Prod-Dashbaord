@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 110,
+      "id": 111,
       "type": "gauge",
       "title": "CPU",
       "datasource": {
@@ -132,7 +132,7 @@
       }
     },
     {
-      "id": 111,
+      "id": 112,
       "type": "gauge",
       "title": "Memory",
       "datasource": {
@@ -192,7 +192,7 @@
       }
     },
     {
-      "id": 112,
+      "id": 113,
       "type": "gauge",
       "title": "Disk",
       "datasource": {
@@ -252,7 +252,7 @@
       }
     },
     {
-      "id": 113,
+      "id": 114,
       "type": "stat",
       "title": "CPU Temp",
       "datasource": {
@@ -310,11 +310,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 114,
+      "id": 115,
       "type": "stat",
       "title": "Signal K Service",
       "datasource": {
@@ -386,11 +387,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 115,
+      "id": 116,
       "type": "stat",
       "title": "MOOS Service",
       "datasource": {
@@ -462,11 +464,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 116,
+      "id": 117,
       "type": "timeseries",
       "title": "CPU Utilization",
       "datasource": {
@@ -560,7 +563,7 @@
       }
     },
     {
-      "id": 117,
+      "id": 118,
       "type": "timeseries",
       "title": "Memory",
       "datasource": {
@@ -630,7 +633,7 @@
       }
     },
     {
-      "id": 118,
+      "id": 119,
       "type": "timeseries",
       "title": "Disk I/O",
       "datasource": {
@@ -722,7 +725,7 @@
       }
     },
     {
-      "id": 119,
+      "id": 120,
       "type": "timeseries",
       "title": "Network I/O",
       "datasource": {
@@ -814,7 +817,7 @@
       }
     },
     {
-      "id": 120,
+      "id": 121,
       "type": "table",
       "title": "Services (systemd)",
       "datasource": {

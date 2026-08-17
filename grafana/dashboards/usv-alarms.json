@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 133,
+      "id": 134,
       "type": "alertlist",
       "title": "Active Alerts",
       "datasource": {
@@ -111,7 +111,7 @@
       }
     },
     {
-      "id": 134,
+      "id": 135,
       "type": "table",
       "title": "Alarm History (events bucket)",
       "datasource": {
@@ -147,7 +147,7 @@
       }
     },
     {
-      "id": 135,
+      "id": 136,
       "type": "stat",
       "title": "Battery SOC",
       "datasource": {
@@ -205,11 +205,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 136,
+      "id": 137,
       "type": "stat",
       "title": "GPS Sats",
       "datasource": {
@@ -266,11 +267,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 137,
+      "id": 138,
       "type": "stat",
       "title": "CAN Bus",
       "datasource": {
@@ -335,11 +337,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 138,
+      "id": 139,
       "type": "stat",
       "title": "Coolant",
       "datasource": {
@@ -397,11 +400,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 139,
+      "id": 140,
       "type": "stat",
       "title": "Fuel",
       "datasource": {
@@ -459,11 +463,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 140,
+      "id": 141,
       "type": "stat",
       "title": "Radar",
       "datasource": {
@@ -528,11 +533,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 141,
+      "id": 142,
       "type": "stat",
       "title": "Camera",
       "datasource": {
@@ -597,11 +603,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 142,
+      "id": 143,
       "type": "stat",
       "title": "Signal K",
       "datasource": {
@@ -666,11 +673,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 143,
+      "id": 144,
       "type": "stat",
       "title": "MOOS Rate",
       "datasource": {
@@ -727,11 +735,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 144,
+      "id": 145,
       "type": "stat",
       "title": "Comms Link",
       "datasource": {
@@ -796,11 +805,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 145,
+      "id": 146,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -858,11 +868,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 146,
+      "id": 147,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -920,11 +931,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 147,
+      "id": 148,
       "type": "stat",
       "title": "Mission State",
       "datasource": {
@@ -967,7 +979,7 @@
               "options": {
                 "Idle": {
                   "text": "Idle",
-                  "color": "text",
+                  "color": "#4d545c",
                   "index": 0
                 },
                 "Autonomous": {
@@ -1007,7 +1019,7 @@
                 },
                 "Parked": {
                   "text": "Parked",
-                  "color": "text",
+                  "color": "#6e7680",
                   "index": 8
                 },
                 "Completed": {
@@ -1029,11 +1041,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 148,
+      "id": 149,
       "type": "stat",
       "title": "Operator Link",
       "datasource": {
@@ -1098,11 +1111,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 149,
+      "id": 150,
       "type": "stat",
       "title": "Mission Armed",
       "datasource": {
@@ -1167,11 +1181,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 150,
+      "id": 151,
       "type": "stat",
       "title": "Geofence",
       "datasource": {
@@ -1241,11 +1256,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 151,
+      "id": 152,
       "type": "stat",
       "title": "Helm All-Stop",
       "datasource": {
@@ -1310,11 +1326,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 152,
+      "id": 153,
       "type": "stat",
       "title": "Obstacles",
       "datasource": {
@@ -1371,7 +1388,8 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     }
   ],

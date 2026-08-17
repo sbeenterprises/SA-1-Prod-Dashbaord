@@ -168,6 +168,98 @@
     },
     {
       "id": 24,
+      "type": "volkovlabs-echarts-panel",
+      "title": "Compass \u2014 HDG / COG",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 0,
+        "w": 5,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"heading\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A",
+          "alias": "HDG"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "B",
+          "alias": "COG"
+        }
+      ],
+      "options": {
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? 'rgba(204,212,220,0.14)' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(204,212,220,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#9da5ad' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#0f9e92',\n  text: dark ? '#ccccdc' : '#24292e',\n  sub: dark ? '#7b7f87' : '#8b949e',\n  accent: '#0f9e92',\n  accent2: '#2f6fd8',\n};\nlet hdg = val('A'); if (hdg === null || isNaN(hdg)) { hdg = 0; }\nlet cog = val('B'); if (cog === null || isNaN(cog)) { cog = hdg; }\nhdg = ((hdg % 360) + 360) % 360;\ncog = ((cog % 360) + 360) % 360;\nconst card = {0: 'N', 90: 'E', 180: 'S', 270: 'W', 360: ''};\nconst base = {\n  type: 'gauge', min: 0, max: 360, startAngle: 90, endAngle: -270,\n  clockwise: true, center: ['50%', '54%'], radius: '86%',\n};\nreturn {\n  series: [Object.assign({}, base, {\n    axisLine: { lineStyle: { width: 4, color: [[1, C.rail]] } },\n    splitNumber: 12,\n    splitLine: { length: 10, distance: -10,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { splitNumber: 3, length: 5, distance: -5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 13, fontSize: 11, fontWeight: 600,\n                 color: C.label,\n                 formatter: (x) => (card[x] !== undefined ? card[x] : x) },\n    pointer: { width: 5, length: '66%', itemStyle: { color: C.accent } },\n    anchor: { show: true, size: 11, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '44%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 18,\n              fontWeight: 600, offsetCenter: [0, '26%'],\n              formatter: (x) => x.toFixed(0) + '\\u00b0' },\n    data: [{ value: hdg, name: 'HDG \\u2014 COG ' + cog.toFixed(0) +\n             '\\u00b0' }],\n  }), Object.assign({}, base, {\n    axisLine: { show: false }, splitLine: { show: false },\n    axisTick: { show: false }, axisLabel: { show: false },\n    pointer: { width: 3, length: '52%',\n               itemStyle: { color: C.accent2, opacity: 0.9 } },\n    anchor: { show: false }, title: { show: false },\n    detail: { show: false },\n    data: [{ value: cog }],\n  })],\n};\n",
+        "renderer": "svg"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "swiftMeta": {
+        "kind": "compass",
+        "preview": 55,
+        "preview2": 57
+      }
+    },
+    {
+      "id": 25,
+      "type": "volkovlabs-echarts-panel",
+      "title": "Speed Over Ground",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 19,
+        "y": 0,
+        "w": 5,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? 'rgba(204,212,220,0.14)' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(204,212,220,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#9da5ad' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#0f9e92',\n  text: dark ? '#ccccdc' : '#24292e',\n  sub: dark ? '#7b7f87' : '#8b949e',\n  accent: '#0f9e92',\n  accent2: '#2f6fd8',\n};\nlet v = val();\nif (v === null || isNaN(v)) { v = 0; }\nv = Math.max(0, Math.min(40, v));\nreturn {\n  series: [{\n    type: 'gauge', min: 0, max: 40,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '58%'], radius: '88%',\n    axisLine: { lineStyle: { width: 9, color: [[1, C.rail]] } }, progress: { show: true, width: 9, itemStyle: { color: C.accent } },\n    splitNumber: 8,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10 },\n    pointer: { width: 4, length: '62%',\n               itemStyle: { color: C.needle } },\n    anchor: { show: true, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '92%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '60%'],\n              formatter: (x) => x.toFixed(1) + ' kn' },\n    data: [{ value: v, name: 'KNOTS' }],\n  }],\n};\n",
+        "renderer": "svg"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "swiftMeta": {
+        "kind": "meter",
+        "min": 0,
+        "max": 40,
+        "unit": "kn",
+        "zones": [],
+        "decimals": 1,
+        "split": 8,
+        "sub": "KNOTS",
+        "preview": 12.8
+      }
+    },
+    {
+      "id": 26,
       "type": "stat",
       "title": "Latitude",
       "datasource": {
@@ -176,7 +268,7 @@
       },
       "gridPos": {
         "x": 14,
-        "y": 0,
+        "y": 6,
         "w": 5,
         "h": 3
       },
@@ -216,11 +308,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 25,
+      "id": 27,
       "type": "stat",
       "title": "Longitude",
       "datasource": {
@@ -229,7 +322,7 @@
       },
       "gridPos": {
         "x": 19,
-        "y": 0,
+        "y": 6,
         "w": 5,
         "h": 3
       },
@@ -269,173 +362,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
-      }
-    },
-    {
-      "id": 26,
-      "type": "stat",
-      "title": "SOG",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 14,
-        "y": 3,
-        "w": 5,
-        "h": 3
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "velocityknot",
-          "decimals": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
-      }
-    },
-    {
-      "id": 27,
-      "type": "stat",
-      "title": "COG",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 19,
-        "y": 3,
-        "w": 5,
-        "h": 3
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "degree",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
       "id": 28,
-      "type": "stat",
-      "title": "Heading",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 14,
-        "y": 6,
-        "w": 5,
-        "h": 3
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"heading\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "degree",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
-      }
-    },
-    {
-      "id": 29,
       "type": "stat",
       "title": "GPS Fix",
       "datasource": {
@@ -443,8 +375,8 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 19,
-        "y": 6,
+        "x": 14,
+        "y": 9,
         "w": 5,
         "h": 3
       },
@@ -471,7 +403,39 @@
                 "value": null
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "RTK Fixed": {
+                  "text": "RTK FIXED",
+                  "color": "green",
+                  "index": 0
+                },
+                "RTK Float": {
+                  "text": "RTK FLOAT",
+                  "color": "yellow",
+                  "index": 1
+                },
+                "3D": {
+                  "text": "3D",
+                  "color": "yellow",
+                  "index": 2
+                },
+                "2D": {
+                  "text": "2D",
+                  "color": "orange",
+                  "index": 3
+                },
+                "None": {
+                  "text": "NO FIX",
+                  "color": "red",
+                  "index": 4
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -483,11 +447,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 30,
+      "id": 29,
       "type": "stat",
       "title": "Satellites",
       "datasource": {
@@ -495,7 +460,7 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 14,
+        "x": 19,
         "y": 9,
         "w": 5,
         "h": 3
@@ -544,73 +509,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 31,
-      "type": "stat",
-      "title": "Cross-Track Error",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 19,
-        "y": 9,
-        "w": 5,
-        "h": 3
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cross_track_error\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "lengthm",
-          "decimals": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 10
-              },
-              {
-                "color": "red",
-                "value": 25
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
-      }
-    },
-    {
-      "id": 32,
+      "id": 30,
       "type": "timeseries",
       "title": "Speed Over Ground",
       "datasource": {
@@ -678,7 +582,7 @@
       }
     },
     {
-      "id": 33,
+      "id": 31,
       "type": "timeseries",
       "title": "Heading / COG",
       "datasource": {
@@ -762,7 +666,7 @@
       }
     },
     {
-      "id": 34,
+      "id": 32,
       "type": "timeseries",
       "title": "Attitude (Roll / Pitch / Yaw)",
       "datasource": {
@@ -844,7 +748,7 @@
       }
     },
     {
-      "id": 35,
+      "id": 33,
       "type": "timeseries",
       "title": "Cross-Track Error",
       "datasource": {
@@ -912,7 +816,7 @@
       }
     },
     {
-      "id": 36,
+      "id": 34,
       "type": "timeseries",
       "title": "Distance to Next Waypoint",
       "datasource": {

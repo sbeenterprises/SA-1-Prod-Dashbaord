@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 100,
+      "id": 101,
       "type": "stat",
       "title": "Internet",
       "datasource": {
@@ -137,11 +137,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 101,
+      "id": 102,
       "type": "stat",
       "title": "Starlink",
       "datasource": {
@@ -206,11 +207,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 102,
+      "id": 103,
       "type": "stat",
       "title": "VPN / Tailscale",
       "datasource": {
@@ -275,11 +277,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 103,
+      "id": 104,
       "type": "stat",
       "title": "Signal K WebSocket",
       "datasource": {
@@ -344,11 +347,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 104,
+      "id": 105,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -405,12 +409,13 @@
           ]
         },
         "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 105,
+      "id": 106,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -467,12 +472,13 @@
           ]
         },
         "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 106,
+      "id": 107,
       "type": "timeseries",
       "title": "Latency",
       "datasource": {
@@ -540,7 +546,7 @@
       }
     },
     {
-      "id": 107,
+      "id": 108,
       "type": "timeseries",
       "title": "Packet Loss",
       "datasource": {
@@ -609,7 +615,7 @@
       }
     },
     {
-      "id": 108,
+      "id": 109,
       "type": "timeseries",
       "title": "Bandwidth",
       "datasource": {
@@ -691,7 +697,7 @@
       }
     },
     {
-      "id": 109,
+      "id": 110,
       "type": "timeseries",
       "title": "Telemetry Message Rates",
       "datasource": {

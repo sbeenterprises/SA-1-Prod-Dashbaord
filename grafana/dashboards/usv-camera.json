@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 90,
+      "id": 91,
       "type": "stat",
       "title": "Connection",
       "datasource": {
@@ -137,11 +137,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 91,
+      "id": 92,
       "type": "stat",
       "title": "Live Stream",
       "datasource": {
@@ -206,11 +207,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 92,
+      "id": 93,
       "type": "stat",
       "title": "Recording",
       "datasource": {
@@ -275,11 +277,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 93,
+      "id": 94,
       "type": "stat",
       "title": "Frame Rate",
       "datasource": {
@@ -337,11 +340,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 94,
+      "id": 95,
       "type": "stat",
       "title": "Bitrate",
       "datasource": {
@@ -391,11 +395,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 95,
+      "id": 96,
       "type": "stat",
       "title": "Camera Temp",
       "datasource": {
@@ -453,11 +458,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 96,
+      "id": 97,
       "type": "timeseries",
       "title": "Frame Rate",
       "datasource": {
@@ -524,7 +530,7 @@
       }
     },
     {
-      "id": 97,
+      "id": 98,
       "type": "timeseries",
       "title": "Bitrate",
       "datasource": {
@@ -592,7 +598,7 @@
       }
     },
     {
-      "id": 98,
+      "id": 99,
       "type": "timeseries",
       "title": "PTZ Position",
       "datasource": {
@@ -674,7 +680,7 @@
       }
     },
     {
-      "id": 99,
+      "id": 100,
       "type": "timeseries",
       "title": "Camera Temperature",
       "datasource": {

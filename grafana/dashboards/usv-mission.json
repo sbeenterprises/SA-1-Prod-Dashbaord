@@ -115,7 +115,7 @@
               "options": {
                 "Idle": {
                   "text": "Idle",
-                  "color": "text",
+                  "color": "#4d545c",
                   "index": 0
                 },
                 "Autonomous": {
@@ -155,7 +155,7 @@
                 },
                 "Parked": {
                   "text": "Parked",
-                  "color": "text",
+                  "color": "#6e7680",
                   "index": 8
                 },
                 "Completed": {
@@ -177,7 +177,8 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
@@ -229,7 +230,7 @@
                 },
                 "PARK": {
                   "text": "PARK",
-                  "color": "text",
+                  "color": "#6e7680",
                   "index": 1
                 },
                 "STANDBY": {
@@ -261,7 +262,8 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
@@ -330,7 +332,8 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
@@ -399,7 +402,8 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
@@ -473,7 +477,8 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
@@ -534,7 +539,8 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
@@ -586,7 +592,8 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
@@ -638,7 +645,8 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
@@ -713,7 +721,8 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
@@ -767,7 +776,8 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
@@ -820,8 +830,9 @@
           ]
         },
         "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
@@ -926,7 +937,8 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
@@ -979,7 +991,8 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
@@ -1040,8 +1053,9 @@
           ]
         },
         "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
@@ -1094,8 +1108,9 @@
           ]
         },
         "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
@@ -1320,7 +1335,7 @@
               "options": {
                 "Idle": {
                   "text": "Idle",
-                  "color": "text",
+                  "color": "#4d545c",
                   "index": 0
                 },
                 "Autonomous": {
@@ -1360,7 +1375,7 @@
                 },
                 "Parked": {
                   "text": "Parked",
-                  "color": "text",
+                  "color": "#6e7680",
                   "index": 8
                 },
                 "Completed": {

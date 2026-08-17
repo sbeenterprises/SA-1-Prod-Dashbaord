@@ -72,9 +72,9 @@
   },
   "panels": [
     {
-      "id": 53,
-      "type": "stat",
-      "title": "Engine RPM",
+      "id": 54,
+      "type": "volkovlabs-echarts-panel",
+      "title": "Tachometer",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -83,7 +83,7 @@
         "x": 0,
         "y": 0,
         "w": 4,
-        "h": 4
+        "h": 6
       },
       "targets": [
         {
@@ -95,48 +95,52 @@
           "refId": "A"
         }
       ],
+      "options": {
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? 'rgba(204,212,220,0.14)' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(204,212,220,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#9da5ad' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#0f9e92',\n  text: dark ? '#ccccdc' : '#24292e',\n  sub: dark ? '#7b7f87' : '#8b949e',\n  accent: '#0f9e92',\n  accent2: '#2f6fd8',\n};\nlet v = val();\nif (v === null || isNaN(v)) { v = 0; }\nv = Math.max(0, Math.min(6000, v));\nreturn {\n  series: [{\n    type: 'gauge', min: 0, max: 6000,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '58%'], radius: '88%',\n    axisLine: { lineStyle: { width: 9, color: [[0.7500, 'rgba(115,191,105,0.90)'], [0.9167, 'rgba(250,222,42,0.90)'], [1.0000, 'rgba(242,73,92,0.92)']] } }, progress: { show: false },\n    splitNumber: 6,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10, formatter: (x) => (x / 1000).toFixed(0) },\n    pointer: { width: 4, length: '62%',\n               itemStyle: { color: C.needle } },\n    anchor: { show: true, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '92%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '60%'],\n              formatter: (x) => x.toFixed(0) + ' rpm' },\n    data: [{ value: v, name: '\u00d71000 RPM' }],\n  }],\n};\n",
+        "renderer": "svg"
+      },
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "rotrpm",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 4500
-              },
-              {
-                "color": "red",
-                "value": 5500
-              }
-            ]
-          }
-        },
+        "defaults": {},
         "overrides": []
       },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
+      "swiftMeta": {
+        "kind": "meter",
+        "min": 0,
+        "max": 6000,
+        "unit": "rpm",
+        "zones": [
+          [
+            4500,
+            "rgba(115,191,105,0.90)"
+          ],
+          [
+            5500,
+            "rgba(250,222,42,0.90)"
+          ],
+          [
+            6000,
+            "rgba(242,73,92,0.92)"
           ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
+        ],
+        "decimals": 0,
+        "split": 6,
+        "sub": "\u00d71000 RPM",
+        "preview": 2547,
+        "labels": {
+          "0": "0",
+          "1000": "1",
+          "2000": "2",
+          "3000": "3",
+          "4000": "4",
+          "5000": "5",
+          "6000": "6"
+        }
       }
     },
     {
-      "id": 54,
-      "type": "stat",
-      "title": "Coolant Temp",
+      "id": 55,
+      "type": "volkovlabs-echarts-panel",
+      "title": "Coolant",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -145,7 +149,7 @@
         "x": 4,
         "y": 0,
         "w": 4,
-        "h": 4
+        "h": 6
       },
       "targets": [
         {
@@ -157,47 +161,42 @@
           "refId": "A"
         }
       ],
+      "options": {
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? 'rgba(204,212,220,0.14)' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(204,212,220,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#9da5ad' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#0f9e92',\n  text: dark ? '#ccccdc' : '#24292e',\n  sub: dark ? '#7b7f87' : '#8b949e',\n  accent: '#0f9e92',\n  accent2: '#2f6fd8',\n};\nlet v = val();\nif (v === null || isNaN(v)) { v = 40; }\nv = Math.max(40, Math.min(120, v));\nreturn {\n  series: [{\n    type: 'gauge', min: 40, max: 120,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '58%'], radius: '88%',\n    axisLine: { lineStyle: { width: 9, color: [[0.6875, 'rgba(115,191,105,0.90)'], [0.8125, 'rgba(250,222,42,0.90)'], [1.0000, 'rgba(242,73,92,0.92)']] } }, progress: { show: false },\n    splitNumber: 4,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10 },\n    pointer: { width: 4, length: '62%',\n               itemStyle: { color: C.needle } },\n    anchor: { show: true, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '92%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '60%'],\n              formatter: (x) => x.toFixed(0) + ' \u00b0C' },\n    data: [{ value: v, name: 'TEMP \u00b0C' }],\n  }],\n};\n",
+        "renderer": "svg"
+      },
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "celsius",
-          "decimals": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 95
-              },
-              {
-                "color": "red",
-                "value": 105
-              }
-            ]
-          }
-        },
+        "defaults": {},
         "overrides": []
       },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
+      "swiftMeta": {
+        "kind": "meter",
+        "min": 40,
+        "max": 120,
+        "unit": "\u00b0C",
+        "zones": [
+          [
+            95,
+            "rgba(115,191,105,0.90)"
+          ],
+          [
+            105,
+            "rgba(250,222,42,0.90)"
+          ],
+          [
+            120,
+            "rgba(242,73,92,0.92)"
           ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
+        ],
+        "decimals": 0,
+        "split": 4,
+        "sub": "TEMP \u00b0C",
+        "preview": 85
       }
     },
     {
-      "id": 55,
-      "type": "stat",
+      "id": 56,
+      "type": "volkovlabs-echarts-panel",
       "title": "Oil Pressure",
       "datasource": {
         "type": "influxdb",
@@ -207,7 +206,7 @@
         "x": 8,
         "y": 0,
         "w": 4,
-        "h": 4
+        "h": 6
       },
       "targets": [
         {
@@ -219,48 +218,47 @@
           "refId": "A"
         }
       ],
+      "options": {
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? 'rgba(204,212,220,0.14)' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(204,212,220,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#9da5ad' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#0f9e92',\n  text: dark ? '#ccccdc' : '#24292e',\n  sub: dark ? '#7b7f87' : '#8b949e',\n  accent: '#0f9e92',\n  accent2: '#2f6fd8',\n};\nlet v = val();\nif (v === null || isNaN(v)) { v = 0; }\nv = Math.max(0, Math.min(600, v));\nreturn {\n  series: [{\n    type: 'gauge', min: 0, max: 600,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '58%'], radius: '88%',\n    axisLine: { lineStyle: { width: 9, color: [[0.2500, 'rgba(242,73,92,0.92)'], [0.4167, 'rgba(250,222,42,0.90)'], [0.8667, 'rgba(115,191,105,0.90)'], [1.0000, 'rgba(250,222,42,0.90)']] } }, progress: { show: false },\n    splitNumber: 6,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10 },\n    pointer: { width: 4, length: '62%',\n               itemStyle: { color: C.needle } },\n    anchor: { show: true, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '92%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '60%'],\n              formatter: (x) => x.toFixed(0) + ' kPa' },\n    data: [{ value: v, name: 'OIL kPa' }],\n  }],\n};\n",
+        "renderer": "svg"
+      },
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "pressurekpa",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 150
-              },
-              {
-                "color": "green",
-                "value": 250
-              }
-            ]
-          }
-        },
+        "defaults": {},
         "overrides": []
       },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
+      "swiftMeta": {
+        "kind": "meter",
+        "min": 0,
+        "max": 600,
+        "unit": "kPa",
+        "zones": [
+          [
+            150,
+            "rgba(242,73,92,0.92)"
+          ],
+          [
+            250,
+            "rgba(250,222,42,0.90)"
+          ],
+          [
+            520,
+            "rgba(115,191,105,0.90)"
+          ],
+          [
+            600,
+            "rgba(250,222,42,0.90)"
           ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
+        ],
+        "decimals": 0,
+        "split": 6,
+        "sub": "OIL kPa",
+        "preview": 402
       }
     },
     {
-      "id": 56,
-      "type": "gauge",
-      "title": "Fuel Level",
+      "id": 57,
+      "type": "volkovlabs-echarts-panel",
+      "title": "Fuel",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -269,7 +267,7 @@
         "x": 12,
         "y": 0,
         "w": 4,
-        "h": 4
+        "h": 6
       },
       "targets": [
         {
@@ -281,46 +279,48 @@
           "refId": "A"
         }
       ],
+      "options": {
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? 'rgba(204,212,220,0.14)' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(204,212,220,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#9da5ad' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#0f9e92',\n  text: dark ? '#ccccdc' : '#24292e',\n  sub: dark ? '#7b7f87' : '#8b949e',\n  accent: '#0f9e92',\n  accent2: '#2f6fd8',\n};\nlet v = val();\nif (v === null || isNaN(v)) { v = 0; }\nv = Math.max(0, Math.min(100, v));\nreturn {\n  series: [{\n    type: 'gauge', min: 0, max: 100,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '58%'], radius: '88%',\n    axisLine: { lineStyle: { width: 9, color: [[0.1500, 'rgba(242,73,92,0.92)'], [0.3000, 'rgba(250,222,42,0.90)'], [1.0000, 'rgba(115,191,105,0.90)']] } }, progress: { show: false },\n    splitNumber: 4,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10, formatter: (x) => (x === 0 ? 'E' : (x === 50 ? '\\u00bd' : (x === 100 ? 'F' : ''))) },\n    pointer: { width: 4, length: '62%',\n               itemStyle: { color: C.needle } },\n    anchor: { show: true, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '92%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '60%'],\n              formatter: (x) => x.toFixed(0) + ' %' },\n    data: [{ value: v, name: 'FUEL' }],\n  }],\n};\n",
+        "renderer": "svg"
+      },
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 15
-              },
-              {
-                "color": "green",
-                "value": 30
-              }
-            ]
-          }
-        },
+        "defaults": {},
         "overrides": []
       },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
+      "swiftMeta": {
+        "kind": "meter",
+        "min": 0,
+        "max": 100,
+        "unit": "%",
+        "zones": [
+          [
+            15,
+            "rgba(242,73,92,0.92)"
+          ],
+          [
+            30,
+            "rgba(250,222,42,0.90)"
+          ],
+          [
+            100,
+            "rgba(115,191,105,0.90)"
           ]
+        ],
+        "decimals": 0,
+        "split": 4,
+        "sub": "FUEL",
+        "preview": 91,
+        "labels": {
+          "0": "E",
+          "50": "\u00bd",
+          "100": "F"
         }
       }
     },
     {
-      "id": 57,
-      "type": "stat",
-      "title": "Fuel Rate",
+      "id": 58,
+      "type": "volkovlabs-echarts-panel",
+      "title": "Battery",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -329,7 +329,125 @@
         "x": 16,
         "y": 0,
         "w": 4,
-        "h": 4
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"electrical\" and (r._field == \"battery_voltage\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? 'rgba(204,212,220,0.14)' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(204,212,220,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#9da5ad' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#0f9e92',\n  text: dark ? '#ccccdc' : '#24292e',\n  sub: dark ? '#7b7f87' : '#8b949e',\n  accent: '#0f9e92',\n  accent2: '#2f6fd8',\n};\nlet v = val();\nif (v === null || isNaN(v)) { v = 10; }\nv = Math.max(10, Math.min(15, v));\nreturn {\n  series: [{\n    type: 'gauge', min: 10, max: 15,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '58%'], radius: '88%',\n    axisLine: { lineStyle: { width: 9, color: [[0.3600, 'rgba(242,73,92,0.92)'], [0.4800, 'rgba(250,222,42,0.90)'], [0.9200, 'rgba(115,191,105,0.90)'], [1.0000, 'rgba(250,222,42,0.90)']] } }, progress: { show: false },\n    splitNumber: 5,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10 },\n    pointer: { width: 4, length: '62%',\n               itemStyle: { color: C.needle } },\n    anchor: { show: true, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '92%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '60%'],\n              formatter: (x) => x.toFixed(2) + ' V' },\n    data: [{ value: v, name: 'VOLTS' }],\n  }],\n};\n",
+        "renderer": "svg"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "swiftMeta": {
+        "kind": "meter",
+        "min": 10,
+        "max": 15,
+        "unit": "V",
+        "zones": [
+          [
+            11.8,
+            "rgba(242,73,92,0.92)"
+          ],
+          [
+            12.4,
+            "rgba(250,222,42,0.90)"
+          ],
+          [
+            14.6,
+            "rgba(115,191,105,0.90)"
+          ],
+          [
+            15,
+            "rgba(250,222,42,0.90)"
+          ]
+        ],
+        "decimals": 2,
+        "split": 5,
+        "sub": "VOLTS",
+        "preview": 12.91
+      }
+    },
+    {
+      "id": 59,
+      "type": "volkovlabs-echarts-panel",
+      "title": "State of Charge",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 0,
+        "w": 4,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"electrical\" and (r._field == \"soc\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? 'rgba(204,212,220,0.14)' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(204,212,220,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#9da5ad' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#0f9e92',\n  text: dark ? '#ccccdc' : '#24292e',\n  sub: dark ? '#7b7f87' : '#8b949e',\n  accent: '#0f9e92',\n  accent2: '#2f6fd8',\n};\nlet v = val();\nif (v === null || isNaN(v)) { v = 0; }\nv = Math.max(0, Math.min(100, v));\nreturn {\n  series: [{\n    type: 'gauge', min: 0, max: 100,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '58%'], radius: '88%',\n    axisLine: { lineStyle: { width: 9, color: [[0.2500, 'rgba(242,73,92,0.92)'], [0.5000, 'rgba(250,222,42,0.90)'], [1.0000, 'rgba(115,191,105,0.90)']] } }, progress: { show: false },\n    splitNumber: 4,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10 },\n    pointer: { width: 4, length: '62%',\n               itemStyle: { color: C.needle } },\n    anchor: { show: true, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '92%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '60%'],\n              formatter: (x) => x.toFixed(0) + ' %' },\n    data: [{ value: v, name: 'BATTERY SOC' }],\n  }],\n};\n",
+        "renderer": "svg"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "swiftMeta": {
+        "kind": "meter",
+        "min": 0,
+        "max": 100,
+        "unit": "%",
+        "zones": [
+          [
+            25,
+            "rgba(242,73,92,0.92)"
+          ],
+          [
+            50,
+            "rgba(250,222,42,0.90)"
+          ],
+          [
+            100,
+            "rgba(115,191,105,0.90)"
+          ]
+        ],
+        "decimals": 0,
+        "split": 4,
+        "sub": "BATTERY SOC",
+        "preview": 87
+      }
+    },
+    {
+      "id": 60,
+      "type": "stat",
+      "title": "Fuel Rate",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 4,
+        "h": 3
       },
       "targets": [
         {
@@ -367,12 +485,13 @@
           ]
         },
         "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 58,
+      "id": 61,
       "type": "stat",
       "title": "Engine Runtime",
       "datasource": {
@@ -380,10 +499,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 20,
-        "y": 0,
+        "x": 4,
+        "y": 6,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -422,11 +541,247 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 59,
+      "id": 62,
+      "type": "stat",
+      "title": "Battery Current",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 6,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"electrical\" and (r._field == \"battery_current\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "amp",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 63,
+      "type": "stat",
+      "title": "Charging Status",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"electrical\" and (r._field == \"charging_status\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "charging": {
+                  "text": "CHARGING",
+                  "color": "green",
+                  "index": 0
+                },
+                "discharging": {
+                  "text": "DISCHARGING",
+                  "color": "yellow",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 64,
+      "type": "stat",
+      "title": "Alternator Voltage",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 6,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"electrical\" and (r._field == \"alternator_voltage\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "volt",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 65,
+      "type": "stat",
+      "title": "Total Power",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 6,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"power\" and (r._field == \"total_power\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "watt",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 66,
       "type": "timeseries",
       "title": "Engine RPM",
       "datasource": {
@@ -435,7 +790,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 4,
+        "y": 9,
         "w": 12,
         "h": 7
       },
@@ -494,7 +849,7 @@
       }
     },
     {
-      "id": 60,
+      "id": 67,
       "type": "timeseries",
       "title": "Coolant Temp / Oil Pressure",
       "datasource": {
@@ -503,7 +858,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 4,
+        "y": 9,
         "w": 12,
         "h": 7
       },
@@ -601,360 +956,7 @@
       }
     },
     {
-      "id": 61,
-      "type": "stat",
-      "title": "Battery Voltage",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 11,
-        "w": 4,
-        "h": 4
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"electrical\" and (r._field == \"battery_voltage\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "volt",
-          "decimals": 2,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 11.8
-              },
-              {
-                "color": "green",
-                "value": 12.4
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
-      }
-    },
-    {
-      "id": 62,
-      "type": "stat",
-      "title": "Battery Current",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 4,
-        "y": 11,
-        "w": 4,
-        "h": 4
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"electrical\" and (r._field == \"battery_current\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "amp",
-          "decimals": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
-      }
-    },
-    {
-      "id": 63,
-      "type": "gauge",
-      "title": "State of Charge",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 8,
-        "y": 11,
-        "w": 4,
-        "h": 4
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"electrical\" and (r._field == \"soc\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 25
-              },
-              {
-                "color": "green",
-                "value": 50
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        }
-      }
-    },
-    {
-      "id": 64,
-      "type": "stat",
-      "title": "Charging Status",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 11,
-        "w": 4,
-        "h": 4
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"electrical\" and (r._field == \"charging_status\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "charging": {
-                  "text": "CHARGING",
-                  "color": "green",
-                  "index": 0
-                },
-                "discharging": {
-                  "text": "DISCHARGING",
-                  "color": "yellow",
-                  "index": 1
-                }
-              }
-            }
-          ]
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "value",
-        "graphMode": "none",
-        "colorMode": "value"
-      }
-    },
-    {
-      "id": 65,
-      "type": "stat",
-      "title": "Alternator Voltage",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 16,
-        "y": 11,
-        "w": 4,
-        "h": 4
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"electrical\" and (r._field == \"alternator_voltage\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "volt",
-          "decimals": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
-      }
-    },
-    {
-      "id": 66,
-      "type": "stat",
-      "title": "Total Power",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 20,
-        "y": 11,
-        "w": 4,
-        "h": 4
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"power\" and (r._field == \"total_power\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "watt",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
-      }
-    },
-    {
-      "id": 67,
+      "id": 68,
       "type": "timeseries",
       "title": "Battery Voltage / Current",
       "datasource": {
@@ -963,7 +965,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 15,
+        "y": 16,
         "w": 12,
         "h": 7
       },
@@ -1062,7 +1064,7 @@
       }
     },
     {
-      "id": 68,
+      "id": 69,
       "type": "timeseries",
       "title": "Power Consumption / System Voltage",
       "datasource": {
@@ -1071,7 +1073,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 15,
+        "y": 16,
         "w": 12,
         "h": 7
       },
@@ -1170,7 +1172,7 @@
       }
     },
     {
-      "id": 69,
+      "id": 70,
       "type": "timeseries",
       "title": "State of Charge",
       "datasource": {
@@ -1179,7 +1181,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 22,
+        "y": 23,
         "w": 12,
         "h": 6
       },
@@ -1240,7 +1242,7 @@
       }
     },
     {
-      "id": 70,
+      "id": 71,
       "type": "timeseries",
       "title": "Fuel Level / Consumption",
       "datasource": {
@@ -1249,7 +1251,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 22,
+        "y": 23,
         "w": 12,
         "h": 6
       },

@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 37,
+      "id": 35,
       "type": "stat",
       "title": "Active Behaviors",
       "datasource": {
@@ -120,11 +120,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 38,
+      "id": 36,
       "type": "stat",
       "title": "Station Keeping",
       "datasource": {
@@ -167,7 +168,7 @@
               "options": {
                 "0": {
                   "text": "OFF",
-                  "color": "text",
+                  "color": "#3d434b",
                   "index": 0
                 },
                 "1": {
@@ -189,11 +190,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 39,
+      "id": 37,
       "type": "stat",
       "title": "Heading Error",
       "datasource": {
@@ -250,12 +252,13 @@
           ]
         },
         "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 40,
+      "id": 38,
       "type": "stat",
       "title": "Speed Error",
       "datasource": {
@@ -312,12 +315,13 @@
           ]
         },
         "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value"
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 41,
+      "id": 39,
       "type": "stat",
       "title": "Rudder Cmd",
       "datasource": {
@@ -367,11 +371,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 42,
+      "id": 40,
       "type": "stat",
       "title": "Throttle Cmd",
       "datasource": {
@@ -421,11 +426,12 @@
         },
         "textMode": "auto",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 43,
+      "id": 41,
       "type": "stat",
       "title": "Helm State",
       "datasource": {
@@ -473,7 +479,7 @@
                 },
                 "PARK": {
                   "text": "PARK",
-                  "color": "text",
+                  "color": "#6e7680",
                   "index": 1
                 },
                 "STANDBY": {
@@ -505,11 +511,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 44,
+      "id": 42,
       "type": "stat",
       "title": "All-Stop Reason",
       "datasource": {
@@ -580,11 +587,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 45,
+      "id": 43,
       "type": "stat",
       "title": "Survey Entry Gate",
       "datasource": {
@@ -649,11 +657,12 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
       }
     },
     {
-      "id": 46,
+      "id": 44,
       "type": "stat",
       "title": "Re-Arm Hold",
       "datasource": {
@@ -696,7 +705,7 @@
               "options": {
                 "0": {
                   "text": "\u2014",
-                  "color": "green",
+                  "color": "#3d434b",
                   "index": 0
                 },
                 "1": {
@@ -718,11 +727,158 @@
         },
         "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "background",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 45,
+      "type": "volkovlabs-echarts-panel",
+      "title": "Rudder Angle",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"rudder_cmd\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? 'rgba(204,212,220,0.14)' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(204,212,220,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#9da5ad' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#0f9e92',\n  text: dark ? '#ccccdc' : '#24292e',\n  sub: dark ? '#7b7f87' : '#8b949e',\n  accent: '#0f9e92',\n  accent2: '#2f6fd8',\n};\nlet v = val(); if (v === null || isNaN(v)) { v = 0; }\nv = Math.max(-35, Math.min(35, v));\nreturn {\n  series: [{\n    type: 'gauge', min: -35, max: 35,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '58%'], radius: '88%',\n    axisLine: { lineStyle: { width: 9, color: [\n      [0.5, 'rgba(242,73,92,0.85)'], [1, 'rgba(115,191,105,0.85)'] ] } },\n    splitNumber: 7,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10,\n                 formatter: (x) => Math.abs(x) },\n    pointer: { width: 4, length: '62%', itemStyle: { color: C.needle } },\n    anchor: { show: true, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '92%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '60%'],\n              formatter: (x) => (x < -0.5 ? 'PORT ' :\n                                 (x > 0.5 ? 'STBD ' : '')) +\n                                Math.abs(x).toFixed(0) + '\\u00b0' },\n    data: [{ value: v, name: 'PORT \\u2039 RUDDER \\u203a STBD' }],\n  }],\n};\n",
+        "renderer": "svg"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "swiftMeta": {
+        "kind": "rudder",
+        "preview": 3
+      }
+    },
+    {
+      "id": 46,
+      "type": "volkovlabs-echarts-panel",
+      "title": "Throttle",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 8,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"throttle_cmd\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? 'rgba(204,212,220,0.14)' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(204,212,220,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#9da5ad' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#0f9e92',\n  text: dark ? '#ccccdc' : '#24292e',\n  sub: dark ? '#7b7f87' : '#8b949e',\n  accent: '#0f9e92',\n  accent2: '#2f6fd8',\n};\nlet v = val();\nif (v === null || isNaN(v)) { v = 0; }\nv = Math.max(0, Math.min(100, v));\nreturn {\n  series: [{\n    type: 'gauge', min: 0, max: 100,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '58%'], radius: '88%',\n    axisLine: { lineStyle: { width: 9, color: [[1, C.rail]] } }, progress: { show: true, width: 9, itemStyle: { color: C.accent } },\n    splitNumber: 5,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10 },\n    pointer: { width: 4, length: '62%',\n               itemStyle: { color: C.needle } },\n    anchor: { show: true, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '92%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '60%'],\n              formatter: (x) => x.toFixed(0) + ' %' },\n    data: [{ value: v, name: 'COMMANDED THRUST' }],\n  }],\n};\n",
+        "renderer": "svg"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "swiftMeta": {
+        "kind": "meter",
+        "min": 0,
+        "max": 100,
+        "unit": "%",
+        "zones": [],
+        "decimals": 0,
+        "split": 5,
+        "sub": "COMMANDED THRUST",
+        "preview": 64
       }
     },
     {
       "id": 47,
+      "type": "volkovlabs-echarts-panel",
+      "title": "Heading Error",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 8,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"heading_error\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? 'rgba(204,212,220,0.14)' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(204,212,220,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#9da5ad' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#0f9e92',\n  text: dark ? '#ccccdc' : '#24292e',\n  sub: dark ? '#7b7f87' : '#8b949e',\n  accent: '#0f9e92',\n  accent2: '#2f6fd8',\n};\nlet v = val();\nif (v === null || isNaN(v)) { v = -45; }\nv = Math.max(-45, Math.min(45, v));\nreturn {\n  series: [{\n    type: 'gauge', min: -45, max: 45,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '58%'], radius: '88%',\n    axisLine: { lineStyle: { width: 9, color: [[0.2222, 'rgba(242,73,92,0.92)'], [0.4111, 'rgba(250,222,42,0.90)'], [0.5889, 'rgba(115,191,105,0.90)'], [0.7778, 'rgba(250,222,42,0.90)'], [1.0000, 'rgba(242,73,92,0.92)']] } }, progress: { show: false },\n    splitNumber: 6,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10 },\n    pointer: { width: 4, length: '62%',\n               itemStyle: { color: C.needle } },\n    anchor: { show: true, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '92%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '60%'],\n              formatter: (x) => x.toFixed(1) + ' \u00b0' },\n    data: [{ value: v, name: 'OFF COURSE' }],\n  }],\n};\n",
+        "renderer": "svg"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "swiftMeta": {
+        "kind": "meter",
+        "min": -45,
+        "max": 45,
+        "unit": "\u00b0",
+        "zones": [
+          [
+            -25,
+            "rgba(242,73,92,0.92)"
+          ],
+          [
+            -8,
+            "rgba(250,222,42,0.90)"
+          ],
+          [
+            8,
+            "rgba(115,191,105,0.90)"
+          ],
+          [
+            25,
+            "rgba(250,222,42,0.90)"
+          ],
+          [
+            45,
+            "rgba(242,73,92,0.92)"
+          ]
+        ],
+        "decimals": 1,
+        "split": 6,
+        "sub": "OFF COURSE",
+        "preview": 1.8
+      }
+    },
+    {
+      "id": 48,
       "type": "timeseries",
       "title": "Desired vs Actual Heading",
       "datasource": {
@@ -731,7 +887,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 8,
+        "y": 15,
         "w": 12,
         "h": 8
       },
@@ -806,7 +962,7 @@
       }
     },
     {
-      "id": 48,
+      "id": 49,
       "type": "timeseries",
       "title": "Desired vs Actual Speed",
       "datasource": {
@@ -815,7 +971,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 8,
+        "y": 15,
         "w": 12,
         "h": 8
       },
@@ -888,7 +1044,7 @@
       }
     },
     {
-      "id": 49,
+      "id": 50,
       "type": "timeseries",
       "title": "Rudder Output",
       "datasource": {
@@ -897,7 +1053,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 16,
+        "y": 23,
         "w": 8,
         "h": 7
       },
@@ -958,7 +1114,7 @@
       }
     },
     {
-      "id": 50,
+      "id": 51,
       "type": "timeseries",
       "title": "Throttle Output",
       "datasource": {
@@ -967,7 +1123,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 16,
+        "y": 23,
         "w": 8,
         "h": 7
       },
@@ -1028,7 +1184,7 @@
       }
     },
     {
-      "id": 51,
+      "id": 52,
       "type": "timeseries",
       "title": "PID Error Trends",
       "datasource": {
@@ -1037,7 +1193,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 16,
+        "y": 23,
         "w": 8,
         "h": 7
       },
@@ -1109,7 +1265,7 @@
       }
     },
     {
-      "id": 52,
+      "id": 53,
       "type": "timeseries",
       "title": "PID Controller Outputs",
       "datasource": {
@@ -1118,7 +1274,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 23,
+        "y": 30,
         "w": 24,
         "h": 6
       },

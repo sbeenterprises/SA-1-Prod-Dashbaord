@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 121,
+      "id": 122,
       "type": "text",
       "title": "How to replay",
       "datasource": {
@@ -100,7 +100,7 @@
       }
     },
     {
-      "id": 122,
+      "id": 123,
       "type": "geomap",
       "title": "GPS Track",
       "datasource": {
@@ -161,7 +161,7 @@
       }
     },
     {
-      "id": 123,
+      "id": 124,
       "type": "state-timeline",
       "title": "Mission State",
       "datasource": {
@@ -195,7 +195,7 @@
               "options": {
                 "Idle": {
                   "text": "Idle",
-                  "color": "text",
+                  "color": "#4d545c",
                   "index": 0
                 },
                 "Autonomous": {
@@ -235,7 +235,7 @@
                 },
                 "Parked": {
                   "text": "Parked",
-                  "color": "text",
+                  "color": "#6e7680",
                   "index": 8
                 },
                 "Completed": {
@@ -258,7 +258,7 @@
       }
     },
     {
-      "id": 124,
+      "id": 125,
       "type": "table",
       "title": "Mission Events",
       "datasource": {
@@ -294,7 +294,7 @@
       }
     },
     {
-      "id": 125,
+      "id": 126,
       "type": "timeseries",
       "title": "Heading History",
       "datasource": {
@@ -364,7 +364,7 @@
       }
     },
     {
-      "id": 126,
+      "id": 127,
       "type": "timeseries",
       "title": "Speed History",
       "datasource": {
@@ -432,7 +432,7 @@
       }
     },
     {
-      "id": 127,
+      "id": 128,
       "type": "timeseries",
       "title": "Rudder Commands",
       "datasource": {
@@ -500,7 +500,7 @@
       }
     },
     {
-      "id": 128,
+      "id": 129,
       "type": "timeseries",
       "title": "Throttle Commands",
       "datasource": {
@@ -568,7 +568,7 @@
       }
     },
     {
-      "id": 129,
+      "id": 130,
       "type": "timeseries",
       "title": "CAN Bus Activity",
       "datasource": {
@@ -635,7 +635,7 @@
       }
     },
     {
-      "id": 130,
+      "id": 131,
       "type": "timeseries",
       "title": "Cross-Track Error",
       "datasource": {
@@ -703,7 +703,7 @@
       }
     },
     {
-      "id": 131,
+      "id": 132,
       "type": "state-timeline",
       "title": "Autonomy Flags",
       "datasource": {
@@ -766,7 +766,7 @@
       }
     },
     {
-      "id": 132,
+      "id": 133,
       "type": "timeseries",
       "title": "Distance to Next Waypoint",
       "datasource": {

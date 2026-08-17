@@ -9,10 +9,10 @@ the vessel (fleet-ready).
 ## Dashboards
 | Dashboard | What you watch |
 |---|---|
-| Mission | State, helm, armed/link/geofence/obstacles status row, progress, waypoints, ETA, approach profile, autonomy flags, event timeline |
-| Navigation | Live map + track, GPS quality, SOG/COG/heading, attitude, XTE |
-| Autopilot (MOOS-IvP) | Desired vs actual heading/speed, rudder/throttle, PID errors, active behaviors, helm state / all-stop, entry gate, re-arm hold |
-| Vessel Health | Engine (RPM, temps, oil, fuel), electrical (V/A/SOC), power |
+| Mission | State, helm, armed/link/geofence/obstacles status wall, progress, waypoints, ETA, approach profile, autonomy flags, event timeline |
+| Navigation | Live map + track, compass (HDG/COG needles), analog speed meter, GPS quality, attitude, XTE |
+| Autopilot (MOOS-IvP) | Rudder angle indicator (PORT/STBD), throttle and heading-error meters, desired vs actual, PID errors, active behaviors, helm state / all-stop, entry gate, re-arm hold |
+| Vessel Health | Analog instrument cluster: tachometer, coolant, oil pressure, fuel, battery volts, SOC; electrical and power trends |
 | CAN Bus | Utilization, msgs/s, error/dropped frames, PGN table |
 | Radar | Online status, targets, closest range, CPA/TCPA |
 | Cameras | Connection, stream, FPS, bitrate, recording, PTZ |
@@ -20,6 +20,15 @@ the vessel (fleet-ready).
 | System Health (OBC) | CPU/RAM/disk/temp, service reachability, systemd services |
 | Mission Replay | Historical playback: set the time range, scrub with crosshair |
 | Alarms | Active alerts + alarm history + at-a-glance status wall |
+
+## Instruments
+Navigation, Autopilot and Vessel Health carry analog instruments styled
+like a marine helm cluster: the compass shows the heading needle (teal)
+with a thinner COG needle (blue); the rudder indicator follows marine
+convention (red to port, green to starboard); machinery meters carry
+semantic bands (green normal, yellow caution, red alarm) that match the
+alert thresholds exactly. Every needle instrument also shows a digital
+readout, and all instruments follow the dark/light theme toggle.
 
 ## Mission states (Mission dashboard)
 Derived onboard from the autonomy stack's own variables:

@@ -41,8 +41,10 @@ Grafana reads via Flux. Everything auto\-reconnects and restarts
 Confirm before starting; each item is required.
 
 - [ ] OBC runs Debian 12 / Ubuntu 22.04\+ (amd64 or arm64), root access
-- [ ] Internet available dockside (apt repos \+ one GitHub clone). The
-  vessel does NOT need internet after install
+- [ ] Internet available dockside (apt repos \+ one GitHub clone \+ one
+  Grafana plugin download for the analog instruments). The vessel does
+  NOT need internet after install. Offline install: regenerate with
+  `tools/gen_dashboards.py --classic` (no plugin needed)
 - [ ] MOOS\-IvP built on the OBC; note the path to `MOOSConfig.cmake`
   (source tree: `~/moos-ivp/build/MOOS/MOOSCore`)
 - [ ] Signal K server running; confirm `ws://localhost:3001/signalk/v1/stream`
@@ -119,6 +121,8 @@ installer re\-applies the Swiftships branding).
 | Alert thresholds | `tools/gen_alerts.py` → regenerate → re\-run install.sh |
 | Alert email recipients | `grafana/provisioning/alerting/contact-points.yml` |
 | Series colors / panels / tabs | `tools/gen_dashboards.py` → regenerate |
+| Analog instruments on/off | `tools/gen_dashboards.py` (default) vs `--classic` (plugin\-free) |
+| Instruments plugin version pin | `ECHARTS_PANEL_VERSION` in `/etc/usv/usv.env` |
 | Swiftships logo | `deploy/branding/swiftships_logo.svg` → re\-run install.sh |
 | Workspace (folder) name | `grafana/provisioning/dashboards/dashboards.yml` |
 | Telegraf inputs | `telegraf/telegraf.conf` (template; installer fills tokens) |
@@ -208,7 +212,15 @@ and the grafana\_bridge console output under pAntler.
     light / dark / system) — e.g. dark for night ops accounts, light for
     a daylight tablet account. The series palette is validated for both
     themes.
-13. **Responsive behavior is Grafana\-native.** PC and tablet\-landscape
+13. **Analog instruments need the Business Charts plugin.** The compass,
+    speed, rudder, throttle, heading\-error and machinery meters render
+    through `volkovlabs-echarts-panel` (signed, React\-based, safe on
+    Grafana 11\+; Angular gauge plugins were deliberately avoided). The
+    installer installs it once; plugins live in
+    `/var/lib/grafana/plugins` and survive `apt upgrade grafana`. Without
+    the plugin those panels show "panel not found" — regenerate with
+    `--classic` for a plugin\-free install.
+14. **Responsive behavior is Grafana\-native.** PC and tablet\-landscape
     render the full 24\-column grid scaled to width; below \~768 px
     (tablet portrait / phone) panels stack in one column in dashboard
     order. No configuration needed; there are no separate mobile
