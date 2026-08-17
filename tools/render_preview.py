@@ -25,15 +25,15 @@ THEMES = {
                  TEXT="#ccccdc", DIM="#9da0a8", FAINT="#7b7f87",
                  GRID="#212327", GREEN="#73bf69", YELLOW="#fade2a",
                  RED="#f2495c", WATER="#0d1720", LAND="#1c2a20",
-                 MAPGRID="#16202a"),
+                 MAPGRID="#16202a", OK="#2e7fb4"),
     "light": dict(BG="#f4f5f6", PANEL="#ffffff", BORDER="#d5d9de",
                   TEXT="#24292e", DIM="#57606a", FAINT="#8b949e",
                   GRID="#e8eaed", GREEN="#1f8a3b", YELLOW="#b58b00",
                   RED="#c62f42", WATER="#dbe9f2", LAND="#dde9d5",
-                  MAPGRID="#c9d6df"),
+                  MAPGRID="#c9d6df", OK="#1e6692"),
 }
 # Applied per render() call:
-BG = PANEL = BORDER = TEXT = DIM = FAINT = GRID = GREEN = YELLOW = RED = ""
+BG = PANEL = BORDER = TEXT = DIM = FAINT = GRID = GREEN = YELLOW = RED = OK = ""
 WATER = LAND = MAPGRID = ""
 # Series palette: validated for both light and dark surfaces
 TEAL, BLUE, AMBER, PURPLE = "#0f9e92", "#2f6fd8", "#c47b06", "#9256b8"
@@ -145,46 +145,46 @@ def series_for(uid, title):
 
 STATS = {
     "Mission Name": ("ALPHA-SURVEY", "TEXT"), "Mission ID": ("M-2026-042", "TEXT"),
-    "Mission State": ("Autonomous", "GREEN"), "Elapsed Time": ("47.2 min", "GREEN"),
-    "ETA to Waypoint": ("5.9 min", "GREEN"), "Current Waypoint": ("4", "GREEN"),
-    "Waypoints Total": ("5", "GREEN"), "Distance to Waypoint": ("812 m", "GREEN"),
-    "Distance to Next Waypoint": ("812 m", "GREEN"),
-    "Distance Traveled": ("8.42 km", "GREEN"),
-    "Helm": ("DRIVE", "GREEN"), "Helm State": ("DRIVE", "GREEN"),
-    "Mission Armed": ("ARMED", "GREEN"), "Operator Link": ("LINK OK", "GREEN"),
-    "Geofence": ("INSIDE", "GREEN"), "Obstacle Alerts": ("0", "GREEN"),
-    "Obstacles": ("0", "GREEN"),
-    "Helm All-Stop": ("CLEAR", "GREEN"), "All-Stop Reason": ("CLEAR", "GREEN"),
-    "Survey Entry Gate": ("OPEN", "GREEN"), "Re-Arm Hold": ("—", "#3d434b"),
+    "Mission State": ("Autonomous", "OK"), "Elapsed Time": ("47.2 min", "OK"),
+    "ETA to Waypoint": ("5.9 min", "OK"), "Current Waypoint": ("4", "OK"),
+    "Waypoints Total": ("5", "OK"), "Distance to Waypoint": ("812 m", "OK"),
+    "Distance to Next Waypoint": ("812 m", "OK"),
+    "Distance Traveled": ("8.42 km", "OK"),
+    "Helm": ("DRIVE", "OK"), "Helm State": ("DRIVE", "OK"),
+    "Mission Armed": ("ARMED", "OK"), "Operator Link": ("LINK OK", "OK"),
+    "Geofence": ("INSIDE", "OK"), "Obstacle Alerts": ("0", "OK"),
+    "Obstacles": ("0", "OK"),
+    "Helm All-Stop": ("CLEAR", "OK"), "All-Stop Reason": ("CLEAR", "OK"),
+    "Survey Entry Gate": ("OPEN", "OK"), "Re-Arm Hold": ("—", "#3d434b"),
     "Active Behaviors": ("waypt_survey, opr24", "TEXT"),
     "Station Keeping": ("OFF", "#3d434b"),
-    "Latitude": ("29.618452", "GREEN"), "Longitude": ("-91.207310", "GREEN"),
-    "SOG": ("4.5 kn", "GREEN"), "COG": ("57°", "GREEN"), "Heading": ("55°", "GREEN"),
-    "GPS Fix": ("RTK Fixed", "GREEN"), "Satellites": ("12", "GREEN"),
-    "Cross-Track Error": ("2.1 m", "GREEN"),
+    "Latitude": ("29.618452", "OK"), "Longitude": ("-91.207310", "OK"),
+    "SOG": ("4.5 kn", "OK"), "COG": ("57°", "OK"), "Heading": ("55°", "OK"),
+    "GPS Fix": ("RTK Fixed", "OK"), "Satellites": ("12", "OK"),
+    "Cross-Track Error": ("2.1 m", "OK"),
     "Active Behavior": ("waypt_survey", "TEXT"),
-    "Heading Error": ("1.8°", "GREEN"), "Speed Error": ("0.04 kn", "GREEN"),
-    "Rudder Cmd": ("3.2°", "GREEN"), "Throttle Cmd": ("64%", "GREEN"),
-    "Engine RPM": ("2547 rpm", "GREEN"), "Coolant Temp": ("85.2 °C", "GREEN"),
-    "Oil Pressure": ("402 kPa", "GREEN"), "Fuel Rate": ("14.4 L/h", "GREEN"),
-    "Engine Runtime": ("512.6 h", "GREEN"),
-    "Battery Voltage": ("12.91 V", "GREEN"), "Battery Current": ("5.2 A", "GREEN"),
-    "Charging Status": ("CHARGING", "GREEN"), "Alternator Voltage": ("14.2 V", "GREEN"),
-    "Total Power": ("243 W", "GREEN"),
-    "Interface": ("UP", "GREEN"), "Messages / s": ("382", "GREEN"),
-    "Error Frames (5s)": ("0", "GREEN"), "Dropped Frames": ("0", "GREEN"),
-    "Active PGNs": ("27", "GREEN"),
-    "Radar Status": ("ONLINE", "GREEN"), "Tracked Targets": ("3", "GREEN"),
-    "Closest Target": ("1240 m", "GREEN"), "CPA": ("980 m", "GREEN"),
-    "TCPA": ("410 s", "GREEN"),
-    "Internet": ("ONLINE", "GREEN"), "Starlink": ("ONLINE", "GREEN"),
-    "VPN / Tailscale": ("ONLINE", "GREEN"), "Signal K WebSocket": ("ONLINE", "GREEN"),
-    "Latency": ("46 ms", "GREEN"), "Packet Loss": ("0.3%", "GREEN"),
+    "Heading Error": ("1.8°", "OK"), "Speed Error": ("0.04 kn", "OK"),
+    "Rudder Cmd": ("3.2°", "OK"), "Throttle Cmd": ("64%", "OK"),
+    "Engine RPM": ("2547 rpm", "OK"), "Coolant Temp": ("85.2 °C", "OK"),
+    "Oil Pressure": ("402 kPa", "OK"), "Fuel Rate": ("14.4 L/h", "OK"),
+    "Engine Runtime": ("512.6 h", "OK"),
+    "Battery Voltage": ("12.91 V", "OK"), "Battery Current": ("5.2 A", "OK"),
+    "Charging Status": ("CHARGING", "OK"), "Alternator Voltage": ("14.2 V", "OK"),
+    "Total Power": ("243 W", "OK"),
+    "Interface": ("UP", "OK"), "Messages / s": ("382", "OK"),
+    "Error Frames (5s)": ("0", "OK"), "Dropped Frames": ("0", "OK"),
+    "Active PGNs": ("27", "OK"),
+    "Radar Status": ("ONLINE", "OK"), "Tracked Targets": ("3", "OK"),
+    "Closest Target": ("1240 m", "OK"), "CPA": ("980 m", "OK"),
+    "TCPA": ("410 s", "OK"),
+    "Internet": ("ONLINE", "OK"), "Starlink": ("ONLINE", "OK"),
+    "VPN / Tailscale": ("ONLINE", "OK"), "Signal K WebSocket": ("ONLINE", "OK"),
+    "Latency": ("46 ms", "OK"), "Packet Loss": ("0.3%", "OK"),
 }
 GAUGES = {
-    "Mission Progress": (62, TEAL), "Fuel Level": (91, "GREEN"),
-    "State of Charge": (87, "GREEN"), "Bus Utilization": (34, "GREEN"),
-    "CPU": (23, "GREEN"), "Memory": (41, "GREEN"), "Disk": (37, "GREEN"),
+    "Mission Progress": (62, TEAL), "Fuel Level": (91, "OK"),
+    "State of Charge": (87, "OK"), "Bus Utilization": (34, "OK"),
+    "CPU": (23, "OK"), "Memory": (41, "OK"), "Disk": (37, "OK"),
 }
 EVENTS = [
     ("14:29:44", "Mission state: Autonomous", "state_change", "info"),
@@ -205,6 +205,9 @@ EVENTS = [
      "info"),
     ("13:45:02", "Survey started (5 waypoints)", "mission", "info"),
 ]
+
+
+_grad_id = [0]
 
 
 def svg_line_chart(series, w, h, unit=""):
@@ -244,10 +247,18 @@ def svg_line_chart(series, w, h, unit=""):
         path = " ".join(pts)
         first_x, last_x = pad_l, pad_l + cw
         base_y = pad_t + ch
+        _grad_id[0] += 1
+        gid = f"ag{_grad_id[0]}"
+        parts.append(
+            f'<defs><linearGradient id="{gid}" x1="0" y1="0" x2="0" y2="1">'
+            f'<stop offset="0%" stop-color="{color}" stop-opacity="0.34"/>'
+            f'<stop offset="100%" stop-color="{color}" stop-opacity="0.02"/>'
+            f'</linearGradient></defs>')
         parts.append(f'<polygon points="{first_x},{base_y} {path} '
-                     f'{last_x},{base_y}" fill="{color}" opacity="0.08"/>')
+                     f'{last_x},{base_y}" fill="url(#{gid})"/>')
         parts.append(f'<polyline points="{path}" fill="none" '
-                     f'stroke="{color}" stroke-width="2"/>')
+                     f'stroke="{color}" stroke-width="2" '
+                     f'stroke-linejoin="round"/>')
     lx = pad_l
     for si, (name, _) in enumerate(series):
         color = SERIES[si % len(SERIES)]
@@ -330,13 +341,13 @@ def svg_timeline(w, h):
     # return-to-base, completed.
     segs = [("Parked", 0.035, "#5a5d63"),
             ("EnteringRegion", 0.05, "#6ed0e0"),
-            ("Autonomous", 0.185, "GREEN"),
+            ("Autonomous", 0.185, "OK"),
             ("Paused", 0.06, "YELLOW"),
-            ("Autonomous", 0.06, "GREEN"),
-            ("StationKeeping", 0.075, BLUE),
+            ("Autonomous", 0.06, "OK"),
+            ("StationKeeping", 0.075, TEAL),
             ("CommsLost", 0.06, "RED"),
             ("AwaitingRearm", 0.06, AMBER),
-            ("Autonomous", 0.26, "GREEN"),
+            ("Autonomous", 0.26, "OK"),
             ("ReturnToHome", 0.09, AMBER),
             ("Completed", 0.065, PURPLE)]
     p = [f'<svg width="{w}" height="{h}">']
@@ -415,7 +426,8 @@ def _needle(cx, cy, deg, length, color, width=4):
     xt, yt = _pol(cx, cy, length * 0.18, deg + 180)
     return (f'<line x1="{xt:.1f}" y1="{yt:.1f}" x2="{x1:.1f}" y2="{y1:.1f}" '
             f'stroke="{color}" stroke-width="{width}" '
-            f'stroke-linecap="round"/>')
+            f'stroke-linecap="round" '
+            f'filter="drop-shadow(0 2px 3px rgba(0,0,0,0.45))"/>')
 
 
 def svg_meter_analog(meta, w, h):
@@ -440,7 +452,14 @@ def svg_meter_analog(meta, w, h):
         p.append(_arc(cx, cy, r, a_start, a_start - sweep,
                       "rgba(204,212,220,0.14)" if BG == "#111217"
                       else "rgba(36,41,46,0.10)", 9))
-        p.append(_arc(cx, cy, r, a_start, ang(v), TEAL, 9))
+        _grad_id[0] += 1
+        gid = f"mg{_grad_id[0]}"
+        p.append(f'<defs><linearGradient id="{gid}" x1="0" y1="0" '
+                 f'x2="1" y2="0">'
+                 f'<stop offset="0%" stop-color="#0f9e92"/>'
+                 f'<stop offset="100%" stop-color="#2e7fb4"/>'
+                 f'</linearGradient></defs>')
+        p.append(_arc(cx, cy, r, a_start, ang(v), f"url(#{gid})", 9))
     for i in range(split + 1):
         val = mn + (mx - mn) * i / split
         a = ang(val)
@@ -580,8 +599,11 @@ def render_panel(uid, p):
         if opts.get("colorMode") == "background":
             # Solid status tile: colored panel, high-contrast text.
             txt = "#101214" if col in (C("YELLOW"), "#fade2a") else "#ffffff"
-            pstyle = (f";background:linear-gradient(135deg,{col} 0%,"
-                      f"{col}d9 100%);border-color:transparent")
+            pstyle = (f";background:linear-gradient(160deg,{col} 0%,"
+                      f"{col}e6 55%,{col}c4 100%);"
+                      f"border-color:transparent;"
+                      f"box-shadow:inset 0 1px 0 rgba(255,255,255,0.22),"
+                      f"0 4px 14px rgba(0,0,0,0.30)")
             tstyle = f';color:{txt};opacity:0.82'
             body = (f'<div class="statv" style="color:{txt};'
                     f'font-size:{fs}px;font-weight:650">{val}</div>')
@@ -592,7 +614,7 @@ def render_panel(uid, p):
                     f'<div class="statv" style="color:{col};'
                     f'font-size:{fs}px">{val}</div>')
     elif ptype == "gauge":
-        pct, col = GAUGES.get(title, (50, "GREEN"))
+        pct, col = GAUGES.get(title, (50, "OK"))
         col = C(col)
         body = svg_gauge(pct, col, iw, ih)
     elif ptype == "timeseries":

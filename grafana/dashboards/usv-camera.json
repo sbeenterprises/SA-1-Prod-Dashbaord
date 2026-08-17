@@ -104,7 +104,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -120,7 +120,7 @@
                 },
                 "1": {
                   "text": "CONNECTED",
-                  "color": "green",
+                  "color": "#2e7fb4",
                   "index": 1
                 }
               }
@@ -174,7 +174,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -190,7 +190,7 @@
                 },
                 "1": {
                   "text": "AVAILABLE",
-                  "color": "green",
+                  "color": "#2e7fb4",
                   "index": 1
                 }
               }
@@ -244,7 +244,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -260,7 +260,7 @@
                 },
                 "1": {
                   "text": "RECORDING",
-                  "color": "green",
+                  "color": "#2e7fb4",
                   "index": 1
                 }
               }
@@ -324,7 +324,7 @@
                 "value": 15
               },
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": 24
               }
             ]
@@ -379,7 +379,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -434,7 +434,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               },
               {
@@ -495,9 +495,11 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 8,
+            "fillOpacity": 14,
             "showPoints": "never",
-            "spanNulls": 60000
+            "spanNulls": 60000,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth"
           }
         },
         "overrides": [
@@ -563,9 +565,11 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 8,
+            "fillOpacity": 14,
             "showPoints": "never",
-            "spanNulls": 60000
+            "spanNulls": 60000,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth"
           }
         },
         "overrides": [
@@ -630,9 +634,11 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 8,
+            "fillOpacity": 14,
             "showPoints": "never",
-            "spanNulls": 60000
+            "spanNulls": 60000,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth"
           }
         },
         "overrides": [
@@ -713,9 +719,11 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 8,
+            "fillOpacity": 14,
             "showPoints": "never",
-            "spanNulls": 60000
+            "spanNulls": 60000,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth"
           }
         },
         "overrides": [

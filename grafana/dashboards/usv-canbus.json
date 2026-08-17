@@ -104,7 +104,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -120,7 +120,7 @@
                 },
                 "1": {
                   "text": "UP",
-                  "color": "green",
+                  "color": "#2e7fb4",
                   "index": 1
                 }
               }
@@ -177,7 +177,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               },
               {
@@ -235,7 +235,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -289,7 +289,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               },
               {
@@ -351,7 +351,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               },
               {
@@ -409,7 +409,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -462,9 +462,11 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 8,
+            "fillOpacity": 14,
             "showPoints": "never",
-            "spanNulls": 60000
+            "spanNulls": 60000,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth"
           }
         },
         "overrides": [
@@ -532,9 +534,11 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 8,
+            "fillOpacity": 14,
             "showPoints": "never",
-            "spanNulls": 60000
+            "spanNulls": 60000,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth"
           }
         },
         "overrides": [
@@ -598,9 +602,11 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 8,
+            "fillOpacity": 14,
             "showPoints": "never",
-            "spanNulls": 60000
+            "spanNulls": 60000,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth"
           }
         },
         "overrides": [

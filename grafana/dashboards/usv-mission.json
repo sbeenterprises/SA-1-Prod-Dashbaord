@@ -104,7 +104,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -120,7 +120,7 @@
                 },
                 "Autonomous": {
                   "text": "Autonomous",
-                  "color": "green",
+                  "color": "#2e7fb4",
                   "index": 1
                 },
                 "Paused": {
@@ -130,7 +130,7 @@
                 },
                 "StationKeeping": {
                   "text": "StationKeeping",
-                  "color": "blue",
+                  "color": "#0f9e92",
                   "index": 3
                 },
                 "ReturnToHome": {
@@ -214,7 +214,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -225,7 +225,7 @@
               "options": {
                 "DRIVE": {
                   "text": "DRIVE",
-                  "color": "green",
+                  "color": "#2e7fb4",
                   "index": 0
                 },
                 "PARK": {
@@ -299,7 +299,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -315,7 +315,7 @@
                 },
                 "1": {
                   "text": "ARMED",
-                  "color": "green",
+                  "color": "#2e7fb4",
                   "index": 1
                 }
               }
@@ -369,7 +369,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -380,7 +380,7 @@
               "options": {
                 "0": {
                   "text": "LINK OK",
-                  "color": "green",
+                  "color": "#2e7fb4",
                   "index": 0
                 },
                 "1": {
@@ -439,7 +439,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -450,7 +450,7 @@
               "options": {
                 "0": {
                   "text": "INSIDE",
-                  "color": "green",
+                  "color": "#2e7fb4",
                   "index": 0
                 },
                 "1": {
@@ -515,7 +515,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               },
               {
@@ -576,7 +576,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -629,7 +629,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -682,7 +682,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -693,7 +693,7 @@
               "options": {
                 "clear": {
                   "text": "CLEAR",
-                  "color": "green",
+                  "color": "#2e7fb4",
                   "index": 0
                 }
               }
@@ -760,7 +760,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -815,7 +815,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -921,7 +921,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -975,7 +975,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -1038,7 +1038,7 @@
                 "value": 100
               },
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": 500
               }
             ]
@@ -1093,7 +1093,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": null
               }
             ]
@@ -1169,7 +1169,7 @@
                 "value": 100
               },
               {
-                "color": "green",
+                "color": "#2e7fb4",
                 "value": 500
               }
             ]
@@ -1177,9 +1177,11 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 8,
+            "fillOpacity": 14,
             "showPoints": "never",
             "spanNulls": 60000,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth",
             "thresholdsStyle": {
               "mode": "line"
             }
@@ -1340,7 +1342,7 @@
                 },
                 "Autonomous": {
                   "text": "Autonomous",
-                  "color": "green",
+                  "color": "#2e7fb4",
                   "index": 1
                 },
                 "Paused": {
@@ -1350,7 +1352,7 @@
                 },
                 "StationKeeping": {
                   "text": "StationKeeping",
-                  "color": "blue",
+                  "color": "#0f9e92",
                   "index": 3
                 },
                 "ReturnToHome": {
@@ -1438,9 +1440,11 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 8,
+            "fillOpacity": 14,
             "showPoints": "never",
-            "spanNulls": 60000
+            "spanNulls": 60000,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth"
           }
         },
         "overrides": [
@@ -1506,9 +1510,11 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 8,
+            "fillOpacity": 14,
             "showPoints": "never",
-            "spanNulls": 60000
+            "spanNulls": 60000,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth"
           }
         },
         "overrides": [

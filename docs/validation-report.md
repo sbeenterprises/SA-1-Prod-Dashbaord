@@ -193,6 +193,11 @@ What changed and how it was validated:
 - Previews of Mission, Navigation, Autopilot and Vessel Health were
   re-rendered (dark, light, tablet) from the generated JSON and committed
   under docs/images/.
+- Healthy-state tiles and threshold base colors follow the Swiftships
+  brand theme (steel blue #2e7fb4, from the wordmark #1e6692 / #08243f
+  and the swiftships.com navy scheme) with glossy gradient styling;
+  yellow/orange/red remain strictly semantic. Full smoke test re-run
+  after the restyle: 40 PASS, 0 FAIL, 1 SKIP.
 
 Note: the Signal K Freeboard UI archive (Swiftships-UI_.tar.gz) had not
 arrived in the workspace by delivery time, so the UI cross-check remains
