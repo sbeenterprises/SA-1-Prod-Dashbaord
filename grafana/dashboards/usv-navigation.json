@@ -201,7 +201,7 @@
         }
       ],
       "options": {
-        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? 'rgba(204,212,220,0.14)' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(204,212,220,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#9da5ad' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#0f9e92',\n  text: dark ? '#ccccdc' : '#24292e',\n  sub: dark ? '#7b7f87' : '#8b949e',\n  accent: '#0f9e92',\n  accent2: '#2f6fd8',\n};\nlet hdg = val('A'); if (hdg === null || isNaN(hdg)) { hdg = 0; }\nlet cog = val('B'); if (cog === null || isNaN(cog)) { cog = hdg; }\nhdg = ((hdg % 360) + 360) % 360;\ncog = ((cog % 360) + 360) % 360;\nconst card = {0: 'N', 90: 'E', 180: 'S', 270: 'W', 360: ''};\nconst base = {\n  type: 'gauge', min: 0, max: 360, startAngle: 90, endAngle: -270,\n  clockwise: true, center: ['50%', '54%'], radius: '86%',\n};\nreturn {\n  series: [Object.assign({}, base, {\n    axisLine: { lineStyle: { width: 4, color: [[1, C.rail]] } },\n    splitNumber: 12,\n    splitLine: { length: 10, distance: -10,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { splitNumber: 3, length: 5, distance: -5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 13, fontSize: 11, fontWeight: 600,\n                 color: C.label,\n                 formatter: (x) => (card[x] !== undefined ? card[x] : x) },\n    pointer: { width: 5, length: '66%',\n               itemStyle: { color: C.accent,\n                            shadowColor: 'rgba(0,0,0,0.45)',\n                            shadowBlur: 6, shadowOffsetY: 2 } },\n    anchor: { show: true, size: 11, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '44%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 18,\n              fontWeight: 600, offsetCenter: [0, '26%'],\n              formatter: (x) => x.toFixed(0) + '\\u00b0' },\n    data: [{ value: hdg, name: 'HDG \\u2014 COG ' + cog.toFixed(0) +\n             '\\u00b0' }],\n  }), Object.assign({}, base, {\n    axisLine: { show: false }, splitLine: { show: false },\n    axisTick: { show: false }, axisLabel: { show: false },\n    pointer: { width: 3, length: '52%',\n               itemStyle: { color: C.accent2, opacity: 0.9 } },\n    anchor: { show: false }, title: { show: false },\n    detail: { show: false },\n    data: [{ value: cog }],\n  })],\n};\n",
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? '#1c2a3d' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(124,156,176,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#7c9cb0' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#00bcd4',\n  text: dark ? '#ffffff' : '#24292e',\n  sub: dark ? '#00bcd4' : '#1e6692',\n  accent: '#00bcd4',\n  accent2: '#42a5f5',\n};\nlet hdg = val('A'); if (hdg === null || isNaN(hdg)) { hdg = 0; }\nlet cog = val('B'); if (cog === null || isNaN(cog)) { cog = hdg; }\nhdg = ((hdg % 360) + 360) % 360;\ncog = ((cog % 360) + 360) % 360;\nconst card = {0: 'N', 90: 'E', 180: 'S', 270: 'W', 360: ''};\nconst base = {\n  type: 'gauge', min: 0, max: 360, startAngle: 90, endAngle: -270,\n  clockwise: true, center: ['50%', '54%'], radius: '86%',\n};\nreturn {\n  series: [Object.assign({}, base, {\n    axisLine: { lineStyle: { width: 4, color: [[1, C.rail]] } },\n    splitNumber: 12,\n    splitLine: { length: 10, distance: -10,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { splitNumber: 3, length: 5, distance: -5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 13, fontSize: 11, fontWeight: 600,\n                 color: C.label,\n                 formatter: (x) => (card[x] !== undefined ? card[x] : x) },\n    pointer: { width: 5, length: '66%',\n               itemStyle: { color: C.accent,\n                            shadowColor: 'rgba(0,0,0,0.45)',\n                            shadowBlur: 6, shadowOffsetY: 2 } },\n    anchor: { show: true, size: 11, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '44%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 18,\n              fontWeight: 600, offsetCenter: [0, '26%'],\n              formatter: (x) => x.toFixed(0) + '\\u00b0' },\n    data: [{ value: hdg, name: 'HDG \\u2014 COG ' + cog.toFixed(0) +\n             '\\u00b0' }],\n  }), Object.assign({}, base, {\n    axisLine: { show: false }, splitLine: { show: false },\n    axisTick: { show: false }, axisLabel: { show: false },\n    pointer: { width: 3, length: '52%',\n               itemStyle: { color: C.accent2, opacity: 0.9 } },\n    anchor: { show: false }, title: { show: false },\n    detail: { show: false },\n    data: [{ value: cog }],\n  })],\n};\n",
         "renderer": "svg"
       },
       "fieldConfig": {
@@ -239,7 +239,7 @@
         }
       ],
       "options": {
-        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? 'rgba(204,212,220,0.14)' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(204,212,220,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#9da5ad' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#0f9e92',\n  text: dark ? '#ccccdc' : '#24292e',\n  sub: dark ? '#7b7f87' : '#8b949e',\n  accent: '#0f9e92',\n  accent2: '#2f6fd8',\n};\nlet v = val();\nif (v === null || isNaN(v)) { v = 0; }\nv = Math.max(0, Math.min(40, v));\nreturn {\n  series: [{\n    type: 'gauge', min: 0, max: 40,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '58%'], radius: '88%',\n    axisLine: { roundCap: true, lineStyle: { width: 9, color: [[1, C.rail]] } }, progress: { show: true, width: 9, roundCap: true, itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [ { offset: 0, color: '#0f9e92' }, { offset: 1, color: '#2e7fb4' } ] }, shadowColor: 'rgba(15,158,146,0.45)', shadowBlur: 8 } },\n    splitNumber: 8,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10 },\n    pointer: { width: 4, length: '62%',\n               itemStyle: { color: C.needle,\n                            shadowColor: 'rgba(0,0,0,0.45)',\n                            shadowBlur: 6, shadowOffsetY: 2 } },\n    anchor: { show: true, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '92%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '60%'],\n              formatter: (x) => x.toFixed(1) + ' kn' },\n    data: [{ value: v, name: 'KNOTS' }],\n  }],\n};\n",
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? '#1c2a3d' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(124,156,176,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#7c9cb0' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#00bcd4',\n  text: dark ? '#ffffff' : '#24292e',\n  sub: dark ? '#00bcd4' : '#1e6692',\n  accent: '#00bcd4',\n  accent2: '#42a5f5',\n};\nlet v = val();\nif (v === null || isNaN(v)) { v = 0; }\nv = Math.max(0, Math.min(40, v));\nreturn {\n  series: [{\n    type: 'gauge', min: 0, max: 40,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '58%'], radius: '88%',\n    axisLine: { roundCap: true, lineStyle: { width: 9, color: [[1, C.rail]] } }, progress: { show: true, width: 9, roundCap: true, itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [ { offset: 0, color: '#00bcd4' }, { offset: 1, color: '#42a5f5' } ] }, shadowColor: 'rgba(0,188,212,0.45)', shadowBlur: 8 } },\n    splitNumber: 8,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10 },\n    pointer: { width: 4, length: '62%',\n               itemStyle: { color: C.needle,\n                            shadowColor: 'rgba(0,0,0,0.45)',\n                            shadowBlur: 6, shadowOffsetY: 2 } },\n    anchor: { show: true, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '92%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '60%'],\n              formatter: (x) => x.toFixed(1) + ' kn' },\n    data: [{ value: v, name: 'KNOTS' }],\n  }],\n};\n",
         "renderer": "svg"
       },
       "fieldConfig": {
@@ -292,7 +292,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -346,7 +346,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -399,7 +399,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -410,7 +410,7 @@
               "options": {
                 "RTK Fixed": {
                   "text": "RTK FIXED",
-                  "color": "#2e7fb4",
+                  "color": "#175d8d",
                   "index": 0
                 },
                 "RTK Float": {
@@ -493,7 +493,7 @@
                 "value": 5
               },
               {
-                "color": "#2e7fb4",
+                "color": "#175d8d",
                 "value": 8
               }
             ]
@@ -565,7 +565,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -636,7 +636,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -651,7 +651,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#2f6fd8"
+                  "fixedColor": "#42a5f5"
                 }
               }
             ]
@@ -720,7 +720,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -735,7 +735,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#2f6fd8"
+                  "fixedColor": "#42a5f5"
                 }
               }
             ]
@@ -805,7 +805,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -875,7 +875,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]

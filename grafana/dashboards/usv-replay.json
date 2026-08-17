@@ -200,7 +200,7 @@
                 },
                 "Autonomous": {
                   "text": "Autonomous",
-                  "color": "#2e7fb4",
+                  "color": "#175d8d",
                   "index": 1
                 },
                 "Paused": {
@@ -210,7 +210,7 @@
                 },
                 "StationKeeping": {
                   "text": "StationKeeping",
-                  "color": "#0f9e92",
+                  "color": "#00bcd4",
                   "index": 3
                 },
                 "ReturnToHome": {
@@ -347,7 +347,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -417,7 +417,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -487,7 +487,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -557,7 +557,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -626,7 +626,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -696,7 +696,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -754,7 +754,7 @@
                 },
                 "1": {
                   "text": "ON",
-                  "color": "#0f9e92",
+                  "color": "#00bcd4",
                   "index": 1
                 }
               }
@@ -829,7 +829,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]

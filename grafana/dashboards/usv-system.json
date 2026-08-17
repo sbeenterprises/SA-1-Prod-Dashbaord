@@ -107,7 +107,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               },
               {
@@ -167,7 +167,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               },
               {
@@ -227,7 +227,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               },
               {
@@ -286,7 +286,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               },
               {
@@ -347,7 +347,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -358,7 +358,7 @@
               "options": {
                 "0": {
                   "text": "UP",
-                  "color": "#2e7fb4",
+                  "color": "#00bcd4",
                   "index": 0
                 }
               }
@@ -424,7 +424,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -435,7 +435,7 @@
               "options": {
                 "0": {
                   "text": "UP",
-                  "color": "#2e7fb4",
+                  "color": "#00bcd4",
                   "index": 0
                 }
               }
@@ -531,7 +531,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -546,7 +546,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#2f6fd8"
+                  "fixedColor": "#42a5f5"
                 }
               }
             ]
@@ -618,7 +618,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -697,7 +697,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -712,7 +712,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#2f6fd8"
+                  "fixedColor": "#42a5f5"
                 }
               }
             ]
@@ -791,7 +791,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -806,7 +806,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#2f6fd8"
+                  "fixedColor": "#42a5f5"
                 }
               }
             ]
@@ -859,7 +859,7 @@
               "options": {
                 "0": {
                   "text": "active",
-                  "color": "#2e7fb4",
+                  "color": "#00bcd4",
                   "index": 0
                 }
               }

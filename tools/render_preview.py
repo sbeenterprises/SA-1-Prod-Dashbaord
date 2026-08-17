@@ -25,18 +25,18 @@ THEMES = {
                  TEXT="#ccccdc", DIM="#9da0a8", FAINT="#7b7f87",
                  GRID="#212327", GREEN="#73bf69", YELLOW="#fade2a",
                  RED="#f2495c", WATER="#0d1720", LAND="#1c2a20",
-                 MAPGRID="#16202a", OK="#2e7fb4"),
+                 MAPGRID="#16202a", OK="#175d8d", CYAN="#00bcd4"),
     "light": dict(BG="#f4f5f6", PANEL="#ffffff", BORDER="#d5d9de",
                   TEXT="#24292e", DIM="#57606a", FAINT="#8b949e",
                   GRID="#e8eaed", GREEN="#1f8a3b", YELLOW="#b58b00",
                   RED="#c62f42", WATER="#dbe9f2", LAND="#dde9d5",
-                  MAPGRID="#c9d6df", OK="#1e6692"),
+                  MAPGRID="#c9d6df", OK="#1e6692", CYAN="#0f7c9c"),
 }
 # Applied per render() call:
-BG = PANEL = BORDER = TEXT = DIM = FAINT = GRID = GREEN = YELLOW = RED = OK = ""
+BG = PANEL = BORDER = TEXT = DIM = FAINT = GRID = GREEN = YELLOW = RED = OK = CYAN = ""
 WATER = LAND = MAPGRID = ""
 # Series palette: validated for both light and dark surfaces
-TEAL, BLUE, AMBER, PURPLE = "#0f9e92", "#2f6fd8", "#c47b06", "#9256b8"
+TEAL, BLUE, AMBER, PURPLE = "#00bcd4", "#42a5f5", "#c47b06", "#9256b8"
 SERIES = [TEAL, BLUE, AMBER, PURPLE]
 
 rng = random.Random(42)
@@ -145,11 +145,11 @@ def series_for(uid, title):
 
 STATS = {
     "Mission Name": ("ALPHA-SURVEY", "TEXT"), "Mission ID": ("M-2026-042", "TEXT"),
-    "Mission State": ("Autonomous", "OK"), "Elapsed Time": ("47.2 min", "OK"),
-    "ETA to Waypoint": ("5.9 min", "OK"), "Current Waypoint": ("4", "OK"),
-    "Waypoints Total": ("5", "OK"), "Distance to Waypoint": ("812 m", "OK"),
-    "Distance to Next Waypoint": ("812 m", "OK"),
-    "Distance Traveled": ("8.42 km", "OK"),
+    "Mission State": ("Autonomous", "OK"), "Elapsed Time": ("47.2 min", "CYAN"),
+    "ETA to Waypoint": ("5.9 min", "CYAN"), "Current Waypoint": ("4", "CYAN"),
+    "Waypoints Total": ("5", "CYAN"), "Distance to Waypoint": ("812 m", "CYAN"),
+    "Distance to Next Waypoint": ("812 m", "CYAN"),
+    "Distance Traveled": ("8.42 km", "CYAN"),
     "Helm": ("DRIVE", "OK"), "Helm State": ("DRIVE", "OK"),
     "Mission Armed": ("ARMED", "OK"), "Operator Link": ("LINK OK", "OK"),
     "Geofence": ("INSIDE", "OK"), "Obstacle Alerts": ("0", "OK"),
@@ -158,28 +158,28 @@ STATS = {
     "Survey Entry Gate": ("OPEN", "OK"), "Re-Arm Hold": ("—", "#3d434b"),
     "Active Behaviors": ("waypt_survey, opr24", "TEXT"),
     "Station Keeping": ("OFF", "#3d434b"),
-    "Latitude": ("29.618452", "OK"), "Longitude": ("-91.207310", "OK"),
-    "SOG": ("4.5 kn", "OK"), "COG": ("57°", "OK"), "Heading": ("55°", "OK"),
+    "Latitude": ("29.618452", "CYAN"), "Longitude": ("-91.207310", "CYAN"),
+    "SOG": ("4.5 kn", "CYAN"), "COG": ("57°", "CYAN"), "Heading": ("55°", "CYAN"),
     "GPS Fix": ("RTK Fixed", "OK"), "Satellites": ("12", "OK"),
-    "Cross-Track Error": ("2.1 m", "OK"),
+    "Cross-Track Error": ("2.1 m", "CYAN"),
     "Active Behavior": ("waypt_survey", "TEXT"),
-    "Heading Error": ("1.8°", "OK"), "Speed Error": ("0.04 kn", "OK"),
-    "Rudder Cmd": ("3.2°", "OK"), "Throttle Cmd": ("64%", "OK"),
-    "Engine RPM": ("2547 rpm", "OK"), "Coolant Temp": ("85.2 °C", "OK"),
-    "Oil Pressure": ("402 kPa", "OK"), "Fuel Rate": ("14.4 L/h", "OK"),
-    "Engine Runtime": ("512.6 h", "OK"),
-    "Battery Voltage": ("12.91 V", "OK"), "Battery Current": ("5.2 A", "OK"),
-    "Charging Status": ("CHARGING", "OK"), "Alternator Voltage": ("14.2 V", "OK"),
-    "Total Power": ("243 W", "OK"),
-    "Interface": ("UP", "OK"), "Messages / s": ("382", "OK"),
-    "Error Frames (5s)": ("0", "OK"), "Dropped Frames": ("0", "OK"),
-    "Active PGNs": ("27", "OK"),
-    "Radar Status": ("ONLINE", "OK"), "Tracked Targets": ("3", "OK"),
-    "Closest Target": ("1240 m", "OK"), "CPA": ("980 m", "OK"),
-    "TCPA": ("410 s", "OK"),
+    "Heading Error": ("1.8°", "CYAN"), "Speed Error": ("0.04 kn", "CYAN"),
+    "Rudder Cmd": ("3.2°", "CYAN"), "Throttle Cmd": ("64%", "CYAN"),
+    "Engine RPM": ("2547 rpm", "CYAN"), "Coolant Temp": ("85.2 °C", "CYAN"),
+    "Oil Pressure": ("402 kPa", "CYAN"), "Fuel Rate": ("14.4 L/h", "CYAN"),
+    "Engine Runtime": ("512.6 h", "CYAN"),
+    "Battery Voltage": ("12.91 V", "CYAN"), "Battery Current": ("5.2 A", "CYAN"),
+    "Charging Status": ("CHARGING", "OK"), "Alternator Voltage": ("14.2 V", "CYAN"),
+    "Total Power": ("243 W", "CYAN"),
+    "Interface": ("UP", "OK"), "Messages / s": ("382", "CYAN"),
+    "Error Frames (5s)": ("0", "CYAN"), "Dropped Frames": ("0", "OK"),
+    "Active PGNs": ("27", "CYAN"),
+    "Radar Status": ("ONLINE", "OK"), "Tracked Targets": ("3", "CYAN"),
+    "Closest Target": ("1240 m", "CYAN"), "CPA": ("980 m", "CYAN"),
+    "TCPA": ("410 s", "CYAN"),
     "Internet": ("ONLINE", "OK"), "Starlink": ("ONLINE", "OK"),
     "VPN / Tailscale": ("ONLINE", "OK"), "Signal K WebSocket": ("ONLINE", "OK"),
-    "Latency": ("46 ms", "OK"), "Packet Loss": ("0.3%", "OK"),
+    "Latency": ("46 ms", "CYAN"), "Packet Loss": ("0.3%", "CYAN"),
 }
 GAUGES = {
     "Mission Progress": (62, TEAL), "Fuel Level": (91, "OK"),
@@ -450,14 +450,14 @@ def svg_meter_analog(meta, w, h):
             prev = hi
     else:
         p.append(_arc(cx, cy, r, a_start, a_start - sweep,
-                      "rgba(204,212,220,0.14)" if BG == "#111217"
+                      "#1c2a3d" if BG == "#111217"
                       else "rgba(36,41,46,0.10)", 9))
         _grad_id[0] += 1
         gid = f"mg{_grad_id[0]}"
         p.append(f'<defs><linearGradient id="{gid}" x1="0" y1="0" '
                  f'x2="1" y2="0">'
-                 f'<stop offset="0%" stop-color="#0f9e92"/>'
-                 f'<stop offset="100%" stop-color="#2e7fb4"/>'
+                 f'<stop offset="0%" stop-color="#00bcd4"/>'
+                 f'<stop offset="100%" stop-color="#42a5f5"/>'
                  f'</linearGradient></defs>')
         p.append(_arc(cx, cy, r, a_start, ang(v), f"url(#{gid})", 9))
     for i in range(split + 1):
@@ -487,12 +487,13 @@ def svg_meter_analog(meta, w, h):
     p.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="6" fill="{TEAL}" '
              f'stroke="{needle_c}" stroke-width="2"/>')
     txt = meta.get("value_text") or f"{v:.{dec}f} {unit}"
-    p.append(f'<text x="{cx:.1f}" y="{cy + r*0.52:.1f}" fill="{TEXT}" '
+    vcol = "#ffffff" if BG == "#111217" else TEXT
+    p.append(f'<text x="{cx:.1f}" y="{cy + r*0.52:.1f}" fill="{vcol}" '
              f'font-size="16" font-weight="600" '
              f'text-anchor="middle">{txt}</text>')
     if meta.get("sub"):
         p.append(f'<text x="{cx:.1f}" y="{cy + r*0.52 + 15:.1f}" '
-                 f'fill="{FAINT}" font-size="9" letter-spacing="1" '
+                 f'fill="{TEAL}" font-size="9" letter-spacing="1" '
                  f'text-anchor="middle">{meta["sub"]}</text>')
     p.append("</svg>")
     return "".join(p)
@@ -528,10 +529,10 @@ def svg_compass(meta, w, h):
     p.append(_needle(cx, cy, ang(hdg), r * 0.70, TEAL, 5))
     p.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="6" fill="{TEAL}" '
              f'stroke="{needle_c}" stroke-width="2"/>')
-    p.append(f'<text x="{cx:.1f}" y="{cy + r*0.30:.1f}" fill="{TEXT}" '
+    p.append(f'<text x="{cx:.1f}" y="{cy + r*0.30:.1f}" fill="#ffffff" '
              f'font-size="17" font-weight="600" text-anchor="middle">'
              f'{hdg:.0f}&#176;</text>')
-    p.append(f'<text x="{cx:.1f}" y="{cy + r*0.30 + 13:.1f}" fill="{FAINT}" '
+    p.append(f'<text x="{cx:.1f}" y="{cy + r*0.30 + 13:.1f}" fill="{TEAL}" '
              f'font-size="9" letter-spacing="1" text-anchor="middle">'
              f'HDG &#8212; COG {cog:.0f}&#176;</text>')
     p.append("</svg>")
@@ -658,6 +659,15 @@ def render_panel(uid, p):
             f'{body}</div>')
 
 
+def _logo_uri(theme):
+    name = ("swiftships_wordmark_light.png" if theme == "dark"
+            else "swiftships_wordmark.png")
+    path = os.path.join(HERE, "..", "deploy", "branding", name)
+    import base64
+    with open(path, "rb") as f:
+        return "data:image/png;base64," + base64.b64encode(f.read()).decode()
+
+
 def render(uid, theme="dark", width=1600):
     globals().update(THEMES[theme])
     global W, COL
@@ -686,6 +696,7 @@ def render(uid, theme="dark", width=1600):
              f'☀ Light</span>'
              f'<span class="tab theme{" on" if theme == "dark" else ""}">'
              f'☾ Dark</span>')
+    LOGO_URI = _logo_uri(theme)
     html = f"""<!doctype html><html><head><meta charset="utf-8"><style>
 * {{ box-sizing: border-box; margin: 0; }}
 body {{ background:{BG}; font-family: Inter,-apple-system,'Segoe UI',
@@ -721,7 +732,7 @@ body {{ background:{BG}; font-family: Inter,-apple-system,'Segoe UI',
 .ptext {{ color:{DIM}; font-size:12px; padding:4px; line-height:1.5; }}
 </style></head><body>
 <div class="topnav">
-<img src="_mark.png" height="30" style="flex:none" alt="Swiftships"/>
+<img src="{LOGO_URI}" height="26" style="flex:none" alt="Swiftships"/>
 <span class="crumb"><b>Swift Autonomous Dashboard</b> &rsaquo;
 {title} ☆</span>
 <div class="controls"><span class="ctrl">🖵 Last 30 minutes ▾</span>

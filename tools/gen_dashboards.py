@@ -17,14 +17,17 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "grafana", "dashboards")
 # CVD separation and contrast on BOTH the dark and light Grafana surfaces
 # (dashboards ship a light/dark toggle, so one palette must serve both).
 # Threshold/status colors (green/yellow/orange/red) remain strictly semantic.
-PALETTE = ["#0f9e92", "#2f6fd8", "#c47b06", "#9256b8"]
+PALETTE = ["#00bcd4", "#42a5f5", "#c47b06", "#9256b8"]
 ACCENT = PALETTE[0]
 # Swiftships brand (extracted from deploy/branding wordmark + website
 # theme): deep navy #08243f, steel blue #1e6692. Healthy/OK states use
 # the steel blue so the ops wall reads as calm brand color; yellow/
 # orange/red remain strictly semantic alarm colors.
 SWIFT_NAVY = "#08243f"
-OK = "#2e7fb4"   # steel blue, +1 luminance step for dark-theme text
+# Theme matched to the vessel control UI (ENGINE STATUS widget):
+# cyan #00bcd4 labels/accents, white values, navy surfaces.
+OK = "#00bcd4"        # healthy VALUE text / arcs (control-UI cyan)
+TILE_OK = "#175d8d"   # healthy STATUS-TILE background (deep azure navy)
 
 import re as _re
 _FIELD_RE = _re.compile(r'_field == "(\w+)"')
@@ -161,13 +164,13 @@ def state_map(pairs):
 def updown_map(down_text="OFFLINE", up_text="ONLINE"):
     return [{"type": "value", "options": {
         "0": {"text": down_text, "color": "red", "index": 0},
-        "1": {"text": up_text, "color": OK, "index": 1}}}]
+        "1": {"text": up_text, "color": TILE_OK, "index": 1}}}]
 
 
 def alert_map(ok_text, alert_text, alert_color="red"):
     """Inverse of updown_map: 0 is the good state, 1 the alert state."""
     return [{"type": "value", "options": {
-        "0": {"text": ok_text, "color": OK, "index": 0},
+        "0": {"text": ok_text, "color": TILE_OK, "index": 0},
         "1": {"text": alert_text, "color": alert_color, "index": 1}}}]
 
 
@@ -214,15 +217,15 @@ const val = (ref) => {
 };
 const dark = context.grafana.theme.isDark;
 const C = {
-  rail: dark ? 'rgba(204,212,220,0.14)' : 'rgba(36,41,46,0.10)',
-  tick: dark ? 'rgba(204,212,220,0.55)' : 'rgba(36,41,46,0.45)',
-  label: dark ? '#9da5ad' : '#57606a',
+  rail: dark ? '#1c2a3d' : 'rgba(36,41,46,0.10)',
+  tick: dark ? 'rgba(124,156,176,0.55)' : 'rgba(36,41,46,0.45)',
+  label: dark ? '#7c9cb0' : '#57606a',
   needle: dark ? '#e8ebee' : '#24292e',
-  pivot: '#0f9e92',
-  text: dark ? '#ccccdc' : '#24292e',
-  sub: dark ? '#7b7f87' : '#8b949e',
-  accent: '#0f9e92',
-  accent2: '#2f6fd8',
+  pivot: '#00bcd4',
+  text: dark ? '#ffffff' : '#24292e',
+  sub: dark ? '#00bcd4' : '#1e6692',
+  accent: '#00bcd4',
+  accent2: '#42a5f5',
 };
 """
 
@@ -246,9 +249,9 @@ def meter_js(min_, max_, unit, zones=None, decimals=0, split=6, sub="",
                 "progress: { show: true, width: 9, roundCap: true, "
                 "itemStyle: { color: { type: 'linear', x: 0, y: 0, "
                 "x2: 1, y2: 0, colorStops: [ "
-                "{ offset: 0, color: '#0f9e92' }, "
-                "{ offset: 1, color: '#2e7fb4' } ] }, "
-                "shadowColor: 'rgba(15,158,146,0.45)', shadowBlur: 8 } }")
+                "{ offset: 0, color: '#00bcd4' }, "
+                "{ offset: 1, color: '#42a5f5' } ] }, "
+                "shadowColor: 'rgba(0,188,212,0.45)', shadowBlur: 8 } }")
     label_fmt = f", formatter: {label_js}" if label_js else ""
     detail_fmt = (detail_js if detail_js
                   else f"(x) => x.toFixed({decimals}) + ' {unit}'")
@@ -463,18 +466,18 @@ DASHBOARDS = []
 # States derived by grafana_bridge from the Alpha mission's mode flags
 # (see docs/alpha-mission-integration.md, table in §3).
 mission_state_mappings = state_map([
-    ("Idle", "#4d545c"), ("Autonomous", OK), ("Paused", "yellow"),
+    ("Idle", "#4d545c"), ("Autonomous", TILE_OK), ("Paused", "yellow"),
     ("StationKeeping", ACCENT), ("ReturnToHome", "orange"),
     ("EnteringRegion", "super-light-blue"), ("AwaitingRearm", "orange"),
     ("CommsLost", "red"), ("Parked", "#6e7680"), ("Completed", "purple"),
 ])
 helm_state_mappings = state_map([
-    ("DRIVE", OK), ("PARK", "#6e7680"), ("STANDBY", "yellow"),
+    ("DRIVE", TILE_OK), ("PARK", "#6e7680"), ("STANDBY", "yellow"),
     ("DISABLED", "orange"), ("MALCONFIG", "red"),
 ])
 allstop_mappings = [
     {"type": "value", "options": {
-        "clear": {"text": "CLEAR", "color": OK, "index": 0}}},
+        "clear": {"text": "CLEAR", "color": TILE_OK, "index": 0}}},
     {"type": "regex", "options": {
         "pattern": "(.+)",
         "result": {"text": "$1", "color": "red", "index": 1}}},
@@ -503,17 +506,17 @@ DASHBOARDS.append(dashboard("usv-mission", "Mission", [
     stat("Mission Armed", flux("autonomy", "armed", last=True), 9, 0, 4, 4,
          mappings=[{"type": "value", "options": {
              "0": {"text": "DISARMED", "color": "orange", "index": 0},
-             "1": {"text": "ARMED", "color": OK, "index": 1}}}],
+             "1": {"text": "ARMED", "color": TILE_OK, "index": 1}}}],
          text_mode="value", color_mode="background"),
     stat("Operator Link", flux("autonomy", "comms_lost", last=True),
-         13, 0, 4, 4, mappings=alert_map("LINK OK", "LOST — FAILSAFE"),
+         13, 0, 4, 4, mappings=alert_map("LINK TILE_OK", "LOST — FAILSAFE"),
          text_mode="value", color_mode="background"),
     stat("Geofence", flux("autonomy", "geofence_breached", last=True),
          17, 0, 4, 4, mappings=geofence_mappings, text_mode="value",
          color_mode="background"),
     stat("Obstacle Alerts", flux("autonomy", "obstacle_alerts", last=True),
          21, 0, 3, 4, decimals=0,
-         thresholds=[(None, OK), (1, "yellow"), (3, "orange")],
+         thresholds=[(None, TILE_OK), (1, "yellow"), (3, "orange")],
          color_mode="background"),
     # Row 1 — identity, helm detail, timers.
     stat("Mission Name", last_str("mission_state", "mission_name"), 0, 4, 5, 4,
@@ -647,14 +650,14 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
     stat("GPS Fix", last_str("nav", "fix_type"), 14, 9, 5, 3,
          text_mode="value", color_mode="background",
          mappings=[{"type": "value", "options": {
-             "RTK Fixed": {"text": "RTK FIXED", "color": OK, "index": 0},
+             "RTK Fixed": {"text": "RTK FIXED", "color": TILE_OK, "index": 0},
              "RTK Float": {"text": "RTK FLOAT", "color": "yellow",
                            "index": 1},
              "3D": {"text": "3D", "color": "yellow", "index": 2},
              "2D": {"text": "2D", "color": "orange", "index": 3},
              "None": {"text": "NO FIX", "color": "red", "index": 4}}}]),
     stat("Satellites", flux("nav", "satellites", last=True), 19, 9, 5, 3,
-         decimals=0, thresholds=[(None, "red"), (5, "yellow"), (8, OK)],
+         decimals=0, thresholds=[(None, "red"), (5, "yellow"), (8, TILE_OK)],
          color_mode="background"),
     ts("Speed Over Ground", [target(flux("nav", "sog"), "SOG")],
        0, 12, 8, 7, unit="velocityknot"),
@@ -706,7 +709,7 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot (MOOS-IvP)", [
          mappings=[{"type": "value", "options": {
              "0": {"text": "CLOSED — RECOVER FIRST", "color": "yellow",
                    "index": 0},
-             "1": {"text": "OPEN", "color": OK, "index": 1}}}],
+             "1": {"text": "OPEN", "color": TILE_OK, "index": 1}}}],
          text_mode="value", color_mode="background"),
     stat("Re-Arm Hold", flux("autonomy", "awaiting_rearm", last=True),
          18, 4, 6, 4,
@@ -806,7 +809,7 @@ DASHBOARDS.append(dashboard("usv-health", "Vessel Health", [
     stat("Charging Status", last_str("electrical", "charging_status"),
          12, 6, 4, 3, text_mode="value", color_mode="background",
          mappings=[{"type": "value", "options": {
-             "charging": {"text": "CHARGING", "color": OK, "index": 0},
+             "charging": {"text": "CHARGING", "color": TILE_OK, "index": 0},
              "discharging": {"text": "DISCHARGING", "color": "yellow",
                              "index": 1}}}]),
     stat("Alternator Voltage", flux("electrical", "alternator_voltage", last=True),
@@ -865,7 +868,7 @@ DASHBOARDS.append(dashboard("usv-canbus", "CAN Bus (NMEA 2000)", [
          thresholds=[(None, OK), (1, "yellow"), (10, "red")]),
     stat("Dropped Frames", flux("canbus", "dropped_frames", last=True),
          16, 0, 4, 4, decimals=0,
-         thresholds=[(None, OK), (1, "red")], color_mode="background"),
+         thresholds=[(None, TILE_OK), (1, "red")], color_mode="background"),
     stat("Active PGNs", flux("canbus", "active_pgns", last=True), 20, 0, 4, 4,
          decimals=0),
     ts("Message Rate", [target(flux("canbus", "msg_rate"), "msgs/s")],
@@ -1124,17 +1127,17 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms & Notifications", [
           12, 0, 12, 10, options={"showHeader": True}),
     stat("Battery SOC", flux("electrical", "soc", last=True), 0, 10, 4, 4,
          unit="percent", decimals=0,
-         thresholds=[(None, "red"), (25, "yellow"), (50, OK)], color_mode="background"),
+         thresholds=[(None, "red"), (25, "yellow"), (50, TILE_OK)], color_mode="background"),
     stat("GPS Sats", flux("nav", "satellites", last=True), 4, 10, 4, 4,
-         decimals=0, thresholds=[(None, "red"), (5, "yellow"), (8, OK)], color_mode="background"),
+         decimals=0, thresholds=[(None, "red"), (5, "yellow"), (8, TILE_OK)], color_mode="background"),
     stat("CAN Bus", flux("canbus", "interface_up", last=True), 8, 10, 4, 4,
-         mappings=updown_map("FAIL", "OK"), text_mode="value", color_mode="background"),
+         mappings=updown_map("FAIL", "TILE_OK"), text_mode="value", color_mode="background"),
     stat("Coolant", flux("engine", "coolant_temp", last=True), 12, 10, 4, 4,
          unit="celsius", decimals=0,
-         thresholds=[(None, OK), (95, "yellow"), (105, "red")], color_mode="background"),
+         thresholds=[(None, TILE_OK), (95, "yellow"), (105, "red")], color_mode="background"),
     stat("Fuel", flux("engine", "fuel_level", last=True), 16, 10, 4, 4,
          unit="percent", decimals=0,
-         thresholds=[(None, "red"), (15, "yellow"), (30, OK)], color_mode="background"),
+         thresholds=[(None, "red"), (15, "yellow"), (30, TILE_OK)], color_mode="background"),
     stat("Radar", flux("radar", "online", last=True), 20, 10, 4, 4,
          mappings=updown_map(), text_mode="value", color_mode="background"),
     stat("Camera", flux("camera", "connected", last=True), 0, 14, 4, 4,
@@ -1142,25 +1145,25 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms & Notifications", [
     stat("Signal K", flux("comms", "signalk_ws_up", last=True), 4, 14, 4, 4,
          mappings=updown_map("DISCONNECTED", "CONNECTED"), text_mode="value", color_mode="background"),
     stat("MOOS Rate", flux("comms", "moos_msg_rate", last=True), 8, 14, 4, 4,
-         decimals=0, thresholds=[(None, "red"), (1, "yellow"), (10, OK)], color_mode="background"),
+         decimals=0, thresholds=[(None, "red"), (1, "yellow"), (10, TILE_OK)], color_mode="background"),
     stat("Comms Link", flux("comms", "internet_up", last=True), 12, 14, 4, 4,
-         mappings=updown_map("FAILED", "OK"), text_mode="value", color_mode="background"),
+         mappings=updown_map("FAILED", "TILE_OK"), text_mode="value", color_mode="background"),
     stat("Latency", flux("comms", "latency_ms", last=True), 16, 14, 4, 4,
          unit="ms", decimals=0,
-         thresholds=[(None, OK), (150, "yellow"), (400, "red")], color_mode="background"),
+         thresholds=[(None, TILE_OK), (150, "yellow"), (400, "red")], color_mode="background"),
     stat("Packet Loss", flux("comms", "packet_loss_pct", last=True), 20, 14, 4, 4,
          unit="percent", decimals=1,
-         thresholds=[(None, OK), (2, "yellow"), (10, "red")], color_mode="background"),
+         thresholds=[(None, TILE_OK), (2, "yellow"), (10, "red")], color_mode="background"),
     # Autonomy / mission safety row (Alpha mission).
     stat("Mission State", last_str("mission_state", "state"), 0, 18, 4, 4,
          mappings=mission_state_mappings, text_mode="value", color_mode="background"),
     stat("Operator Link", flux("autonomy", "comms_lost", last=True),
-         4, 18, 4, 4, mappings=alert_map("OK", "FAILSAFE"),
+         4, 18, 4, 4, mappings=alert_map("TILE_OK", "FAILSAFE"),
          text_mode="value", color_mode="background"),
     stat("Mission Armed", flux("autonomy", "armed", last=True), 8, 18, 4, 4,
          mappings=[{"type": "value", "options": {
              "0": {"text": "DISARMED", "color": "orange", "index": 0},
-             "1": {"text": "ARMED", "color": OK, "index": 1}}}],
+             "1": {"text": "ARMED", "color": TILE_OK, "index": 1}}}],
          text_mode="value", color_mode="background"),
     stat("Geofence", flux("autonomy", "geofence_breached", last=True),
          12, 18, 4, 4, mappings=geofence_mappings, text_mode="value", color_mode="background"),
@@ -1168,7 +1171,7 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms & Notifications", [
          mappings=alert_map("CLEAR", "ALLSTOP"), text_mode="value", color_mode="background"),
     stat("Obstacles", flux("autonomy", "obstacle_alerts", last=True),
          20, 18, 4, 4, decimals=0,
-         thresholds=[(None, OK), (1, "yellow"), (3, "orange")], color_mode="background"),
+         thresholds=[(None, TILE_OK), (1, "yellow"), (3, "orange")], color_mode="background"),
 ], ["alarms"]))
 
 

@@ -173,10 +173,15 @@ sed -i 's/^;*default_theme =.*/default_theme = dark/' /etc/grafana/grafana.ini
 # OSS Grafana has no white-label config, so we overwrite the shipped image
 # assets; an apt upgrade of grafana restores the originals, so RE-RUN this
 # installer after any Grafana upgrade to re-apply branding.
+# The default theme is dark, so the nav uses the white-knockout mark
+# (swiftships_logo_light.svg) — the official navy mark is invisible on the
+# dark navbar. The favicon keeps the original navy artwork.
 if [[ -f "$REPO/deploy/branding/swiftships_logo.svg" ]]; then
   say "Applying Swiftships branding"
   GPUB=/usr/share/grafana/public
-  cp "$REPO/deploy/branding/swiftships_logo.svg" "$GPUB/img/grafana_icon.svg"
+  NAV_LOGO="$REPO/deploy/branding/swiftships_logo_light.svg"
+  [[ -f $NAV_LOGO ]] || NAV_LOGO="$REPO/deploy/branding/swiftships_logo.svg"
+  cp "$NAV_LOGO" "$GPUB/img/grafana_icon.svg"
   if command -v rsvg-convert &>/dev/null; then
     rsvg-convert -w 32 -h 32 "$REPO/deploy/branding/swiftships_logo.svg" \
       -o "$GPUB/img/fav32.png" 2>/dev/null || true

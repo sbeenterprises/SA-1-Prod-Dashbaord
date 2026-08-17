@@ -199,9 +199,12 @@ and the grafana\_bridge console output under pAntler.
 10. **Logo assets are the official Swiftships mark.**
     `deploy/branding/swiftships_logo.svg` (nav icon, vessel mark) and
     `swiftships_wordmark.png` (full horizontal logo) are built from the
-    official artwork. To update branding later, replace these files and
-    re\-run the installer. The mark is dark navy: crisp on the light
-    theme, subtler on dark; kiosk wall displays hide the nav bar anyway.
+    official artwork; `swiftships_logo_light.svg` and
+    `swiftships_wordmark_light.png` are white\-knockout variants generated
+    from them for dark surfaces. The installer puts the knockout mark in
+    the (dark) nav bar so the logo is always visible, and keeps the navy
+    original for the favicon. To update branding later, replace the
+    official files, regenerate the knockouts, and re\-run the installer.
 11. **Tab row is tag\-driven.** The chips list every dashboard tagged
     `usv`; a new dashboard saved with that tag automatically appears as a
     tab on all dashboards. The current dashboard is not highlighted in the

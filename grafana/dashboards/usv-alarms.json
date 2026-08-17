@@ -189,7 +189,7 @@
                 "value": 25
               },
               {
-                "color": "#2e7fb4",
+                "color": "#175d8d",
                 "value": 50
               }
             ]
@@ -251,7 +251,7 @@
                 "value": 5
               },
               {
-                "color": "#2e7fb4",
+                "color": "#175d8d",
                 "value": 8
               }
             ]
@@ -304,7 +304,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -319,8 +319,8 @@
                   "index": 0
                 },
                 "1": {
-                  "text": "OK",
-                  "color": "#2e7fb4",
+                  "text": "TILE_OK",
+                  "color": "#175d8d",
                   "index": 1
                 }
               }
@@ -376,7 +376,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#175d8d",
                 "value": null
               },
               {
@@ -447,7 +447,7 @@
                 "value": 15
               },
               {
-                "color": "#2e7fb4",
+                "color": "#175d8d",
                 "value": 30
               }
             ]
@@ -500,7 +500,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -516,7 +516,7 @@
                 },
                 "1": {
                   "text": "ONLINE",
-                  "color": "#2e7fb4",
+                  "color": "#175d8d",
                   "index": 1
                 }
               }
@@ -570,7 +570,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -586,7 +586,7 @@
                 },
                 "1": {
                   "text": "ONLINE",
-                  "color": "#2e7fb4",
+                  "color": "#175d8d",
                   "index": 1
                 }
               }
@@ -640,7 +640,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -656,7 +656,7 @@
                 },
                 "1": {
                   "text": "CONNECTED",
-                  "color": "#2e7fb4",
+                  "color": "#175d8d",
                   "index": 1
                 }
               }
@@ -719,7 +719,7 @@
                 "value": 1
               },
               {
-                "color": "#2e7fb4",
+                "color": "#175d8d",
                 "value": 10
               }
             ]
@@ -772,7 +772,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -787,8 +787,8 @@
                   "index": 0
                 },
                 "1": {
-                  "text": "OK",
-                  "color": "#2e7fb4",
+                  "text": "TILE_OK",
+                  "color": "#175d8d",
                   "index": 1
                 }
               }
@@ -844,7 +844,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#175d8d",
                 "value": null
               },
               {
@@ -907,7 +907,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#175d8d",
                 "value": null
               },
               {
@@ -968,7 +968,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -984,7 +984,7 @@
                 },
                 "Autonomous": {
                   "text": "Autonomous",
-                  "color": "#2e7fb4",
+                  "color": "#175d8d",
                   "index": 1
                 },
                 "Paused": {
@@ -994,7 +994,7 @@
                 },
                 "StationKeeping": {
                   "text": "StationKeeping",
-                  "color": "#0f9e92",
+                  "color": "#00bcd4",
                   "index": 3
                 },
                 "ReturnToHome": {
@@ -1078,7 +1078,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -1088,8 +1088,8 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "OK",
-                  "color": "#2e7fb4",
+                  "text": "TILE_OK",
+                  "color": "#175d8d",
                   "index": 0
                 },
                 "1": {
@@ -1148,7 +1148,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -1164,7 +1164,7 @@
                 },
                 "1": {
                   "text": "ARMED",
-                  "color": "#2e7fb4",
+                  "color": "#175d8d",
                   "index": 1
                 }
               }
@@ -1218,7 +1218,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -1229,7 +1229,7 @@
               "options": {
                 "0": {
                   "text": "INSIDE",
-                  "color": "#2e7fb4",
+                  "color": "#00bcd4",
                   "index": 0
                 },
                 "1": {
@@ -1293,7 +1293,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -1304,7 +1304,7 @@
               "options": {
                 "0": {
                   "text": "CLEAR",
-                  "color": "#2e7fb4",
+                  "color": "#175d8d",
                   "index": 0
                 },
                 "1": {
@@ -1364,7 +1364,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#175d8d",
                 "value": null
               },
               {

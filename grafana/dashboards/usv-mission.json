@@ -104,7 +104,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -120,7 +120,7 @@
                 },
                 "Autonomous": {
                   "text": "Autonomous",
-                  "color": "#2e7fb4",
+                  "color": "#175d8d",
                   "index": 1
                 },
                 "Paused": {
@@ -130,7 +130,7 @@
                 },
                 "StationKeeping": {
                   "text": "StationKeeping",
-                  "color": "#0f9e92",
+                  "color": "#00bcd4",
                   "index": 3
                 },
                 "ReturnToHome": {
@@ -214,7 +214,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -225,7 +225,7 @@
               "options": {
                 "DRIVE": {
                   "text": "DRIVE",
-                  "color": "#2e7fb4",
+                  "color": "#175d8d",
                   "index": 0
                 },
                 "PARK": {
@@ -299,7 +299,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -315,7 +315,7 @@
                 },
                 "1": {
                   "text": "ARMED",
-                  "color": "#2e7fb4",
+                  "color": "#175d8d",
                   "index": 1
                 }
               }
@@ -369,7 +369,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -379,8 +379,8 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "LINK OK",
-                  "color": "#2e7fb4",
+                  "text": "LINK TILE_OK",
+                  "color": "#175d8d",
                   "index": 0
                 },
                 "1": {
@@ -439,7 +439,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -450,7 +450,7 @@
               "options": {
                 "0": {
                   "text": "INSIDE",
-                  "color": "#2e7fb4",
+                  "color": "#00bcd4",
                   "index": 0
                 },
                 "1": {
@@ -515,7 +515,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#175d8d",
                 "value": null
               },
               {
@@ -576,7 +576,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -629,7 +629,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -682,7 +682,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -693,7 +693,7 @@
               "options": {
                 "clear": {
                   "text": "CLEAR",
-                  "color": "#2e7fb4",
+                  "color": "#175d8d",
                   "index": 0
                 }
               }
@@ -760,7 +760,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -815,7 +815,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -871,7 +871,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#0f9e92",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -921,7 +921,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -975,7 +975,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -1038,7 +1038,7 @@
                 "value": 100
               },
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": 500
               }
             ]
@@ -1093,7 +1093,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": null
               }
             ]
@@ -1169,7 +1169,7 @@
                 "value": 100
               },
               {
-                "color": "#2e7fb4",
+                "color": "#00bcd4",
                 "value": 500
               }
             ]
@@ -1206,7 +1206,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#2f6fd8"
+                  "fixedColor": "#42a5f5"
                 }
               }
             ]
@@ -1221,7 +1221,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -1279,7 +1279,7 @@
                 },
                 "1": {
                   "text": "ON",
-                  "color": "#0f9e92",
+                  "color": "#00bcd4",
                   "index": 1
                 }
               }
@@ -1342,7 +1342,7 @@
                 },
                 "Autonomous": {
                   "text": "Autonomous",
-                  "color": "#2e7fb4",
+                  "color": "#175d8d",
                   "index": 1
                 },
                 "Paused": {
@@ -1352,7 +1352,7 @@
                 },
                 "StationKeeping": {
                   "text": "StationKeeping",
-                  "color": "#0f9e92",
+                  "color": "#00bcd4",
                   "index": 3
                 },
                 "ReturnToHome": {
@@ -1458,7 +1458,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
@@ -1528,7 +1528,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#0f9e92"
+                  "fixedColor": "#00bcd4"
                 }
               }
             ]
