@@ -7,12 +7,32 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-find_package(MOOS 10 REQUIRED)
-find_package(CURL REQUIRED)
+# The mission-logic unit tests build anywhere — no MOOS required:
+#   cmake -S . -B build -DMISSION_LOGIC_TESTS_ONLY=ON
+#   cmake --build build && ctest --test-dir build
+option(MISSION_LOGIC_TESTS_ONLY
+       "Build only the mission-logic unit tests (no MOOS needed)" OFF)
 
-add_executable(moos_bridge moos_bridge.cpp)
-target_include_directories(moos_bridge PRIVATE ${MOOS_INCLUDE_DIRS})
-target_link_libraries(moos_bridge PRIVATE ${MOOS_LIBRARIES} CURL::libcurl)
-target_compile_options(moos_bridge PRIVATE -Wall -Wextra)
+enable_testing()
+add_executable(mission_logic_test mission_logic_test.cpp)
+target_compile_options(mission_logic_test PRIVATE -Wall -Wextra)
+add_test(NAME mission_logic COMMAND mission_logic_test)
 
-install(TARGETS moos_bridge RUNTIME DESTINATION bin)
+if(NOT MISSION_LOGIC_TESTS_ONLY)
+  find_package(MOOS 10 REQUIRED)
+  find_package(CURL REQUIRED)
+
+  add_executable(moos_bridge moos_bridge.cpp)
+  target_include_directories(moos_bridge PRIVATE ${MOOS_INCLUDE_DIRS})
+  target_link_libraries(moos_bridge PRIVATE ${MOOS_LIBRARIES} CURL::libcurl)
+  target_compile_options(moos_bridge PRIVATE -Wall -Wextra)
+
+  # Test/commissioning poke utility (not installed as a service; used by
+  # tools/smoke_test.sh and handy for manual variable pokes).
+  add_executable(moos_poke moos_poke.cpp)
+  target_include_directories(moos_poke PRIVATE ${MOOS_INCLUDE_DIRS})
+  target_link_libraries(moos_poke PRIVATE ${MOOS_LIBRARIES})
+  target_compile_options(moos_poke PRIVATE -Wall -Wextra)
+
+  install(TARGETS moos_bridge moos_poke RUNTIME DESTINATION bin)
+endif()

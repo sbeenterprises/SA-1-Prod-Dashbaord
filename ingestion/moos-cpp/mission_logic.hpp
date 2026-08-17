@@ -1,0 +1,313 @@
+// Mission-state derivation and MOOS-string parsers for the Alpha mission
+// (alpha.bhv). Pure C++17, no MOOS dependency, so the state machine that
+// operators rely on is unit-testable off-vessel (mission_logic_test.cpp).
+//
+// Semantics mirror the behavior file:
+//  - COMMS_LOST carries the failsafe action ("loiter", ...) while the
+//    operator link is down; "false" means link ok.
+//  - MISSION_ARMED is the explicit re-arm latch: cleared by iWebSocket on a
+//    comms loss, set true ONLY by an operator AUTONOMOUS_START/RESUME. A
+//    link merely returning must NOT read as a resumed mission.
+//  - SURVEY_ENTRY_GATE is the start-only latch: "closed" when a mission
+//    starts outside the region (opr24 recovers the boat inside first).
+//  - MOOS_MANUAL_OVERRIDE=true parks the helm; planchaPID actively zeroes
+//    thrust while parked.
+#pragma once
+
+#include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <map>
+#include <string>
+#include <vector>
+
+namespace usv {
+
+// ------------------------------------------------------------ small helpers
+
+inline std::string trim(const std::string& s) {
+    size_t a = s.find_first_not_of(" \t\r\n");
+    if (a == std::string::npos) return "";
+    size_t b = s.find_last_not_of(" \t\r\n");
+    return s.substr(a, b - a + 1);
+}
+
+inline std::string lower(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return s;
+}
+
+// MOOS mode flags arrive as strings ("true"/"false"); be liberal in what we
+// accept ("TRUE", "1", "yes", "on").
+inline bool truthy(const std::string& v) {
+    const std::string t = lower(trim(v));
+    return t == "true" || t == "1" || t == "yes" || t == "on";
+}
+
+// COMMS_LOST: "false" (or empty/0/ok) = link up; anything else is the
+// failsafe action currently in force.
+inline bool comms_lost_active(const std::string& v) {
+    const std::string t = lower(trim(v));
+    return !(t.empty() || t == "false" || t == "0" || t == "ok");
+}
+
+// SURVEY_ENTRY_GATE: defaults open; only the literal "closed" suppresses
+// the survey (matches iWebSocket's publication).
+inline bool gate_open(const std::string& v) {
+    return lower(trim(v)) != "closed";
+}
+
+// IVPHELM_ALLSTOP reasons that are normal operation, not a fault:
+//   clear          - helm producing decisions
+//   ManualOverride - helm parked on purpose (MOOS_MANUAL_OVERRIDE)
+//   NothingToDo    - deployed with no active behavior (idle)
+// Anything else (MissingDecVars:..., NoIvPFunctions, MALCONFIG fallout...)
+// is an unexpected all-stop and alert-worthy.
+inline bool allstop_unexpected(const std::string& reason) {
+    const std::string r = lower(trim(reason));
+    if (r.empty() || r == "clear") return false;
+    if (r.rfind("manualoverride", 0) == 0) return false;
+    if (r.rfind("nothingtodo", 0) == 0) return false;
+    return true;
+}
+
+// ------------------------------------------------------- mission state
+
+struct MissionFlags {
+    // Defaults track the `initialize` lines in alpha.bhv (cold-start safe).
+    bool deploy = false;
+    bool waypoint = false;
+    bool returning = false;
+    bool stationing = false;
+    bool pause = false;
+    bool manual_override = false;
+    bool armed = true;                 // MISSION_ARMED
+    bool survey_complete = false;      // latched by waypt_survey endflag
+    std::string entry_gate = "open";   // SURVEY_ENTRY_GATE
+    std::string comms_lost = "false";  // COMMS_LOST
+    std::string helm_state;            // IVPHELM_STATE (informational)
+    std::string allstop = "clear";     // IVPHELM_ALLSTOP (informational)
+};
+
+// Operational mission state, priority-ordered (first match wins). Helm
+// health is intentionally NOT folded in: a frozen helm while Paused must
+// show as Paused + an all-stop alert, not mask one with the other.
+inline const char* DeriveMissionState(const MissionFlags& f) {
+    if (comms_lost_active(f.comms_lost))         return "CommsLost";
+    if (f.manual_override && f.survey_complete)  return "Completed";
+    if (f.manual_override)                       return "Parked";
+    if (f.pause)                                 return "Paused";
+    if (f.stationing)                            return "StationKeeping";
+    if (f.returning)                             return "ReturnToHome";
+    if (f.waypoint && !gate_open(f.entry_gate))  return "EnteringRegion";
+    if (f.waypoint && !f.armed)                  return "AwaitingRearm";
+    if (f.waypoint)                              return "Autonomous";
+    if (f.survey_complete)                       return "Completed";
+    return "Idle";
+}
+
+// The no-silent-resume hold: survey requested but the operator has not
+// re-armed after a comms loss. Surfaced as its own field + warning alert.
+inline bool awaiting_rearm(const MissionFlags& f) {
+    return f.waypoint && !f.armed && !comms_lost_active(f.comms_lost);
+}
+
+// --------------------------------------------- IVPHELM_SUMMARY parsing
+
+// Split a MOOS-style comma-separated k=v string; a segment without '=' is
+// re-attached to the previous value (values never start a new key).
+inline std::map<std::string, std::string> ParseKeyValues(
+        const std::string& s) {
+    std::map<std::string, std::string> out;
+    std::string cur_key;
+    size_t start = 0;
+    while (start <= s.size()) {
+        size_t comma = s.find(',', start);
+        const std::string seg =
+            s.substr(start, comma == std::string::npos ? std::string::npos
+                                                       : comma - start);
+        size_t eq = seg.find('=');
+        if (eq != std::string::npos) {
+            cur_key = trim(seg.substr(0, eq));
+            out[cur_key] = trim(seg.substr(eq + 1));
+        } else if (!cur_key.empty() && !seg.empty()) {
+            out[cur_key] += "," + seg;  // continuation of previous value
+        }
+        if (comma == std::string::npos) break;
+        start = comma + 1;
+    }
+    return out;
+}
+
+// Extract the active behavior names from IVPHELM_SUMMARY.
+// active_bhvs value: "name$dur$pwt$...:name2$..." ; "none" when empty.
+// Returns "name, name2" (or "" when none).
+inline std::string ParseActiveBehaviors(const std::string& summary) {
+    auto kv = ParseKeyValues(summary);
+    auto it = kv.find("active_bhvs");
+    if (it == kv.end()) return "";
+    const std::string& v = it->second;
+    if (lower(v) == "none" || v.empty()) return "";
+    std::string out;
+    size_t start = 0;
+    while (start <= v.size()) {
+        size_t colon = v.find(':', start);
+        std::string entry =
+            v.substr(start, colon == std::string::npos ? std::string::npos
+                                                       : colon - start);
+        std::string name = trim(entry.substr(0, entry.find('$')));
+        if (!name.empty()) {
+            if (!out.empty()) out += ", ";
+            out += name;
+        }
+        if (colon == std::string::npos) break;
+        start = colon + 1;
+    }
+    return out;
+}
+
+// --------------------------------------------- VIEW_SEGLIST parsing
+
+struct SeglistInfo {
+    std::string label;
+    int points = 0;
+};
+
+// Parse "pts={x1,y1:x2,y2:...},label=name,edge_color=..." (BHV_Waypoint
+// visual). Returns point count and label; count 0 when malformed/empty.
+inline SeglistInfo ParseSeglist(const std::string& spec) {
+    SeglistInfo info;
+    size_t open = spec.find("pts={");
+    if (open != std::string::npos) {
+        size_t close = spec.find('}', open);
+        if (close != std::string::npos) {
+            const std::string body = spec.substr(open + 5, close - open - 5);
+            if (!trim(body).empty()) {
+                int n = 1;
+                for (char c : body)
+                    if (c == ':') ++n;
+                info.points = n;
+            }
+        }
+    }
+    size_t lp = spec.find("label=");
+    if (lp != std::string::npos) {
+        size_t end = spec.find(',', lp);
+        info.label = trim(spec.substr(
+            lp + 6, end == std::string::npos ? std::string::npos
+                                             : end - lp - 6));
+    }
+    return info;
+}
+
+// Extract an obstacle id from an OBSTACLE_ALERT post. pObstacleMgr posts
+// "name=<id>#..." / "...,label=<id>,..." variants; fall back to the whole
+// (trimmed) string so distinct alerts still count distinctly.
+inline std::string ParseObstacleId(const std::string& alert) {
+    for (const char* key : {"name=", "label="}) {
+        size_t p = alert.find(key);
+        if (p != std::string::npos) {
+            size_t start = p + std::string(key).size();
+            size_t end = alert.find_first_of(",#", start);
+            std::string id = trim(alert.substr(
+                start, end == std::string::npos ? std::string::npos
+                                                : end - start));
+            if (!id.empty()) return id;
+        }
+    }
+    return trim(alert);
+}
+
+// --------------------------------------------- time-decayed trackers
+
+// Holds the last posted level until `quiet_s` elapse without a new post,
+// then reads 0. Used for OPR_BREACHED (edge posts, no explicit "recovered")
+// so the geofence panel/alert self-clears after recovery.
+class DecayLatch {
+public:
+    explicit DecayLatch(double quiet_s) : quiet_s_(quiet_s) {}
+    void post(int level, double now) { level_ = level; last_ = now; }
+    int level(double now) const {
+        return (now - last_ <= quiet_s_) ? level_ : 0;
+    }
+
+private:
+    double quiet_s_;
+    double last_ = -1e18;
+    int level_ = 0;
+};
+
+// Tracks alerted obstacle ids with a last-seen TTL (BHV_AvoidObstacleV24
+// dies at completed_dist without notifying us).
+class ObstacleTracker {
+public:
+    explicit ObstacleTracker(double ttl_s = 120.0) : ttl_s_(ttl_s) {}
+
+    // Returns true when this id is newly alerted (event-worthy).
+    bool post(const std::string& id, double now) {
+        const bool fresh =
+            seen_.find(id) == seen_.end() || now - seen_[id] > ttl_s_;
+        seen_[id] = now;
+        return fresh;
+    }
+
+    int active(double now) {
+        int n = 0;
+        for (auto it = seen_.begin(); it != seen_.end();) {
+            if (now - it->second > ttl_s_) {
+                it = seen_.erase(it);
+            } else {
+                ++n;
+                ++it;
+            }
+        }
+        return n;
+    }
+
+private:
+    double ttl_s_;
+    std::map<std::string, double> seen_;
+};
+
+// Integrates distance traveled from NAV_X/NAV_Y (local grid, meters) with a
+// jump guard against GPS re-acquisition steps. Reset on survey start.
+class OdometryIntegrator {
+public:
+    void reset() {
+        has_last_ = false;
+        total_ = 0.0;
+    }
+    double add(double x, double y) {
+        if (has_last_) {
+            const double dx = x - lx_, dy = y - ly_;
+            const double step = std::sqrt(dx * dx + dy * dy);
+            if (step < 100.0) total_ += step;  // jump guard
+        }
+        lx_ = x;
+        ly_ = y;
+        has_last_ = true;
+        return total_;
+    }
+    double total() const { return total_; }
+
+private:
+    bool has_last_ = false;
+    double lx_ = 0.0, ly_ = 0.0, total_ = 0.0;
+};
+
+// ---------------------------------------------------- derived quantities
+
+inline double ProgressPct(double wpt_index, int wpt_total) {
+    if (wpt_total <= 0) return 0.0;
+    double p = 100.0 * wpt_index / static_cast<double>(wpt_total);
+    return std::max(0.0, std::min(100.0, p));
+}
+
+// ETA to the next waypoint; floor the speed so a momentary hover doesn't
+// explode the estimate.
+inline double EtaSeconds(double dist_m, double speed_mps) {
+    return dist_m / std::max(0.2, speed_mps);
+}
+
+}  // namespace usv

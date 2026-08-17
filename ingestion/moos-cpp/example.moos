@@ -1,5 +1,9 @@
 // Example mission-file integration for grafana_bridge.
 // Merge these blocks into your vessel's mission (.moos) file.
+//
+// The bridge's variable map is pre-aligned with the Alpha mission
+// (alpha.bhv): no per-mission configuration is needed here beyond the
+// InfluxDB connection. See docs/alpha-mission-integration.md.
 
 ServerHost = localhost
 ServerPort = 9000
