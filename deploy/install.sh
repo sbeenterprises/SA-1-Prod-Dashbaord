@@ -36,12 +36,14 @@ apt-get install -y -q curl gnupg ca-certificates apt-transport-https \
   g++ cmake make git libcurl4-openssl-dev nlohmann-json3-dev
 
 install -d /etc/apt/keyrings
+# --batch --yes: don't stop the installer with an interactive overwrite
+# prompt when the keyring already exists (idempotent re-runs).
 curl -fsSL https://repos.influxdata.com/influxdata-archive.key \
-  | gpg --dearmor -o /etc/apt/keyrings/influxdata.gpg
+  | gpg --batch --yes --dearmor -o /etc/apt/keyrings/influxdata.gpg
 echo "deb [signed-by=/etc/apt/keyrings/influxdata.gpg] https://repos.influxdata.com/debian stable main" \
   > /etc/apt/sources.list.d/influxdata.list
 curl -fsSL https://apt.grafana.com/gpg.key \
-  | gpg --dearmor -o /etc/apt/keyrings/grafana.gpg
+  | gpg --batch --yes --dearmor -o /etc/apt/keyrings/grafana.gpg
 echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" \
   > /etc/apt/sources.list.d/grafana.list
 
@@ -120,7 +122,10 @@ if cmake -S "$REPO/ingestion/moos-cpp" -B "$REPO/ingestion/moos-cpp/build" \
      -DCMAKE_BUILD_TYPE=Release $MOOS_HINT; then
   cmake --build "$REPO/ingestion/moos-cpp/build" -j"$(nproc)"
   install -m 755 "$REPO/ingestion/moos-cpp/build/moos_bridge" /usr/local/bin/
-  say "moos_bridge installed — add 'Run = grafana_bridge' to your mission file"
+  # pAntler launches the app as 'grafana_bridge' (see example.moos) — make
+  # sure that name resolves on PATH.
+  ln -sf /usr/local/bin/moos_bridge /usr/local/bin/grafana_bridge
+  say "moos_bridge installed (as grafana_bridge) — add 'Run = grafana_bridge' to your mission file"
 else
   echo "WARNING: MOOS not found. Re-run with MOOS_DIR=<path to MOOSConfig.cmake>"
   echo "         (source tree: ~/moos-ivp/build/MOOS/MOOSCore)"
@@ -134,13 +139,36 @@ systemctl enable --now usv-signalk-bridge usv-can-bridge
 # usv-simulator.service installed but NOT enabled (bench testing only)
 
 # ---------------------------------------------------------------- grafana
+# grafana-cli needs an explicit homepath when run outside /usr/share/grafana;
+# without it every plugin/admin command fails with "Could not find config
+# defaults" and the failure is easy to miss.
+GCLI="grafana-cli --homepath /usr/share/grafana"
+
+say "Installing Grafana data source plugin (InfluxDB)"
+# Grafana >= 13.0.2 ships the InfluxDB data source as an EXTERNAL plugin
+# (it was removed from core). Without it, the provisioned datasource shows
+# "Data source not found" and every panel errors. On Grafana <= 12 the
+# datasource is core and this block is skipped.
+if [[ -d /usr/share/grafana/public/app/plugins/datasource/influxdb ]]; then
+  say "InfluxDB data source is built-in (Grafana <= 12) — nothing to install"
+elif $GCLI plugins ls 2>/dev/null | grep -q '^influxdb'; then
+  say "influxdb data source plugin already installed"
+elif $GCLI plugins install influxdb 2>/dev/null; then
+  chown -R grafana:grafana /var/lib/grafana/plugins 2>/dev/null || true
+else
+  echo "WARNING: could not install the influxdb data source plugin."
+  echo "         On Grafana 13+ ALL dashboards will show 'Data source not"
+  echo "         found' until it is installed:"
+  echo "           sudo grafana-cli --homepath /usr/share/grafana plugins install influxdb"
+fi
+
 say "Installing Grafana panel plugins (analog instruments)"
 # Business Charts (Apache ECharts) renders the analog needle gauges,
 # compass and rudder indicator. Signed + React-based (safe on Grafana 11+).
 # Pin a version via ECHARTS_PANEL_VERSION in /etc/usv/usv.env if desired.
-if grafana-cli plugins ls 2>/dev/null | grep -q volkovlabs-echarts-panel; then
+if $GCLI plugins ls 2>/dev/null | grep -q volkovlabs-echarts-panel; then
   say "volkovlabs-echarts-panel already installed"
-elif grafana-cli plugins install volkovlabs-echarts-panel \
+elif $GCLI plugins install volkovlabs-echarts-panel \
        ${ECHARTS_PANEL_VERSION:-} 2>/dev/null; then
   chown -R grafana:grafana /var/lib/grafana/plugins 2>/dev/null || true
 else
@@ -165,8 +193,14 @@ chown -R root:grafana /etc/grafana/provisioning
 chmod 640 /etc/grafana/provisioning/datasources/influxdb.yml
 chown -R grafana:grafana /var/lib/grafana/dashboards
 
-grafana-cli admin reset-admin-password "$GRAFANA_ADMIN_PASSWORD" \
-  --homepath /usr/share/grafana --config /etc/grafana/grafana.ini 2>/dev/null || true
+# Set the admin password from usv.env. Do NOT swallow failures silently —
+# a failed reset leaves the operator locked out with no hint why.
+if ! $GCLI admin reset-admin-password "$GRAFANA_ADMIN_PASSWORD" \
+       --config /etc/grafana/grafana.ini; then
+  echo "WARNING: could not set the Grafana admin password."
+  echo "         Log in with admin/admin (fresh install) or reset manually:"
+  echo "           sudo grafana-cli --homepath /usr/share/grafana admin reset-admin-password <password>"
+fi
 sed -i 's/^;*default_theme =.*/default_theme = dark/' /etc/grafana/grafana.ini
 # The vessel's Signal K server owns port 3000, so Grafana moves to
 # GRAFANA_PORT (default 3001). Set GRAFANA_PORT in /etc/usv/usv.env to
