@@ -199,6 +199,15 @@ static void test_traffic_geometry() {
     CHECK_EQ_STR(t.contacts().at("R-1").source, "radar");
     CHECK_EQ_STR(t.worst_id(), "TGT-27");
     CHECK(std::fabs(t.closest_range() - 1000.0) < 0.01);
+    // Radar-only target with polar data: relative bearing and encounter
+    // from own heading, no position needed.
+    t.post_radar("R-31", 1.0, 900, 319, 1.5, 139, 350, 140);
+    t.update_geometry(own, 500, 300);
+    const auto& r = t.contacts().at("R-31");
+    CHECK(std::fabs(r.rel_bearing - (-41.0)) < 0.01);
+    CHECK_EQ_STR(r.encounter, "crossing");
+    CHECK(r.risk == 2);   // CPA 350 < 500 within 140 s
+    CHECK_EQ_STR(t.worst_id(), "R-31");
 }
 
 static void test_route_naming() {

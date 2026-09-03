@@ -42,6 +42,7 @@
 namespace {
 
 constexpr double MS_TO_KN = 1.94384;
+constexpr double KN_TO_MS = 1.0 / MS_TO_KN;   // RADAR_TARGET spd is knots ($RATTM)
 
 struct FieldMap {
     const char* measurement;
@@ -687,7 +688,9 @@ private:
             try { return std::stod(it->second); } catch (...) { return -1.0; }
         };
         const double cpa = num("cpa");
-        contacts_.post(id->second, now, num("range"), cpa, num("tcpa"));
+        const double spd = num("spd");
+        contacts_.post_radar(id->second, now, num("range"), num("bearing"),
+                             spd >= 0 ? spd * KN_TO_MS : -1.0, num("cog"), cpa, num("tcpa"));
         if (cpa >= 0 && cpa < radar_cpa_alert_m_ &&
             alerted_contacts_.insert(id->second).second) {
             char m[128];
