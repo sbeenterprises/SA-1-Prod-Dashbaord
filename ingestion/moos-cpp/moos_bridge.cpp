@@ -35,6 +35,7 @@
 #include <thread>
 #include <vector>
 
+#include "../cpp-common/http_get.hpp"
 #include "../cpp-common/influx_writer.hpp"
 #include "mission_logic.hpp"
 
@@ -45,35 +46,73 @@ constexpr double MS_TO_KN = 1.94384;
 struct FieldMap {
     const char* measurement;
     const char* field;
-    double scale = 1.0;  // unit conversion (schema uses display units)
+    double scale = 1.0;   // unit conversion (schema uses display units)
+    const char* tags = "";  // extra line-protocol tags, e.g. "instance=0"
 };
 
 // Numeric MOOS variables -> measurement/field (passthrough; a variable may
 // feed several fields). MOOS speeds are m/s; the schema stores knots.
+//
+// Producers on the vessel: iDivisorNMEA (NAV_*, GPS_*, ANGULO_LEME),
+// planchaPID (DESIRED_THRUST/RUDDER, SPEED_CAP, CMD_SPEED, XTE_NOW,
+// NEXT_TURN_ANGLE, DIST_TO_STATION), pHelmIvP (DESIRED_HEADING/SPEED),
+// iCANRec (ENGINE_*, SAE J1939). In simulation uSimMarineV23 publishes the
+// NAV_* set (incl. NAV_HEADING_OVER_GROUND) and there is no engine data.
 const std::multimap<std::string, FieldMap> kNumericVars = {
     // Navigation (FR-2)
-    {"NAV_X",              {"nav", "x"}},
-    {"NAV_Y",              {"nav", "y"}},
-    {"NAV_LAT",            {"nav", "lat"}},
-    {"NAV_LONG",           {"nav", "lon"}},
-    {"NAV_HEADING",        {"nav", "heading"}},
-    {"NAV_SPEED",          {"nav", "sog", MS_TO_KN}},
-    {"NAV_YAW",            {"nav", "yaw"}},
-    {"NAV_PITCH",          {"nav", "pitch"}},
-    {"NAV_ROLL",           {"nav", "roll"}},
+    {"NAV_X",                    {"nav", "x"}},
+    {"NAV_Y",                    {"nav", "y"}},
+    {"NAV_LAT",                  {"nav", "lat"}},
+    {"NAV_LONG",                 {"nav", "lon"}},
+    {"NAV_HEADING",              {"nav", "heading"}},
+    {"NAV_SPEED",                {"nav", "sog", MS_TO_KN}},
+    {"NAV_COG",                  {"nav", "cog"}},           // iDivisorNMEA
+    {"NAV_HEADING_OVER_GROUND",  {"nav", "cog"}},           // uSimMarine
+    {"NAV_YAW",                  {"nav", "yaw"}},           // vessel: see ignore_vars
+    {"NAV_PITCH",                {"nav", "pitch"}},
+    {"NAV_ROLL",                 {"nav", "roll"}},
+    {"NAV_DEPTH",                {"nav", "depth"}},
+    {"GPS_SATS",                 {"nav", "satellites"}},
+    {"GPS_HDOP",                 {"nav", "hdop"}},
+    {"GPS_QUALITY",              {"nav", "gps_quality"}},
+    {"XTE_NOW",                  {"nav", "cross_track_error"}},   // planchaPID
+    {"CROSS_TRACK_ERROR",        {"nav", "cross_track_error"}},   // legacy name
     // Autopilot (FR-3). NAV_HEADING/NAV_SPEED double as the "actual" side
     // of the desired-vs-actual pairs on the Autopilot dashboard.
-    {"NAV_HEADING",        {"autopilot", "actual_heading"}},
-    {"NAV_SPEED",          {"autopilot", "actual_speed", MS_TO_KN}},
-    {"DESIRED_HEADING",    {"autopilot", "desired_heading"}},
-    {"DESIRED_SPEED",      {"autopilot", "desired_speed", MS_TO_KN}},
-    {"DESIRED_RUDDER",     {"autopilot", "rudder_cmd"}},
-    {"DESIRED_THRUST",     {"autopilot", "throttle_cmd"}},
-    {"PID_HEADING_ERROR",  {"autopilot", "heading_error"}},
-    {"PID_SPEED_ERROR",    {"autopilot", "speed_error", MS_TO_KN}},
-    {"PID_HEADING_OUT",    {"autopilot", "pid_heading_out"}},
-    {"PID_SPEED_OUT",      {"autopilot", "pid_speed_out"}},
-    {"CROSS_TRACK_ERROR",  {"nav", "cross_track_error"}},
+    {"NAV_HEADING",              {"autopilot", "actual_heading"}},
+    {"NAV_SPEED",                {"autopilot", "actual_speed", MS_TO_KN}},
+    {"DESIRED_HEADING",          {"autopilot", "desired_heading"}},
+    {"DESIRED_SPEED",            {"autopilot", "desired_speed", MS_TO_KN}},
+    {"DESIRED_RUDDER",           {"autopilot", "rudder_cmd"}},
+    {"DESIRED_THRUST",           {"autopilot", "throttle_cmd"}},
+    {"ANGULO_LEME",              {"autopilot", "rudder_actual"}},  // $AGRSA
+    // planchaPID speed governor (m/s -> kn)
+    {"SPEED_CAP",                {"autopilot", "speed_cap", MS_TO_KN}},
+    {"CMD_SPEED",                {"autopilot", "cmd_speed", MS_TO_KN}},
+    {"NEXT_TURN_ANGLE",          {"autopilot", "next_turn_angle"}},
+    {"DIST_TO_STATION",          {"mission", "dist_to_station"}},
+    // Legacy pMarinePID outputs (not published by planchaPID; if they ever
+    // appear they take precedence over the bridge-derived errors).
+    {"PID_HEADING_ERROR",        {"autopilot", "heading_error"}},
+    {"PID_SPEED_ERROR",          {"autopilot", "speed_error", MS_TO_KN}},
+    {"PID_HEADING_OUT",          {"autopilot", "pid_heading_out"}},
+    {"PID_SPEED_OUT",            {"autopilot", "pid_speed_out"}},
+    // Engine (FR-4), iCANRec J1939 decode. Units are already display units
+    // (rpm, C, kPa, L/h, %, count, V).
+    {"ENGINE_SPEED",                      {"engine", "rpm",                      1.0, "instance=0"}},
+    {"ENGINE_COOLANT_TEMP",               {"engine", "coolant_temp",             1.0, "instance=0"}},
+    {"ENGINE_OIL_TEMP",                   {"engine", "oil_temp",                 1.0, "instance=0"}},
+    {"ENGINE_OIL_PRESSURE",               {"engine", "oil_pressure",             1.0, "instance=0"}},
+    {"ENGINE_FUEL_RATE",                  {"engine", "fuel_rate",                1.0, "instance=0"}},
+    {"ENGINE_PERCENT_LOAD",               {"engine", "percent_load",             1.0, "instance=0"}},
+    {"ENGINE_PERCENT_TORQUE",             {"engine", "percent_torque",           1.0, "instance=0"}},
+    {"ENGINE_ACCELERATOR_PEDAL_POSITION", {"engine", "pedal_position",           1.0, "instance=0"}},
+    {"ENGINE_INTAKE_MANIFOLD_PRESSURE",   {"engine", "intake_manifold_pressure", 1.0, "instance=0"}},
+    {"ENGINE_ACTIVE_DTCS",                {"engine", "active_dtcs",              1.0, "instance=0"}},
+    {"ENGINE_HOURS",                      {"engine", "runtime_h",                1.0, "instance=0"}},
+    {"ENGINE_FUEL_LEVEL",                 {"engine", "fuel_level",               1.0, "instance=0"}},
+    {"ENGINE_BATTERY_VOLTAGE",            {"electrical", "battery_voltage",      1.0, "instance=0"}},
+    {"ENGINE_BATTERY_VOLTAGE",            {"power", "system_voltage"}},
 };
 
 // Legacy generic mission variables. Kept for compatibility: if some app
@@ -95,13 +134,26 @@ const std::map<std::string, FieldMap> kStringPassthrough = {
     // state; it is stored alongside for comparison.
     {"MISSION_STATE",      {"mission_state", "state_external"}},
     {"OPR_STATUS",         {"mission_state", "opr_status"}},
+    // iWebSocket: route id sent with AUTONOMOUS_START (#ID_ROUTE=...)
+    {"ID_ROUTE",           {"mission_state", "mission_id"}},
+    {"REGION_WARNING",     {"mission_state", "region_warning"}},
+    // planchaPID status strings (posted every iterate: written on change,
+    // re-emitted at 1 Hz by the snapshot)
+    {"ARRIVAL_STATE",      {"mission_state", "arrival_state"}},
+    {"CORRIDOR_STATUS",    {"mission_state", "corridor_status"}},
+    {"CRASH_STOP_STATUS",  {"mission_state", "crash_stop_status"}},
+    {"WPT_STAT",           {"mission_state", "wpt_stat"}},
 };
 
 // Alpha mission mode flags (posted as strings "true"/"false"; some tools
-// post numeric 0/1 — both are accepted).
+// post numeric 0/1 — both are accepted). MOOS_MANUAL_OVERIDE (single R) is
+// the misspelled variant iWebSocket still posts for CONTROLE_MANUAL; treated
+// as the same flag (see docs/wire-protocol.md in the MOOS repo).
 const std::set<std::string> kFlagVars = {
     "DEPLOY", "WAYPOINT", "RETURN", "STATIONING", "PAUSE",
-    "MOOS_MANUAL_OVERRIDE", "MISSION_ARMED", "SURVEY_COMPLETE",
+    "MOOS_MANUAL_OVERRIDE", "MOOS_MANUAL_OVERIDE",
+    "MISSION_ARMED", "SURVEY_COMPLETE",
+    "REMOTE_CONTROL", "CRASH_STOP",
 };
 
 // Everything else we subscribe to.
@@ -112,7 +164,25 @@ const std::set<std::string> kSpecialVars = {
     "DIST_TO_NEXT_WPT", "WPT_INDEX",
     "ACTIVE_BEHAVIOR", "STATION_KEEP_STATUS",
     "BHV_WARNING", "BHV_ERROR",
+    // Radar / contacts: NODE_REPORT (iRadarTargets, AIS via iDivisorNMEA,
+    // pContactSpawn in simulation), RADAR_TARGET / RADAR_TTM_RATE (proposed
+    // iRadarTargets additions with CPA/TCPA and a liveness rate).
+    "NODE_REPORT", "RADAR_TARGET", "RADAR_TTM_RATE",
 };
+
+// Variables whose every sample feeds a derived quantity (odometry, heading
+// and speed error), so they are cached before the rate limiter runs.
+const std::set<std::string> kCachedVars = {
+    "NAV_SPEED", "NAV_X", "NAV_Y", "NAV_HEADING",
+    "DESIRED_HEADING", "DESIRED_SPEED",
+};
+
+double EpochMs() {
+    using namespace std::chrono;
+    return static_cast<double>(
+        duration_cast<milliseconds>(system_clock::now().time_since_epoch())
+            .count());
+}
 
 // alpha.bhv initializes DIST_TO_NEXT_WPT = 99999 before any behavior posts
 // a real value; treat anything this large as "no target yet".
@@ -159,6 +229,40 @@ protected:
         if (m_MissionReader.GetConfigurationParam("influx_bucket", v)) opts.bucket = v;
         if (m_MissionReader.GetConfigurationParam("events_bucket", v)) events_bucket = v;
         if (m_MissionReader.GetConfigurationParam("vessel_id", v)) opts.vessel = v;
+
+        // Deployment tuning (all optional; defaults suit the simulation).
+        //   mission_name   = alpha        // shown on the Mission dashboard
+        //   max_rate_hz    = 5            // ceiling for nav/autopilot passthrough
+        //   engine_rate_hz = 2            // ceiling for ENGINE_* passthrough
+        //   ignore_vars    = NAV_YAW      // vessel: NAV_YAW is the rudder angle
+        //   radar_cpa_alert_m = 500       // radar event threshold (pContactMgr cpa_range)
+        //   contact_ttl_s  = 10           // contact expiry without an update
+        //   signalk_http   = localhost:3000  // route-name lookup (ID_ROUTE ->
+        //                                   // /signalk/v{2,1}/api/resources/routes/<id>);
+        //                                   // empty disables the lookup
+        //   signalk_token  = <jwt>          // only if Signal K security denies reads
+        double hz = 5.0;
+        if (m_MissionReader.GetConfigurationParam("max_rate_hz", hz)) {}
+        limiter_.set_default(hz);
+        double engine_hz = 2.0;
+        m_MissionReader.GetConfigurationParam("engine_rate_hz", engine_hz);
+        for (const auto& [var, fm] : kNumericVars)
+            if (std::string(fm.measurement) == "engine")
+                limiter_.set_rate(std::string("engine.") + fm.field, engine_hz);
+        limiter_.set_rate("autopilot.error", 2.0);
+        if (m_MissionReader.GetConfigurationParam("ignore_vars", v))
+            for (const auto& s : usv::SplitCsv(v)) ignore_vars_.insert(s);
+        if (!m_MissionReader.GetConfigurationParam("mission_name", mission_name_))
+            m_MissionReader.GetValue("Community", mission_name_);
+        m_MissionReader.GetConfigurationParam("radar_cpa_alert_m", radar_cpa_alert_m_);
+        double ttl = 10.0;
+        m_MissionReader.GetConfigurationParam("contact_ttl_s", ttl);
+        contacts_ = usv::ContactTracker(ttl);
+        if (m_MissionReader.GetConfigurationParam("signalk_http", v))
+            signalk_http_ = v;
+        if (!signalk_http_.empty() && signalk_http_.find("://") == std::string::npos)
+            signalk_http_ = "http://" + signalk_http_;
+        m_MissionReader.GetConfigurationParam("signalk_token", signalk_token_);
 
         telemetry_ = std::make_unique<usv::InfluxWriter>(opts);
         usv::InfluxOptions ev_opts = opts;
@@ -254,20 +358,24 @@ private:
 
     void HandleMessage(const CMOOSMsg& msg, double now) {
         const std::string& key = msg.GetKey();
+        if (ignore_vars_.count(key)) return;
 
-        // 1) Plain numeric passthrough (may fan out to several fields).
+        // 1) Plain numeric passthrough (may fan out to several fields),
+        //    rate-limited per field. Derived-quantity inputs are cached
+        //    from every sample first.
         if (msg.IsDouble()) {
+            if (kCachedVars.count(key)) CacheSample(key, msg.GetDouble(), now);
             auto range = kNumericVars.equal_range(key);
-            for (auto it = range.first; it != range.second; ++it)
-                telemetry_->field(it->second.measurement, "",
-                                  it->second.field,
-                                  msg.GetDouble() * it->second.scale);
-            if (range.first != range.second) {
-                if (key == "NAV_SPEED") last_speed_mps_ = msg.GetDouble();
-                if (key == "NAV_X") { nav_x_ = msg.GetDouble(); have_x_ = true; }
-                // Odometry: integrate on NAV_Y arrival (NAV_X cached above).
-                if (key == "NAV_Y" && have_x_)
-                    odom_.add(nav_x_, msg.GetDouble());
+            for (auto it = range.first; it != range.second; ++it) {
+                const FieldMap& fm = it->second;
+                // Legacy PID_* producers take precedence over derived errors.
+                if (key.rfind("PID_", 0) == 0)
+                    external_fields_.insert(fm.field);
+                const std::string k =
+                    std::string(fm.measurement) + "." + fm.field;
+                if (!limiter_.allow(k, now)) continue;
+                telemetry_->field(fm.measurement, fm.tags, fm.field,
+                                  msg.GetDouble() * fm.scale);
             }
         }
 
@@ -282,11 +390,28 @@ private:
             return;
         }
 
-        // 3) String passthrough.
+        // 3) String passthrough, change-only (planchaPID re-posts its status
+        //    strings every iterate at 20 Hz; the snapshot re-emits at 1 Hz).
         auto sp = kStringPassthrough.find(key);
         if (sp != kStringPassthrough.end() && msg.IsString()) {
-            telemetry_->str_field(sp->second.measurement, "",
-                                  sp->second.field, msg.GetString());
+            std::string& prev = last_str_[sp->second.field];
+            if (prev != msg.GetString()) {
+                prev = msg.GetString();
+                telemetry_->str_field(sp->second.measurement, "",
+                                      sp->second.field, prev);
+                if (key == "ID_ROUTE") {
+                    mission_id_ = prev;
+                    last_str_["route_name"] = ResolveRouteName(prev);
+                    telemetry_->str_field("mission_state", "", "route_name",
+                                          last_str_["route_name"]);
+                }
+                if (key == "CRASH_STOP_STATUS" && prev == "braking")
+                    Event("alarm", "critical",
+                          "Crash stop: emergency braking engaged");
+                if (key == "CORRIDOR_STATUS" && prev == "stop")
+                    Event("alarm", "critical",
+                          "Corridor limit reached: steering back inside");
+            }
             return;
         }
 
@@ -322,9 +447,20 @@ private:
         } else if (key == "COMMS_LOST") {
             HandleCommsLost(AsString(msg));
         } else if (key == "SURVEY_ENTRY_GATE") {
-            flags_.entry_gate = usv::lower(usv::trim(AsString(msg)));
-            telemetry_->str_field("mission_state", "", "entry_gate",
-                                  flags_.entry_gate);
+            // iWebSocket re-posts this every iterate (20 Hz): change-only.
+            const std::string gate = usv::lower(usv::trim(AsString(msg)));
+            if (gate != flags_.entry_gate || !seen_entry_gate_) {
+                seen_entry_gate_ = true;
+                flags_.entry_gate = gate;
+                telemetry_->str_field("mission_state", "", "entry_gate", gate);
+            }
+        } else if (key == "NODE_REPORT" && msg.IsString()) {
+            HandleNodeReport(msg.GetString(), now);
+        } else if (key == "RADAR_TARGET" && msg.IsString()) {
+            HandleRadarTarget(msg.GetString(), now);
+        } else if (key == "RADAR_TTM_RATE" && msg.IsDouble()) {
+            radar_ttm_rate_ = msg.GetDouble();
+            radar_ttm_time_ = now;
         } else if (key == "IVPHELM_STATE" && msg.IsString()) {
             HandleHelmState(msg.GetString());
         } else if (key == "IVPHELM_ALLSTOP" && msg.IsString()) {
@@ -361,21 +497,39 @@ private:
         else if (key == "RETURN")               slot = &flags_.returning;
         else if (key == "STATIONING")           slot = &flags_.stationing;
         else if (key == "PAUSE")                slot = &flags_.pause;
-        else if (key == "MOOS_MANUAL_OVERRIDE") slot = &flags_.manual_override;
+        else if (key == "MOOS_MANUAL_OVERRIDE" ||
+                 key == "MOOS_MANUAL_OVERIDE")  slot = &flags_.manual_override;
         else if (key == "MISSION_ARMED")        slot = &flags_.armed;
         else if (key == "SURVEY_COMPLETE")      slot = &flags_.survey_complete;
+        else if (key == "REMOTE_CONTROL")       slot = &flags_.remote_control;
+        else if (key == "CRASH_STOP")           slot = &flags_.crash_stop;
         if (!slot || *slot == val) return;
         *slot = val;
 
         if (key == "WAYPOINT" && val) {
             // Survey (re)start: reset the mission-scoped accumulators.
             mission_start_ = MonoSeconds();
+            mission_start_ms_ = EpochMs();
             odom_.reset();
             flags_.survey_complete = false;
             char m[96];
             std::snprintf(m, sizeof(m), "Survey started (%d waypoints)",
                           survey_wpt_total_);
-            Event("mission", "info", m);
+            MissionEvent(m, /*ended=*/false);
+        } else if (key == "WAYPOINT" && !val) {
+            // Survey ended (endflag, abort, or RTB): close the mission span
+            // so the replay index knows its time range.
+            if (mission_start_ms_ > 0.0)
+                MissionEvent(flags_.survey_complete ? "Survey finished"
+                                                    : "Survey ended",
+                             /*ended=*/true);
+        } else if (key == "REMOTE_CONTROL") {
+            Event("state_change", "info",
+                  val ? "Remote control engaged (operator has the helm)"
+                      : "Remote control released — autonomy standby");
+        } else if (key == "CRASH_STOP") {
+            if (val) Event("alarm", "critical", "CRASH STOP commanded");
+            else     Event("alarm", "info", "Crash stop cleared");
         } else if (key == "RETURN" && val) {
             Event("mission", "info", "Return-to-base started");
             if (mission_start_ == 0.0) mission_start_ = MonoSeconds();
@@ -399,22 +553,132 @@ private:
                                   val ? "true" : "false");
     }
 
+    // COMMS_LOST carries a phase (see usv::comms_phase): false / grace /
+    // <action> / rtb. Only the hold phase derives the CommsLost state; the
+    // others are surfaced as autonomy.comms_phase plus events.
     void HandleCommsLost(const std::string& raw) {
-        const bool was = usv::comms_lost_active(flags_.comms_lost);
-        flags_.comms_lost = usv::trim(raw);
-        const bool is = usv::comms_lost_active(flags_.comms_lost);
+        const std::string v = usv::trim(raw);
+        const int was = usv::comms_phase(flags_.comms_lost);
+        const int is = usv::comms_phase(v);
+        flags_.comms_lost = v;
+        if (is == was) return;
         telemetry_->str_field("mission_state", "", "comms_failsafe",
-                              is ? flags_.comms_lost : "ok");
-        if (is && !was) {
-            Event("alarm", "critical",
-                  "Operator link LOST — failsafe '" + flags_.comms_lost +
-                  "' engaged, mission disarmed");
-        } else if (!is && was) {
-            Event("alarm", "info",
-                  flags_.armed
-                      ? "Operator link restored"
-                      : "Operator link restored — survey held until "
-                        "operator re-arm");
+                              is == 0 ? "ok" : usv::lower(v));
+        switch (is) {
+            case 1:
+                Event("alarm", "warning",
+                      "Operator link lost — grace period, mission continues");
+                break;
+            case 2:
+                Event("alarm", "critical",
+                      "Operator link LOST — failsafe '" + v +
+                      "' engaged, mission disarmed");
+                break;
+            case 3:
+                Event("alarm", "critical",
+                      "Comms failsafe: returning to base");
+                break;
+            default:
+                Event("alarm", "info",
+                      was == 1
+                          ? "Operator link restored within grace period"
+                          : flags_.armed
+                                ? "Operator link restored"
+                                : "Operator link restored — survey held "
+                                  "until operator re-arm");
+                break;
+        }
+    }
+
+    // Mission span events carry epoch-ms bounds and the mission id as a tag
+    // so the Replay dashboard can list missions and jump to their range.
+    void MissionEvent(const std::string& message, bool ended) {
+        std::string tags = "severity=info,source=moos,type=mission";
+        if (!mission_id_.empty()) tags += ",mission_id=" + EscapeTag(mission_id_);
+        events_->str_field("events", tags, "message", message);
+        events_->field("events", tags, "value", 1);
+        events_->field("events", tags, "start_ms", mission_start_ms_);
+        if (ended) {
+            events_->field("events", tags, "end_ms", EpochMs());
+            mission_start_ms_ = 0.0;
+        }
+        events_->flush();
+    }
+
+    static std::string EscapeTag(const std::string& s) {
+        std::string out;
+        for (char c : s) {
+            if (c == ',' || c == '=' || c == ' ') out += '\\';
+            out += c;
+        }
+        return out;
+    }
+
+    // Derived-quantity inputs, updated from every sample (before limiting).
+    void CacheSample(const std::string& key, double v, double now) {
+        if (key == "NAV_SPEED") last_speed_mps_ = v;
+        else if (key == "NAV_X") { nav_x_ = v; have_x_ = true; }
+        else if (key == "NAV_Y") {
+            nav_y_ = v; have_y_ = true;
+            if (have_x_) odom_.add(nav_x_, v);   // odometry
+        }
+        else if (key == "NAV_HEADING") nav_hdg_ = v;
+        else if (key == "DESIRED_HEADING") { desired_hdg_ = v; have_desired_hdg_ = true; }
+        else if (key == "DESIRED_SPEED") { desired_spd_ = v; have_desired_spd_ = true; }
+
+        // Heading / speed error: planchaPID publishes neither (the PID_*
+        // names belong to pMarinePID), so derive them at 2 Hz unless an
+        // external producer has appeared.
+        if ((key == "NAV_HEADING" || key == "NAV_SPEED") &&
+            limiter_.allow("autopilot.error", now)) {
+            if (have_desired_hdg_ && !external_fields_.count("heading_error"))
+                telemetry_->field("autopilot", "", "heading_error",
+                                  usv::HeadingError(desired_hdg_, nav_hdg_));
+            if (have_desired_spd_ && !external_fields_.count("speed_error"))
+                telemetry_->field("autopilot", "", "speed_error",
+                                  (desired_spd_ - last_speed_mps_) * MS_TO_KN);
+        }
+    }
+
+    // NODE_REPORT: "NAME=contato_26,TYPE=ship,TIME=...,X=..,Y=..,SPD=..,HDG=.."
+    // (iRadarTargets / pContactSpawn / AIS). Range is computed from our own
+    // NAV_X/Y in the local grid; no CPA/TCPA here.
+    void HandleNodeReport(const std::string& report, double now) {
+        auto kv = usv::ParseKeyValuesLower(report);
+        auto name = kv.find("name");
+        if (name == kv.end() || name->second.empty()) return;
+        double range = -1;
+        auto x = kv.find("x"), y = kv.find("y");
+        if (have_x_ && have_y_ && x != kv.end() && y != kv.end()) {
+            try {
+                const double dx = std::stod(x->second) - nav_x_;
+                const double dy = std::stod(y->second) - nav_y_;
+                range = std::sqrt(dx * dx + dy * dy);
+            } catch (...) { range = -1; }
+        }
+        contacts_.post(name->second, now, range);
+    }
+
+    // RADAR_TARGET (proposed iRadarTargets addition):
+    // "id=26,range=1066.8,bearing=133.8,spd=5.7,cog=232.7,cpa=350.1,tcpa=138"
+    void HandleRadarTarget(const std::string& spec, double now) {
+        auto kv = usv::ParseKeyValuesLower(spec);
+        auto id = kv.find("id");
+        if (id == kv.end() || id->second.empty()) return;
+        auto num = [&](const char* k) {
+            auto it = kv.find(k);
+            if (it == kv.end() || it->second.empty()) return -1.0;
+            try { return std::stod(it->second); } catch (...) { return -1.0; }
+        };
+        const double cpa = num("cpa");
+        contacts_.post(id->second, now, num("range"), cpa, num("tcpa"));
+        if (cpa >= 0 && cpa < radar_cpa_alert_m_ &&
+            alerted_contacts_.insert(id->second).second) {
+            char m[128];
+            std::snprintf(m, sizeof(m),
+                          "Radar contact %s CPA %.0f m (TCPA %.0f s)",
+                          id->second.c_str(), cpa, num("tcpa"));
+            Event("radar", "warning", m);
         }
     }
 
@@ -454,7 +718,7 @@ private:
 
     void HandleHelmSummary(const std::string& summary) {
         if (external_active_behavior_) return;
-        const std::string active = usv::ParseActiveBehaviors(summary);
+        const std::string active = usv::ParseHelmBehaviors(summary);
         WriteActiveBehavior(active.empty() ? "none" : active);
         // Store the raw summary too (debug value for engineers).
         telemetry_->str_field("mission_state", "", "helm_summary", summary);
@@ -549,17 +813,77 @@ private:
         telemetry_->field("autonomy", "", "geofence_breached", gf);
         telemetry_->field("autonomy", "", "obstacle_alerts",
                           obstacles_.active(now));
+        telemetry_->field("autonomy", "", "comms_phase",
+                          usv::comms_phase(flags_.comms_lost));
+        telemetry_->field("autonomy", "", "remote_control",
+                          b(flags_.remote_control));
+        telemetry_->field("autonomy", "", "crash_stop", b(flags_.crash_stop));
 
         // Derived state written periodically too, so the state timeline is
-        // continuous and last() panels never go stale.
+        // continuous and last() panels never go stale. Same for the
+        // change-only strings and the mission identity.
         telemetry_->str_field("mission_state", "", "state", last_state_);
+        for (const char* f : {"arrival_state", "corridor_status",
+                              "crash_stop_status", "mission_id", "route_name",
+                              "region_warning"}) {
+            auto it = last_str_.find(f);
+            if (it != last_str_.end() && !it->second.empty())
+                telemetry_->str_field("mission_state", "", f, it->second);
+        }
+        // Change-only helm / mission strings: re-emit so last() over any
+        // dashboard time range finds a value (they may not change for hours).
+        if (!helm_state_str_.empty())
+            telemetry_->str_field("mission_state", "", "helm_state", helm_state_str_);
+        telemetry_->str_field("mission_state", "", "allstop_reason", allstop_str_);
+        if (!last_active_behavior_.empty())
+            telemetry_->str_field("mission_state", "", "active_behavior",
+                                  last_active_behavior_);
+        if (seen_entry_gate_)
+            telemetry_->str_field("mission_state", "", "entry_gate", flags_.entry_gate);
+        telemetry_->str_field("mission_state", "", "comms_failsafe",
+                              usv::comms_phase(flags_.comms_lost) == 0
+                                  ? "ok" : usv::lower(flags_.comms_lost));
+        if (!external_station_keep_)
+            telemetry_->str_field("mission_state", "", "station_keep",
+                                  flags_.stationing ? "true" : "false");
+        if (!mission_name_.empty())
+            telemetry_->str_field("mission_state", "", "mission_name",
+                                  mission_name_);
+
+        // Radar / contacts (FR-6): aggregates only; per-contact detail is
+        // event-driven. "online" = a TTM rate heartbeat within 30 s, or any
+        // contact update within 30 s (simulation has no TTM heartbeat).
+        {
+            const int n = contacts_.active(now);
+            if (n == 0) alerted_contacts_.clear();
+            const bool heartbeat = now - radar_ttm_time_ <= 30.0;
+            const bool recent = now - contacts_.last_seen() <= 30.0;
+            if (heartbeat || recent || radar_seen_) {
+                radar_seen_ = true;
+                telemetry_->field("radar", "", "online",
+                                  b(heartbeat || recent));
+                telemetry_->field("radar", "", "targets", n);
+                const double cr = contacts_.closest_range();
+                if (cr >= 0)
+                    telemetry_->field("radar", "", "closest_range_m", cr);
+                const usv::Contact w = contacts_.worst_cpa();
+                if (w.cpa_m >= 0) telemetry_->field("radar", "", "cpa_m", w.cpa_m);
+                if (w.tcpa_s >= 0) telemetry_->field("radar", "", "tcpa_s", w.tcpa_s);
+                if (heartbeat)
+                    telemetry_->field("radar", "", "ttm_rate", radar_ttm_rate_);
+            }
+        }
 
         // Derived mission quantities — each yields to an external producer.
         const bool wpt_active = flags_.waypoint || flags_.returning;
         if (!external_fields_.count("waypoints_total") &&
-            survey_wpt_total_ > 0)
+            survey_wpt_total_ > 0) {
             telemetry_->field("mission", "", "waypoints_total",
                               survey_wpt_total_);
+            if (last_wpt_index_ >= 0)
+                telemetry_->field("mission", "", "waypoints_remaining",
+                                  std::max(0, survey_wpt_total_ - last_wpt_index_));
+        }
         if (!external_fields_.count("progress_pct") && survey_wpt_total_ > 0) {
             const double pct =
                 flags_.survey_complete
@@ -609,9 +933,60 @@ private:
     int survey_wpt_total_ = 0;
     double last_dist_ = 0.0, last_dist_time_ = -1e18;
     double last_speed_mps_ = 0.0;
-    double nav_x_ = 0.0;
-    bool have_x_ = false;
-    double mission_start_ = 0.0;
+    double nav_x_ = 0.0, nav_y_ = 0.0;
+    bool have_x_ = false, have_y_ = false;
+    double nav_hdg_ = 0.0, desired_hdg_ = 0.0, desired_spd_ = 0.0;
+    bool have_desired_hdg_ = false, have_desired_spd_ = false;
+    double mission_start_ = 0.0;      // monotonic, for elapsed_s
+    double mission_start_ms_ = 0.0;   // epoch ms, for the replay index
+
+    // Deployment configuration (OnStartUp).
+    usv::RateLimiter limiter_{5.0};
+    std::set<std::string> ignore_vars_;
+    std::string mission_name_;
+    std::string mission_id_;
+    std::string signalk_http_ = "http://localhost:3000";
+    std::string signalk_token_;   // optional bearer token when SK security is on
+
+    // The console starts a mission with ID_ROUTE=<Signal K route uuid>; the
+    // operator knows the route by its name, so look it up once per change
+    // (one bounded GET on the MOOS thread, 800 ms worst case). Falls back
+    // to a readable short id when Signal K is unreachable.
+    std::string ResolveRouteName(const std::string& id) {
+        std::string name;
+        if (!signalk_http_.empty() && !id.empty() &&
+            usv::lower(id) != "return_to_base") {
+            // Signal K server v2 serves resources under /signalk/v2/...; v1
+            // keys routes by "urn:mrn:signalk:uuid:<uuid>". Try each shape
+            // and say in the log which one answered (journalctl -u <antler>).
+            const std::string cands[] = {
+                signalk_http_ + "/signalk/v2/api/resources/routes/" + id,
+                signalk_http_ + "/signalk/v1/api/resources/routes/" + id,
+                signalk_http_ + "/signalk/v1/api/resources/routes/urn:mrn:signalk:uuid:" + id,
+            };
+            for (const auto& url : cands) {
+                long status = 0;
+                const std::string body = usv::HttpGet(url, 800, signalk_token_, &status);
+                name = usv::JsonStringMember(body, "name");
+                std::fprintf(stderr, "[grafana_bridge] route lookup %s -> HTTP %ld%s%s\n",
+                             url.c_str(), status,
+                             name.empty() ? "" : " name=", name.c_str());
+                if (!name.empty()) break;
+            }
+        }
+        return usv::RouteDisplayName(id, name);
+    }
+    double radar_cpa_alert_m_ = 500.0;
+
+    // Change-only string cache: field -> last written value.
+    std::map<std::string, std::string> last_str_;
+    bool seen_entry_gate_ = false;
+
+    // Radar / contacts.
+    usv::ContactTracker contacts_{10.0};
+    std::set<std::string> alerted_contacts_;
+    double radar_ttm_rate_ = 0.0, radar_ttm_time_ = -1e18;
+    bool radar_seen_ = false;
 
     uint64_t msg_count_ = 0;
     double last_rate_emit_ = 0.0;

@@ -1,25 +1,39 @@
 # Operator User Guide
 
 ## Getting in
-Browse to http://<host>:3001, log in, open folder **Swift Autonomous Dashboard**. (The vessel's Signal K server owns port 3000; Grafana runs on 3001 — set GRAFANA_PORT in /etc/usv/usv.env to change.)
-All dashboards default to dark theme and a 5 s refresh (change per dashboard
-via the refresh picker, 1–5 s supported). The **Vessel** dropdown selects
-the vessel (fleet-ready).
+Browse to http://<host>:<port> (GRAFANA_PORT in /etc/usv/usv.env: 3001 on
+a vessel, 3300 on the simulation host), log in on the Swiftships login
+page, open folder **Swift Autonomous Dashboard**. The chips across the top
+of every dashboard switch between the twelve dashboards and keep the time
+range and vessel selection. All dashboards refresh every 5 s (1 to 5 s
+selectable) and fit one 1080p screen without scrolling. The **Vessel**
+dropdown selects the vessel; the **Fleet** dashboard shows all of them.
+
+Units are nautical throughout: knots, nautical miles for long distances,
+fixed metres for short ranges (approach distance, cross-track error).
+
+## Themes
+Dashboards work in Grafana's dark and light themes. The ☀ Light / ☾ Dark
+chips open the current dashboard in a new tab in that theme (Grafana only
+reads the theme on page load). To switch the tab you are in, press `c`
+then `t`. Set your lasting default under Profile -> Preferences ->
+Interface theme.
 
 ## Dashboards
 | Dashboard | What you watch |
 |---|---|
-| Mission | State, helm, armed/link/geofence/obstacles status wall, progress, waypoints, ETA, approach profile, autonomy flags, event timeline |
-| Navigation | Live map + track, compass (HDG/COG needles), analog speed meter, GPS quality, attitude, XTE |
-| Autopilot (MOOS-IvP) | Rudder angle indicator (PORT/STBD), throttle and heading-error meters, desired vs actual, PID errors, active behaviors, helm state / all-stop, entry gate, re-arm hold |
-| Vessel Health | Analog instrument cluster: tachometer, coolant, oil pressure, fuel, battery volts, SOC; electrical and power trends |
+| Mission | Status wall (mission state, helm, armed, operator link, geofence, all-stop, arrival, obstacles), readouts (mission, route name, elapsed, ETA, waypoint n of m, remaining, distance to waypoint, distance traveled in nm), progress bar, approach profile, autonomy flags, state timeline, mission events |
+| Navigation | Live map + track, compass (HDG/COG needles), speed meter, GPS fix and satellites, lat/lon, KPI strip (SOG, COG, heading, XTE, distance to WP, HDOP, depth, roll/pitch), trends |
+| Autopilot | Helm state, all-stop, station keeping, entry gate, re-arm hold, remote control, corridor, crash stop; active behaviors, heading/speed error, rudder/throttle commands, speed cap, next turn; rudder/throttle/heading-error instruments; desired vs actual heading; speed governor (desired / cap / commanded / actual) |
+| Vessel Health | Instrument cluster (tachometer, coolant, oil pressure, fuel, battery volts, SOC), engine and electrical tiles, trends |
 | CAN Bus | Utilization, msgs/s, error/dropped frames, PGN table |
-| Radar | Online status, targets, closest range, CPA/TCPA |
+| Radar | Online status, targets, closest range and CPA (nm), TCPA |
 | Cameras | Connection, stream, FPS, bitrate, recording, PTZ |
-| Communications | Internet/Starlink/VPN/Signal K status, latency, loss, bandwidth |
-| System Health (OBC) | CPU/RAM/disk/temp, service reachability, systemd services |
-| Mission Replay | Historical playback: set the time range, scrub with crosshair |
-| Alarms | Active alerts + alarm history + at-a-glance status wall |
+| Comms | Internet/Starlink/VPN/Signal K status, latency, loss, bandwidth |
+| System | CPU, GPU, RAM, disk, CPU temperature, load, Signal K and MOOS reachability, trends, systemd services |
+| Replay | Historical playback: GPS track, mission state, events, heading/speed/actuator history |
+| Alarms | Active alerts, alarm history, at-a-glance status wall |
+| Fleet | Last known positions on one map and a status row per vessel, each tile opening that vessel's Mission dashboard |
 
 ## Instruments
 Navigation, Autopilot and Vessel Health carry analog instruments styled
@@ -36,13 +50,14 @@ Derived onboard from the autonomy stack's own variables:
 | State | Meaning |
 |---|---|
 | Autonomous | Survey running (waypt_survey driving) |
+| Remote | Operator driving the boat through remote control (REMOTE_CONTROL); autonomy is not in charge |
 | Paused | Operator pause — boat holds at zero speed |
 | StationKeeping | Holding a station point (operator request or station waypoint) |
 | ReturnToHome | Driving back to the base/return point |
 | EnteringRegion | Mission started outside the region — recovering inside before the survey may run |
 | AwaitingRearm | Operator link is back but the mission is NOT re-armed; the survey stays held until an operator AUTONOMOUS_START/RESUME |
 | CommsLost | Operator-link failsafe in force (action shown in the events table); boat holds at the loss position |
-| Parked | Helm parked (manual override) — thrust actively zeroed |
+| Parked | Helm parked (manual override) — thrust actively zeroed. All-Stop shows PARKED / IDLE in grey for these benign causes; only unexpected all-stops are red |
 | Completed | Survey finished; boat stopped at the final waypoint / parked |
 | Idle | No mission requested |
 
@@ -50,7 +65,7 @@ Derived onboard from the autonomy stack's own variables:
 action — both also raise alerts.
 
 ## Mission replay
-1. Open **USV / Mission Replay**.
+1. Open **Replay**.
 2. Pick the mission window with the time picker (annotations mark waypoint
    hits and state changes).
 3. Hover any graph — the crosshair is shared, and the map shows the track

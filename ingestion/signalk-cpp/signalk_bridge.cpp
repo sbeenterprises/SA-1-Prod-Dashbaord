@@ -109,6 +109,7 @@ public:
 
     void set_up(bool up) {
         std::lock_guard<std::mutex> lock(mu_);
+        up_ = up;
         writer_.field("comms", "", "signalk_ws_up", up ? 1 : 0);
         writer_.flush();
     }
@@ -120,6 +121,10 @@ public:
         if (now - last_emit_ >= 5.0) {
             writer_.field("comms", "", "signalk_msg_rate",
                           msg_count_ / (now - last_emit_));
+            // Heartbeat: the link state is re-written with the rate so a
+            // dashboard window that starts hours after the last change still
+            // sees UP/DOWN instead of "No data".
+            writer_.field("comms", "", "signalk_ws_up", up_ ? 1 : 0);
             msg_count_ = 0;
             last_emit_ = now;
         }
@@ -163,6 +168,7 @@ private:
     usv::InfluxWriter writer_{"telemetry"};
     uint64_t msg_count_ = 0;
     double last_emit_ = 0.0;
+    bool up_ = false;
 };
 
 }  // namespace

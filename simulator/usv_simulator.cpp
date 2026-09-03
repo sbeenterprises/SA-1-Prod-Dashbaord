@@ -426,6 +426,8 @@ int main() {
         tel.field("mission", "", "waypoint_index",
                   static_cast<double>(wpt_i));
         tel.field("mission", "", "waypoints_total", wpt_total);
+        tel.field("mission", "", "waypoints_remaining",
+                  std::max(0, wpt_total - static_cast<int>(wpt_i)));
         tel.field("mission", "", "dist_to_waypoint", dist_next);
         tel.field("mission", "", "eta_s",
                   usv::EtaSeconds(dist_next, speed * KN_TO_MS));
@@ -466,6 +468,10 @@ int main() {
         bf("awaiting_rearm", usv::awaiting_rearm(flags));
         bf("helm_drive", helm_state == "DRIVE");
         bf("allstop", usv::allstop_unexpected(allstop));
+        bf("remote_control", false);
+        bf("crash_stop", false);
+        tel.field("autonomy", "", "comms_phase",
+                  usv::comms_phase(flags.comms_lost));
         tel.field("autonomy", "", "geofence_breached", geofence_level);
         tel.field("autonomy", "", "obstacle_alerts", obstacle_alerts);
         // autopilot

@@ -1,6 +1,6 @@
 {
   "uid": "usv-replay",
-  "title": "Mission Replay",
+  "title": "Replay",
   "tags": [
     "usv",
     "replay"
@@ -34,9 +34,9 @@
       "url": "/d/usv-replay?theme=light",
       "keepTime": true,
       "includeVars": true,
-      "targetBlank": false,
+      "targetBlank": true,
       "icon": "external link",
-      "tooltip": "View in light theme"
+      "tooltip": "Open in a new tab in the light theme (or press c, t)"
     },
     {
       "type": "link",
@@ -44,9 +44,9 @@
       "url": "/d/usv-replay?theme=dark",
       "keepTime": true,
       "includeVars": true,
-      "targetBlank": false,
+      "targetBlank": true,
       "icon": "external link",
-      "tooltip": "View in dark theme"
+      "tooltip": "Open in a new tab in the dark theme (or press c, t)"
     }
   ],
   "templating": {
@@ -72,7 +72,23 @@
   },
   "panels": [
     {
-      "id": 122,
+      "id": 187,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 2
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **REPLAY** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel**"
+      }
+    },
+    {
+      "id": 137,
       "type": "text",
       "title": "How to replay",
       "datasource": {
@@ -81,7 +97,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 2,
         "w": 24,
         "h": 2
       },
@@ -100,7 +116,7 @@
       }
     },
     {
-      "id": 123,
+      "id": 138,
       "type": "geomap",
       "title": "GPS Track",
       "datasource": {
@@ -109,9 +125,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 2,
+        "y": 4,
         "w": 14,
-        "h": 12
+        "h": 9
       },
       "targets": [
         {
@@ -119,8 +135,16 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"lat\" or r._field == \"lon\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> aggregateWindow(every: 10s, fn: last, createEmpty: false)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"lat\" or r._field == \"lon\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: 10s, fn: last, createEmpty: false)\n  |> group()\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.lat and exists r.lon)\n  |> keep(columns: [\"_time\", \"lat\", \"lon\"])\n  |> sort(columns: [\"_time\"])\n",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"lat\" or r._field == \"lon\" or r._field == \"heading\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> pivot(rowKey: [\"vessel\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.lat and exists r.lon)\n  |> keep(columns: [\"vessel\", \"lat\", \"lon\", \"heading\"])\n",
+          "refId": "B"
         }
       ],
       "fieldConfig": {
@@ -133,7 +157,8 @@
       },
       "options": {
         "view": {
-          "id": "fit"
+          "id": "fit",
+          "zoom": 15
         },
         "basemap": {
           "type": "osm-standard",
@@ -148,6 +173,10 @@
               "latitude": "lat",
               "longitude": "lon"
             },
+            "filterData": {
+              "id": "byRefId",
+              "options": "A"
+            },
             "config": {
               "style": {
                 "color": {
@@ -156,12 +185,57 @@
                 "lineWidth": 2
               }
             }
+          },
+          {
+            "type": "markers",
+            "name": "Last position",
+            "location": {
+              "mode": "coords",
+              "latitude": "lat",
+              "longitude": "lon"
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "B"
+            },
+            "config": {
+              "style": {
+                "size": {
+                  "fixed": 26
+                },
+                "color": {
+                  "fixed": "#d9342b"
+                },
+                "opacity": 1,
+                "symbol": {
+                  "fixed": "img/swiftships_boat.svg",
+                  "mode": "fixed"
+                },
+                "rotation": {
+                  "field": "heading",
+                  "mode": "field",
+                  "fixed": 0
+                },
+                "text": {
+                  "field": "vessel",
+                  "mode": "field"
+                },
+                "textConfig": {
+                  "fontSize": 13,
+                  "offsetX": 0,
+                  "offsetY": -24,
+                  "textAlign": "center",
+                  "textBaseline": "middle"
+                }
+              },
+              "showLegend": false
+            }
           }
         ]
       }
     },
     {
-      "id": 124,
+      "id": 139,
       "type": "state-timeline",
       "title": "Mission State",
       "datasource": {
@@ -170,9 +244,9 @@
       },
       "gridPos": {
         "x": 14,
-        "y": 2,
+        "y": 4,
         "w": 10,
-        "h": 6
+        "h": 4
       },
       "targets": [
         {
@@ -180,7 +254,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: 30s, fn: last, createEmpty: false)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: 30s, fn: last, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -203,45 +277,50 @@
                   "color": "#175d8d",
                   "index": 1
                 },
+                "Remote": {
+                  "text": "Remote",
+                  "color": "orange",
+                  "index": 2
+                },
                 "Paused": {
                   "text": "Paused",
                   "color": "yellow",
-                  "index": 2
+                  "index": 3
                 },
                 "StationKeeping": {
                   "text": "StationKeeping",
                   "color": "#00bcd4",
-                  "index": 3
+                  "index": 4
                 },
                 "ReturnToHome": {
                   "text": "ReturnToHome",
                   "color": "orange",
-                  "index": 4
+                  "index": 5
                 },
                 "EnteringRegion": {
                   "text": "EnteringRegion",
                   "color": "super-light-blue",
-                  "index": 5
+                  "index": 6
                 },
                 "AwaitingRearm": {
                   "text": "AwaitingRearm",
                   "color": "orange",
-                  "index": 6
+                  "index": 7
                 },
                 "CommsLost": {
                   "text": "CommsLost",
                   "color": "red",
-                  "index": 7
+                  "index": 8
                 },
                 "Parked": {
                   "text": "Parked",
                   "color": "#6e7680",
-                  "index": 8
+                  "index": 9
                 },
                 "Completed": {
                   "text": "Completed",
                   "color": "purple",
-                  "index": 9
+                  "index": 10
                 }
               }
             }
@@ -258,7 +337,7 @@
       }
     },
     {
-      "id": 125,
+      "id": 140,
       "type": "table",
       "title": "Mission Events",
       "datasource": {
@@ -269,7 +348,7 @@
         "x": 14,
         "y": 8,
         "w": 10,
-        "h": 6
+        "h": 5
       },
       "targets": [
         {
@@ -277,7 +356,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"events\" and r._field == \"message\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> keep(columns: [\"_time\", \"_value\", \"type\", \"severity\"])\n  |> sort(columns: [\"_time\"], desc: true)\n",
+          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"events\" and r._field == \"message\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\", \"type\", \"severity\"])\n  |> rename(columns: {_time: \"Time\", _value: \"Event\", type: \"Type\", severity: \"Severity\"})\n  |> sort(columns: [\"Time\"], desc: true)\n",
           "refId": "A"
         }
       ],
@@ -294,7 +373,7 @@
       }
     },
     {
-      "id": 126,
+      "id": 141,
       "type": "timeseries",
       "title": "Heading History",
       "datasource": {
@@ -303,9 +382,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 14,
-        "w": 12,
-        "h": 6
+        "y": 13,
+        "w": 8,
+        "h": 5
       },
       "targets": [
         {
@@ -313,7 +392,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"heading\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"heading\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A",
           "alias": "heading"
         }
@@ -366,7 +445,7 @@
       }
     },
     {
-      "id": 127,
+      "id": 142,
       "type": "timeseries",
       "title": "Speed History",
       "datasource": {
@@ -374,10 +453,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 12,
-        "y": 14,
-        "w": 12,
-        "h": 6
+        "x": 8,
+        "y": 13,
+        "w": 8,
+        "h": 5
       },
       "targets": [
         {
@@ -385,7 +464,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A",
           "alias": "SOG"
         }
@@ -436,18 +515,18 @@
       }
     },
     {
-      "id": 128,
+      "id": 143,
       "type": "timeseries",
-      "title": "Rudder Commands",
+      "title": "Actuator Commands",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 0,
-        "y": 20,
-        "w": 12,
-        "h": 6
+        "x": 16,
+        "y": 13,
+        "w": 8,
+        "h": 5
       },
       "targets": [
         {
@@ -455,9 +534,18 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"rudder_cmd\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"rudder_cmd\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A",
-          "alias": "rudder"
+          "alias": "rudder \u00b0"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"throttle_cmd\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "B",
+          "alias": "throttle %"
         }
       ],
       "fieldConfig": {
@@ -491,62 +579,7 @@
                 }
               }
             ]
-          }
-        ]
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 129,
-      "type": "timeseries",
-      "title": "Throttle Commands",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 20,
-        "w": 12,
-        "h": 6
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"throttle_cmd\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n",
-          "refId": "A",
-          "alias": "throttle"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "percent",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 14,
-            "showPoints": "never",
-            "spanNulls": 60000,
-            "gradientMode": "opacity",
-            "lineInterpolation": "smooth"
-          }
-        },
-        "overrides": [
           {
             "matcher": {
               "id": "byRegexp",
@@ -557,77 +590,24 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#00bcd4"
+                  "fixedColor": "#42a5f5"
                 }
               }
             ]
-          }
-        ]
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 130,
-      "type": "timeseries",
-      "title": "CAN Bus Activity",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 26,
-        "w": 12,
-        "h": 6
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"canbus\" and (r._field == \"msg_rate\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n",
-          "refId": "A",
-          "alias": "msgs/s"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 14,
-            "showPoints": "never",
-            "spanNulls": 60000,
-            "gradientMode": "opacity",
-            "lineInterpolation": "smooth"
-          }
-        },
-        "overrides": [
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": ".*msg_rate.*"
+              "id": "byFrameRefID",
+              "options": "B"
             },
             "properties": [
               {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#00bcd4"
-                }
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
               }
             ]
           }
@@ -645,7 +625,7 @@
       }
     },
     {
-      "id": 131,
+      "id": 144,
       "type": "timeseries",
       "title": "Cross-Track Error",
       "datasource": {
@@ -653,10 +633,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 12,
-        "y": 26,
-        "w": 12,
-        "h": 6
+        "x": 0,
+        "y": 18,
+        "w": 8,
+        "h": 5
       },
       "targets": [
         {
@@ -664,7 +644,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cross_track_error\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cross_track_error\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A",
           "alias": "XTE"
         }
@@ -674,7 +654,7 @@
           "color": {
             "mode": "palette-classic"
           },
-          "unit": "lengthm",
+          "unit": "suffix: m",
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
@@ -715,7 +695,7 @@
       }
     },
     {
-      "id": 132,
+      "id": 145,
       "type": "state-timeline",
       "title": "Autonomy Flags",
       "datasource": {
@@ -723,10 +703,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 0,
-        "y": 32,
-        "w": 12,
-        "h": 6
+        "x": 8,
+        "y": 18,
+        "w": 8,
+        "h": 5
       },
       "targets": [
         {
@@ -734,7 +714,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"waypoint\" or r._field == \"pause\" or r._field == \"stationing\" or r._field == \"returning\" or r._field == \"armed\" or r._field == \"comms_lost\" or r._field == \"manual_override\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: 30s, fn: last, createEmpty: false)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"waypoint\" or r._field == \"pause\" or r._field == \"stationing\" or r._field == \"returning\" or r._field == \"armed\" or r._field == \"comms_lost\" or r._field == \"manual_override\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: 30s, fn: last, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -778,7 +758,7 @@
       }
     },
     {
-      "id": 133,
+      "id": 146,
       "type": "timeseries",
       "title": "Distance to Next Waypoint",
       "datasource": {
@@ -786,10 +766,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 12,
-        "y": 32,
-        "w": 12,
-        "h": 6
+        "x": 16,
+        "y": 18,
+        "w": 8,
+        "h": 5
       },
       "targets": [
         {
@@ -797,7 +777,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission\" and (r._field == \"dist_to_waypoint\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission\" and (r._field == \"dist_to_waypoint\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A",
           "alias": "distance m"
         }
@@ -807,7 +787,7 @@
           "color": {
             "mode": "palette-classic"
           },
-          "unit": "lengthm",
+          "unit": "suffix: m",
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,

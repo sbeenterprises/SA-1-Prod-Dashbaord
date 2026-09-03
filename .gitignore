@@ -1,5 +1,6 @@
 # build outputs
 **/build/
+**/build-tests/
 preview/
 # secrets — never commit a filled-in env
 usv.env

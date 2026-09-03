@@ -91,9 +91,14 @@ for p in glob.glob(f"{repo}/grafana/dashboards/*.json"):
                 for f in pf.findall(q):
                     want.add((m, f))
 have = {tuple(l.split()) for l in open(produced_file) if l.strip()}
-external = {"cpu","mem","disk","diskio","net","temp","net_response","systemd_units","canbus_pgn"}
-missing = sorted((m,f) for m,f in want if m not in external and (m,f) not in have)
-print(f"  dashboard pairs: {len(want)} | simulator emits: {len(have)} | telegraf-sourced: skipped")
+# Fields the MOOS bridge maps from the helm (its FieldMap table) count as
+# produced too; the live bridge run below is skipped when MOOSDB is absent.
+src = open(f"{repo}/ingestion/moos-cpp/moos_bridge.cpp").read()
+moos = set(re.findall(r'\{"(\w+)",\s*"(\w+)"(?:,|\})', src))
+moos |= set(re.findall(r'(?:str_)?field\("(\w+)",\s*"",\s*"(\w+)"', src))
+external = {"cpu","mem","disk","diskio","net","temp","system","nvidia_smi","net_response","systemd_units","canbus_pgn"}
+missing = sorted((m,f) for m,f in want if m not in external and (m,f) not in have and (m,f) not in moos)
+print(f"  dashboard pairs: {len(want)} | simulator emits: {len(have)} | moos bridge maps: {len(moos)} | telegraf-sourced: skipped")
 if missing:
     print("  [FAIL] queried but never written:")
     for m,f in missing: print(f"      {m}.{f}")
@@ -131,7 +136,7 @@ PY
 hdr "Signal K bridge (mock WebSocket server)"
 if [[ ! -x "$REPO/ingestion/signalk-cpp/build/signalk_bridge" ]]; then
   skip "Signal K test (bridge not built — IXWebSocket missing on this host)"
-elif command -v node >/dev/null && node -e "require('ws')" 2>/dev/null; then
+elif command -v node >/dev/null && NODE_PATH="${NODE_PATH:-$(npm root -g 2>/dev/null)}" node -e "require('ws')" 2>/dev/null; then
   cat > "$TMP/sk.js" <<'EOF'
 const { WebSocketServer } = require('ws');
 const wss = new WebSocketServer({ port: 3111 });
@@ -145,7 +150,7 @@ wss.on('connection', ws => setInterval(() => ws.send(JSON.stringify({updates:[{v
   {path:'navigation.gnss.type', value:'RTK Fixed'}]}]})), 200));
 EOF
   start_stub
-  nohup node "$TMP/sk.js" >/dev/null 2>&1 & SK=$!
+  NODE_PATH="${NODE_PATH:-$(npm root -g 2>/dev/null)}" nohup node "$TMP/sk.js" >/dev/null 2>&1 & SK=$!
   sleep 1
   SIGNALK_URL=ws://127.0.0.1:3111/signalk/v1/stream \
     timeout 6 "$REPO/ingestion/signalk-cpp/build/signalk_bridge" >/dev/null 2>&1
@@ -214,7 +219,9 @@ EOF
       WAYPOINT=true DEPLOY=true DIST_TO_NEXT_WPT=650 WPT_INDEX=0 \
       'IVPHELM_SUMMARY=iter=10,active_bhvs=waypt_survey$0.6$100$4$0$0/0$1:opr24$0.6$300$5$0$0/0$1,idle_bhvs=station_keep'
     sleep 2
-    P COMMS_LOST=loiter MISSION_ARMED=false STATIONING=true    # link watchdog trips
+    P COMMS_LOST=grace                                         # link down, mission continues
+    sleep 2
+    P COMMS_LOST=loiter MISSION_ARMED=false STATIONING=true    # grace expired: failsafe hold
     sleep 2
     P COMMS_LOST=false STATIONING=false                        # link back, NOT re-armed
     sleep 2
@@ -224,6 +231,16 @@ EOF
     sleep 2
     P 'BHV_WARNING=Behavior avdcol_: unrecognized condition (MALCONFIG)'
     sleep 2
+    # Vessel / simulation producers added in the alignment pass: planchaPID
+    # governor + XTE, uSimMarine COG, iCANRec engine, iWebSocket route id,
+    # contacts (NODE_REPORT), crash stop.
+    P NAV_X=0 NAV_Y=0 DESIRED_HEADING=95 DESIRED_SPEED=3
+    sleep 1
+    P XTE_NOW=3.2 NAV_HEADING_OVER_GROUND=88 SPEED_CAP=4.0 NAV_HEADING=80 \
+      ENGINE_SPEED=1850 ENGINE_COOLANT_TEMP=82 ID_ROUTE=R-17 \
+      ARRIVAL_STATE=decelerating CRASH_STOP=true \
+      'NODE_REPORT=NAME=contato_7,TYPE=ship,TIME=1,X=300,Y=400,SPD=5,HDG=90'
+    sleep 3
   fi
   kill $DB 2>/dev/null; pkill -f moos_bridge 2>/dev/null; stop_stub
 
@@ -249,6 +266,21 @@ EOF
     grep -q "Operator link LOST" "$LINES"     && ok "comms-loss failsafe event emitted"     || bad "comms-loss event missing"
     grep -q "Mission re-armed" "$LINES"       && ok "re-arm event emitted"                  || bad "re-arm event missing"
     grep -q "Helm behavior: " "$LINES"        && ok "BHV_WARNING event emitted"             || bad "BHV_WARNING event missing"
+    grep -q "autonomy,.* comms_phase=1" "$LINES"       && ok "COMMS_LOST=grace -> comms_phase=1"        || bad "comms_phase grace missing"
+    grep -q "grace period, mission continues" "$LINES" && ok "grace-period warning event emitted"      || bad "grace event missing"
+    grep -q "nav,.* cross_track_error=3.2" "$LINES"    && ok "XTE_NOW -> nav.cross_track_error"         || bad "XTE_NOW not mapped"
+    grep -q "nav,.* cog=88" "$LINES"                   && ok "NAV_HEADING_OVER_GROUND -> nav.cog"       || bad "COG not mapped"
+    grep -q "autopilot,.* speed_cap=" "$LINES"         && ok "SPEED_CAP -> autopilot.speed_cap (kn)"    || bad "SPEED_CAP not mapped"
+    grep -q "autopilot,.* heading_error=15" "$LINES"   && ok "heading_error derived (95-80=15)"   || bad "heading_error not derived"
+    grep -q "engine,vessel=usv-moos,instance=0 rpm=1850" "$LINES" && ok "ENGINE_SPEED -> engine.rpm{instance=0}" || bad "ENGINE_SPEED not mapped"
+    grep -q 'mission_id="R-17"' "$LINES"               && ok "ID_ROUTE -> mission_state.mission_id"     || bad "ID_ROUTE not mapped"
+    grep -q 'arrival_state="decelerating"' "$LINES"    && ok "ARRIVAL_STATE -> mission_state"           || bad "ARRIVAL_STATE not mapped"
+    grep -q "radar,.* targets=1" "$LINES"              && ok "NODE_REPORT -> radar.targets=1"           || bad "contact tracking missing"
+    grep -q "radar,.* closest_range_m=500" "$LINES"    && ok "contact range from NAV_X/Y (500 m)"       || bad "contact range missing"
+    grep -q "autonomy,.* crash_stop=1" "$LINES"        && ok "CRASH_STOP -> autonomy.crash_stop"        || bad "crash_stop missing"
+    grep -q "CRASH STOP commanded" "$LINES"            && ok "crash-stop event emitted"                 || bad "crash-stop event missing"
+    grep -q "mission,.* waypoints_remaining=5" "$LINES" && ok "waypoints_remaining derived"             || bad "waypoints_remaining missing"
+    grep -q "Survey started" "$LINES" && grep -q "start_ms=" "$LINES" && ok "mission span event carries start_ms" || bad "mission start_ms missing"
   else
     skip "Alpha scenario replay (moos_poke not built)"
   fi

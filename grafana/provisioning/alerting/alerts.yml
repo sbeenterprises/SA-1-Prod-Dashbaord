@@ -9,7 +9,7 @@ groups:
     title: Low Battery SOC
     condition: C
     for: 1m
-    noDataState: Alerting
+    noDataState: OK
     execErrState: Alerting
     labels:
       severity: critical
@@ -63,7 +63,7 @@ groups:
     title: Low Battery Voltage
     condition: C
     for: 1m
-    noDataState: Alerting
+    noDataState: OK
     execErrState: Alerting
     labels:
       severity: critical
@@ -117,7 +117,7 @@ groups:
     title: GPS Signal Loss
     condition: C
     for: 30s
-    noDataState: Alerting
+    noDataState: OK
     execErrState: Alerting
     labels:
       severity: critical
@@ -171,7 +171,7 @@ groups:
     title: CAN Bus Failure
     condition: C
     for: 30s
-    noDataState: Alerting
+    noDataState: OK
     execErrState: Alerting
     labels:
       severity: critical
@@ -225,7 +225,7 @@ groups:
     title: Engine Over Temperature
     condition: C
     for: 1m
-    noDataState: Alerting
+    noDataState: OK
     execErrState: Alerting
     labels:
       severity: critical
@@ -279,7 +279,7 @@ groups:
     title: Low Fuel Level
     condition: C
     for: 1m
-    noDataState: Alerting
+    noDataState: OK
     execErrState: Alerting
     labels:
       severity: warning
@@ -333,7 +333,7 @@ groups:
     title: Radar Offline
     condition: C
     for: 1m
-    noDataState: Alerting
+    noDataState: OK
     execErrState: Alerting
     labels:
       severity: warning
@@ -387,7 +387,7 @@ groups:
     title: Camera Offline
     condition: C
     for: 1m
-    noDataState: Alerting
+    noDataState: OK
     execErrState: Alerting
     labels:
       severity: warning
@@ -549,7 +549,7 @@ groups:
     title: Communication Failure
     condition: C
     for: 30s
-    noDataState: Alerting
+    noDataState: OK
     execErrState: Alerting
     labels:
       severity: critical
@@ -621,6 +621,61 @@ groups:
         refId: A
         query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
           \ == \"autonomy\" and r._field == \"geofence_breached\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-comms-grace
+    title: Operator Link Lost (Grace Period)
+    condition: C
+    for: 0s
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: warning
+      system: usv
+    annotations:
+      summary: Operator link down; the mission keeps running for the grace period. Escalates to the failsafe
+        hold if the link does not return.
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"autonomy\" and r._field == \"comms_phase\")\n"
     - refId: B
       datasourceUid: __expr__
       model:
@@ -786,6 +841,61 @@ groups:
         refId: A
         query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
           \ == \"autonomy\" and r._field == \"awaiting_rearm\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-crash-stop
+    title: Crash Stop Commanded
+    condition: C
+    for: 0s
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: "Emergency stop commanded from the console \u2014 planchaPID is braking the boat to rest\
+        \ and parking the helm."
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"autonomy\" and r._field == \"crash_stop\")\n"
     - refId: B
       datasourceUid: __expr__
       model:

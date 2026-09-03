@@ -154,6 +154,14 @@ STATS = {
     "Mission Armed": ("ARMED", "OK"), "Operator Link": ("LINK OK", "OK"),
     "Geofence": ("INSIDE", "OK"), "Obstacle Alerts": ("0", "OK"),
     "Obstacles": ("0", "OK"),
+    "Armed": ("ARMED", "OK"), "All-Stop": ("CLEAR", "OK"),
+    "Mission": ("alpha-sim", "TEXT"), "Route ID": ("R-2026-017", "TEXT"),
+    "Elapsed": ("47m 12s", "CYAN"), "ETA to WP": ("5m 54s", "CYAN"),
+    "Waypoint": ("4 of 5", "CYAN"), "Remaining": ("1", "CYAN"),
+    "Arrival": ("cruising", "OK"),
+    "XTE": ("2.1 m", "CYAN"), "HDOP": ("0.8", "OK"), "Depth": ("6.4 m", "CYAN"),
+    "Roll / Pitch": ("1.2°", "CYAN"),
+    "Dist to WP": ("812 m", "CYAN"), "Traveled": ("8420 m", "CYAN"),
     "Helm All-Stop": ("CLEAR", "OK"), "All-Stop Reason": ("CLEAR", "OK"),
     "Survey Entry Gate": ("OPEN", "OK"), "Re-Arm Hold": ("—", "#3d434b"),
     "Active Behaviors": ("waypt_survey, opr24", "TEXT"),
@@ -319,6 +327,17 @@ def svg_map(w, h):
                  f'fill="none" stroke="{YELLOW}" stroke-width="2"/>')
         p.append(f'<text x="{fx*w+9:.0f}" y="{fy*h+4:.0f}" fill="{DIM}" '
                  f'font-size="11">WP{i+1}</text>')
+    # Operating region (OpRegion) and contacts — Phase B layers, mocked here.
+    poly = [(0.10, 0.90), (0.30, 0.42), (0.70, 0.36), (0.90, 0.62), (0.75, 0.92)]
+    p.append('<polygon points="' + " ".join(f"{fx*w:.0f},{fy*h:.0f}" for fx, fy in poly) +
+             '" fill="rgba(146,86,184,0.10)" stroke="#b388d9" stroke-width="1.5" '
+             'stroke-dasharray="6 4"/>')
+    for (fx, fy, kind) in [(0.28, 0.62, "ais"), (0.50, 0.44, "ais"), (0.84, 0.55, "radar"),
+                           (0.66, 0.80, "ais")]:
+        col = "#73bf69" if kind == "ais" else "#f2495c"
+        cx, cy = fx * w, fy * h
+        p.append(f'<polygon points="{cx:.0f},{cy-6:.0f} {cx-5:.0f},{cy+5:.0f} {cx+5:.0f},{cy+5:.0f}" '
+                 f'fill="{col}" opacity="0.9"/>')
     vx, vy = wps[-1][0] * w, wps[-1][1] * h
     p.append(f'<circle cx="{vx:.0f}" cy="{vy:.0f}" r="8" fill="{TEAL}" '
              f'stroke="#fff" stroke-width="2"/>')
@@ -614,6 +633,15 @@ def render_panel(uid, p):
             body = (spark +
                     f'<div class="statv" style="color:{col};'
                     f'font-size:{fs}px">{val}</div>')
+    elif ptype == "bargauge":
+        pct, col = GAUGES.get(title, (62, TEAL))
+        col = C(col) if col != TEAL else col
+        body = (f'<div style="position:relative;margin:4px 8px;height:{max(10, ih-8)}px;'
+                f'background:rgba(120,140,160,0.18);border-radius:3px">'
+                f'<div style="width:{pct}%;height:100%;background:{col};'
+                f'border-radius:3px;opacity:.9"></div>'
+                f'<div style="position:absolute;right:10px;top:0;line-height:{max(10, ih-8)}px;'
+                f'font-size:13px;color:#fff;font-weight:600">{pct}%</div></div>')
     elif ptype == "gauge":
         pct, col = GAUGES.get(title, (50, "OK"))
         col = C(col)
@@ -645,7 +673,23 @@ def render_panel(uid, p):
                               [(f"2026-08-12 {t}", m, ty, sv)
                                for t, m, ty, sv in EVENTS])
     elif ptype == "text":
-        body = f'<div class="ptext">{p["options"].get("content","")}</div>'
+        content = p["options"].get("content", "")
+        if content.startswith("![Swiftships]"):
+            import re as _re
+            m = _re.search(r"\*\*([A-Z ()/-]+)\*\*", content)
+            band_title = m.group(1) if m else ""
+            chip = os.path.join(os.path.dirname(__file__), "..", "deploy",
+                                "branding", "swiftships_wordmark_chip_sm.png")
+            import base64 as _b64
+            data = _b64.b64encode(open(chip, "rb").read()).decode()
+            body = (f'<div style="display:flex;align-items:center;gap:14px;'
+                    f'height:100%;padding:0 6px">'
+                    f'<img src="data:image/png;base64,{data}" height="30">'
+                    f'<b style="font-size:15px;letter-spacing:.04em">{band_title}</b>'
+                    f'<span style="color:{DIM}">&middot;</span>'
+                    f'<span style="color:{DIM}">Vessel <b>alpha</b></span></div>')
+        else:
+            body = f'<div class="ptext">{content}</div>'
     elif ptype == "alertlist":
         body = ('<div class="ptext" style="color:' + DIM + '">'
                 '<div style="padding:24px;text-align:center">No firing alerts'

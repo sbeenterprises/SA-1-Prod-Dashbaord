@@ -21,10 +21,11 @@ add_test(NAME mission_logic COMMAND mission_logic_test)
 if(NOT MISSION_LOGIC_TESTS_ONLY)
   find_package(MOOS 10 REQUIRED)
   find_package(CURL REQUIRED)
+  find_package(Threads REQUIRED)
 
   add_executable(moos_bridge moos_bridge.cpp)
   target_include_directories(moos_bridge PRIVATE ${MOOS_INCLUDE_DIRS})
-  target_link_libraries(moos_bridge PRIVATE ${MOOS_LIBRARIES} CURL::libcurl)
+  target_link_libraries(moos_bridge PRIVATE ${MOOS_LIBRARIES} CURL::libcurl Threads::Threads)
   target_compile_options(moos_bridge PRIVATE -Wall -Wextra)
 
   # Test/commissioning poke utility (not installed as a service; used by

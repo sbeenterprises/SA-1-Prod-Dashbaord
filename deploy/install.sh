@@ -38,10 +38,18 @@ apt-get install -y -q curl gnupg ca-certificates apt-transport-https \
 install -d /etc/apt/keyrings
 # --batch --yes: don't stop the installer with an interactive overwrite
 # prompt when the keyring already exists (idempotent re-runs).
-curl -fsSL https://repos.influxdata.com/influxdata-archive.key \
-  | gpg --batch --yes --dearmor -o /etc/apt/keyrings/influxdata.gpg
-echo "deb [signed-by=/etc/apt/keyrings/influxdata.gpg] https://repos.influxdata.com/debian stable main" \
-  > /etc/apt/sources.list.d/influxdata.list
+# The influxdata-archive-keyring package (pulled in by influxdb2) owns
+# /etc/apt/sources.list.d/influxdata.list as a conffile. Writing our own copy
+# makes dpkg stop with an interactive "modified configuration file" prompt
+# on the very first install, so bootstrap the repo only while the keyring
+# package is absent, and never overwrite the file it manages.
+if ! dpkg -s influxdata-archive-keyring >/dev/null 2>&1 && \
+   [[ ! -f /etc/apt/sources.list.d/influxdata.list ]]; then
+  curl -fsSL https://repos.influxdata.com/influxdata-archive.key \
+    | gpg --batch --yes --dearmor -o /etc/apt/keyrings/influxdata.gpg
+  echo "deb [signed-by=/etc/apt/keyrings/influxdata.gpg] https://repos.influxdata.com/debian stable main" \
+    > /etc/apt/sources.list.d/influxdata.list
+fi
 curl -fsSL https://apt.grafana.com/gpg.key \
   | gpg --batch --yes --dearmor -o /etc/apt/keyrings/grafana.gpg
 echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" \
@@ -49,7 +57,12 @@ echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stab
 
 apt-get update -q
 say "Installing influxdb2, telegraf, grafana"
-apt-get install -y -q influxdb2 telegraf grafana
+# Non-interactive, keep any locally modified conffiles, retry slow CDNs
+# (apt.grafana.com is 375 MB and has timed out in the field).
+DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
+  -o Dpkg::Options::="--force-confold" \
+  -o Acquire::Retries=10 -o Acquire::http::Timeout=120 -o Acquire::https::Timeout=120 \
+  influxdb2 telegraf grafana
 
 # ---------------------------------------------------------------- influxdb
 say "Starting InfluxDB and creating org/buckets/token"
@@ -118,14 +131,36 @@ if [[ -n "${MOOS_DIR:-}" ]]; then
 else
   MOOS_HINT=""
 fi
+# A build dir configured for the unit tests only (-DMISSION_LOGIC_TESTS_ONLY=ON,
+# as tools/smoke_test.sh and the docs do) caches that switch; a later
+# configure with MOOS_DIR would silently skip moos_bridge. Reset it.
+if grep -qs "MISSION_LOGIC_TESTS_ONLY:BOOL=ON" \
+     "$REPO/ingestion/moos-cpp/build/CMakeCache.txt"; then
+  rm -rf "$REPO/ingestion/moos-cpp/build"
+fi
 if cmake -S "$REPO/ingestion/moos-cpp" -B "$REPO/ingestion/moos-cpp/build" \
-     -DCMAKE_BUILD_TYPE=Release $MOOS_HINT; then
+     -DCMAKE_BUILD_TYPE=Release -DMISSION_LOGIC_TESTS_ONLY=OFF $MOOS_HINT; then
   cmake --build "$REPO/ingestion/moos-cpp/build" -j"$(nproc)"
   install -m 755 "$REPO/ingestion/moos-cpp/build/moos_bridge" /usr/local/bin/
   # pAntler launches the app as 'grafana_bridge' (see example.moos) — make
   # sure that name resolves on PATH.
   ln -sf /usr/local/bin/moos_bridge /usr/local/bin/grafana_bridge
   say "moos_bridge installed (as grafana_bridge) — add 'Run = grafana_bridge' to your mission file"
+  # If pAntler runs from a systemd unit with a private PATH (as on usv01:
+  # moos-antler.service sets PATH to the two MOOS bin dirs only), pAntler
+  # cannot exec /usr/local/bin/grafana_bridge ("Failed exec - not good").
+  # Extend that unit's PATH with a drop-in instead of editing the unit.
+  if [[ -n "${MOOS_ANTLER_UNIT:-}" ]] && systemctl cat "$MOOS_ANTLER_UNIT" &>/dev/null; then
+    cur=$(systemctl show "$MOOS_ANTLER_UNIT" -p Environment --value | tr ' ' '\n' | sed -n 's/^PATH=//p')
+    if [[ -n "$cur" && "$cur" != *"/usr/local/bin"* ]]; then
+      say "Adding /usr/local/bin to PATH of $MOOS_ANTLER_UNIT (drop-in)"
+      install -d "/etc/systemd/system/$MOOS_ANTLER_UNIT.d"
+      printf '[Service]\nEnvironment=PATH=%s:/usr/local/bin:/usr/bin:/bin\n' "$cur" \
+        > "/etc/systemd/system/$MOOS_ANTLER_UNIT.d/10-usv-path.conf"
+      systemctl daemon-reload
+      echo "         restart it after merging example.moos: systemctl restart $MOOS_ANTLER_UNIT"
+    fi
+  fi
 else
   echo "WARNING: MOOS not found. Re-run with MOOS_DIR=<path to MOOSConfig.cmake>"
   echo "         (source tree: ~/moos-ivp/build/MOOS/MOOSCore)"
@@ -135,8 +170,28 @@ say "Installing services"
 id -u usv &>/dev/null || useradd -r -s /usr/sbin/nologin usv
 cp "$REPO"/deploy/systemd/*.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now usv-signalk-bridge usv-can-bridge
+systemctl enable --now usv-can-bridge
 # usv-simulator.service installed but NOT enabled (bench testing only)
+
+# Signal K bridges: one per vessel when VESSELS is set in usv.env
+# ("alpha:3000 bravo:3001 ..."), each an instance of the template unit
+# usv-signalk-bridge@<vessel> with its own /etc/usv/vessels/<vessel>.env.
+# Without VESSELS the single usv-signalk-bridge (SIGNALK_URL) is used.
+if [[ -n "${VESSELS:-}" ]]; then
+  say "Configuring per-vessel Signal K bridges: $VESSELS"
+  install -d -m 750 -o root -g usv /etc/usv/vessels
+  systemctl disable --now usv-signalk-bridge 2>/dev/null || true
+  for spec in $VESSELS; do
+    name=${spec%%:*}; port=${spec##*:}
+    printf 'SIGNALK_URL=ws://localhost:%s/signalk/v1/stream?subscribe=all\nVESSEL_ID=%s\n' \
+      "$port" "$name" > "/etc/usv/vessels/$name.env"
+    chmod 640 "/etc/usv/vessels/$name.env"; chown root:usv "/etc/usv/vessels/$name.env"
+    systemctl enable --now "usv-signalk-bridge@$name"
+    systemctl restart "usv-signalk-bridge@$name"
+  done
+else
+  systemctl enable --now usv-signalk-bridge
+fi
 
 # ---------------------------------------------------------------- grafana
 # grafana-cli needs an explicit homepath when run outside /usr/share/grafana;
@@ -207,24 +262,12 @@ sed -i 's/^;*default_theme =.*/default_theme = dark/' /etc/grafana/grafana.ini
 # change it; re-run this installer to apply.
 sed -i "s/^;*http_port =.*/http_port = ${GRAFANA_PORT:-3001}/" /etc/grafana/grafana.ini
 
-# Branding: Swiftships logo in the top-left nav + favicon.
-# OSS Grafana has no white-label config, so we overwrite the shipped image
-# assets; an apt upgrade of grafana restores the originals, so RE-RUN this
-# installer after any Grafana upgrade to re-apply branding.
-# The default theme is dark, so the nav uses the white-knockout mark
-# (swiftships_logo_light.svg) — the official navy mark is invisible on the
-# dark navbar. The favicon keeps the original navy artwork.
-if [[ -f "$REPO/deploy/branding/swiftships_logo.svg" ]]; then
-  say "Applying Swiftships branding"
-  GPUB=/usr/share/grafana/public
-  NAV_LOGO="$REPO/deploy/branding/swiftships_logo_light.svg"
-  [[ -f $NAV_LOGO ]] || NAV_LOGO="$REPO/deploy/branding/swiftships_logo.svg"
-  cp "$NAV_LOGO" "$GPUB/img/grafana_icon.svg"
-  if command -v rsvg-convert &>/dev/null; then
-    rsvg-convert -w 32 -h 32 "$REPO/deploy/branding/swiftships_logo.svg" \
-      -o "$GPUB/img/fav32.png" 2>/dev/null || true
-  fi
-fi
+# Branding (logo, favicon, login page, title): deploy/brand.sh. Grafana OSS
+# has no white-label config, so it overwrites shipped assets; an apt
+# upgrade of grafana restores them until this installer is re-run.
+say "Applying Swiftships branding"
+bash "$REPO/deploy/brand.sh"
+
 systemctl enable --now grafana-server
 systemctl restart grafana-server
 

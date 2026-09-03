@@ -73,17 +73,18 @@ Priority order (first match wins), mirroring the semantics documented in
 
 | # | Condition | State | Rationale |
 |---|---|---|---|
-| 1 | `COMMS_LOST` ≠ false | `CommsLost` | Failsafe dominates; planchaPID station-keeps at the loss position, but shore must see *why* |
-| 2 | `MOOS_MANUAL_OVERRIDE` and `SURVEY_COMPLETE` | `Completed` | Post-survey park (iWebSocket parks once inside the region) |
-| 3 | `MOOS_MANUAL_OVERRIDE` | `Parked` | Helm parked / manual-RC; thrust actively zeroed |
-| 4 | `PAUSE` | `Paused` | Zero-speed hold (pause behaviors active) |
-| 5 | `STATIONING` | `StationKeeping` | Operator station-keep or mid-route station waypoint |
-| 6 | `RETURN` | `ReturnToHome` | `waypt_return` driving to base |
-| 7 | `WAYPOINT` and gate `closed` | `EnteringRegion` | Start-outside latch: opr24 recovers the boat inside before the survey may run |
-| 8 | `WAYPOINT` and not `MISSION_ARMED` | `AwaitingRearm` | Link back but no operator re-arm — the explicit no-silent-resume hold |
-| 9 | `WAYPOINT` | `Autonomous` | Survey running |
-| 10 | `SURVEY_COMPLETE` | `Completed` | Completed but not yet parked (e.g. recovering inside first) |
-| 11 | otherwise | `Idle` | |
+| 1 | `COMMS_LOST` in its hold phase | `CommsLost` | Failsafe dominates; planchaPID station-keeps at the loss position, but shore must see *why* |
+| 2 | `REMOTE_CONTROL` | `Remote` | Operator driving through the passthrough; it parks the helm underneath, so it must outrank Parked |
+| 3 | `MOOS_MANUAL_OVERRIDE` and `SURVEY_COMPLETE` | `Completed` | Post-survey park (iWebSocket parks once inside the region) |
+| 4 | `MOOS_MANUAL_OVERRIDE` | `Parked` | Helm parked; thrust actively zeroed |
+| 5 | `PAUSE` | `Paused` | Zero-speed hold (pause behaviors active) |
+| 6 | `STATIONING` | `StationKeeping` | Operator station-keep or mid-route station waypoint |
+| 7 | `RETURN` | `ReturnToHome` | `waypt_return` driving to base |
+| 8 | `WAYPOINT` and gate `closed` | `EnteringRegion` | Start-outside latch: opr24 recovers the boat inside before the survey may run |
+| 9 | `WAYPOINT` and not `MISSION_ARMED` | `AwaitingRearm` | Link back but no operator re-arm — the explicit no-silent-resume hold |
+| 10 | `WAYPOINT` | `Autonomous` | Survey running |
+| 11 | `SURVEY_COMPLETE` | `Completed` | Completed but not yet parked (e.g. recovering inside first) |
+| 12 | otherwise | `Idle` | |
 
 Helm health (`IVPHELM_STATE`, `IVPHELM_ALLSTOP`) is deliberately **not**
 folded into the mission state: a frozen helm while `Paused` must show as

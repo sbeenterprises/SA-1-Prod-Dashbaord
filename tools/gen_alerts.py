@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 """Generate Grafana unified-alerting provisioning (FR-11).
 
-Run:  python3 tools/gen_alerts.py
+Run:  python3 tools/gen_alerts.py [--profile sim|vessel]
 Output: grafana/provisioning/alerting/alerts.yml
 
 Each rule: Flux query (A) -> reduce last (B) -> threshold (C).
+
+Profiles decide what "no data" means for the sensor-backed rules:
+  sim     (default) the simulation community has no CAN bus, engine, GPS
+          quality, battery or fuel sensors, so those rules must NOT page on
+          missing data; they still fire if a value crosses the threshold.
+  vessel  sensor rules page on missing data (a silent sensor is a fault).
 """
 import os
+import sys
 
 import yaml
 
@@ -67,9 +74,14 @@ def rule(uid, title, query, op, threshold, severity, summary,
 
 
 RULES = [
+    # noDataState=OK on the rules whose field has no producer yet in the
+    # simulation environment (no battery monitor, fuel sender, radar, camera
+    # or link probe). They evaluate normally once data exists; flip to
+    # "Alerting" per rule at vessel commissioning (see docs/deployment.md).
     rule("usv-low-battery", "Low Battery SOC",
          q("electrical", "soc"), "lt", 25, "critical",
-         "Battery state of charge below 25% — consider Return-to-Home."),
+         "Battery state of charge below 25% — consider Return-to-Home.",
+         no_data="OK"),
     rule("usv-low-batt-voltage", "Low Battery Voltage",
          q("electrical", "battery_voltage"), "lt", 11.8, "critical",
          "Battery voltage below 11.8 V."),
@@ -85,13 +97,13 @@ RULES = [
          "Engine coolant temperature above 105 °C."),
     rule("usv-low-fuel", "Low Fuel Level",
          q("engine", "fuel_level"), "lt", 15, "warning",
-         "Fuel level below 15%."),
+         "Fuel level below 15%.", no_data="OK"),
     rule("usv-radar-offline", "Radar Offline",
          q("radar", "online"), "lt", 1, "warning",
-         "Radar is offline — collision avoidance degraded."),
+         "Radar is offline — collision avoidance degraded.", no_data="OK"),
     rule("usv-camera-offline", "Camera Offline",
          q("camera", "connected"), "lt", 1, "warning",
-         "Camera disconnected."),
+         "Camera disconnected.", no_data="OK"),
     rule("usv-signalk-disc", "Signal K Disconnected",
          q("comms", "signalk_ws_up"), "lt", 1, "warning",
          "Signal K WebSocket stream is down.", for_="30s"),
@@ -101,7 +113,7 @@ RULES = [
     rule("usv-comms-failure", "Communication Failure",
          q("comms", "internet_up"), "lt", 1, "critical",
          "Internet/Starlink link down — remote monitoring degraded.",
-         for_="30s"),
+         for_="30s", no_data="OK"),
     # ------------------------------------------------- Alpha mission rules
     # These fire on the live autonomy fields grafana_bridge derives from the
     # Alpha mission (alpha.bhv). noDataState=OK: the fields only exist while
@@ -110,6 +122,11 @@ RULES = [
          q("autonomy", "geofence_breached"), "gt", 0, "critical",
          "Vessel outside the operating region (OPR_BREACHED) — opr24 "
          "recovery in progress. Self-clears 30 s after recovery.",
+         for_="0s", no_data="OK"),
+    rule("usv-comms-grace", "Operator Link Lost (Grace Period)",
+         q("autonomy", "comms_phase"), "gt", 0, "warning",
+         "Operator link down; the mission keeps running for the grace period. "
+         "Escalates to the failsafe hold if the link does not return.",
          for_="0s", no_data="OK"),
     rule("usv-comms-failsafe", "Operator Link Lost (Failsafe Engaged)",
          q("autonomy", "comms_lost"), "gt", 0, "critical",
@@ -126,10 +143,34 @@ RULES = [
          "Operator link is back but MISSION_ARMED is false: the survey will "
          "NOT resume until an operator AUTONOMOUS_START/RESUME.",
          for_="1m", no_data="OK"),
+    rule("usv-crash-stop", "Crash Stop Commanded",
+         q("autonomy", "crash_stop"), "gt", 0, "critical",
+         "Emergency stop commanded from the console — planchaPID is braking "
+         "the boat to rest and parking the helm.",
+         for_="0s", no_data="OK"),
 ]
 
 
+# Rules whose data source is a physical sensor that the simulation does not
+# have. In the "vessel" profile their noDataState becomes "Alerting".
+SENSOR_RULES = {"usv-low-batt-voltage", "usv-gps-loss", "usv-can-failure",
+                "usv-engine-overtemp"}
+
+
+def apply_profile(rules, profile):
+    for r in rules:
+        if r["uid"] in SENSOR_RULES:
+            r["noDataState"] = "Alerting" if profile == "vessel" else "OK"
+    return rules
+
+
 def main():
+    profile = "sim"
+    if "--profile" in sys.argv:
+        profile = sys.argv[sys.argv.index("--profile") + 1]
+    if profile not in ("sim", "vessel"):
+        sys.exit("--profile must be sim or vessel")
+    apply_profile(RULES, profile)
     os.makedirs(OUT, exist_ok=True)
     doc = {
         "apiVersion": 1,
@@ -143,7 +184,7 @@ def main():
     }
     with open(os.path.join(OUT, "alerts.yml"), "w") as f:
         yaml.safe_dump(doc, f, sort_keys=False, width=100)
-    print(f"wrote alerts.yml with {len(RULES)} rules")
+    print(f"wrote alerts.yml with {len(RULES)} rules (profile: {profile})")
 
 
 if __name__ == "__main__":

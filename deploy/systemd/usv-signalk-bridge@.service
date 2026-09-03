@@ -1,0 +1,19 @@
+[Unit]
+Description=USV Signal K -> InfluxDB telemetry bridge (vessel %i)
+After=network-online.target influxdb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Common settings first, then the per-vessel overrides (SIGNALK_URL, VESSEL_ID)
+# written by deploy/install.sh from VESSELS in /etc/usv/usv.env.
+EnvironmentFile=/etc/usv/usv.env
+EnvironmentFile=/etc/usv/vessels/%i.env
+ExecStart=/usr/local/bin/signalk_bridge
+Restart=always
+RestartSec=5
+User=usv
+Group=usv
+
+[Install]
+WantedBy=multi-user.target
