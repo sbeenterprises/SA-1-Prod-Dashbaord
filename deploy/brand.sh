@@ -79,9 +79,11 @@ cat > "$1" <<'EOF'
 </svg>
 EOF
 }
-for f in g8_login_dark.svg g8_login_light.svg login_background_dark.svg login_background_light.svg; do
-  [[ -f "$GPUB/img/$f" ]] || continue
-  keep "$GPUB/img/$f"; mk_bg "$GPUB/img/$f"
+# Grafana 13 loads hashed copies (build/static/img/g8_login_dark.<hash>.svg);
+# older builds use img/. Replace every copy, wherever it lives.
+find "$GPUB" \( -name 'g8_login_*.svg' -o -name 'login_background_*.svg' \) \
+     -not -name '*.grafana-orig' | while read -r f; do
+  keep "$f"; mk_bg "$f"
 done
 
 # ------------------------------------------------- title and login text
