@@ -394,9 +394,74 @@ private:
 struct Contact {
     double range_m = -1;   // < 0 = unknown
     double cpa_m = -1;
-    double tcpa_s = -1;
+    double tcpa_s = -1;    // < 0 = diverging / unknown
     double last_seen = -1e18;
+    // Kinematics (MOOS local grid) when the source reports them.
+    bool have_pos = false;
+    double x = 0.0, y = 0.0;
+    double spd_mps = -1;   // < 0 = unknown
+    double hdg = -1;       // < 0 = unknown
+    double bearing = -1;      // true bearing from own ship (deg)
+    double rel_bearing = 0;   // -180..180, negative = port
+    double rel_speed_mps = -1;
+    std::string type;         // NODE_REPORT TYPE (ship, kayak, ...)
+    std::string source;       // "report" (AIS / NODE_REPORT) or "radar"
+    std::string encounter;    // head-on | crossing | overtaking | ""
+    int risk = 0;             // 0 clear, 1 medium, 2 high
 };
+
+struct OwnShip {
+    bool valid = false;
+    double x = 0.0, y = 0.0, spd_mps = 0.0, hdg = 0.0;
+};
+
+inline double WrapDeg180(double d) {
+    while (d > 180.0) d -= 360.0;
+    while (d <= -180.0) d += 360.0;
+    return d;
+}
+
+// Closest point of approach from current positions and velocities
+// (x east, y north, heading clockwise from north). tcpa < 0 means the
+// contact is opening (CPA is the current range). Both in metres / seconds.
+inline void ComputeCpa(double ox, double oy, double ospd, double ohdg,
+                       double cx, double cy, double cspd, double chdg,
+                       double* cpa_m, double* tcpa_s) {
+    const double rx = cx - ox, ry = cy - oy;
+    const double ovx = ospd * std::sin(ohdg * M_PI / 180.0);
+    const double ovy = ospd * std::cos(ohdg * M_PI / 180.0);
+    const double cvx = cspd * std::sin(chdg * M_PI / 180.0);
+    const double cvy = cspd * std::cos(chdg * M_PI / 180.0);
+    const double vx = cvx - ovx, vy = cvy - ovy;
+    const double v2 = vx * vx + vy * vy;
+    const double range = std::sqrt(rx * rx + ry * ry);
+    if (v2 < 1e-6) { *cpa_m = range; *tcpa_s = -1; return; }
+    const double t = -(rx * vx + ry * vy) / v2;
+    if (t <= 0) { *cpa_m = range; *tcpa_s = -1; return; }
+    const double px = rx + vx * t, py = ry + vy * t;
+    *cpa_m = std::sqrt(px * px + py * py);
+    *tcpa_s = t;
+}
+
+// COLREGs-style geometric classification from the heading difference:
+// reciprocal courses head-on, near-parallel overtaking, otherwise crossing.
+inline const char* EncounterType(double own_hdg, double contact_hdg) {
+    const double d = std::fabs(WrapDeg180(contact_hdg - own_hdg));
+    if (d >= 150.0) return "head-on";
+    if (d <= 30.0) return "overtaking";
+    return "crossing";
+}
+
+// 2 = HIGH: closing inside the alert CPA within the alert TCPA.
+// 1 = MEDIUM: closing inside twice the alert CPA, or inside the alert CPA
+//     but further out in time. 0 otherwise (opening contacts included).
+inline int RiskLevel(double cpa_m, double tcpa_s, double cpa_alert_m,
+                     double tcpa_alert_s) {
+    if (cpa_m < 0 || tcpa_s < 0) return 0;
+    if (cpa_m < cpa_alert_m && tcpa_s < tcpa_alert_s) return 2;
+    if (cpa_m < 2.0 * cpa_alert_m && tcpa_s < 2.0 * tcpa_alert_s) return 1;
+    return 0;
+}
 
 class ContactTracker {
 public:
@@ -409,6 +474,44 @@ public:
         if (cpa_m >= 0) c.cpa_m = cpa_m;
         if (tcpa_s >= 0) c.tcpa_s = tcpa_s;
         c.last_seen = now;
+        if (c.source.empty()) c.source = "radar";
+    }
+
+    // NODE_REPORT / AIS-style contact with position and motion.
+    void post_report(const std::string& id, double now, double x, double y,
+                     double spd_mps, double hdg, const std::string& type) {
+        Contact& c = contacts_[id];
+        c.have_pos = true;
+        c.x = x; c.y = y; c.spd_mps = spd_mps; c.hdg = hdg;
+        if (!type.empty()) c.type = type;
+        c.source = "report";
+        c.last_seen = now;
+    }
+
+    // Refresh range / bearing / CPA / risk of every contact that carries a
+    // position, from the own-ship state. Radar-only contacts keep the
+    // values their source reported.
+    void update_geometry(const OwnShip& own, double cpa_alert_m,
+                         double tcpa_alert_s) {
+        for (auto& [id, c] : contacts_) {
+            if (c.have_pos && own.valid) {
+                const double dx = c.x - own.x, dy = c.y - own.y;
+                c.range_m = std::sqrt(dx * dx + dy * dy);
+                c.bearing = std::fmod(std::atan2(dx, dy) * 180.0 / M_PI + 360.0, 360.0);
+                c.rel_bearing = WrapDeg180(c.bearing - own.hdg);
+                if (c.spd_mps >= 0 && c.hdg >= 0) {
+                    ComputeCpa(own.x, own.y, own.spd_mps, own.hdg,
+                               c.x, c.y, c.spd_mps, c.hdg, &c.cpa_m, &c.tcpa_s);
+                    const double ovx = own.spd_mps * std::sin(own.hdg * M_PI / 180.0);
+                    const double ovy = own.spd_mps * std::cos(own.hdg * M_PI / 180.0);
+                    const double cvx = c.spd_mps * std::sin(c.hdg * M_PI / 180.0);
+                    const double cvy = c.spd_mps * std::cos(c.hdg * M_PI / 180.0);
+                    c.rel_speed_mps = std::hypot(cvx - ovx, cvy - ovy);
+                    c.encounter = EncounterType(own.hdg, c.hdg);
+                }
+            }
+            c.risk = RiskLevel(c.cpa_m, c.tcpa_s, cpa_alert_m, tcpa_alert_s);
+        }
     }
 
     // Drops expired contacts; returns the active count.
@@ -433,12 +536,27 @@ public:
             if (c.cpa_m >= 0 && (best.cpa_m < 0 || c.cpa_m < best.cpa_m)) best = c;
         return best;
     }
+    // Id of the highest-risk contact: highest risk level, then smallest
+    // CPA, then smallest range. Empty when there are no contacts.
+    std::string worst_id() const {
+        std::string best;
+        const Contact* bc = nullptr;
+        for (const auto& [id, c] : contacts_) {
+            if (!bc || c.risk > bc->risk ||
+                (c.risk == bc->risk && c.cpa_m >= 0 &&
+                 (bc->cpa_m < 0 || c.cpa_m < bc->cpa_m))) {
+                bc = &c; best = id;
+            }
+        }
+        return best;
+    }
     // Time of the most recent post of any contact.
     double last_seen() const {
         double t = -1e18;
         for (const auto& [id, c] : contacts_) t = std::max(t, c.last_seen);
         return t;
     }
+    const std::map<std::string, Contact>& contacts() const { return contacts_; }
 
 private:
     double ttl_s_;

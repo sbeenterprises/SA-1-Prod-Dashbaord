@@ -7,7 +7,10 @@ page, open folder **Swift Autonomous Dashboard**. The chips across the top
 of every dashboard switch between the twelve dashboards and keep the time
 range and vessel selection. All dashboards refresh every 5 s (1 to 5 s
 selectable) and fit one 1080p screen without scrolling. The **Vessel**
-dropdown selects the vessel; the **Fleet** dashboard shows all of them.
+dropdown selects the vessel; the **Fleet** dashboard shows all of them. The
+tab row keeps the same order on every dashboard: Mission, Navigation,
+Autopilot, Vessel Health, CAN Bus, Traffic, Cameras, Comms, System, Replay,
+Alarms, Fleet.
 
 Units are nautical throughout: knots, nautical miles for long distances,
 fixed metres for short ranges (approach distance, cross-track error).
@@ -27,7 +30,7 @@ Interface theme.
 | Autopilot | Helm state, all-stop, station keeping, entry gate, re-arm hold, remote control, corridor, crash stop; active behaviors, heading/speed error, rudder/throttle commands, speed cap, next turn; rudder/throttle/heading-error instruments; desired vs actual heading; speed governor (desired / cap / commanded / actual) |
 | Vessel Health | Instrument cluster (tachometer, coolant, oil pressure, fuel, battery volts, SOC), engine and electrical tiles, trends |
 | CAN Bus | Utilization, msgs/s, error/dropped frames, PGN table |
-| Radar | Online status, targets, closest range and CPA (nm), TCPA |
+| Traffic | Collision avoidance picture: risk level, avoidance state, contact counts by source, closest range and CPA; heading-up polar traffic view with range rings, contacts and CPA line; highest-risk contact card (CPA, TCPA, range, bearings, relative speed, type, encounter); MOOS action (planned vs commanded course, actual heading, speed command vs SOG, avoidance behavior, reason); contact table and CPA/TCPA trend |
 | Cameras | Connection, stream, FPS, bitrate, recording, PTZ |
 | Comms | Internet/Starlink/VPN/Signal K status, latency, loss, bandwidth |
 | System | CPU, GPU, RAM, disk, CPU temperature, load, Signal K and MOOS reachability, trends, systemd services |

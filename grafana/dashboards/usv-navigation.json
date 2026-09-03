@@ -17,16 +17,124 @@
   },
   "links": [
     {
-      "type": "dashboards",
-      "title": "",
-      "tags": [
-        "usv"
-      ],
-      "asDropdown": false,
+      "type": "link",
+      "title": "Mission",
+      "url": "/d/usv-mission",
       "keepTime": true,
       "includeVars": true,
       "targetBlank": false,
-      "icon": "dashboard"
+      "icon": "dashboard",
+      "tooltip": "Open Mission"
+    },
+    {
+      "type": "link",
+      "title": "Navigation",
+      "url": "/d/usv-navigation",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Navigation"
+    },
+    {
+      "type": "link",
+      "title": "Autopilot",
+      "url": "/d/usv-autopilot",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Autopilot"
+    },
+    {
+      "type": "link",
+      "title": "Vessel Health",
+      "url": "/d/usv-health",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Vessel Health"
+    },
+    {
+      "type": "link",
+      "title": "CAN Bus",
+      "url": "/d/usv-canbus",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open CAN Bus"
+    },
+    {
+      "type": "link",
+      "title": "Traffic",
+      "url": "/d/usv-traffic",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Traffic"
+    },
+    {
+      "type": "link",
+      "title": "Cameras",
+      "url": "/d/usv-camera",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Cameras"
+    },
+    {
+      "type": "link",
+      "title": "Comms",
+      "url": "/d/usv-comms",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Comms"
+    },
+    {
+      "type": "link",
+      "title": "System",
+      "url": "/d/usv-system",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open System"
+    },
+    {
+      "type": "link",
+      "title": "Replay",
+      "url": "/d/usv-replay",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Replay"
+    },
+    {
+      "type": "link",
+      "title": "Alarms",
+      "url": "/d/usv-alarms",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Alarms"
+    },
+    {
+      "type": "link",
+      "title": "Fleet",
+      "url": "/d/usv-fleet",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Fleet"
     },
     {
       "type": "link",
@@ -72,7 +180,7 @@
   },
   "panels": [
     {
-      "id": 180,
+      "id": 199,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -679,7 +787,7 @@
     {
       "id": 29,
       "type": "stat",
-      "title": "SOG",
+      "title": "Speed Cap",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -696,7 +804,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"speed_cap\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -726,7 +834,7 @@
           ]
         },
         "textMode": "auto",
-        "graphMode": "area",
+        "graphMode": "none",
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
@@ -797,7 +905,7 @@
     {
       "id": 31,
       "type": "stat",
-      "title": "Heading",
+      "title": "WP Bearing",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -814,7 +922,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"heading\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"planned_course\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],

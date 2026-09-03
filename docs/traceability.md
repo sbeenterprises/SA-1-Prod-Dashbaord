@@ -7,7 +7,7 @@
 | FR-3 Autopilot | `usv-autopilot.json`; helm/safety tiles (helm state, all-stop, station keeping, entry gate, re-arm hold, remote control, corridor, crash stop), command readouts, instruments, desired vs actual, speed governor; planchaPID outputs mapped (SPEED_CAP, CMD_SPEED, XTE_NOW, NEXT_TURN_ANGLE) | Complete |
 | FR-4 Vessel Health | `usv-health.json` (engine, electrical, power rows) | Complete |
 | FR-5 CAN Bus | `usv-canbus.json`; C++ SocketCAN bridge with per-PGN stats | Partial — fast-packet (multi-frame) PGNs counted, not decoded |
-| FR-6 Radar | `usv-radar.json`; radar measurement schema | Dashboard complete — needs radar adapter to feed the schema |
+| FR-6 Radar / Traffic | `usv-traffic.json`: polar traffic view, risk and avoidance tiles, highest-risk contact, MOOS action, contact table; contacts/traffic measurements with onboard CPA/TCPA, encounter and risk; `usv-collision-risk` alert | Complete in simulation (pContactSpawn contacts); on the vessel radar targets feed the same schema through RADAR_TARGET |
 | FR-7 Camera | `usv-camera.json`; camera measurement schema | Dashboard complete — needs camera manager to feed the schema |
 | FR-8 Communication | `usv-comms.json`; comms measurement; Telegraf ping | Complete — starlink_up/vpn_up need small host probes (see review notes) |
 | FR-9 System Health | `usv-system.json`; Telegraf host (CPU/GPU/RAM/disk/temp/load) + systemd_units + net_response | Complete — GPU via Telegraf nvidia_smi (enable on NVIDIA hosts); Docker container panel replaced by systemd services |

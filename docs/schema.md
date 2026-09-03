@@ -60,6 +60,23 @@ mission_name comes from the grafana_bridge ProcessConfig (default: the MOOS
 Community name).
 See docs/alpha-mission-integration.md for the state derivation rules.
 
+### contacts / traffic (FR-6) — source: MOOS bridge, 1 Hz while active
+`contacts`: one series per live contact, tags `contact` (name / target id)
+and `source` (report = NODE_REPORT / AIS-style, radar = RADAR_TARGET);
+fields range_m, bearing, rel_bearing (-180..180, port negative), spd_kn,
+hdg, rel_speed_kn, cpa_m, tcpa_s (-1 = opening), risk (0 clear, 1 medium,
+2 high), strings encounter (head-on | crossing | overtaking) and type.
+Geometry is computed onboard from the own-ship state (mission_logic.hpp:
+ComputeCpa, EncounterType, RiskLevel; thresholds radar_cpa_alert_m /
+tcpa_alert_s). Rows stop when a contact expires (contact_ttl_s), so a
+30-second window is the live picture.
+`traffic`: contacts, reports, radar_only, high_risk, risk_level,
+avoidance_active (helm running an avd*/colreg*/avoid* behavior),
+closest_range_m, min_cpa_m, min_tcpa_s, planned_course (bearing to the
+current waypoint), course_deviation (commanded minus planned), strings
+worst_contact and reason. The legacy `radar` aggregates are kept for the
+alert rules.
+
 ### geometry (map overlays) — source: MOOS bridge, on change
 Vertex sets for the Navigation / Replay maps, tags `kind` (route |
 region) and `idx` (zero-padded vertex index), fields lat, lon, seq. The

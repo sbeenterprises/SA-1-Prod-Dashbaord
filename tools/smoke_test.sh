@@ -131,6 +131,10 @@ repo, produced_file = sys.argv[1], sys.argv[2]
 pm = re.compile(r'_measurement == "(\w+)"'); pf = re.compile(r'_field == "(\w+)"')
 d = yaml.safe_load(open(f"{repo}/grafana/provisioning/alerting/alerts.yml"))
 have = {tuple(l.split()) for l in open(produced_file) if l.strip()}
+# fields the MOOS bridge writes (its live run below needs MOOSDB)
+src = open(f"{repo}/ingestion/moos-cpp/moos_bridge.cpp").read()
+have |= set(re.findall(r'\{"(\w+)",\s*"(\w+)"(?:,|\})', src))
+have |= set(re.findall(r'(?:str_)?field\("(\w+)",\s*[^,]+,\s*"(\w+)"', src))
 external = {"cpu","mem","disk","diskio","net","temp","net_response","systemd_units"}
 missing = []
 for g in d["groups"]:
@@ -288,6 +292,14 @@ EOF
       && ok "route vertex converted with the mission datum" || bad "datum conversion missing"
     grep -q 'kind=\\"region\\" AND vessel=\\"usv-moos\\"' "$TMP/deletes.txt" 2>/dev/null \
       && ok "previous geometry set deleted before rewrite" || bad "geometry delete not issued"
+    # Traffic: NODE_REPORT contact (X=300,Y=400, 5 m/s, hdg 90) vs own ship at
+    # the origin -> per-contact row with bearing ~36.9 and a risk level.
+    grep -q 'contacts,vessel=usv-moos,contact=contato_7,source=report bearing=36\.[0-9]*' "$LINES" \
+      && ok "NODE_REPORT -> contacts row with bearing" || bad "contact bearing missing"
+    grep -q 'contacts,vessel=usv-moos,contact=contato_7,source=report risk=' "$LINES" \
+      && ok "contact risk level written" || bad "contact risk missing"
+    grep -q 'traffic,vessel=usv-moos contacts=1' "$LINES" \
+      && ok "traffic summary counts the contact" || bad "traffic summary missing"
     grep -q "autonomy,.* comms_lost=1" "$LINES"        && ok "autonomy.comms_lost flag written"             || bad "autonomy.comms_lost missing"
     grep -q "autonomy,.* awaiting_rearm=1" "$LINES"    && ok "autonomy.awaiting_rearm hold visible"         || bad "awaiting_rearm missing"
     grep -q "autonomy,.* geofence_breached=1" "$LINES" && ok "OPR_BREACHED -> geofence_breached=1"          || bad "geofence level missing"

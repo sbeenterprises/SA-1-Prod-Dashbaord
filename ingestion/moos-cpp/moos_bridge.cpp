@@ -235,7 +235,8 @@ protected:
         //   max_rate_hz    = 5            // ceiling for nav/autopilot passthrough
         //   engine_rate_hz = 2            // ceiling for ENGINE_* passthrough
         //   ignore_vars    = NAV_YAW      // vessel: NAV_YAW is the rudder angle
-        //   radar_cpa_alert_m = 500       // radar event threshold (pContactMgr cpa_range)
+        //   radar_cpa_alert_m = 500       // HIGH collision risk: CPA below this ...
+        //   tcpa_alert_s   = 300          // ... within this many seconds
         //   contact_ttl_s  = 10           // contact expiry without an update
         //   signalk_http   = localhost:3000  // route-name lookup (ID_ROUTE ->
         //                                   // /signalk/v{2,1}/api/resources/routes/<id>);
@@ -255,6 +256,8 @@ protected:
         if (!m_MissionReader.GetConfigurationParam("mission_name", mission_name_))
             m_MissionReader.GetValue("Community", mission_name_);
         m_MissionReader.GetConfigurationParam("radar_cpa_alert_m", radar_cpa_alert_m_);
+        m_MissionReader.GetConfigurationParam("tcpa_alert_s", tcpa_alert_s_);
+        m_MissionReader.GetValue("Community", own_name_);
         double ttl = 10.0;
         m_MissionReader.GetConfigurationParam("contact_ttl_s", ttl);
         contacts_ = usv::ContactTracker(ttl);
@@ -655,16 +658,21 @@ private:
         auto kv = usv::ParseKeyValuesLower(report);
         auto name = kv.find("name");
         if (name == kv.end() || name->second.empty()) return;
-        double range = -1;
+        if (name->second == mission_name_ || name->second == own_name_) return;
+        auto num = [&](const char* k, double dflt) {
+            auto it = kv.find(k);
+            if (it == kv.end() || it->second.empty()) return dflt;
+            try { return std::stod(it->second); } catch (...) { return dflt; }
+        };
         auto x = kv.find("x"), y = kv.find("y");
-        if (have_x_ && have_y_ && x != kv.end() && y != kv.end()) {
-            try {
-                const double dx = std::stod(x->second) - nav_x_;
-                const double dy = std::stod(y->second) - nav_y_;
-                range = std::sqrt(dx * dx + dy * dy);
-            } catch (...) { range = -1; }
+        if (x == kv.end() || y == kv.end()) {
+            contacts_.post(name->second, now, -1);
+            return;
         }
-        contacts_.post(name->second, now, range);
+        std::string type;
+        if (auto t = kv.find("type"); t != kv.end()) type = t->second;
+        contacts_.post_report(name->second, now, num("x", 0.0), num("y", 0.0),
+                              num("spd", -1.0), num("hdg", -1.0), type);
     }
 
     // RADAR_TARGET (proposed iRadarTargets addition):
@@ -777,6 +785,7 @@ private:
         prev = spec;
         if (!have_datum_) return;
         std::vector<usv::XY> pts = usv::ParsePts(spec);
+        if (kind == "route") route_pts_ = pts;
         telemetry_->erase("_measurement=\"geometry\" AND kind=\"" + kind + "\"");
         if (pts.empty()) { telemetry_->flush(); return; }   // "NONE": cleared
         if (close) pts.push_back(pts.front());
@@ -791,6 +800,106 @@ private:
             telemetry_->field("geometry", tags, "seq", static_cast<double>(i), ts);
         }
         telemetry_->flush();
+    }
+
+    // Per-contact rows (measurement "contacts", tags contact/source) plus the
+    // "traffic" summary and the legacy "radar" aggregates, 1 Hz. Contacts
+    // are only written while active, so a dashboard query over the last
+    // 30 s sees exactly the live picture.
+    void WriteTraffic(double now) {
+        usv::OwnShip own;
+        own.valid = have_x_ && have_y_;
+        own.x = nav_x_; own.y = nav_y_; own.spd_mps = last_speed_mps_; own.hdg = nav_hdg_;
+        contacts_.update_geometry(own, radar_cpa_alert_m_, tcpa_alert_s_);
+        const int n = contacts_.active(now);
+        if (n == 0) alerted_contacts_.clear();
+
+        int reports = 0, radar_only = 0, high = 0, medium = 0;
+        double min_cpa = -1, min_tcpa = -1, closest = -1;
+        for (const auto& [id, c] : contacts_.contacts()) {
+            if (c.source == "report") ++reports; else ++radar_only;
+            if (c.risk == 2) ++high; else if (c.risk == 1) ++medium;
+            if (c.cpa_m >= 0 && c.tcpa_s >= 0 && (min_cpa < 0 || c.cpa_m < min_cpa)) {
+                min_cpa = c.cpa_m; min_tcpa = c.tcpa_s;
+            }
+            if (c.range_m >= 0 && (closest < 0 || c.range_m < closest)) closest = c.range_m;
+            const std::string tags = "contact=" + EscapeTag(id) +
+                                     ",source=" + c.source;
+            if (c.range_m >= 0) telemetry_->field("contacts", tags, "range_m", c.range_m);
+            if (c.bearing >= 0) {
+                telemetry_->field("contacts", tags, "bearing", c.bearing);
+                telemetry_->field("contacts", tags, "rel_bearing", c.rel_bearing);
+            }
+            if (c.spd_mps >= 0) telemetry_->field("contacts", tags, "spd_kn", c.spd_mps * MS_TO_KN);
+            if (c.hdg >= 0) telemetry_->field("contacts", tags, "hdg", c.hdg);
+            if (c.rel_speed_mps >= 0)
+                telemetry_->field("contacts", tags, "rel_speed_kn", c.rel_speed_mps * MS_TO_KN);
+            if (c.cpa_m >= 0) telemetry_->field("contacts", tags, "cpa_m", c.cpa_m);
+            telemetry_->field("contacts", tags, "tcpa_s", c.tcpa_s);   // -1 = opening
+            telemetry_->field("contacts", tags, "risk", c.risk);
+            telemetry_->str_field("contacts", tags, "encounter",
+                                  c.encounter.empty() ? "-" : c.encounter);
+            telemetry_->str_field("contacts", tags, "type", c.type.empty() ? "unknown" : c.type);
+            // One event per contact entering HIGH risk; cleared when it drops.
+            if (c.risk == 2) {
+                if (alerted_contacts_.insert(id).second) {
+                    char m[160];
+                    std::snprintf(m, sizeof m, "Collision risk HIGH: %s CPA %.0f m, TCPA %.0f s (%s)",
+                                  id.c_str(), c.cpa_m, c.tcpa_s,
+                                  c.encounter.empty() ? "radar" : c.encounter.c_str());
+                    Event("traffic", "critical", m);
+                }
+            } else {
+                alerted_contacts_.erase(id);
+            }
+        }
+
+        const bool avoidance = last_active_behavior_.find("avd") != std::string::npos ||
+                               last_active_behavior_.find("colreg") != std::string::npos ||
+                               last_active_behavior_.find("avoid") != std::string::npos;
+        const int risk_level = high ? 2 : (medium ? 1 : 0);
+        telemetry_->field("traffic", "", "contacts", n);
+        telemetry_->field("traffic", "", "reports", reports);
+        telemetry_->field("traffic", "", "radar_only", radar_only);
+        telemetry_->field("traffic", "", "high_risk", high);
+        telemetry_->field("traffic", "", "risk_level", risk_level);
+        telemetry_->field("traffic", "", "avoidance_active", avoidance ? 1 : 0);
+        if (closest >= 0) telemetry_->field("traffic", "", "closest_range_m", closest);
+        if (min_cpa >= 0) {
+            telemetry_->field("traffic", "", "min_cpa_m", min_cpa);
+            telemetry_->field("traffic", "", "min_tcpa_s", min_tcpa);
+        }
+        const std::string worst = contacts_.worst_id();
+        telemetry_->str_field("traffic", "", "worst_contact", worst.empty() ? "-" : worst);
+        // MOOS action: the course the route asks for (bearing to the next
+        // waypoint), what the helm commands and what the boat does.
+        if (own.valid && !route_pts_.empty() && last_wpt_index_ >= 0 &&
+            last_wpt_index_ < static_cast<int>(route_pts_.size())) {
+            const usv::XY& wp = route_pts_[last_wpt_index_];
+            const double brg = std::fmod(std::atan2(wp.x - own.x, wp.y - own.y) * 180.0 / M_PI + 360.0, 360.0);
+            telemetry_->field("traffic", "", "planned_course", brg);
+            if (have_desired_hdg_)
+                telemetry_->field("traffic", "", "course_deviation",
+                                  usv::WrapDeg180(desired_hdg_ - brg));
+        }
+        telemetry_->str_field("traffic", "", "reason",
+                              avoidance ? "Collision avoidance active" :
+                              high ? "High-risk contact, helm not avoiding" :
+                              n ? "Traffic monitored, no avoidance needed" : "No contacts");
+
+        const bool heartbeat = now - radar_ttm_time_ <= 30.0;
+        const bool recent = now - contacts_.last_seen() <= 30.0;
+        if (heartbeat || recent || radar_seen_) {
+            radar_seen_ = true;
+            telemetry_->field("radar", "", "online", (heartbeat || recent) ? 1.0 : 0.0);
+            telemetry_->field("radar", "", "targets", n);
+            if (closest >= 0) telemetry_->field("radar", "", "closest_range_m", closest);
+            if (min_cpa >= 0) {
+                telemetry_->field("radar", "", "cpa_m", min_cpa);
+                telemetry_->field("radar", "", "tcpa_s", min_tcpa);
+            }
+            if (heartbeat) telemetry_->field("radar", "", "ttm_rate", radar_ttm_rate_);
+        }
     }
 
     void HandleSeglist(const std::string& spec) {
@@ -907,29 +1016,11 @@ private:
             telemetry_->str_field("mission_state", "", "mission_name",
                                   mission_name_);
 
-        // Radar / contacts (FR-6): aggregates only; per-contact detail is
-        // event-driven. "online" = a TTM rate heartbeat within 30 s, or any
-        // contact update within 30 s (simulation has no TTM heartbeat).
-        {
-            const int n = contacts_.active(now);
-            if (n == 0) alerted_contacts_.clear();
-            const bool heartbeat = now - radar_ttm_time_ <= 30.0;
-            const bool recent = now - contacts_.last_seen() <= 30.0;
-            if (heartbeat || recent || radar_seen_) {
-                radar_seen_ = true;
-                telemetry_->field("radar", "", "online",
-                                  b(heartbeat || recent));
-                telemetry_->field("radar", "", "targets", n);
-                const double cr = contacts_.closest_range();
-                if (cr >= 0)
-                    telemetry_->field("radar", "", "closest_range_m", cr);
-                const usv::Contact w = contacts_.worst_cpa();
-                if (w.cpa_m >= 0) telemetry_->field("radar", "", "cpa_m", w.cpa_m);
-                if (w.tcpa_s >= 0) telemetry_->field("radar", "", "tcpa_s", w.tcpa_s);
-                if (heartbeat)
-                    telemetry_->field("radar", "", "ttm_rate", radar_ttm_rate_);
-            }
-        }
+        // Traffic (FR-6): contact geometry from own-ship state, per-contact
+        // rows for the Traffic dashboard, radar aggregates for the alert
+        // rules. "online" = a TTM rate heartbeat within 30 s, or any contact
+        // update within 30 s (simulation has no TTM heartbeat).
+        WriteTraffic(now);
 
         // Derived mission quantities — each yields to an external producer.
         const bool wpt_active = flags_.waypoint || flags_.returning;
@@ -1039,6 +1130,9 @@ private:
         return usv::RouteDisplayName(id, name);
     }
     double radar_cpa_alert_m_ = 500.0;
+    double tcpa_alert_s_ = 300.0;
+    std::string own_name_;                 // Community: own NODE_REPORT is not a contact
+    std::vector<usv::XY> route_pts_;       // planned route (local grid) for the planned course
 
     // Change-only string cache: field -> last written value.
     std::map<std::string, std::string> last_str_;

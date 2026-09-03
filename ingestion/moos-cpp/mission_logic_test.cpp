@@ -161,6 +161,46 @@ static void test_geometry() {
     CHECK(std::fabs((o.lon) - (-91.1)) < 1e-12);
 }
 
+static void test_traffic_geometry() {
+    // Own ship at origin heading north 5 m/s; contact 1000 m east heading
+    // west at 5 m/s: crossing, closes to CPA ~707 m after ~100 s.
+    double cpa = 0, tcpa = 0;
+    ComputeCpa(0, 0, 5, 0, 1000, 0, 5, 270, &cpa, &tcpa);
+    CHECK(std::fabs(cpa - 707.1) < 1.0);
+    CHECK(std::fabs(tcpa - 100.0) < 0.5);
+    // Head-on: contact 2000 m north heading south at 5 m/s -> CPA 0 in 200 s.
+    ComputeCpa(0, 0, 5, 0, 0, 2000, 5, 180, &cpa, &tcpa);
+    CHECK(cpa < 0.01 && std::fabs(tcpa - 200.0) < 0.5);
+    // Opening contact: CPA is the current range, tcpa < 0.
+    ComputeCpa(0, 0, 5, 0, 0, -500, 5, 180, &cpa, &tcpa);
+    CHECK(std::fabs(cpa - 500.0) < 0.01 && tcpa < 0);
+    CHECK_EQ_STR(EncounterType(0, 180), "head-on");
+    CHECK_EQ_STR(EncounterType(0, 10), "overtaking");
+    CHECK_EQ_STR(EncounterType(0, 90), "crossing");
+    CHECK_EQ_STR(EncounterType(350, 200), "head-on");
+    CHECK(RiskLevel(80, 100, 500, 300) == 2);
+    CHECK(RiskLevel(600, 100, 500, 300) == 1);
+    CHECK(RiskLevel(80, 500, 500, 300) == 1);
+    CHECK(RiskLevel(2000, 100, 500, 300) == 0);
+    CHECK(RiskLevel(80, -1, 500, 300) == 0);   // opening
+
+    ContactTracker t(10.0);
+    OwnShip own; own.valid = true; own.x = 0; own.y = 0; own.spd_mps = 5; own.hdg = 0;
+    t.post_report("TGT-27", 1.0, 1000, 0, 5, 270, "ship");
+    t.post_report("FAR", 1.0, 0, 5000, 0, 0, "buoy");
+    t.post("R-1", 1.0, 3000, 2500, 900);      // radar-only, opening slowly
+    t.update_geometry(own, 500, 300);
+    const auto& c = t.contacts().at("TGT-27");
+    CHECK(std::fabs(c.bearing - 90.0) < 0.01);
+    CHECK(std::fabs(c.rel_bearing - 90.0) < 0.01);
+    CHECK_EQ_STR(c.encounter, "crossing");
+    CHECK_EQ_STR(c.source, "report");
+    CHECK(c.risk == 1);    // CPA 707 m < 1000 m, TCPA 100 s
+    CHECK_EQ_STR(t.contacts().at("R-1").source, "radar");
+    CHECK_EQ_STR(t.worst_id(), "TGT-27");
+    CHECK(std::fabs(t.closest_range() - 1000.0) < 0.01);
+}
+
 static void test_route_naming() {
     const std::string body =
         "{\"name\":\"Som Rt0\",\"description\":\"x\",\"feature\":{\"type\":\"Feature\"}}";
@@ -415,6 +455,7 @@ int main() {
     test_contact_tracker();
     test_route_naming();
     test_geometry();
+    test_traffic_geometry();
     test_helm_behaviors_fallback();
 
     std::printf("mission_logic_test: %d passed, %d failed\n", g_pass, g_fail);

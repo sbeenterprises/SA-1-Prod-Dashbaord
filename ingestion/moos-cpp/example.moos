@@ -38,7 +38,8 @@ ProcessConfig = grafana_bridge
   engine_rate_hz = 2           // write ceiling for ENGINE_* (iCANRec, J1939)
   // ignore_vars = NAV_YAW     // VESSEL ONLY: iDivisorNMEA posts NAV_YAW as
                                // the rudder angle ($AGRSA); never in simulation
-  radar_cpa_alert_m = 500      // radar event threshold (pContactMgrV20 cpa_range)
+  radar_cpa_alert_m = 500      // collision risk HIGH: CPA below this ...
+  tcpa_alert_s   = 300         // ... within this many seconds (MEDIUM: 2x both)
   contact_ttl_s  = 10          // contact expiry without a NODE_REPORT/RADAR_TARGET
   signalk_http   = localhost:3000  // ID_ROUTE -> route name lookup
                                // (/signalk/v2 or v1/api/resources/routes/<id>);

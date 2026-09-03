@@ -153,6 +153,8 @@ ProcessConfig = grafana_bridge
   events_bucket = events
   vessel_id     = usv-01
   signalk_http  = localhost:3000   // route name lookup (ID_ROUTE uuid -> name)
+  radar_cpa_alert_m = 500          // collision risk HIGH: CPA below this ...
+  tcpa_alert_s  = 300              // ... within this many seconds
 }
 ```
 The console starts a mission with `ID_ROUTE=<Signal K route uuid>`; the
