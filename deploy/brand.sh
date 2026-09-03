@@ -14,6 +14,7 @@
 # Wording can be tuned in /etc/usv/usv.env:
 #   BRAND_TITLE="Swiftships USV Console"     (browser tab / loading screen)
 #   BRAND_WELCOME="Welcome to Swiftships"    (login heading)
+#   BRAND_SUBTITLE="Swiftships Autonomous Dashboard"  (under the heading)
 set -euo pipefail
 
 GPUB=${GPUB:-/usr/share/grafana/public}
@@ -94,22 +95,29 @@ sed -i -e "s|\[\[\.AppTitle\]\]|$TITLE|g" \
 grep -rl --include='*.js' -e 'Welcome to Grafana' "$GPUB/build" 2>/dev/null | while read -r f; do
   keep "$f"
   sed -i "s|Welcome to Grafana|$WELCOME|g" "$f"
-done
+done || true   # no match (already branded) must not abort under pipefail
 
 # ------------------------------------------------------ login page style
-# Scoped to Grafana's login classes (login-content-box, login-branding,
-# login-form); harmless where a class is absent. Navy card on the navy
-# background, cyan focus/primary, Swiftships type colour.
-if ! grep -q 'id="swiftships-brand"' "$IDX"; then
-  sed -i 's|</head>|<style id="swiftships-brand">\
-.login-content-box{background:rgba(8,36,63,.90)!important;border:1px solid rgba(0,188,212,.35)!important;box-shadow:0 24px 64px rgba(0,0,0,.5)!important;border-radius:10px!important}\
-.login-branding h1,.login-content-box h1{color:#e8f1f8!important;letter-spacing:.02em}\
-.login-branding img,.login-content-box img{filter:drop-shadow(0 2px 8px rgba(0,188,212,.35))}\
-.login-form button[type=submit],.login-content-box button[type=submit]{background:#1e6692!important;border-color:#1e6692!important}\
-.login-form button[type=submit]:hover,.login-content-box button[type=submit]:hover{background:#00bcd4!important;border-color:#00bcd4!important;color:#04121f!important}\
-.login-content-box input:focus{box-shadow:0 0 0 2px #00bcd4!important}\
-</style></head>|' "$IDX"
-fi
+# Grafana 13 generates its login class names, so the rules are scoped to the
+# login page through the form's user input (only present there) with :has().
+# The subtitle under the heading comes from BRAND_SUBTITLE via ::after.
+SUBTITLE=${BRAND_SUBTITLE:-Swiftships Autonomous Dashboard}
+CSS_FILE=$(mktemp)
+cat > "$CSS_FILE" <<CSS
+<style id="swiftships-brand">
+body:has(input[name="user"]) h1{color:#e8f1f8!important;letter-spacing:.02em;margin-bottom:6px!important}
+body:has(input[name="user"]) h1::after{content:"$SUBTITLE";display:block;font-size:15px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:#00bcd4;margin-top:8px}
+body:has(input[name="user"]) button[type="submit"]{background:#1e6692!important;border-color:#1e6692!important;color:#fff!important}
+body:has(input[name="user"]) button[type="submit"]:hover{background:#00bcd4!important;border-color:#00bcd4!important;color:#04121f!important}
+body:has(input[name="user"]) input:focus,body:has(input[name="user"]) input:focus-visible{box-shadow:0 0 0 2px #00bcd4!important;outline:none!important}
+body:has(input[name="user"]) a{color:#5fc9dd!important}
+body:has(input[name="user"]) div:has(> form):not(:has(div:has(> form))){background:rgba(8,36,63,.92)!important;border:1px solid rgba(0,188,212,.35)!important;border-radius:10px!important;box-shadow:0 24px 64px rgba(0,0,0,.5)!important}
+</style>
+CSS
+# Replace any previous block, then insert before </head>.
+perl -0pi -e 's|<style id="swiftships-brand">.*?</style>\n?||s' "$IDX"
+CSS_FILE="$CSS_FILE" perl -0pi -e 'BEGIN{local $/; open(F, "<", $ENV{CSS_FILE}) or die; $css=<F>; close F} s|</head>|$css</head>|' "$IDX"
+rm -f "$CSS_FILE"
 
 echo "Swiftships branding applied (title: '$TITLE', login: '$WELCOME')."
 echo "Reload the browser with Ctrl+F5 to drop cached Grafana icons."
