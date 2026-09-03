@@ -6,6 +6,11 @@ Keep a Changelog; versions are git tags on `main`.
 ## [Unreleased]
 
 ### Added
+- `tools/fake_traffic.py`: fake AIS / radar scene (harbour: 6 vessels +
+  radar track; busy: 10) moving around the boat, published as
+  NODE_REPORT / RADAR_TARGET for Traffic dashboard and avoidance tests.
+
+### Added
 - `tools/traffic_scenario.sh`: scripted crossing / head-on / overtaking /
   radar-only / opening contacts for an end-to-end Traffic test on the
   simulation host.

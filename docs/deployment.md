@@ -114,6 +114,14 @@ show Radar Only = 1; the opening contact must stay CLEAR with TCPA
 (read from InfluxDB via `/etc/usv/usv.env`, hence sudo) or `OWN_HDG=<deg>`;
 run it while the boat is under way on a steady leg.
 
+For a full traffic picture, `tools/fake_traffic.py <mission.moos>
+[--scene harbour|busy] [--duration 300]` feeds a scene of six to ten
+vessels (ferry crossing, head-on workboat, slow tug, anchored barge, fast
+small craft, distant cargo, a radar-only track) as NODE_REPORT / RADAR_TARGET
+every 2 s, placed around the boat's current position and heading and moving
+on their own courses. pContactMgrV20 sees them too, so this also exercises
+the helm's avoidance behaviors. Stop with Ctrl-C; contacts expire within 10 s.
+
 ## Units
 Speeds are knots everywhere (the bridges convert MOOS m/s). Distances use
 fixed units chosen per panel: metres for approach distance, cross-track
