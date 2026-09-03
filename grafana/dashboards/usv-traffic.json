@@ -613,6 +613,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "unit": "suffix: nm",
           "decimals": 2,
           "thresholds": {
@@ -680,6 +681,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "unit": "suffix: m",
           "decimals": 0,
           "thresholds": {
@@ -791,6 +793,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "no contacts",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -849,6 +852,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "unit": "suffix: m",
           "decimals": 0,
           "thresholds": {
@@ -916,6 +920,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "unit": "dtdurations",
           "decimals": 0,
           "thresholds": {
@@ -995,6 +1000,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "unit": "suffix: m",
           "decimals": 0,
           "thresholds": {
@@ -1054,6 +1060,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "unit": "degree",
           "decimals": 0,
           "thresholds": {
@@ -1113,6 +1120,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "unit": "degree",
           "decimals": 0,
           "thresholds": {
@@ -1172,6 +1180,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "unit": "velocityknot",
           "decimals": 1,
           "thresholds": {
@@ -1231,6 +1240,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1289,11 +1299,12 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -1374,6 +1385,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "no route",
           "unit": "degree",
           "decimals": 0,
           "thresholds": {
@@ -1433,6 +1445,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "unit": "degree",
           "decimals": 0,
           "thresholds": {
@@ -1492,6 +1505,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "unit": "degree",
           "decimals": 0,
           "thresholds": {
@@ -1551,6 +1565,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "no route",
           "unit": "degree",
           "decimals": 0,
           "thresholds": {
@@ -1618,6 +1633,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "unit": "velocityknot",
           "decimals": 1,
           "thresholds": {
@@ -1677,6 +1693,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "unit": "velocityknot",
           "decimals": 1,
           "thresholds": {
@@ -1736,6 +1753,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "none",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1852,6 +1870,7 @@
           "color": {
             "mode": "palette-classic"
           },
+          "noValue": "no contacts",
           "mappings": [
             {
               "type": "value",

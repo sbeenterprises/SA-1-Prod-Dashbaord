@@ -1311,7 +1311,9 @@ encounter_mappings = state_map([("head-on", "red"), ("crossing", "orange"),
 
 
 def kv_tile(title, query, x, y, w, h, **kw):
-    """Key/value readout tile for the contact and MOOS action cards."""
+    """Key/value readout tile for the contact and MOOS action cards; reads
+    "none" instead of Grafana's "No data" while there is no contact."""
+    kw.setdefault("no_value", "none")
     return stat(title, query, x, y, w, h, **kw)
 
 
@@ -1330,10 +1332,10 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
     stat("High Risk", flux("traffic", "high_risk", last=True), 15, 0, 3, 3, decimals=0,
          thresholds=[(None, OK), (1, "red")]),
     stat("Closest Range", flux("traffic", "closest_range_m", last=True, nm=True),
-         18, 0, 3, 3, unit=UNIT_NM, decimals=2,
+         18, 0, 3, 3, unit=UNIT_NM, decimals=2, no_value="none",
          thresholds=[(None, "red"), (0.11, "yellow"), (0.27, OK)]),
     stat("Min CPA", flux("traffic", "min_cpa_m", last=True), 21, 0, 3, 3,
-         unit=UNIT_M, decimals=0,
+         unit=UNIT_M, decimals=0, no_value="none",
          thresholds=[(None, "red"), (500, "yellow"), (1000, OK)]),
     # B — traffic view | highest-risk contact | MOOS action
     (instrument("Traffic View",
@@ -1345,7 +1347,7 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
      panel("table", "Contacts", [target(contacts_query())], 0, 3, 10, 13,
            options={"showHeader": True})),
     stat("Highest-Risk Contact", worst_contact_query("contact"), 10, 3, 7, 2,
-         string_value=True, text_mode="value"),
+         string_value=True, text_mode="value", no_value="no contacts"),
     kv_tile("CPA", worst_contact_query("cpa_m"), 10, 5, 4, 3, unit=UNIT_M, decimals=0,
             thresholds=[(None, "red"), (500, "yellow"), (1000, OK)]),
     kv_tile("TCPA", worst_contact_query("tcpa_s"), 14, 5, 3, 3, unit="dtdurations",
@@ -1359,29 +1361,30 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
     kv_tile("Rel. Speed", worst_contact_query("rel_speed_kn"), 14, 11, 3, 3,
             unit="velocityknot", decimals=1),
     stat("Type", worst_contact_query("type"), 10, 14, 4, 2, string_value=True,
-         text_mode="value"),
+         text_mode="value", no_value="none"),
     stat("Encounter", worst_contact_query("encounter"), 14, 14, 3, 2, string_value=True,
-         text_mode="value", mappings=encounter_mappings, color_mode="background"),
+         text_mode="value", mappings=encounter_mappings, color_mode="background",
+         no_value="none", thresholds=[(None, "#3d434b")]),
     kv_tile("Planned Course", flux("traffic", "planned_course", last=True), 17, 3, 4, 3,
-            unit="degree", decimals=0),
+            unit="degree", decimals=0, no_value="no route"),
     kv_tile("Commanded Course", flux("autopilot", "desired_heading", last=True), 21, 3, 3, 3,
             unit="degree", decimals=0),
     kv_tile("Actual Heading", flux("nav", "heading", last=True), 17, 6, 4, 3,
             unit="degree", decimals=0),
     kv_tile("Deviation", flux("traffic", "course_deviation", last=True), 21, 6, 3, 3,
-            unit="degree", decimals=0,
+            unit="degree", decimals=0, no_value="no route",
             thresholds=[(None, OK), (10, "yellow"), (30, "orange")]),
     kv_tile("Speed Command", flux("autopilot", "desired_speed", last=True), 17, 9, 4, 3,
             unit="velocityknot", decimals=1),
     kv_tile("Actual SOG", flux("nav", "sog", last=True), 21, 9, 3, 3,
             unit="velocityknot", decimals=1),
     stat("Avoidance Behavior", last_str("mission_state", "active_behavior"), 17, 12, 7, 2,
-         text_mode="value"),
+         text_mode="value", no_value="none"),
     stat("Reason", last_str("traffic", "reason"), 17, 14, 7, 2, text_mode="value",
          string_value=True),
     # C — contact table and CPA / TCPA trend
     panel("table", "Contacts — riskiest first", [target(contacts_query(limit=12))],
-          0, 16, 12, 5, options={"showHeader": True},
+          0, 16, 12, 5, options={"showHeader": True}, no_value="no contacts",
           mappings=risk_mappings,
           overrides=[{"matcher": {"id": "byName", "options": "range_m"},
                       "properties": [{"id": "unit", "value": UNIT_M}, {"id": "decimals", "value": 0},
