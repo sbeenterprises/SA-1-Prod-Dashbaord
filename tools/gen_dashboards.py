@@ -54,15 +54,22 @@ UNIT_NM = "suffix: nm"
 M_TO_NM = '  |> map(fn: (r) => ({r with _value: r._value / 1852.0}))\n'
 
 
+# Replay: the raw bucket keeps 30 days; older windows are served from the
+# 1-minute archive (telemetry_1m, downsampled by the installer's task).
+ARCHIVE_BUCKET = ('bucket = if int(v: now()) - int(v: v.timeRangeStart) > int(v: 30d) '
+                  'then "telemetry_1m" else "telemetry"\n')
+
+
 def flux(measurement, fields, bucket="telemetry", every='v.windowPeriod', fn="mean",
-         extra="", last=False, nm=False):
+         extra="", last=False, nm=False, archive=False):
     if isinstance(fields, str):
         fields = [fields]
     fieldset = " or ".join(f'r._field == "{f}"' for f in fields)
-    q = (f'from(bucket: "{bucket}")\n'
-         f'  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
-         f'  |> filter(fn: (r) => r._measurement == "{measurement}" and ({fieldset}))\n'
-         f'  |> filter(fn: (r) => r.vessel == "${{vessel}}")\n')
+    q = ((ARCHIVE_BUCKET + 'from(bucket: bucket)\n') if archive
+         else f'from(bucket: "{bucket}")\n')
+    q += (f'  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+          f'  |> filter(fn: (r) => r._measurement == "{measurement}" and ({fieldset}))\n'
+          f'  |> filter(fn: (r) => r.vessel == "${{vessel}}")\n')
     if extra:
         q += extra + "\n"
     if last:
@@ -170,12 +177,13 @@ def overlay_layers(track_ref="A", vessel_ref="B", route_ref="C",
     ]
 
 
-def track_query(every):
+def track_query(every, archive=False):
     """lat/lon pivoted into one frame for the geomap route layer. The two
     fields arrive as separate tables, so they are merged (group()) before
     the pivot; pivoting first leaves lat and lon in different frames and
     aggregateWindow with no _value column errors out."""
-    return ('from(bucket: "telemetry")\n'
+    return ((ARCHIVE_BUCKET + 'from(bucket: bucket)\n') if archive
+            else 'from(bucket: "telemetry")\n'
             '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
             '  |> filter(fn: (r) => r._measurement == "nav" and (r._field == "lat" or r._field == "lon"))\n'
             '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
@@ -920,11 +928,13 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
          unit="degree", decimals=1),
     # Trends.
     ts("Heading / COG", [target(flux("nav", ["heading", "cog"]))],
-       0, 16, 8, 6, unit="degree", min_=0, max_=360),
+       0, 16, 6, 6, unit="degree", min_=0, max_=360),
     ts("Speed Over Ground", [target(flux("nav", "sog"), "SOG")],
-       8, 16, 8, 6, unit="velocityknot"),
+       6, 16, 6, 6, unit="velocityknot"),
     ts("Cross-Track Error", [target(flux("nav", "cross_track_error"), "XTE")],
-       16, 16, 8, 6, unit=UNIT_M),
+       12, 16, 6, 6, unit=UNIT_M),
+    ts("Attitude — Roll / Pitch", [target(flux("nav", ["roll", "pitch"]))],
+       18, 16, 6, 6, unit="degree"),
 ], ["navigation"]))
 
 # -------------------------------------------------------------- FR-3 Autopilot
@@ -1267,6 +1277,7 @@ def tele_last(measurement, field, extra=""):
 PING_INTERNET = '  |> filter(fn: (r) => r.url == "8.8.8.8")\n'
 PING_STARLINK = '  |> filter(fn: (r) => r.url == "192.168.100.1")\n'
 UNIT_SERVICE = '  |> filter(fn: (r) => r.name == "tailscaled.service")\n'
+BYTES_TO_BITS = '  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n'
 
 
 def probe_tile(title, query, x, down="DOWN", up="UP", no_value=None):
@@ -1302,9 +1313,10 @@ DASHBOARDS.append(dashboard("usv-comms", "Comms", [
     ts("Packet Loss", [target(tele("ping", "percent_packet_loss", extra=PING_INTERNET),
                               "loss")],
        12, 4, 12, 7, unit="percent", min_=0),
-    ts("Bandwidth",
-       [target(flux("comms", ["up_mbps", "down_mbps"]))], 0, 11, 12, 7,
-       unit="Mbits"),
+    ts("Bandwidth (host interfaces)",
+       [target(tele("net", "bytes_recv", rate=True) + BYTES_TO_BITS, "down"),
+        target(tele("net", "bytes_sent", rate=True) + BYTES_TO_BITS, "up", ref="B")],
+       0, 11, 12, 7, unit="bps"),
     ts("Telemetry Message Rates",
        [target(flux("comms", ["moos_msg_rate", "signalk_msg_rate"]))],
        12, 11, 12, 7),
@@ -1325,7 +1337,7 @@ def service_tile(title, service, x):
 
 
 # Single screen: 8 equal tiles (CPU / GPU / RAM / Disk gauges, CPU temp,
-# load, Signal K / MOOS status), six trend charts, service table. GPU utilisation comes
+# InfluxDB / Signal K / MOOS reachability), six trend charts, service table. GPU utilisation comes
 # from Telegraf's nvidia_smi input (see telegraf.conf); the tile reads
 # "No data" on hosts without a supported GPU.
 DASHBOARDS.append(dashboard("usv-system", "System", [
@@ -1339,7 +1351,7 @@ DASHBOARDS.append(dashboard("usv-system", "System", [
           thresholds=[(None, OK), (75, "yellow"), (90, "red")]),
     stat("CPU Temp", tele_last("temp", "temp"), 12, 0, 3, 4, unit="celsius",
          decimals=0, thresholds=[(None, OK), (70, "yellow"), (85, "red")]),
-    stat("Load (1m)", tele_last("system", "load1"), 15, 0, 3, 4, decimals=2),
+    service_tile("InfluxDB", "influxdb", 15),
     service_tile("Signal K", "signalk", 18),
     service_tile("MOOS", "moos", 21),
     ts("CPU", [target(tele("cpu", "usage_user"), "user"),
@@ -1391,7 +1403,7 @@ DASHBOARDS.append(dashboard("usv-replay", "Replay", [
               "bucket. Use the **Mission events** annotations to locate "
               "waypoint hits and state changes.")}),
     panel("geomap", "GPS Track",
-          [target(track_query("10s")), target(position_query(), ref="B"),
+          [target(track_query("10s", archive=True)), target(position_query(), ref="B"),
            target(geometry_query("route"), ref="C"),
            target(geometry_query("region"), ref="D")],
           0, 2, 14, 9,
@@ -1413,19 +1425,19 @@ DASHBOARDS.append(dashboard("usv-replay", "Replay", [
                   '  |> rename(columns: {_time: "Time", _value: "Event", type: "Type", severity: "Severity"})\n'
                   '  |> sort(columns: ["Time"], desc: true)\n')],
           14, 6, 10, 5, options={"showHeader": True}),
-    ts("Heading History", [target(flux("nav", "heading"), "heading")],
+    ts("Heading History", [target(flux("nav", "heading", archive=True), "heading")],
        0, 11, 8, 5, unit="degree", min_=0, max_=360),
-    ts("Speed History", [target(flux("nav", "sog"), "SOG")],
+    ts("Speed History", [target(flux("nav", "sog", archive=True), "SOG")],
        8, 11, 8, 5, unit="velocityknot"),
     ts("Actuator Commands",
-       [target(flux("autopilot", "rudder_cmd"), "rudder °"),
-        target(flux("autopilot", "throttle_cmd"), "throttle %", ref="B")],
+       [target(flux("autopilot", "rudder_cmd", archive=True), "rudder °"),
+        target(flux("autopilot", "throttle_cmd", archive=True), "throttle %", ref="B")],
        16, 11, 8, 5, unit="degree",
        overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
                    "properties": [{"id": "unit", "value": "percent"},
                                   {"id": "custom.axisPlacement",
                                    "value": "right"}]}]),
-    ts("Cross-Track Error", [target(flux("nav", "cross_track_error"), "XTE")],
+    ts("Cross-Track Error", [target(flux("nav", "cross_track_error", archive=True), "XTE")],
        0, 16, 8, 5, unit=UNIT_M),
     panel("state-timeline", "Autonomy Flags",
           [target(flux("autonomy",
@@ -1437,7 +1449,7 @@ DASHBOARDS.append(dashboard("usv-replay", "Replay", [
           options={"showValue": "never", "legend": {"showLegend": False},
                    "tooltip": {"mode": "single"}}),
     ts("Distance to Next Waypoint",
-       [target(flux("mission", "dist_to_waypoint"), "distance m")],
+       [target(flux("mission", "dist_to_waypoint", archive=True), "distance m")],
        16, 16, 8, 5, unit=UNIT_M),
 ], ["replay"], refresh="", time_from="now-6h"))
 

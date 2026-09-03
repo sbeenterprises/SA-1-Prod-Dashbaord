@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 185,
+      "id": 186,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -88,7 +88,7 @@
       }
     },
     {
-      "id": 112,
+      "id": 113,
       "type": "stat",
       "title": "Internet",
       "datasource": {
@@ -169,7 +169,7 @@
       }
     },
     {
-      "id": 113,
+      "id": 114,
       "type": "stat",
       "title": "Starlink",
       "datasource": {
@@ -251,7 +251,7 @@
       }
     },
     {
-      "id": 114,
+      "id": 115,
       "type": "stat",
       "title": "VPN / Tailscale",
       "datasource": {
@@ -332,7 +332,7 @@
       }
     },
     {
-      "id": 115,
+      "id": 116,
       "type": "stat",
       "title": "Signal K WebSocket",
       "datasource": {
@@ -406,7 +406,7 @@
       }
     },
     {
-      "id": 116,
+      "id": 117,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -473,7 +473,7 @@
       }
     },
     {
-      "id": 117,
+      "id": 118,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -540,7 +540,7 @@
       }
     },
     {
-      "id": 118,
+      "id": 119,
       "type": "timeseries",
       "title": "Latency",
       "datasource": {
@@ -610,7 +610,7 @@
       }
     },
     {
-      "id": 119,
+      "id": 120,
       "type": "timeseries",
       "title": "Packet Loss",
       "datasource": {
@@ -681,9 +681,9 @@
       }
     },
     {
-      "id": 120,
+      "id": 121,
       "type": "timeseries",
-      "title": "Bandwidth",
+      "title": "Bandwidth (host interfaces)",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -700,8 +700,18 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"up_mbps\" or r._field == \"down_mbps\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
-          "refId": "A"
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"net\" and r._field == \"bytes_recv\")\n  |> filter(fn: (r) => r.interface != \"lo\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n",
+          "refId": "A",
+          "alias": "down"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"net\" and r._field == \"bytes_sent\")\n  |> filter(fn: (r) => r.interface != \"lo\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n",
+          "refId": "B",
+          "alias": "up"
         }
       ],
       "fieldConfig": {
@@ -709,7 +719,7 @@
           "color": {
             "mode": "palette-classic"
           },
-          "unit": "Mbits",
+          "unit": "bps",
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
@@ -724,7 +734,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*up_mbps.*"
+              "options": ".*bytes_recv.*"
             },
             "properties": [
               {
@@ -739,7 +749,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*down_mbps.*"
+              "options": ".*bytes_sent.*"
             },
             "properties": [
               {
@@ -765,7 +775,7 @@
       }
     },
     {
-      "id": 121,
+      "id": 122,
       "type": "timeseries",
       "title": "Telemetry Message Rates",
       "datasource": {

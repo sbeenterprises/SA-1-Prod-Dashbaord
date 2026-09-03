@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 186,
+      "id": 187,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -88,7 +88,7 @@
       }
     },
     {
-      "id": 122,
+      "id": 123,
       "type": "gauge",
       "title": "CPU",
       "datasource": {
@@ -148,7 +148,7 @@
       }
     },
     {
-      "id": 123,
+      "id": 124,
       "type": "gauge",
       "title": "GPU",
       "datasource": {
@@ -208,7 +208,7 @@
       }
     },
     {
-      "id": 124,
+      "id": 125,
       "type": "gauge",
       "title": "RAM",
       "datasource": {
@@ -268,7 +268,7 @@
       }
     },
     {
-      "id": 125,
+      "id": 126,
       "type": "gauge",
       "title": "Disk",
       "datasource": {
@@ -328,7 +328,7 @@
       }
     },
     {
-      "id": 126,
+      "id": 127,
       "type": "stat",
       "title": "CPU Temp",
       "datasource": {
@@ -395,9 +395,9 @@
       }
     },
     {
-      "id": 127,
+      "id": 128,
       "type": "stat",
-      "title": "Load (1m)",
+      "title": "InfluxDB",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -414,7 +414,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r._field == \"load1\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"net_response\" and r._field == \"result_code\")\n  |> filter(fn: (r) => r.service == \"influxdb\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -423,7 +423,6 @@
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 2,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -432,7 +431,31 @@
                 "value": null
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "UP",
+                  "color": "#175d8d",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1,
+                "to": 99,
+                "result": {
+                  "text": "DOWN",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -442,9 +465,9 @@
             "lastNotNull"
           ]
         },
-        "textMode": "auto",
+        "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value",
+        "colorMode": "background",
         "justifyMode": "auto",
         "text": {
           "valueSize": 34,
@@ -453,7 +476,7 @@
       }
     },
     {
-      "id": 128,
+      "id": 129,
       "type": "stat",
       "title": "Signal K",
       "datasource": {
@@ -534,7 +557,7 @@
       }
     },
     {
-      "id": 129,
+      "id": 130,
       "type": "stat",
       "title": "MOOS",
       "datasource": {
@@ -615,7 +638,7 @@
       }
     },
     {
-      "id": 130,
+      "id": 131,
       "type": "timeseries",
       "title": "CPU",
       "datasource": {
@@ -711,7 +734,7 @@
       }
     },
     {
-      "id": 131,
+      "id": 132,
       "type": "timeseries",
       "title": "GPU",
       "datasource": {
@@ -823,7 +846,7 @@
       }
     },
     {
-      "id": 132,
+      "id": 133,
       "type": "timeseries",
       "title": "Memory",
       "datasource": {
@@ -895,7 +918,7 @@
       }
     },
     {
-      "id": 133,
+      "id": 134,
       "type": "timeseries",
       "title": "Disk I/O",
       "datasource": {
@@ -989,7 +1012,7 @@
       }
     },
     {
-      "id": 134,
+      "id": 135,
       "type": "timeseries",
       "title": "Network I/O",
       "datasource": {
@@ -1083,7 +1106,7 @@
       }
     },
     {
-      "id": 135,
+      "id": 136,
       "type": "timeseries",
       "title": "CPU Temp",
       "datasource": {
@@ -1153,7 +1176,7 @@
       }
     },
     {
-      "id": 136,
+      "id": 137,
       "type": "table",
       "title": "Services (systemd)",
       "datasource": {

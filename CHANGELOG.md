@@ -20,6 +20,13 @@ Keep a Changelog; versions are git tags on `main`.
 - Comms dashboard: Internet, latency, packet loss, VPN (tailscaled) and
   Starlink tiles read Telegraf host probes instead of simulator fields.
 
+- Navigation: attitude (roll / pitch) trend alongside heading, speed and
+  XTE. System: InfluxDB reachability tile next to Signal K and MOOS.
+  Comms: bandwidth up / down from the host interfaces.
+- Replay reads the 1-minute archive (`telemetry_1m`) automatically for
+  windows older than the 30-day raw retention; the installer's downsample
+  task now skips string fields (it errored on them before).
+
 ### Changed
 - Fleet dashboard uses its own `fleet_vessel` variable (default All) so
   the vessel selected on another tab no longer narrows the fleet view.

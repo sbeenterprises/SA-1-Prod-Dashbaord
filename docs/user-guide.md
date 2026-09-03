@@ -72,8 +72,9 @@ action — both also raise alerts.
 2. Pick the mission window with the time picker (annotations mark waypoint
    hits and state changes).
 3. Hover any graph — the crosshair is shared, and the map shows the track
-   for the selected window. Missions older than 30 days come from the
-   1-minute archive.
+   for the selected window. Windows older than 30 days are read from the
+   1-minute archive automatically (numeric series; state timelines keep
+   the raw 30 days).
 
 ## Alarms
 Active alerts appear on the Alarms dashboard and are emailed to the

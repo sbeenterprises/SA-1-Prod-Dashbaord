@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 180,
+      "id": 181,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -88,7 +88,7 @@
       }
     },
     {
-      "id": 40,
+      "id": 41,
       "type": "stat",
       "title": "Helm State",
       "datasource": {
@@ -178,7 +178,7 @@
       }
     },
     {
-      "id": 41,
+      "id": 42,
       "type": "stat",
       "title": "All-Stop",
       "datasource": {
@@ -269,7 +269,7 @@
       }
     },
     {
-      "id": 42,
+      "id": 43,
       "type": "stat",
       "title": "Station Keeping",
       "datasource": {
@@ -343,7 +343,7 @@
       }
     },
     {
-      "id": 43,
+      "id": 44,
       "type": "stat",
       "title": "Entry Gate",
       "datasource": {
@@ -417,7 +417,7 @@
       }
     },
     {
-      "id": 44,
+      "id": 45,
       "type": "stat",
       "title": "Re-Arm Hold",
       "datasource": {
@@ -491,7 +491,7 @@
       }
     },
     {
-      "id": 45,
+      "id": 46,
       "type": "stat",
       "title": "Remote Control",
       "datasource": {
@@ -565,7 +565,7 @@
       }
     },
     {
-      "id": 46,
+      "id": 47,
       "type": "stat",
       "title": "Corridor",
       "datasource": {
@@ -650,7 +650,7 @@
       }
     },
     {
-      "id": 47,
+      "id": 48,
       "type": "stat",
       "title": "Crash Stop",
       "datasource": {
@@ -730,7 +730,7 @@
       }
     },
     {
-      "id": 48,
+      "id": 49,
       "type": "stat",
       "title": "Active Behaviors",
       "datasource": {
@@ -788,7 +788,7 @@
       }
     },
     {
-      "id": 49,
+      "id": 50,
       "type": "stat",
       "title": "Heading Error",
       "datasource": {
@@ -855,7 +855,7 @@
       }
     },
     {
-      "id": 50,
+      "id": 51,
       "type": "stat",
       "title": "Speed Error",
       "datasource": {
@@ -922,7 +922,7 @@
       }
     },
     {
-      "id": 51,
+      "id": 52,
       "type": "stat",
       "title": "Rudder Cmd",
       "datasource": {
@@ -981,7 +981,7 @@
       }
     },
     {
-      "id": 52,
+      "id": 53,
       "type": "stat",
       "title": "Throttle Cmd",
       "datasource": {
@@ -1040,7 +1040,7 @@
       }
     },
     {
-      "id": 53,
+      "id": 54,
       "type": "stat",
       "title": "Speed Cap",
       "datasource": {
@@ -1099,7 +1099,7 @@
       }
     },
     {
-      "id": 54,
+      "id": 55,
       "type": "stat",
       "title": "Next Turn",
       "datasource": {
@@ -1158,7 +1158,7 @@
       }
     },
     {
-      "id": 55,
+      "id": 56,
       "type": "volkovlabs-echarts-panel",
       "title": "Rudder Angle",
       "datasource": {
@@ -1195,7 +1195,7 @@
       }
     },
     {
-      "id": 56,
+      "id": 57,
       "type": "volkovlabs-echarts-panel",
       "title": "Throttle",
       "datasource": {
@@ -1239,7 +1239,7 @@
       }
     },
     {
-      "id": 57,
+      "id": 58,
       "type": "volkovlabs-echarts-panel",
       "title": "Heading Error",
       "datasource": {
@@ -1304,7 +1304,7 @@
       }
     },
     {
-      "id": 58,
+      "id": 59,
       "type": "timeseries",
       "title": "Desired vs Actual Heading",
       "datasource": {
@@ -1390,7 +1390,7 @@
       }
     },
     {
-      "id": 59,
+      "id": 60,
       "type": "timeseries",
       "title": "Speed Governor \u2014 desired / cap / commanded / actual",
       "datasource": {
@@ -1504,7 +1504,7 @@
       }
     },
     {
-      "id": 60,
+      "id": 61,
       "type": "timeseries",
       "title": "Rudder Output",
       "datasource": {
@@ -1574,7 +1574,7 @@
       }
     },
     {
-      "id": 61,
+      "id": 62,
       "type": "timeseries",
       "title": "Throttle Output",
       "datasource": {
@@ -1646,7 +1646,7 @@
       }
     },
     {
-      "id": 62,
+      "id": 63,
       "type": "timeseries",
       "title": "Heading & Speed Error",
       "datasource": {

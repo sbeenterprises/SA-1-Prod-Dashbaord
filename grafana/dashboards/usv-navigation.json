@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 179,
+      "id": 180,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -1174,7 +1174,7 @@
       "gridPos": {
         "x": 0,
         "y": 18,
-        "w": 8,
+        "w": 6,
         "h": 6
       },
       "targets": [
@@ -1258,9 +1258,9 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 8,
+        "x": 6,
         "y": 18,
-        "w": 8,
+        "w": 6,
         "h": 6
       },
       "targets": [
@@ -1328,9 +1328,9 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 16,
+        "x": 12,
         "y": 18,
-        "w": 8,
+        "w": 6,
         "h": 6
       },
       "targets": [
@@ -1372,6 +1372,90 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#00bcd4"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 40,
+      "type": "timeseries",
+      "title": "Attitude \u2014 Roll / Pitch",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 18,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"roll\" or r._field == \"pitch\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "degree",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 14,
+            "showPoints": "never",
+            "spanNulls": 60000,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*roll.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#00bcd4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*pitch.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#42a5f5"
                 }
               }
             ]
