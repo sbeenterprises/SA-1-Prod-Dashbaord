@@ -2077,7 +2077,31 @@
       },
       "options": {
         "showHeader": true
-      }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "rel_bearing": true,
+              "rel_speed_kn": true,
+              "hdg": true
+            },
+            "indexByName": {
+              "contact": 0,
+              "source": 1,
+              "type": 2,
+              "range_m": 3,
+              "bearing": 4,
+              "spd_kn": 5,
+              "cpa_m": 6,
+              "tcpa_s": 7,
+              "encounter": 8,
+              "risk": 9
+            }
+          }
+        }
+      ]
     },
     {
       "id": 121,

@@ -885,6 +885,7 @@ private:
         telemetry_->str_field("traffic", "", "reason",
                               avoidance ? "Collision avoidance active" :
                               high ? "High-risk contact, helm not avoiding" :
+                              medium ? "Contact closing (MEDIUM), monitoring" :
                               n ? "Traffic monitored, no avoidance needed" : "No contacts");
 
         const bool heartbeat = now - radar_ttm_time_ <= 30.0;

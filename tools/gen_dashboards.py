@@ -1431,6 +1431,15 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
                                   {"id": "custom.axisPlacement", "value": "right"}]}]),
 ], ["traffic"]))
 
+# Contacts table: the join emits columns alphabetically; fix the reading
+# order and drop the working columns.
+_ct = next(p for p in DASHBOARDS[-1]["panels"] if p["title"].startswith("Contacts —"))
+_ct["transformations"] = [{"id": "organize", "options": {
+    "excludeByName": {"rel_bearing": True, "rel_speed_kn": True, "hdg": True},
+    "indexByName": {"contact": 0, "source": 1, "type": 2, "range_m": 3,
+                    "bearing": 4, "spd_kn": 5, "cpa_m": 6, "tcpa_s": 7,
+                    "encounter": 8, "risk": 9}}}]
+
 # --------------------------------------------------------------- FR-7 Camera
 DASHBOARDS.append(dashboard("usv-camera", "Cameras", [
     stat("Connection", flux("camera", "connected", last=True), 0, 0, 4, 4,
