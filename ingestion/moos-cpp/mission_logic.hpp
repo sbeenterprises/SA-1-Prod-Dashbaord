@@ -725,32 +725,91 @@ inline LatLon LocalToLatLon(double x, double y, double lat0, double lon0) {
 // CHECKLIST_STATUS from the operator console (see docs/deployment.md,
 // "Console checklist"): "done=9,total=11,pending=Weather Conditions|Port
 // Clearance,by=douglas". Missing numbers parse as -1.
+struct ChecklistItem {
+    std::string name, description;
+    bool ticked = false;
+};
+
 struct Checklist {
     int done = -1, total = -1;
     std::string pending;   // "|"-separated item names, may be empty
     std::string by;
+    // Full list when the console sends items=Name:ticked:Description|...
+    std::vector<ChecklistItem> items;
 };
 
-// Rows for the console-checklist table: a head line with the count and the
-// operator, then one row per pending item.
-struct ChecklistRow { std::string item, state; };
-
-inline std::vector<ChecklistRow> ChecklistRows(const Checklist& c) {
-    std::vector<ChecklistRow> rows;
-    if (c.total < 0) return rows;
-    const bool complete = c.done >= c.total;
-    std::string head = "Console checklist " + std::to_string(c.done) + " / " +
-                       std::to_string(c.total);
-    if (!c.by.empty()) head += " · ticked by " + c.by;
-    rows.push_back({head, complete ? "COMPLETE" : "OPEN"});
+inline std::vector<std::string> SplitBar(const std::string& s) {
+    std::vector<std::string> out;
     std::string cur;
-    for (char ch : c.pending + "|") {
+    for (char ch : s + "|") {
         if (ch == '|') {
             cur = trim(cur);
-            if (!cur.empty()) rows.push_back({cur, "PENDING"});
+            if (!cur.empty()) out.push_back(cur);
             cur.clear();
         } else cur += ch;
     }
+    return out;
+}
+
+// "Name:Description|Name2:Description2" (readiness config checklist_items)
+// or "Name:ticked:Description|..." (console items=). Missing parts are
+// empty; a middle token of ticked / pending / done / open is the state.
+inline std::vector<ChecklistItem> ParseChecklistItems(const std::string& spec) {
+    std::vector<ChecklistItem> out;
+    for (const std::string& part : SplitBar(spec)) {
+        ChecklistItem it;
+        const size_t c1 = part.find(':');
+        if (c1 == std::string::npos) { it.name = trim(part); out.push_back(it); continue; }
+        it.name = trim(part.substr(0, c1));
+        std::string rest = trim(part.substr(c1 + 1));
+        const size_t c2 = rest.find(':');
+        const std::string first = lower(trim(rest.substr(0, c2)));
+        if (first == "ticked" || first == "done" || first == "pending" || first == "open") {
+            it.ticked = (first == "ticked" || first == "done");
+            rest = c2 == std::string::npos ? "" : trim(rest.substr(c2 + 1));
+        }
+        it.description = rest;
+        out.push_back(it);
+    }
+    return out;
+}
+
+// Rows for the console-checklist table (measurement checklist): one row
+// per item (TICKED / PENDING, with its description) and a footer with the
+// count and the operator. When the console sends only counts and the
+// pending names, the configured item list (checklist_items) supplies the
+// names: every configured item not pending is ticked. With neither, the
+// table shows the head line and the pending items only.
+struct ChecklistRow { std::string item, description, state; };
+
+inline std::vector<ChecklistRow> ChecklistRows(const Checklist& c,
+                                               const std::vector<ChecklistItem>& configured = {}) {
+    std::vector<ChecklistRow> rows;
+    if (c.total < 0) return rows;
+    const bool complete = c.done >= c.total;
+    const std::string count = std::to_string(c.done) + " / " + std::to_string(c.total);
+    const std::string by = c.by.empty() ? "" : " · ticked by " + c.by;
+    const std::vector<std::string> pending = SplitBar(c.pending);
+    auto is_pending = [&](const std::string& name) {
+        for (const auto& pn : pending) if (lower(pn) == lower(name)) return true;
+        return false;
+    };
+    if (!c.items.empty()) {
+        for (const auto& it : c.items)
+            rows.push_back({it.name, it.description, it.ticked ? "TICKED" : "PENDING"});
+    } else if (!configured.empty()) {
+        for (const auto& it : configured)
+            rows.push_back({it.name, it.description, is_pending(it.name) ? "PENDING" : "TICKED"});
+        for (const auto& pn : pending) {   // pending items the config does not know
+            bool known = false;
+            for (const auto& it : configured) if (lower(it.name) == lower(pn)) known = true;
+            if (!known) rows.push_back({pn, "", "PENDING"});
+        }
+    } else {
+        for (const auto& pn : pending) rows.push_back({pn, "", "PENDING"});
+    }
+    rows.push_back({"Console checklist " + count + by, "",
+                    complete ? "COMPLETE" : "OPEN"});
     return rows;
 }
 
@@ -766,6 +825,7 @@ inline Checklist ParseChecklist(const std::string& spec) {
     c.total = num("total");
     if (auto it = kv.find("pending"); it != kv.end()) c.pending = trim(it->second);
     if (auto it = kv.find("by"); it != kv.end()) c.by = trim(it->second);
+    if (auto it = kv.find("items"); it != kv.end()) c.items = ParseChecklistItems(it->second);
     return c;
 }
 
@@ -833,11 +893,92 @@ inline std::string fmt0(double v) {
     return b;
 }
 
+// Point in polygon (ray casting), local grid. Used for "route inside the
+// operating region".
+inline bool PointInPolygon(double x, double y, const std::vector<XY>& poly) {
+    bool inside = false;
+    const size_t n = poly.size();
+    if (n < 3) return false;
+    for (size_t i = 0, j = n - 1; i < n; j = i++) {
+        const XY& a = poly[i];
+        const XY& b = poly[j];
+        if ((a.y > y) != (b.y > y) &&
+            x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x)
+            inside = !inside;
+    }
+    return inside;
+}
+
+inline bool RouteInsideRegion(const std::vector<XY>& route, const std::vector<XY>& region) {
+    if (route.empty() || region.size() < 3) return false;
+    for (const XY& p : route)
+        if (!PointInPolygon(p.x, p.y, region)) return false;
+    return true;
+}
+
+inline double RouteLengthM(const std::vector<XY>& route) {
+    double len = 0.0;
+    for (size_t i = 1; i < route.size(); ++i)
+        len += std::hypot(route[i].x - route[i - 1].x, route[i].y - route[i - 1].y);
+    return len;
+}
+
+// App names from the mission file's ANTLER block ("Run = pHelmIvP @
+// NewConsole=false", "Run = uTimerScript @ ... ~ uTimerScript_A"): the
+// MOOSDB client name is the alias when given, else the app name.
+inline std::vector<std::string> ParseAntlerApps(const std::vector<std::string>& lines) {
+    std::vector<std::string> apps;
+    for (const std::string& raw : lines) {
+        std::string line = raw;
+        const size_t cmt = line.find("//");
+        if (cmt != std::string::npos) line = line.substr(0, cmt);
+        const size_t eq = line.find('=');
+        if (eq == std::string::npos) continue;
+        if (lower(trim(line.substr(0, eq))) != "run") continue;
+        std::string rhs = line.substr(eq + 1);
+        std::string name;
+        const size_t tilde = rhs.find('~');
+        if (tilde != std::string::npos) name = trim(rhs.substr(tilde + 1));
+        else {
+            const size_t at = rhs.find('@');
+            name = trim(at == std::string::npos ? rhs : rhs.substr(0, at));
+        }
+        if (!name.empty() && name != "MOOSDB") apps.push_back(name);
+    }
+    return apps;
+}
+
+// Apps in `required` missing from a DB_CLIENTS list ("a,b,c").
+inline std::vector<std::string> MissingApps(const std::vector<std::string>& required,
+                                            const std::string& db_clients) {
+    std::vector<std::string> present = SplitCsv(db_clients), missing;
+    for (const auto& r : required) {
+        bool found = false;
+        for (const auto& p : present) if (trim(p) == r) found = true;
+        if (!found) missing.push_back(r);
+    }
+    return missing;
+}
+
+// Vessel constants for the readiness checks (grafana_bridge ProcessConfig).
+// Zero / empty disables the check that needs it (row reads N/A).
+struct ReadinessConfig {
+    double fuel_tank_l = 0.0;       // usable fuel
+    double cruise_fuel_lph = 0.0;   // consumption at cruise
+    double cruise_speed_kn = 0.0;   // planning speed for the route time
+    double battery_kwh = 0.0;       // usable battery energy
+    double cruise_power_kw = 0.0;   // electrical load under way
+    double endurance_margin = 1.5;  // required = route time x margin (return leg, weather)
+    std::vector<std::string> required_apps;   // MOOS apps that must be connected
+    std::vector<ChecklistItem> checklist_items;
+};
+
 // strict (vessel profile): a check whose sensor data is missing FAILS
 // instead of reading N/A. In simulation there is no engine, CAN or camera
 // data, so the simulation profile reports those as N/A.
 inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, double now,
-                                                     bool strict) {
+                                                     bool strict,
+                                                     const ReadinessConfig& cfg = {}) {
     std::vector<ReadinessCheck> out;
     const int missing = strict ? READY_FAIL : READY_NA;
     auto add = [&](const char* id, const char* name, const std::string& ev, int st) {
@@ -881,12 +1022,19 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         const bool have_route = route && !route->str.empty() && route->str != "-";
         const bool have_wpts = wpts && wpts->num > 0.0;
         const bool have_region = region && region->num >= 3.0;
+        const Sample* inside = num("mission", "route_in_region", 1e9);
+        const Sample* len = num("mission", "route_length_m", 1e9);
         std::string ev = have_route ? route->str : "no route loaded";
         if (have_route && now - route->t > 600.0) ev += " (last known)";
         ev += have_wpts ? " · " + fmt0(wpts->num) + " waypoints" : " · no waypoints";
+        if (len && len->num > 0.0) ev += " · " + fmt1(len->num / 1852.0) + " nm";
         ev += have_region ? " · region " + fmt0(region->num) + " vertices" : " · no operating region";
-        add("course", "Course planning", ev,
-            (have_route && have_wpts && have_region) ? READY_PASS : READY_FAIL);
+        bool ok = have_route && have_wpts && have_region;
+        if (ok && inside) {
+            if (inside->num == 1.0) ev += " · route inside region";
+            else { ev += " · ROUTE OUTSIDE REGION"; ok = false; }
+        }
+        add("course", "Course planning", ev, ok ? READY_PASS : READY_FAIL);
     }
     // 3 Chart / ENC selected (console publishes ENC_STATUS)
     {
@@ -908,7 +1056,27 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         if (allstop && allstop->num != 0.0) { ev += " · ALL-STOP"; ok = false; }
         add("autonomy", "Autonomy stack", ev, ok ? READY_PASS : READY_FAIL);
     }
-    // 5 Steering / actuators: rudder feedback (ANGULO_LEME) and command
+    // 5 MOOS community complete: every app the Antler block starts (or
+    // required_apps) is connected to MOOSDB (DB_CLIENTS).
+    {
+        const Sample* clients = num("moos", "clients", 30.0);
+        if (cfg.required_apps.empty())
+            add("apps", "MOOS apps", "no app list (Antler block / required_apps)", READY_NA);
+        else if (!clients)
+            add("apps", "MOOS apps", "DB_CLIENTS not received", READY_FAIL);
+        else {
+            const auto missing = MissingApps(cfg.required_apps, clients->str);
+            const std::string n = std::to_string(cfg.required_apps.size() - missing.size()) +
+                                  " / " + std::to_string(cfg.required_apps.size()) + " running";
+            if (missing.empty()) add("apps", "MOOS apps", n, READY_PASS);
+            else {
+                std::string m;
+                for (const auto& a : missing) m += (m.empty() ? "" : ", ") + a;
+                add("apps", "MOOS apps", n + " · missing: " + m, READY_FAIL);
+            }
+        }
+    }
+    // 6 Steering / actuators: rudder feedback (ANGULO_LEME) and command
     {
         const Sample* act = num("autopilot", "rudder_actual", 15.0);
         const Sample* cmd = num("autopilot", "rudder_cmd", 15.0);
@@ -923,7 +1091,7 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             add("steering", "Steering / actuators", ev, ok ? READY_PASS : READY_FAIL);
         }
     }
-    // 6 Operator link and comms
+    // 7 Operator link and comms
     {
         const Sample* sk = num("comms", "signalk_ws_up", 60.0);
         const Sample* inet = num("ping", "result_code", 120.0);
@@ -936,7 +1104,7 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         if (phase && phase->num != 0.0) { ev += " · operator link LOST"; ok = false; }
         add("comms", "Operator link & comms", ev, ok ? READY_PASS : READY_FAIL);
     }
-    // 7 CAN bus (NMEA 2000 / J1939 interface)
+    // 8 CAN bus (NMEA 2000 / J1939 interface)
     {
         const Sample* up = num("canbus", "interface_up", 60.0);
         const Sample* rate = num("canbus", "msg_rate", 60.0);
@@ -948,11 +1116,12 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             add("can", "CAN bus", strict ? "interface DOWN" : "interface DOWN (no CAN hardware in simulation)",
                 strict ? READY_FAIL : READY_NA);
     }
-    // 8 Engine pre-start (J1939)
+    // 9 Engine pre-start (J1939)
     {
         const Sample* cool = num("engine", "coolant_temp", 60.0);
         const Sample* oil = num("engine", "oil_pressure", 60.0);
         const Sample* fuel = num("engine", "fuel_level", 120.0);
+        const Sample* dtcs = num("engine", "active_dtcs", 120.0);
         if (!cool && !oil && !fuel) add("engine", "Engine pre-start", "no engine data", missing);
         else {
             bool ok = true;
@@ -960,10 +1129,12 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             if (cool) { ev += "coolant " + fmt0(cool->num) + " °C"; ok = ok && cool->num < 105.0; }
             if (oil) ev += std::string(ev.empty() ? "" : " · ") + "oil " + fmt0(oil->num) + " kPa";
             if (fuel) { ev += std::string(ev.empty() ? "" : " · ") + "fuel " + fmt0(fuel->num) + " %"; ok = ok && fuel->num > 15.0; }
+            if (dtcs && dtcs->num > 0.0) { ev += " · " + fmt0(dtcs->num) + " ACTIVE DTC"; ok = false; }
+            else if (dtcs) ev += " · no DTC";
             add("engine", "Engine pre-start", ev, ok ? READY_PASS : READY_FAIL);
         }
     }
-    // 9 Electrical
+    // 10 Electrical
     {
         const Sample* volt = num("electrical", "battery_voltage", 60.0);
         const Sample* soc = num("electrical", "soc", 120.0);
@@ -981,29 +1152,60 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             add("electrical", "Electrical", ev, ok ? READY_PASS : READY_FAIL);
         }
     }
-    // 10 AIS / contact reports. An empty harbour gives zero reports, so a
-    // zero is "nothing to verify", never a fault.
+    // 11 Endurance: fuel and battery hours against the route time (with the
+    // margin for the return leg). Needs the vessel constants and a route.
+    {
+        const Sample* len = num("mission", "route_length_m", 1e9);
+        const Sample* fuel = num("engine", "fuel_level", 120.0);
+        const Sample* soc = num("electrical", "soc", 120.0);
+        const bool have_route = len && len->num > 0.0 && cfg.cruise_speed_kn > 0.0;
+        const bool fuel_cfg = cfg.fuel_tank_l > 0.0 && cfg.cruise_fuel_lph > 0.0;
+        const bool batt_cfg = cfg.battery_kwh > 0.0 && cfg.cruise_power_kw > 0.0;
+        if (!fuel_cfg && !batt_cfg)
+            add("endurance", "Endurance", "no vessel constants (fuel_tank_l / battery_kwh)", READY_NA);
+        else if (!have_route)
+            add("endurance", "Endurance", "no route to plan against", strict ? READY_FAIL : READY_NA);
+        else {
+            const double need_h = (len->num / 1852.0) / cfg.cruise_speed_kn * cfg.endurance_margin;
+            std::string ev = "route " + fmt1(len->num / 1852.0) + " nm needs " + fmt1(need_h) +
+                             " h (x" + fmt1(cfg.endurance_margin) + ")";
+            bool ok = true, any = false;
+            if (fuel_cfg) {
+                if (fuel) {
+                    const double h = fuel->num / 100.0 * cfg.fuel_tank_l / cfg.cruise_fuel_lph;
+                    ev += " · fuel " + fmt1(h) + " h"; ok = ok && h >= need_h; any = true;
+                } else ev += " · no fuel level";
+            }
+            if (batt_cfg) {
+                if (soc) {
+                    const double h = soc->num / 100.0 * cfg.battery_kwh / cfg.cruise_power_kw;
+                    ev += " · battery " + fmt1(h) + " h"; ok = ok && h >= need_h; any = true;
+                } else ev += " · no SOC";
+            }
+            add("endurance", "Endurance", ev, !any ? missing : (ok ? READY_PASS : READY_FAIL));
+        }
+    }
+    // 12 AIS / radar. An empty harbour gives zero reports, so a zero is
+    // "nothing to verify", never a fault; an offline radar is.
     {
         const Sample* rep = num("traffic", "reports", 300.0);
-        if (rep && rep->num > 0.0)
-            add("ais", "AIS / contact reports", fmt0(rep->num) + " reported contacts", READY_PASS);
-        else add("ais", "AIS / contact reports", "no contact reports (5 min)", READY_NA);
-    }
-    // 11 Radar
-    {
         const Sample* on = num("radar", "online", 60.0);
-        if (!on) add("radar", "Radar", "no radar data", missing);
-        else add("radar", "Radar", on->num == 1.0 ? "online" : "OFFLINE",
-                 on->num == 1.0 ? READY_PASS : READY_FAIL);
+        std::string ev = (rep && rep->num > 0.0) ? fmt0(rep->num) + " reported contacts"
+                                                 : "no contact reports (5 min)";
+        int st = (rep && rep->num > 0.0) ? READY_PASS : READY_NA;
+        if (!on) { ev += " · no radar data"; if (strict) st = READY_FAIL; }
+        else if (on->num == 1.0) { ev += " · radar online"; if (st == READY_NA) st = READY_PASS; }
+        else { ev += " · RADAR OFFLINE"; st = READY_FAIL; }
+        add("ais", "AIS / radar", ev, st);
     }
-    // 12 Cameras
+    // 13 Cameras
     {
         const Sample* con = num("camera", "connected", 60.0);
         if (!con) add("cameras", "Cameras", "no camera data", missing);
         else add("cameras", "Cameras", con->num == 1.0 ? "connected" : "DISCONNECTED",
                  con->num == 1.0 ? READY_PASS : READY_FAIL);
     }
-    // 13 Onboard computer (Telegraf host metrics)
+    // 14 Onboard computer (Telegraf host metrics)
     {
         const Sample* cpu = num("cpu", "usage_user", 60.0);
         const Sample* mem = num("mem", "used_percent", 60.0);
@@ -1018,7 +1220,7 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             add("obc", "Onboard computer", ev, ok ? READY_PASS : READY_FAIL);
         }
     }
-    // 14 Safety flags
+    // 15 Safety flags
     {
         const Sample* geo = num("autonomy", "geofence_breached", 10.0);
         const Sample* risk = num("traffic", "risk_level", 10.0);
@@ -1031,7 +1233,7 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             ev.empty() ? "no geofence breach, no HIGH collision risk, no crash stop" : ev,
             ev.empty() ? READY_PASS : READY_FAIL);
     }
-    // 15 Console checklist (manual items ticked in Freeboard)
+    // 16 Console checklist (manual items ticked in Freeboard)
     {
         const Sample* done = num("mission_state", "checklist_done", 1e9);
         const Sample* total = num("mission_state", "checklist_total", 1e9);

@@ -254,7 +254,7 @@ def panel(ptype, title, targets, x, y, w, h, unit=None, thresholds=None,
 STRING_FIELDS = {
     "state", "state_external", "helm_state", "mission_name", "mission_id",
     "route_name", "allstop_reason", "enc_status", "checklist_pending", "checklist_by",
-    "blocking", "profile", "name", "evidence", "active_behavior", "station_keep", "comms_failsafe",
+    "blocking", "profile", "name", "evidence", "description", "item", "clients", "active_behavior", "station_keep", "comms_failsafe",
     "entry_gate", "opr_status", "helm_summary", "arrival_state",
     "corridor_status", "crash_stop_status", "region_warning", "wpt_stat",
     "fix_type", "charging_status", "message", "worst_contact", "reason",
@@ -1229,18 +1229,19 @@ def readiness_query():
 
 def checklist_query():
     """Console checklist mirror: rows written by grafana_bridge from the
-    console's CHECKLIST_STATUS (measurement checklist, tag seq: a head line
-    with the count and the operator, then one row per pending item)."""
+    console's CHECKLIST_STATUS (measurement checklist, tag seq: one row per
+    item with its description and TICKED / PENDING, then a footer with the
+    count and the operator)."""
     return ('from(bucket: "telemetry")\n'
             f'  |> range(start: {READINESS_WINDOW})\n'
-            '  |> filter(fn: (r) => r._measurement == "checklist" and (r._field == "item" or r._field == "state"))\n'
+            '  |> filter(fn: (r) => r._measurement == "checklist" and (r._field == "item" or r._field == "description" or r._field == "state"))\n'
             '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
             '  |> last()\n'
             '  |> drop(columns: ["_start", "_stop", "_measurement", "vessel", "_time"])\n'
             '  |> group()\n'
             '  |> pivot(rowKey: ["seq"], columnKey: ["_field"], valueColumn: "_value")\n'
             '  |> sort(columns: ["seq"])\n'
-            '  |> keep(columns: ["item", "state"])\n')
+            '  |> keep(columns: ["item", "description", "state"])\n')
 
 
 status_mappings = [{"type": "value", "options": {
@@ -1249,7 +1250,8 @@ status_mappings = [{"type": "value", "options": {
     "2": {"text": "N/A", "color": "#3d434b", "index": 2},
     "3": {"text": "CONSOLE", "color": "#6e7680", "index": 3}}}]
 checklist_state_mappings = state_map([("COMPLETE", TILE_OK), ("OPEN", "orange"),
-                                      ("PENDING", "orange"), ("UNKNOWN", "#6e7680")])
+                                      ("TICKED", "#4d545c"), ("PENDING", "orange"),
+                                      ("UNKNOWN", "#6e7680")])
 ready_mappings = value_color_map([(0, "NOT READY", "red"), (1, "READY", TILE_OK)])
 
 
@@ -1278,7 +1280,12 @@ def status_table(title, query, x, y, w, h, status_col, mappings, name_col,
                                          {"id": "custom.width", "value": 36}]},
                          {"matcher": {"id": "byName", "options": "item"},
                           "properties": [{"id": "displayName", "value": "Item"},
-                                         {"id": "custom.minWidth", "value": 520}]}])
+                                         {"id": "custom.width", "value": 230}]},
+                         {"matcher": {"id": "byName", "options": "description"},
+                          "properties": [{"id": "displayName", "value": "Description"},
+                                         {"id": "custom.minWidth", "value": 260},
+                                         {"id": "color", "value": {"mode": "fixed", "fixedColor": "#8e9299"}},
+                                         {"id": "custom.cellOptions", "value": {"type": "color-text"}}]}])
     p["transformations"] = [{"id": "organize", "options": {
         "indexByName": {c: i for i, c in enumerate(columns)}}}]
     if description:
@@ -1311,22 +1318,24 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
                  no_value="grafana_bridge not writing readiness (bridge older than v1.1 or not restarted)",
                  description=(
                      "Decided by grafana_bridge every 5 s from the latest telemetry "
-                     "(GPS ≥ 6 satellites and HDOP ≤ 2.5, rudder within ±35° and "
-                     "following the command, coolant < 105 °C, fuel > 15 %, SOC ≥ 30 %, "
-                     "host load < 90 %). N/A = sensor not fitted or no data; under "
+                     "(GPS ≥ 6 satellites and HDOP ≤ 2.5, route inside the region, every "
+                     "Antler app connected, rudder within ±35° and following the command, "
+                     "coolant < 105 °C, fuel > 15 %, no active DTC, SOC ≥ 30 %, fuel and "
+                     "battery hours ≥ route time x margin, host load < 90 %). N/A = sensor "
+                     "not fitted or no data; under "
                      "readiness_profile = vessel it counts as FAIL. CONSOLE = the "
                      "operator console has not published it (ENC selection, checklist). "
                      "READY needs no FAIL and no CONSOLE item.")),
     status_table("Console checklist — manual items ticked in Freeboard",
                  checklist_query(), 12, 3, 12, 18, "state", checklist_state_mappings, "item",
-                 ["item", "state"],
+                 ["item", "description", "state"],
                  no_value="console not publishing CHECKLIST_STATUS (docs/deployment.md, Console checklist)",
                  description=(
                      "Mirror of the console's pre-departure checklist "
                      "(CHECKLIST_STATUS from the operator UI). Items are ticked in "
-                     "Freeboard; Grafana shows the count, who ticked and what is "
-                     "still pending. Blocking items: see the Failed tile and the "
-                     "Mission Events list (Readiness NOT READY: ...).")),
+                     "Freeboard; Grafana shows every item with its state, who ticked "
+                     "and the count. Item names and descriptions come from the console "
+                     "(items=) or from checklist_items in the bridge ProcessConfig.")),
 ], ["readiness"]))
 
 # ------------------------------------------------ FR-6 Traffic (collision avoidance)

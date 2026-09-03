@@ -15,6 +15,8 @@
 #   BRAND_TITLE="Swiftships USV Console"     (browser tab / loading screen)
 #   BRAND_WELCOME="Welcome to Swiftships"    (login heading)
 #   BRAND_SUBTITLE="Autonomous Dashboard"   (under the heading)
+#   BRAND_APP_TITLE="SA-1 Dashboard"        (replaces "Grafana" next to the
+#                                            logo in the navigation menu)
 set -euo pipefail
 
 GPUB=${GPUB:-/usr/share/grafana/public}
@@ -113,6 +115,7 @@ done || true   # no match (already branded) must not abort under pipefail
 #   body.login-page > ... > div (::before = fixed background artwork)
 #     > div > div.login-content-box > div > img(logo) + div > h1(heading)
 SUBTITLE=${BRAND_SUBTITLE:-Autonomous Dashboard}
+APP_TITLE=${BRAND_APP_TITLE:-SA-1 Dashboard}
 cp "$BR/swiftships_logo_light.svg" "$GPUB/img/swiftships_login_logo.svg"
 mk_bg "$GPUB/img/swiftships_login_bg.svg"
 LOGO_V=$(md5sum "$GPUB/img/swiftships_login_logo.svg" | cut -c1-8)
@@ -135,9 +138,19 @@ body.login-page button[type="submit"]:hover{background:#00bcd4!important;border-
 body.login-page input:focus,body.login-page input:focus-visible{box-shadow:0 0 0 2px #00bcd4!important;outline:none!important}
 body.login-page a{color:#5fc9dd!important}
 </style>
+<script id="swiftships-brand-js">
+/* The navigation menu header shows the product name "Grafana" next to the
+   logo (a constant in the OSS build, not a setting). Replace that text
+   node, and any later re-render of it, with the vessel console name. */
+(function(){var T=$(printf '%s' "$APP_TITLE" | sed 's/[\\"]/\\&/g; s/^/"/; s/$/"/');
+function fix(n){if(n.nodeType===3){if(n.nodeValue.trim()==="Grafana")n.nodeValue=T;return}
+if(n.nodeType!==1||n.tagName==="SCRIPT"||n.tagName==="STYLE")return;for(var c=n.firstChild;c;c=c.nextSibling)fix(c)}
+new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var m=ms[i];if(m.type==="characterData")fix(m.target);else for(var j=0;j<m.addedNodes.length;j++)fix(m.addedNodes[j])}})
+.observe(document.documentElement,{childList:true,subtree:true,characterData:true});})();
+</script>
 CSS
 # Replace any previous block, then insert before </head>.
-perl -0pi -e 's|<style id="swiftships-brand">.*?</style>\n?||s' "$IDX"
+perl -0pi -e 's|<style id="swiftships-brand">.*?</style>\n?||s; s|<script id="swiftships-brand-js">.*?</script>\n?||s' "$IDX"
 CSS_FILE="$CSS_FILE" perl -0pi -e 'BEGIN{local $/; open(F, "<", $ENV{CSS_FILE}) or die; $css=<F>; close F} s|</head>|$css</head>|' "$IDX"
 rm -f "$CSS_FILE"
 
