@@ -10,7 +10,7 @@
 #   crossing   contact 800 m off the starboard bow crossing left  -> MEDIUM/HIGH
 #   headon     reciprocal contact 1200 m dead ahead               -> HIGH
 #   overtaking slow contact 600 m ahead on the same course        -> LOW / MEDIUM
-#   radar      radar-only target (RADAR_TARGET), no AIS report    -> "Radar Only" = 1
+#   radar      radar-only target (RADAR_TARGET, refreshed every 3 s) -> "Radar Only" = 1
 #   opening    contact astern moving away                         -> CLEAR, TCPA "OPENING"
 #   all        the five in sequence, cleaning between them
 #   clean      remove spawned contacts
@@ -45,7 +45,7 @@ if [[ -z ${OWN_HDG:-} ]]; then
   echo "own heading $OWN_HDG deg (from nav.heading of $VESSEL)"
 fi
 
-poke() { uPokeDB "$MISSION" "$@" >/dev/null; echo "  -> $*"; }
+poke() { uPokeDB "$MISSION" "$@" >/dev/null 2>&1; echo "  -> $*"; }
 hdg() { echo $(( ( (OWN_HDG + $1) % 360 + 360) % 360 )); }   # own heading + offset
 clean() { poke SPAWN_CLEAN=true; }
 hold() { echo "  holding ${HOLD}s (watch the Traffic tab)"; sleep "$HOLD"; }
@@ -62,8 +62,16 @@ run_step() {
       echo "[overtaking] 600 m ahead, same course, 1.5 m/s"
       poke "SPAWN_CONTACT=heading=$(hdg 0),relative_bearing=0,distance=600,speed=1.5,name=TUG-12" ;;
     radar)
-      echo "[radar] radar-only target 900 m on the port beam, no report"
-      poke "RADAR_TARGET=id=R-31,range=900,bearing=$(hdg -90),spd=3,cog=$(hdg 90),cpa=350,tcpa=140" ;;
+      # A radar reports every sweep; the bridge drops a target not refreshed
+      # within contact_ttl_s (10 s), so re-send every 3 s with the range and
+      # TCPA closing, as a real track would.
+      echo "[radar] radar-only target 900 m on the port bow, closing, no report (refreshed every 3 s)"
+      local range=900 tcpa=140 t=0
+      while (( t < HOLD )); do
+        poke "RADAR_TARGET=id=R-31,range=$range,bearing=$(hdg -41),spd=3,cog=$(hdg 90),cpa=350,tcpa=$tcpa"
+        sleep 3; t=$((t + 3)); range=$((range > 400 ? range - 15 : range)); tcpa=$((tcpa > 20 ? tcpa - 3 : tcpa))
+      done
+      return ;;
     opening)
       echo "[opening] 500 m astern, moving away at 3 m/s"
       poke "SPAWN_CONTACT=heading=$(hdg 180),relative_bearing=180,distance=500,speed=3,name=FERRY-2" ;;
