@@ -731,6 +731,29 @@ struct Checklist {
     std::string by;
 };
 
+// Rows for the console-checklist table: a head line with the count and the
+// operator, then one row per pending item.
+struct ChecklistRow { std::string item, state; };
+
+inline std::vector<ChecklistRow> ChecklistRows(const Checklist& c) {
+    std::vector<ChecklistRow> rows;
+    if (c.total < 0) return rows;
+    const bool complete = c.done >= c.total;
+    std::string head = "Console checklist " + std::to_string(c.done) + " / " +
+                       std::to_string(c.total);
+    if (!c.by.empty()) head += " · ticked by " + c.by;
+    rows.push_back({head, complete ? "COMPLETE" : "OPEN"});
+    std::string cur;
+    for (char ch : c.pending + "|") {
+        if (ch == '|') {
+            cur = trim(cur);
+            if (!cur.empty()) rows.push_back({cur, "PENDING"});
+            cur.clear();
+        } else cur += ch;
+    }
+    return rows;
+}
+
 inline Checklist ParseChecklist(const std::string& spec) {
     Checklist c;
     auto kv = ParseKeyValues(spec);
@@ -850,13 +873,16 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
     }
     // 2 Course planning: route, waypoints, operating region
     {
+        // Last known (also read back from InfluxDB after a community
+        // restart, like the Route tile); flagged when older than 10 min.
         const Sample* route = num("mission_state", "route_name", 1e9);
         const Sample* wpts = num("mission", "waypoints_total", 1e9);
-        const Sample* region = num("geometry", "region_vertices", 1e9);
+        const Sample* region = num("mission", "region_vertices", 1e9);
         const bool have_route = route && !route->str.empty() && route->str != "-";
         const bool have_wpts = wpts && wpts->num > 0.0;
         const bool have_region = region && region->num >= 3.0;
         std::string ev = have_route ? route->str : "no route loaded";
+        if (have_route && now - route->t > 600.0) ev += " (last known)";
         ev += have_wpts ? " · " + fmt0(wpts->num) + " waypoints" : " · no waypoints";
         ev += have_region ? " · region " + fmt0(region->num) + " vertices" : " · no operating region";
         add("course", "Course planning", ev,
@@ -915,10 +941,12 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         const Sample* up = num("canbus", "interface_up", 60.0);
         const Sample* rate = num("canbus", "msg_rate", 60.0);
         if (!up) add("can", "CAN bus", "no CAN bridge data", missing);
-        else add("can", "CAN bus",
-                 std::string(up->num == 1.0 ? "interface UP" : "interface DOWN") +
-                     (rate ? " · " + fmt0(rate->num) + " msg/s" : ""),
-                 up->num == 1.0 ? READY_PASS : READY_FAIL);
+        else if (up->num == 1.0)
+            add("can", "CAN bus", "interface UP" + (rate ? " · " + fmt0(rate->num) + " msg/s" : std::string()),
+                READY_PASS);
+        else   // simulation host: can_bridge runs with no CAN hardware
+            add("can", "CAN bus", strict ? "interface DOWN" : "interface DOWN (no CAN hardware in simulation)",
+                strict ? READY_FAIL : READY_NA);
     }
     // 8 Engine pre-start (J1939)
     {

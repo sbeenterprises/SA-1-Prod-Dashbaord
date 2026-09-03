@@ -349,6 +349,10 @@ EOF
     # Console mirrors and the onboard readiness evaluation (FR-12).
     grep -q 'mission_state,vessel=usv-moos checklist_done=9' "$LINES" && ok "CHECKLIST_STATUS -> mission_state.checklist_*" || bad "checklist not mirrored"
     grep -q 'enc_status="selected:US5LA31M"' "$LINES"   && ok "ENC_STATUS -> mission_state.enc_status"     || bad "enc_status missing"
+    grep -q 'checklist,vessel=usv-moos,seq=000 item="Console checklist 9 / 11 · ticked by douglas"' "$LINES" \
+      && ok "checklist table head row written" || bad "checklist head row missing"
+    grep -q 'checklist,vessel=usv-moos,seq=002 state="PENDING"' "$LINES" && ok "pending checklist items written as rows" || bad "checklist item rows missing"
+    grep -q 'mission,vessel=usv-moos region_vertices=4' "$LINES" && ok "OPR_POLY_ACTUAL -> mission.region_vertices" || bad "region_vertices missing"
     [ "$(grep -c 'readiness,vessel=usv-moos,check=' "$LINES")" -ge 60 ] \
       && ok "readiness rows written per check (seq/status/name/evidence)" || bad "readiness rows missing"
     grep -q 'readiness_summary,vessel=usv-moos ready=' "$LINES" && ok "readiness summary written" || bad "readiness summary missing"

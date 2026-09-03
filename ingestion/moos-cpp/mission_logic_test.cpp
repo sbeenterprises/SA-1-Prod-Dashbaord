@@ -467,7 +467,7 @@ static void test_readiness() {
     s.put("nav", "lat", 29.7, now - 1);
     s.put_str("mission_state", "route_name", "Som Rt0", now - 50);
     s.put("mission", "waypoints_total", 4, now - 5);
-    s.put("geometry", "region_vertices", 5, now - 500);
+    s.put("mission", "region_vertices", 5, now - 500);
     s.put("comms", "moos_msg_rate", 61, now - 3);
     s.put_str("mission_state", "helm_state", "PARK", now - 1);
     s.put("autonomy", "allstop", 0, now - 1);
@@ -495,6 +495,9 @@ static void test_readiness() {
     CHECK(find_check(v, "comms").status == READY_PASS);
     CHECK_EQ_STR(find_check(v, "comms").evidence, "Signal K UP · Internet UP · 38 ms");
     CHECK(find_check(v, "can").status == READY_NA);
+    s.put("canbus", "interface_up", 0, now);
+    CHECK(find_check(EvaluateReadiness(s, now, false), "can").status == READY_NA);   // sim host, no hardware
+    CHECK(find_check(EvaluateReadiness(s, now, true), "can").status == READY_FAIL);
     CHECK(find_check(v, "engine").status == READY_NA);
     CHECK(find_check(v, "electrical").status == READY_NA);
     CHECK(find_check(v, "ais").status == READY_NA);
@@ -564,6 +567,22 @@ static void test_readiness() {
     ReadinessSummary ry = SummarizeReadiness(y);
     CHECK(!ry.ready && ry.failed == 5);
     CHECK_EQ_STR(ry.blocking, "GPS position fix; Steering / actuators; Engine pre-start; Safety flags; Console checklist");
+
+    // Course planning falls back to the last known route (flagged after 10 min)
+    s.put_str("mission_state", "route_name", "Rt WP Alpha", now - 1200);
+    CHECK_EQ_STR(find_check(EvaluateReadiness(s, now, true), "course").evidence,
+                 "Rt WP Alpha (last known) · 4 waypoints · region 5 vertices");
+
+    // Console checklist rows
+    auto rows = ChecklistRows(ParseChecklist("done=9,total=11,pending=Weather Conditions|Port Clearance,by=douglas"));
+    CHECK(rows.size() == 3);
+    CHECK_EQ_STR(rows[0].item, "Console checklist 9 / 11 · ticked by douglas");
+    CHECK_EQ_STR(rows[0].state, "OPEN");
+    CHECK_EQ_STR(rows[1].item, "Weather Conditions");
+    CHECK_EQ_STR(rows[2].state, "PENDING");
+    auto done = ChecklistRows(ParseChecklist("done=11,total=11,pending=,by=ops"));
+    CHECK(done.size() == 1 && done[0].state == "COMPLETE");
+    CHECK(ChecklistRows(ParseChecklist("garbage")).empty());
 
     // LatestStore age test
     CHECK(s.get("nav", "lat", now, 30.0) == nullptr);

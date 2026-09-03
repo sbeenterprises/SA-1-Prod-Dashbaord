@@ -1228,27 +1228,19 @@ def readiness_query():
 
 
 def checklist_query():
-    """Console checklist mirror: a head line with the tick count and the
-    operator, then one row per pending item (mission_state.checklist_*)."""
-    return ('import "array"\n'
-            'import "strings"\n'
-            'lv = (f) => from(bucket: "telemetry")\n'
-            '  |> range(start: -2m)\n'
-            '  |> filter(fn: (r) => r._measurement == "mission_state" and r._field == f)\n'
+    """Console checklist mirror: rows written by grafana_bridge from the
+    console's CHECKLIST_STATUS (measurement checklist, tag seq: a head line
+    with the count and the operator, then one row per pending item)."""
+    return ('from(bucket: "telemetry")\n'
+            f'  |> range(start: {READINESS_WINDOW})\n'
+            '  |> filter(fn: (r) => r._measurement == "checklist" and (r._field == "item" or r._field == "state"))\n'
             '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
             '  |> last()\n'
-            '  |> findRecord(fn: (key) => true, idx: 0)\n'
-            'done = lv(f: "checklist_done")\n'
-            'total = lv(f: "checklist_total")\n'
-            'pend = lv(f: "checklist_pending")\n'
-            'by = lv(f: "checklist_by")\n'
-            'have = exists total._value and exists done._value\n'
-            'items = if have and exists pend._value and pend._value != "-" then strings.split(v: pend._value, t: "|") else []\n'
-            'pending = array.map(arr: items, fn: (x) => ({item: x, state: "PENDING"}))\n'
-            'head = if have then [{item: "Console checklist " + string(v: int(v: done._value)) + " / " + string(v: int(v: total._value)) + (if exists by._value and by._value != "-" then " · ticked by " + string(v: by._value) else ""), state: if int(v: done._value) >= int(v: total._value) then "COMPLETE" else "OPEN"}] else [{item: "console not publishing CHECKLIST_STATUS (docs/deployment.md, Console checklist)", state: "UNKNOWN"}]\n'
-            'array.from(rows: head)\n'
-            '  |> union(tables: [array.from(rows: if length(arr: pending) > 0 then pending else [{item: "-", state: "-"}])])\n'
-            '  |> filter(fn: (r) => r.item != "-")\n')
+            '  |> drop(columns: ["_start", "_stop", "_measurement", "vessel", "_time"])\n'
+            '  |> group()\n'
+            '  |> pivot(rowKey: ["seq"], columnKey: ["_field"], valueColumn: "_value")\n'
+            '  |> sort(columns: ["seq"])\n'
+            '  |> keep(columns: ["item", "state"])\n')
 
 
 status_mappings = [{"type": "value", "options": {
@@ -1262,14 +1254,17 @@ ready_mappings = value_color_map([(0, "NOT READY", "red"), (1, "READY", TILE_OK)
 
 
 def status_table(title, query, x, y, w, h, status_col, mappings, name_col,
-                 description=None):
+                 columns, description=None, no_value=None):
+    """Table with a coloured status column (mappings on that column only)
+    and a fixed column order."""
     p = panel("table", title, [target(query)], x, y, w, h,
               options={"showHeader": True, "cellHeight": "sm"},
-              mappings=mappings,
+              no_value=no_value,
               overrides=[{"matcher": {"id": "byName", "options": status_col},
                           "properties": [{"id": "displayName", "value": "Status"},
                                          {"id": "custom.width", "value": 100},
                                          {"id": "custom.align", "value": "center"},
+                                         {"id": "mappings", "value": mappings},
                                          {"id": "custom.cellOptions",
                                           "value": {"type": "color-background", "mode": "basic"}}]},
                          {"matcher": {"id": "byName", "options": name_col},
@@ -1282,6 +1277,8 @@ def status_table(title, query, x, y, w, h, status_col, mappings, name_col,
                                          {"id": "custom.width", "value": 40}]},
                          {"matcher": {"id": "byName", "options": "item"},
                           "properties": [{"id": "displayName", "value": "Item"}]}])
+    p["transformations"] = [{"id": "organize", "options": {
+        "indexByName": {c: i for i, c in enumerate(columns)}}}]
     if description:
         p["description"] = description
     return p
@@ -1308,6 +1305,8 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
     # B — the two lists
     status_table("Automatic checks — verified onboard from live telemetry",
                  readiness_query(), 0, 3, 12, 18, "status", status_mappings, "name",
+                 ["seq", "name", "evidence", "status"],
+                 no_value="grafana_bridge not writing readiness (bridge older than v1.1 or not restarted)",
                  description=(
                      "Decided by grafana_bridge every 5 s from the latest telemetry "
                      "(GPS ≥ 6 satellites and HDOP ≤ 2.5, rudder within ±35° and "
@@ -1318,6 +1317,8 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
                      "READY needs no FAIL and no CONSOLE item.")),
     status_table("Console checklist — manual items ticked in Freeboard",
                  checklist_query(), 12, 3, 12, 18, "state", checklist_state_mappings, "item",
+                 ["item", "state"],
+                 no_value="console not publishing CHECKLIST_STATUS (docs/deployment.md, Console checklist)",
                  description=(
                      "Mirror of the console's pre-departure checklist "
                      "(CHECKLIST_STATUS from the operator UI). Items are ticked in "

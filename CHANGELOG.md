@@ -19,6 +19,10 @@ Keep a Changelog; versions are git tags on `main`.
   `CHECKLIST_STATUS` and `ENC_STATUS` MOOS variables ->
   `mission_state.checklist_*` / `enc_status`. New ProcessConfig
   parameters `readiness_profile` (sim | vessel) and `readiness_period_s`.
+  The console checklist table reads rows the bridge writes (`checklist`
+  measurement); the course check falls back to the last known route,
+  waypoints and region (`mission.region_vertices`) after a community
+  restart.
 - `tools/fake_traffic.py`: fake AIS / radar scene (harbour: 6 vessels +
   radar track; busy: 10) moving around the boat, published as
   NODE_REPORT / RADAR_TARGET for Traffic dashboard and avoidance tests.

@@ -30,7 +30,9 @@ struct QueryField {
 };
 
 struct LatestValue {
+    bool is_str = false;
     double value = 0.0;
+    std::string str;      // when the field is a string (e.g. route_name)
     double age_s = 0.0;   // at the time of the poll
 };
 
@@ -42,8 +44,11 @@ public:
     LatestPoller& operator=(const LatestPoller&) = delete;
 
     // fields: what to fetch; window: how far back last() may look.
+    // window: how far back last() may look; the caller judges freshness
+    // from age_s, so a long window lets "last known" values (route, region)
+    // survive a community restart.
     void start(const InfluxOptions& opts, std::vector<QueryField> fields,
-               double period_s = 5.0, const std::string& window = "2m") {
+               double period_s = 5.0, const std::string& window = "24h") {
         stop();
         opts_ = opts;
         fields_ = std::move(fields);
@@ -84,7 +89,8 @@ public:
           << "  |> filter(fn: (r) => not exists r.vessel or r.vessel == \"" << vessel << "\")\n"
           << "  |> last()\n"
           << "  |> group(columns: [\"_measurement\", \"_field\"])\n"
-          << "  |> min()\n"   // several series (cameras): the weakest one counts
+          << "  |> sort(columns: [\"_value\"])\n"   // several series (cameras): the weakest counts
+          << "  |> limit(n: 1)\n"
           << "  |> keep(columns: [\"_measurement\", \"_field\", \"_value\", \"_time\"])\n";
         return q.str();
     }
@@ -118,7 +124,11 @@ public:
             const int need = std::max(std::max(im, ifld), std::max(iv, it));
             if (static_cast<int>(cols.size()) <= need) continue;
             LatestValue lv;
-            try { lv.value = std::stod(cols[iv]); } catch (...) { continue; }
+            try {
+                size_t used = 0;
+                lv.value = std::stod(cols[iv], &used);
+                if (used != cols[iv].size()) throw 0;
+            } catch (...) { lv.is_str = true; lv.str = cols[iv]; }
             if (it >= 0) lv.age_s = static_cast<double>(now_utc - ParseRfc3339(cols[it]));
             out[cols[im] + "." + cols[ifld]] = lv;
         }

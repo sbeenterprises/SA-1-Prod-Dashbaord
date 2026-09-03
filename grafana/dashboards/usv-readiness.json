@@ -817,33 +817,7 @@
           "color": {
             "mode": "palette-classic"
           },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "PASS",
-                  "color": "#175d8d",
-                  "index": 0
-                },
-                "1": {
-                  "text": "FAIL",
-                  "color": "red",
-                  "index": 1
-                },
-                "2": {
-                  "text": "N/A",
-                  "color": "#3d434b",
-                  "index": 2
-                },
-                "3": {
-                  "text": "CONSOLE",
-                  "color": "#6e7680",
-                  "index": 3
-                }
-              }
-            }
-          ]
+          "noValue": "grafana_bridge not writing readiness (bridge older than v1.1 or not restarted)"
         },
         "overrides": [
           {
@@ -863,6 +837,36 @@
               {
                 "id": "custom.align",
                 "value": "center"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "PASS",
+                        "color": "#175d8d",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "FAIL",
+                        "color": "red",
+                        "index": 1
+                      },
+                      "2": {
+                        "text": "N/A",
+                        "color": "#3d434b",
+                        "index": 2
+                      },
+                      "3": {
+                        "text": "CONSOLE",
+                        "color": "#6e7680",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
               },
               {
                 "id": "custom.cellOptions",
@@ -935,6 +939,19 @@
         "showHeader": true,
         "cellHeight": "sm"
       },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "seq": 0,
+              "name": 1,
+              "evidence": 2,
+              "status": 3
+            }
+          }
+        }
+      ],
       "description": "Decided by grafana_bridge every 5 s from the latest telemetry (GPS \u2265 6 satellites and HDOP \u2264 2.5, rudder within \u00b135\u00b0 and following the command, coolant < 105 \u00b0C, fuel > 15 %, SOC \u2265 30 %, host load < 90 %). N/A = sensor not fitted or no data; under readiness_profile = vessel it counts as FAIL. CONSOLE = the operator console has not published it (ENC selection, checklist). READY needs no FAIL and no CONSOLE item."
     },
     {
@@ -957,7 +974,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "import \"array\"\nimport \"strings\"\nlv = (f) => from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and r._field == f)\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> findRecord(fn: (key) => true, idx: 0)\ndone = lv(f: \"checklist_done\")\ntotal = lv(f: \"checklist_total\")\npend = lv(f: \"checklist_pending\")\nby = lv(f: \"checklist_by\")\nhave = exists total._value and exists done._value\nitems = if have and exists pend._value and pend._value != \"-\" then strings.split(v: pend._value, t: \"|\") else []\npending = array.map(arr: items, fn: (x) => ({item: x, state: \"PENDING\"}))\nhead = if have then [{item: \"Console checklist \" + string(v: int(v: done._value)) + \" / \" + string(v: int(v: total._value)) + (if exists by._value and by._value != \"-\" then \" \u00b7 ticked by \" + string(v: by._value) else \"\"), state: if int(v: done._value) >= int(v: total._value) then \"COMPLETE\" else \"OPEN\"}] else [{item: \"console not publishing CHECKLIST_STATUS (docs/deployment.md, Console checklist)\", state: \"UNKNOWN\"}]\narray.from(rows: head)\n  |> union(tables: [array.from(rows: if length(arr: pending) > 0 then pending else [{item: \"-\", state: \"-\"}])])\n  |> filter(fn: (r) => r.item != \"-\")\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: -60s)\n  |> filter(fn: (r) => r._measurement == \"checklist\" and (r._field == \"item\" or r._field == \"state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\n  |> group()\n  |> pivot(rowKey: [\"seq\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> sort(columns: [\"seq\"])\n  |> keep(columns: [\"item\", \"state\"])\n",
           "refId": "A"
         }
       ],
@@ -966,33 +983,7 @@
           "color": {
             "mode": "palette-classic"
           },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "COMPLETE": {
-                  "text": "COMPLETE",
-                  "color": "#175d8d",
-                  "index": 0
-                },
-                "OPEN": {
-                  "text": "OPEN",
-                  "color": "orange",
-                  "index": 1
-                },
-                "PENDING": {
-                  "text": "PENDING",
-                  "color": "orange",
-                  "index": 2
-                },
-                "UNKNOWN": {
-                  "text": "UNKNOWN",
-                  "color": "#6e7680",
-                  "index": 3
-                }
-              }
-            }
-          ]
+          "noValue": "console not publishing CHECKLIST_STATUS (docs/deployment.md, Console checklist)"
         },
         "overrides": [
           {
@@ -1012,6 +1003,36 @@
               {
                 "id": "custom.align",
                 "value": "center"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "COMPLETE": {
+                        "text": "COMPLETE",
+                        "color": "#175d8d",
+                        "index": 0
+                      },
+                      "OPEN": {
+                        "text": "OPEN",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "PENDING": {
+                        "text": "PENDING",
+                        "color": "orange",
+                        "index": 2
+                      },
+                      "UNKNOWN": {
+                        "text": "UNKNOWN",
+                        "color": "#6e7680",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
               },
               {
                 "id": "custom.cellOptions",
@@ -1084,6 +1105,17 @@
         "showHeader": true,
         "cellHeight": "sm"
       },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "item": 0,
+              "state": 1
+            }
+          }
+        }
+      ],
       "description": "Mirror of the console's pre-departure checklist (CHECKLIST_STATUS from the operator UI). Items are ticked in Freeboard; Grafana shows the count, who ticked and what is still pending. Blocking items: see the Failed tile and the Mission Events list (Readiness NOT READY: ...)."
     }
   ],

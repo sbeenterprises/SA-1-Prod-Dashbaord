@@ -314,6 +314,11 @@ protected:
             {"cpu", "usage_user", "r.cpu == \"cpu-total\""},
             {"mem", "used_percent", ""},
             {"disk", "used_percent", "r.path == \"/\""},
+            // last known course (survives a community restart, like the
+            // Route tile; the check flags values older than 10 min)
+            {"mission_state", "route_name", ""},
+            {"mission", "waypoints_total", ""},
+            {"mission", "region_vertices", ""},
         }, readiness_period_s_);
 
         MOOSTrace("grafana_bridge: influx=%s bucket=%s vessel=%s\n",
@@ -837,8 +842,8 @@ private:
         if (kind == "route") route_pts_ = pts;
         telemetry_->erase("_measurement=\"geometry\" AND kind=\"" + kind + "\"");
         if (kind == "region")
-            latest_.put("geometry", "region_vertices",
-                        static_cast<double>(pts.size()), MonoSeconds());
+            telemetry_->field("mission", "", "region_vertices",
+                              static_cast<double>(pts.size()));
         if (pts.empty()) { telemetry_->flush(); return; }   // "NONE": cleared
         if (close) pts.push_back(pts.front());
         const long long ts = std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -981,6 +986,11 @@ private:
         WriteChecklist();
     }
 
+    // mission_state.checklist_* (count, pending list, operator) plus one row
+    // per line of the Readiness dashboard's checklist table (measurement
+    // "checklist", tag seq). The row set is erased when the spec changes so
+    // items ticked since disappear; rows are re-emitted every readiness
+    // period so the table window stays fresh.
     void WriteChecklist() {
         if (!have_checklist_) return;
         telemetry_->field("mission_state", "", "checklist_done", checklist_.done);
@@ -989,6 +999,18 @@ private:
                               checklist_.pending.empty() ? "-" : checklist_.pending);
         telemetry_->str_field("mission_state", "", "checklist_by",
                               checklist_.by.empty() ? "-" : checklist_.by);
+        const auto rows = usv::ChecklistRows(checklist_);
+        if (rows.size() != checklist_rows_written_) {
+            telemetry_->erase("_measurement=\"checklist\"");
+            checklist_rows_written_ = rows.size();
+        }
+        for (size_t i = 0; i < rows.size(); ++i) {
+            char tags[24];
+            std::snprintf(tags, sizeof tags, "seq=%03zu", i);
+            telemetry_->field("checklist", tags, "seq", static_cast<double>(i));
+            telemetry_->str_field("checklist", tags, "item", rows[i].item);
+            telemetry_->str_field("checklist", tags, "state", rows[i].state);
+        }
     }
 
     // One row per check (measurement "readiness", tag check) plus the
@@ -999,8 +1021,14 @@ private:
         for (const auto& [key, lv] : poller_.snapshot()) {
             const size_t dot = key.find('.');
             if (dot == std::string::npos) continue;
-            latest_.put(key.substr(0, dot), key.substr(dot + 1), lv.value, now - lv.age_s);
+            const std::string m = key.substr(0, dot), f = key.substr(dot + 1);
+            // Never let a polled (older) value replace a fresher own sample.
+            const usv::Sample* own = latest_.get(m, f, now, 1e9);
+            if (own && own->t >= now - lv.age_s) continue;
+            if (lv.is_str) latest_.put_str(m, f, lv.str, now - lv.age_s);
+            else latest_.put(m, f, lv.value, now - lv.age_s);
         }
+        WriteChecklist();
         const auto checks = usv::EvaluateReadiness(latest_, now, readiness_strict_);
         const usv::ReadinessSummary sum = usv::SummarizeReadiness(checks);
         for (const auto& c : checks) {
@@ -1265,6 +1293,7 @@ private:
     usv::Checklist checklist_;
     bool have_checklist_ = false;
     std::string last_checklist_spec_;
+    size_t checklist_rows_written_ = 0;
     usv::LatestStore latest_;              // latest value per field for the readiness checks
     usv::LatestPoller poller_;             // fields written by other producers
     bool readiness_strict_ = true;
