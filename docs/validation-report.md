@@ -269,11 +269,12 @@ What changed and how it was verified:
    aggregates. Live check: 86 variables subscribed, nav / autopilot /
    autonomy / mission_state series present in InfluxDB.
 2. **Mission state** gains `Remote` (REMOTE_CONTROL passthrough outranks
-   the helm park it causes); the operator-facing behavior list falls back
-   to the helm's running set when `active_bhvs=none` (verified against a
-   real pHelmIvP IVPHELM_SUMMARY from the s1_morgan_city_signalk log);
+   the helm park it causes); the operator-facing behavior list is the helm's
+   running set (the per-iteration active set flickers and flooded the
+   events table; verified against a real pHelmIvP IVPHELM_SUMMARY from the
+   s1_morgan_city_signalk log);
    `route_name` resolved from the Signal K route resource for the ID_ROUTE
-   uuid. `mission_logic_test`: **140 assertions, all passing**.
+   uuid. `mission_logic_test`: **141 assertions, all passing**.
 3. **Async InfluxWriter** (worker thread, bounded queue, 2 s timeout) so a
    slow InfluxDB can never stall the MOOS thread; Threads linked in every
    CMake target.

@@ -238,8 +238,9 @@ protected:
         //   radar_cpa_alert_m = 500       // radar event threshold (pContactMgr cpa_range)
         //   contact_ttl_s  = 10           // contact expiry without an update
         //   signalk_http   = localhost:3000  // route-name lookup (ID_ROUTE ->
-        //                                   // /signalk/v1/api/resources/routes/<id>);
+        //                                   // /signalk/v{2,1}/api/resources/routes/<id>);
         //                                   // empty disables the lookup
+        //   signalk_token  = <jwt>          // only if Signal K security denies reads
         double hz = 5.0;
         if (m_MissionReader.GetConfigurationParam("max_rate_hz", hz)) {}
         limiter_.set_default(hz);
@@ -261,6 +262,7 @@ protected:
             signalk_http_ = v;
         if (!signalk_http_.empty() && signalk_http_.find("://") == std::string::npos)
             signalk_http_ = "http://" + signalk_http_;
+        m_MissionReader.GetConfigurationParam("signalk_token", signalk_token_);
 
         telemetry_ = std::make_unique<usv::InfluxWriter>(opts);
         usv::InfluxOptions ev_opts = opts;
@@ -944,6 +946,7 @@ private:
     std::string mission_name_;
     std::string mission_id_;
     std::string signalk_http_ = "http://localhost:3000";
+    std::string signalk_token_;   // optional bearer token when SK security is on
 
     // The console starts a mission with ID_ROUTE=<Signal K route uuid>; the
     // operator knows the route by its name, so look it up once per change
@@ -953,9 +956,23 @@ private:
         std::string name;
         if (!signalk_http_.empty() && !id.empty() &&
             usv::lower(id) != "return_to_base") {
-            const std::string body = usv::HttpGet(
-                signalk_http_ + "/signalk/v1/api/resources/routes/" + id, 800);
-            name = usv::JsonStringMember(body, "name");
+            // Signal K server v2 serves resources under /signalk/v2/...; v1
+            // keys routes by "urn:mrn:signalk:uuid:<uuid>". Try each shape
+            // and say in the log which one answered (journalctl -u <antler>).
+            const std::string cands[] = {
+                signalk_http_ + "/signalk/v2/api/resources/routes/" + id,
+                signalk_http_ + "/signalk/v1/api/resources/routes/" + id,
+                signalk_http_ + "/signalk/v1/api/resources/routes/urn:mrn:signalk:uuid:" + id,
+            };
+            for (const auto& url : cands) {
+                long status = 0;
+                const std::string body = usv::HttpGet(url, 800, signalk_token_, &status);
+                name = usv::JsonStringMember(body, "name");
+                std::fprintf(stderr, "[grafana_bridge] route lookup %s -> HTTP %ld%s%s\n",
+                             url.c_str(), status,
+                             name.empty() ? "" : " name=", name.c_str());
+                if (!name.empty()) break;
+            }
         }
         return usv::RouteDisplayName(id, name);
     }

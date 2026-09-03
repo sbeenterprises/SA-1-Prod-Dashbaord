@@ -214,16 +214,17 @@ inline std::string ParseActiveBehaviors(const std::string& summary) {
     return ParseBehaviorList(summary, "active_bhvs");
 }
 
-// The operator-facing behavior list: "active" behaviors in IvP terms are
-// only those producing an objective function THIS iteration, so a helm
-// that is holding station inside its inner radius or driving a survey with
-// a plain speed/course balk reports active_bhvs=none while
-// running_bhvs still lists waypt_survey / station-keep / opr region. Show
-// active when present, otherwise the running set.
+// The operator-facing behavior list is the helm's RUNNING set (the
+// behaviors engaged for the mission: waypt_survey, station-keep, opr
+// region...). "active" in IvP terms means "produced an objective function
+// this iteration", which flickers between none and a subset several times
+// a minute (speed/course balks, station-keep inside its radius) and would
+// spam the events table. active_bhvs is used only when running_bhvs is
+// absent (older helm builds).
 inline std::string ParseHelmBehaviors(const std::string& summary) {
-    const std::string active = ParseActiveBehaviors(summary);
-    if (!active.empty()) return active;
-    return ParseBehaviorList(summary, "running_bhvs");
+    const std::string running = ParseBehaviorList(summary, "running_bhvs");
+    if (!running.empty()) return running;
+    return ParseActiveBehaviors(summary);
 }
 
 // --------------------------------------------- VIEW_SEGLIST parsing

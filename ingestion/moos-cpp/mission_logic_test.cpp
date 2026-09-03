@@ -139,7 +139,8 @@ static void test_helm_behaviors_fallback() {
     CHECK_EQ_STR(ParseActiveBehaviors(summ), "");
     CHECK_EQ_STR(ParseHelmBehaviors(summ), "waypt_survey, opr24");
     CHECK_EQ_STR(ParseHelmBehaviors("iter=1,running_bhvs=none,active_bhvs=none"), "");
-    CHECK_EQ_STR(ParseHelmBehaviors("iter=1,running_bhvs=a$1$1,active_bhvs=b$1$1"), "b");
+    CHECK_EQ_STR(ParseHelmBehaviors("iter=1,running_bhvs=a$1$1,active_bhvs=b$1$1"), "a");
+    CHECK_EQ_STR(ParseHelmBehaviors("iter=1,active_bhvs=b$1$1"), "b");
 }
 
 static void test_route_naming() {

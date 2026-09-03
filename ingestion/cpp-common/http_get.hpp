@@ -11,10 +11,16 @@ inline size_t http_get_sink(char* ptr, size_t size, size_t nmemb, void* ud) {
     return size * nmemb;
 }
 
-inline std::string HttpGet(const std::string& url, long timeout_ms = 1000) {
+inline std::string HttpGet(const std::string& url, long timeout_ms = 1000,
+                           const std::string& bearer = "", long* status = nullptr) {
     CURL* curl = curl_easy_init();
     if (!curl) return "";
     std::string body;
+    struct curl_slist* headers = nullptr;
+    if (!bearer.empty()) {
+        headers = curl_slist_append(headers, ("Authorization: Bearer " + bearer).c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    }
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, http_get_sink);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
@@ -26,6 +32,8 @@ inline std::string HttpGet(const std::string& url, long timeout_ms = 1000) {
     long code = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
     curl_easy_cleanup(curl);
+    if (headers) curl_slist_free_all(headers);
+    if (status) *status = (rc == CURLE_OK) ? code : -static_cast<long>(rc);
     if (rc != CURLE_OK || code < 200 || code >= 300) return "";
     return body;
 }

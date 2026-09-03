@@ -43,8 +43,8 @@ mission_name, mission_id, route_name, state (derived: Idle | Autonomous |
 Remote | Paused | StationKeeping | ReturnToHome | EnteringRegion |
 AwaitingRearm | CommsLost | Parked | Completed), state_external (a
 MISSION_STATE published by another app, if any), active_behavior (parsed
-from IVPHELM_SUMMARY: the helm's active behaviors, or its running set when
-none is active this iteration), station_keep,
+from IVPHELM_SUMMARY: the helm's running behavior set; the per-iteration
+active set only on helm builds that do not report running_bhvs), station_keep,
 helm_state (IVPHELM_STATE), allstop_reason (IVPHELM_ALLSTOP),
 comms_failsafe ("ok", "grace", the failsafe action e.g. "loiter", or "rtb"),
 entry_gate (open | closed), opr_status, helm_summary, arrival_state
@@ -53,7 +53,8 @@ recovering), crash_stop_status (off | braking | stopped), region_warning,
 wpt_stat (all from planchaPID / iWebSocket, written on change and re-emitted
 at 1 Hz). mission_id is fed by iWebSocket's ID_ROUTE (a Signal K route
 uuid); route_name is that route's name looked up once per change from the
-Signal K server (`signalk_http` in the ProcessConfig), "Return to base" for
+Signal K server (`signalk_http` in the ProcessConfig; v2 and v1 resource
+paths are both tried, `signalk_token` when security denies anonymous reads), "Return to base" for
 the built-in return route, or the id's first block when the lookup fails;
 mission_name comes from the grafana_bridge ProcessConfig (default: the MOOS
 Community name).

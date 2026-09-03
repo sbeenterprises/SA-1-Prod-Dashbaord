@@ -99,7 +99,7 @@ python3 tools/gen_alerts.py --profile sim
 bash tools/smoke_test.sh                 # must end with FAIL: 0
 ```
 
-The smoke test builds every C++ program, runs the 140-assertion
+The smoke test builds every C++ program, runs the 141-assertion
 `mission_logic_test`, drives the simulator, the CAN bridge, the Signal K
 bridge and (when MOOSDB is on the PATH) the MOOS bridge against an
 InfluxDB stub, and cross-checks every field the dashboards query against

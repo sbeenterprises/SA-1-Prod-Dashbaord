@@ -74,6 +74,34 @@ def flux(measurement, fields, bucket="telemetry", every='v.windowPeriod', fn="me
     return q + CLEAN_LABELS
 
 
+# Vessel marker: heading-rotated triangle, large and high-contrast on the
+# light OSM chart, name label above.
+VESSEL_MARKER = {
+    "size": {"fixed": 18},
+    "color": {"fixed": "#c47b06"},
+    "opacity": 1,
+    "symbol": {"fixed": "img/icons/marker/triangle.svg", "mode": "fixed"},
+    "rotation": {"field": "heading", "mode": "field", "fixed": 0},
+    "text": {"field": "vessel", "mode": "field"},
+    "textConfig": {"fontSize": 13, "offsetX": 0, "offsetY": -20,
+                   "textAlign": "center", "textBaseline": "middle"},
+}
+
+
+def position_query():
+    """Latest lat/lon/heading of the selected vessel in one row (markers
+    layer: one heading-rotated vessel symbol, not one dot per track point)."""
+    return ('from(bucket: "telemetry")\n'
+            '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+            '  |> filter(fn: (r) => r._measurement == "nav" and (r._field == "lat" or r._field == "lon" or r._field == "heading"))\n'
+            '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+            '  |> last()\n'
+            '  |> group()\n'
+            '  |> pivot(rowKey: ["vessel"], columnKey: ["_field"], valueColumn: "_value")\n'
+            '  |> filter(fn: (r) => exists r.lat and exists r.lon)\n'
+            '  |> keep(columns: ["vessel", "lat", "lon", "heading"])\n')
+
+
 def track_query(every):
     """lat/lon pivoted into one frame for the geomap route layer. The two
     fields arrive as separate tables, so they are merged (group()) before
@@ -751,26 +779,24 @@ gps_fix_mappings = [{"type": "value", "options": {
 
 DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
     panel("geomap", "Position & Track",
-          [target(track_query("5s"))],
+          [target(track_query("5s")), target(position_query(), ref="B")],
           0, 0, 14, 13,
           options={
-              "view": {"id": "fit", "lat": 0, "lon": 0, "zoom": 12},
+              "view": {"id": "fit", "zoom": 15},
               "basemap": {"type": "osm-standard", "name": "OSM"},
               "layers": [{
                   "type": "route", "name": "Track",
                   "location": {"mode": "coords", "latitude": "lat",
                                "longitude": "lon"},
+                  "filterData": {"id": "byRefId", "options": "A"},
                   "config": {"style": {"color": {"fixed": "orange"},
                                        "lineWidth": 2, "opacity": 0.8}},
               }, {
                   "type": "markers", "name": "Vessel",
                   "location": {"mode": "coords", "latitude": "lat",
                                "longitude": "lon"},
-                  "filterData": {"id": "byRefId", "options": "A"},
-                  "config": {"style": {"size": {"fixed": 8},
-                                       "color": {"fixed": "super-light-blue"},
-                                       "symbol": {"fixed": "img/icons/marker/circle.svg",
-                                                  "mode": "fixed"}}},
+                  "filterData": {"id": "byRefId", "options": "B"},
+                  "config": {"style": VESSEL_MARKER, "showLegend": False},
               }],
               "tooltip": {"mode": "details"},
           }),
@@ -1266,16 +1292,24 @@ DASHBOARDS.append(dashboard("usv-replay", "Replay", [
               "bucket. Use the **Mission events** annotations to locate "
               "waypoint hits and state changes.")}),
     panel("geomap", "GPS Track",
-          [target(track_query("10s"))],
+          [target(track_query("10s")), target(position_query(), ref="B")],
           0, 2, 14, 9,
-          options={"view": {"id": "fit"},
+          options={"view": {"id": "fit", "zoom": 15},
                    "basemap": {"type": "osm-standard", "name": "OSM"},
                    "layers": [{"type": "route", "name": "Track",
                                "location": {"mode": "coords",
                                             "latitude": "lat",
                                             "longitude": "lon"},
+                               "filterData": {"id": "byRefId", "options": "A"},
                                "config": {"style": {"color": {"fixed": "orange"},
-                                                    "lineWidth": 2}}}]}),
+                                                    "lineWidth": 2}}},
+                              {"type": "markers", "name": "Last position",
+                               "location": {"mode": "coords",
+                                            "latitude": "lat",
+                                            "longitude": "lon"},
+                               "filterData": {"id": "byRefId", "options": "B"},
+                               "config": {"style": VESSEL_MARKER,
+                                          "showLegend": False}}]}),
     panel("state-timeline", "Mission State",
           [target(flux("mission_state", "state", every="30s", fn="last"))],
           14, 2, 10, 4, mappings=mission_state_mappings,
@@ -1341,33 +1375,25 @@ def fleet_last(measurement, field):
 fleet_map_query = (
     'from(bucket: "telemetry")\n'
     '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
-    '  |> filter(fn: (r) => r._measurement == "nav" and (r._field == "lat" or r._field == "lon"))\n'
+    '  |> filter(fn: (r) => r._measurement == "nav" and (r._field == "lat" or r._field == "lon" or r._field == "heading"))\n'
     '  |> last()\n'
     '  |> group()\n'
     '  |> pivot(rowKey: ["vessel"], columnKey: ["_field"], valueColumn: "_value")\n'
     '  |> filter(fn: (r) => exists r.lat and exists r.lon)\n'
-    '  |> keep(columns: ["vessel", "lat", "lon"])\n')
+    '  |> keep(columns: ["vessel", "lat", "lon", "heading"])\n')
+
 
 fleet_panels = [
     panel("geomap", "Fleet Map — last known positions",
           [target(fleet_map_query)], 0, 0, 24, 10,
           options={
-              "view": {"id": "fit", "lat": 0, "lon": 0, "zoom": 11},
+              "view": {"id": "fit", "zoom": 14},
               "basemap": {"type": "osm-standard", "name": "OSM"},
               "layers": [{
                   "type": "markers", "name": "Vessels",
                   "location": {"mode": "coords", "latitude": "lat",
                                "longitude": "lon"},
-                  "config": {"style": {
-                      "size": {"fixed": 9},
-                      "color": {"fixed": ACCENT},
-                      "symbol": {"fixed": "img/icons/marker/circle.svg",
-                                 "mode": "fixed"},
-                      "text": {"field": "vessel", "mode": "field"},
-                      "textConfig": {"fontSize": 13, "offsetX": 0,
-                                     "offsetY": -14, "textAlign": "center",
-                                     "textBaseline": "middle"},
-                  }, "showLegend": False},
+                  "config": {"style": VESSEL_MARKER, "showLegend": False},
               }],
               "controls": {"showZoom": True, "mouseWheelZoom": True},
           }),

@@ -41,6 +41,7 @@ ProcessConfig = grafana_bridge
   radar_cpa_alert_m = 500      // radar event threshold (pContactMgrV20 cpa_range)
   contact_ttl_s  = 10          // contact expiry without a NODE_REPORT/RADAR_TARGET
   signalk_http   = localhost:3000  // ID_ROUTE -> route name lookup
-                               // (/signalk/v1/api/resources/routes/<id>);
+                               // (/signalk/v2 or v1/api/resources/routes/<id>);
                                // leave empty to disable
+  // signalk_token = <jwt>     // only if Signal K security denies anonymous reads
 }
