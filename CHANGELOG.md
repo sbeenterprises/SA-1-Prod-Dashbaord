@@ -5,6 +5,27 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+### Added
+- Readiness: three more onboard checks and two sharper ones. MOOS apps
+  (every Antler `Run =` app, or `required_apps`, present in DB_CLIENTS),
+  Endurance (fuel and battery hours from the vessel constants against
+  the route time with a margin), route inside the operating region and
+  route length on the course row, active J1939 DTCs fail the engine row;
+  AIS and radar merged into one row (16 checks). GUI viewers listed in
+  `optional_apps` are reported but never fail the apps row; stale rows
+  from a previous bridge build are erased at start.
+- Console checklist table shows every item with its description and
+  TICKED / PENDING like the console: full-form `CHECKLIST_STATUS`
+  (`items=Name:state:Description|...`) or `checklist_items` in the bridge
+  ProcessConfig as the fallback for the short form.
+- Alert rules are provisioned into the "Swift Autonomous Dashboard"
+  folder (one folder in Grafana; delete the old empty "USV Alerts"
+  folder once after upgrading).
+- Readiness is the first tab and Grafana's home dashboard
+  (`default_home_dashboard_path`, `GRAFANA_HOME_DASHBOARD` in usv.env).
+- Branding: `BRAND_APP_TITLE` (default "SA-1 Dashboard") replaces the
+  "Grafana" product name next to the logo in the navigation menu.
+
 ## [1.1.0] - 2026-09-03 — map overlays, Traffic, Readiness
 
 Verified live on the simulation host usv01 (Grafana 13.2.1 on port 3300,

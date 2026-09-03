@@ -166,7 +166,7 @@ const std::set<std::string> kSpecialVars = {
     "COMMS_LOST", "SURVEY_ENTRY_GATE",
     "IVPHELM_STATE", "IVPHELM_ALLSTOP", "IVPHELM_SUMMARY",
     "OPR_BREACHED", "VIEW_SEGLIST", "OPR_POLY_ACTUAL", "OBSTACLE_ALERT",
-    "CHECKLIST_STATUS",
+    "CHECKLIST_STATUS", "DB_CLIENTS",
     "DIST_TO_NEXT_WPT", "WPT_INDEX",
     "ACTIVE_BEHAVIOR", "STATION_KEEP_STATUS",
     "BHV_WARNING", "BHV_ERROR",
@@ -253,6 +253,13 @@ protected:
         //                                   // "sim" = it reads N/A (no engine/CAN/
         //                                   // camera data in simulation)
         //   readiness_period_s = 5          // evaluation and write period
+        //   required_apps  = pHelmIvP,...   // MOOS apps that must be connected
+        //                                   // (default: every Run= in the Antler block)
+        //   optional_apps  = pMarineViewer,uMACView,uPlotViewer   // reported, never a fault
+        //   fuel_tank_l / cruise_fuel_lph / cruise_speed_kn / battery_kwh /
+        //   cruise_power_kw / endurance_margin   // Endurance check constants
+        //   checklist_items = Name:Description|Name2:Description2   // console
+        //                                   // checklist item list (short-form fallback)
         double hz = 5.0;
         if (m_MissionReader.GetConfigurationParam("max_rate_hz", hz)) {}
         limiter_.set_default(hz);
@@ -282,6 +289,26 @@ protected:
         readiness_strict_ = usv::lower(usv::trim(profile)) != "sim";
         m_MissionReader.GetConfigurationParam("readiness_period_s", readiness_period_s_);
         if (readiness_period_s_ < 1.0) readiness_period_s_ = 1.0;
+        m_MissionReader.GetConfigurationParam("fuel_tank_l", readiness_cfg_.fuel_tank_l);
+        m_MissionReader.GetConfigurationParam("cruise_fuel_lph", readiness_cfg_.cruise_fuel_lph);
+        m_MissionReader.GetConfigurationParam("cruise_speed_kn", readiness_cfg_.cruise_speed_kn);
+        m_MissionReader.GetConfigurationParam("battery_kwh", readiness_cfg_.battery_kwh);
+        m_MissionReader.GetConfigurationParam("cruise_power_kw", readiness_cfg_.cruise_power_kw);
+        m_MissionReader.GetConfigurationParam("endurance_margin", readiness_cfg_.endurance_margin);
+        if (m_MissionReader.GetConfigurationParam("required_apps", v))
+            for (const auto& a : usv::SplitCsv(v)) readiness_cfg_.required_apps.push_back(usv::trim(a));
+        else {
+            // Default: every app the Antler block launches.
+            STRING_LIST antler;
+            if (m_MissionReader.GetConfiguration("ANTLER", antler))
+                readiness_cfg_.required_apps =
+                    usv::ParseAntlerApps(std::vector<std::string>(antler.begin(), antler.end()));
+        }
+        v = "pMarineViewer,uMACView,uPlotViewer";   // GUI viewers: never a departure fault
+        m_MissionReader.GetConfigurationParam("optional_apps", v);
+        for (const auto& a : usv::SplitCsv(v)) readiness_cfg_.optional_apps.push_back(usv::trim(a));
+        if (m_MissionReader.GetConfigurationParam("checklist_items", v))
+            readiness_cfg_.checklist_items = usv::ParseChecklistItems(v);
         // Map overlays need the MOOS local-grid datum (global block of the
         // mission file). Without it no geometry is written, nothing else
         // changes.
@@ -289,6 +316,10 @@ protected:
                       m_MissionReader.GetValue("LongOrigin", lon0_);
 
         telemetry_ = std::make_unique<usv::InfluxWriter>(opts);
+        // A previous bridge build may have written rows for check ids that
+        // no longer exist; clear them so a restart never shows leftovers.
+        telemetry_->erase("_measurement=\"readiness\"");
+        telemetry_->erase("_measurement=\"checklist\"");
         usv::InfluxOptions ev_opts = opts;
         ev_opts.bucket = events_bucket;
         events_ = std::make_unique<usv::InfluxWriter>(ev_opts);
@@ -339,6 +370,7 @@ protected:
         for (const auto& [var, _] : kLegacyMissionVars) reg(var);
         for (const auto& [var, _] : kStringPassthrough) reg(var);
         for (const auto& var : kFlagVars) reg(var);
+        Register("DB_CLIENTS", 0.0);
         for (const auto& var : kSpecialVars) reg(var);
         MOOSTrace("grafana_bridge: connected, %zu vars registered\n", n);
         // No telemetry write here on purpose: this callback can fire before
@@ -534,6 +566,8 @@ private:
             WriteGeometry("region", msg.GetString(), /*close=*/true);
         } else if (key == "CHECKLIST_STATUS" && msg.IsString()) {
             HandleChecklist(msg.GetString());
+        } else if (key == "DB_CLIENTS" && msg.IsString()) {
+            latest_.put_str("moos", "clients", msg.GetString(), now);
         } else if (key == "OBSTACLE_ALERT" && msg.IsString()) {
             const std::string id = usv::ParseObstacleId(msg.GetString());
             if (obstacles_.post(id, now))
@@ -841,9 +875,16 @@ private:
         std::vector<usv::XY> pts = usv::ParsePts(spec);
         if (kind == "route") route_pts_ = pts;
         telemetry_->erase("_measurement=\"geometry\" AND kind=\"" + kind + "\"");
-        if (kind == "region")
+        if (kind == "region") {
+            region_pts_ = pts;
             telemetry_->field("mission", "", "region_vertices",
                               static_cast<double>(pts.size()));
+        }
+        if (kind == "route" && !pts.empty())
+            telemetry_->field("mission", "", "route_length_m", usv::RouteLengthM(pts));
+        if (!route_pts_.empty() && region_pts_.size() >= 3)
+            telemetry_->field("mission", "", "route_in_region",
+                              usv::RouteInsideRegion(route_pts_, region_pts_) ? 1.0 : 0.0);
         if (pts.empty()) { telemetry_->flush(); return; }   // "NONE": cleared
         if (close) pts.push_back(pts.front());
         const long long ts = std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -999,7 +1040,7 @@ private:
                               checklist_.pending.empty() ? "-" : checklist_.pending);
         telemetry_->str_field("mission_state", "", "checklist_by",
                               checklist_.by.empty() ? "-" : checklist_.by);
-        const auto rows = usv::ChecklistRows(checklist_);
+        const auto rows = usv::ChecklistRows(checklist_, readiness_cfg_.checklist_items);
         if (rows.size() != checklist_rows_written_) {
             telemetry_->erase("_measurement=\"checklist\"");
             checklist_rows_written_ = rows.size();
@@ -1009,6 +1050,8 @@ private:
             std::snprintf(tags, sizeof tags, "seq=%03zu", i);
             telemetry_->field("checklist", tags, "seq", static_cast<double>(i));
             telemetry_->str_field("checklist", tags, "item", rows[i].item);
+            telemetry_->str_field("checklist", tags, "description",
+                                  rows[i].description.empty() ? "-" : rows[i].description);
             telemetry_->str_field("checklist", tags, "state", rows[i].state);
         }
     }
@@ -1029,7 +1072,7 @@ private:
             else latest_.put(m, f, lv.value, now - lv.age_s);
         }
         WriteChecklist();
-        const auto checks = usv::EvaluateReadiness(latest_, now, readiness_strict_);
+        const auto checks = usv::EvaluateReadiness(latest_, now, readiness_strict_, readiness_cfg_);
         const usv::ReadinessSummary sum = usv::SummarizeReadiness(checks);
         for (const auto& c : checks) {
             const std::string tags = "check=" + c.id;
@@ -1297,6 +1340,8 @@ private:
     usv::LatestStore latest_;              // latest value per field for the readiness checks
     usv::LatestPoller poller_;             // fields written by other producers
     bool readiness_strict_ = true;
+    usv::ReadinessConfig readiness_cfg_;
+    std::vector<usv::XY> region_pts_;
     double readiness_period_s_ = 5.0;
     double last_readiness_ = 0.0;
     std::string last_readiness_state_;

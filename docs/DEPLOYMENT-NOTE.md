@@ -142,7 +142,7 @@ repo to the OBC, re\-run install.sh.
 | 5 | Tab navigation | open any dashboard; click the link chips across the top | one click switches dashboard; time range and vessel selection carry over |
 | 6 | Theme toggle | click the "☀ Light" / "☾ Dark" chips at the end of the tab row | dashboard re\-opens in that theme, time range kept |
 | 7 | Tablet check | open any dashboard on a tablet (landscape) | grid scales; below \~768 px panels stack single\-column |
-| 8 | Alert rules loaded | Grafana → Alerting → Alert rules | 15 rules, folder "USV Alerts" |
+| 8 | Alert rules loaded | Grafana → Alerting → Alert rules | 18 rules, folder "Swift Autonomous Dashboard" |
 | 9 | Stop simulator | `sudo systemctl stop usv-simulator` | required before real ops |
 | 10 | MOOS feed | launch mission with grafana\_bridge; watch Autopilot dashboard | desired/actual heading move |
 | 11 | Signal K feed | Navigation \+ Vessel Health dashboards | position, engine, battery live |

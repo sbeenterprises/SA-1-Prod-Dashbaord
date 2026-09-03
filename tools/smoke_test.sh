@@ -239,6 +239,11 @@ ProcessConfig = grafana_bridge
   vessel_id     = usv-moos
   readiness_profile = sim
   readiness_period_s = 2
+  required_apps = pHelmIvP,grafana_bridge
+  fuel_tank_l = 200
+  cruise_fuel_lph = 12
+  cruise_speed_kn = 6
+  checklist_items = Chart Navigation System:Verify charts are loaded and current|Weather Conditions:Current and forecast weather acceptable|Port Clearance:Harbor control and departure clearance
 }
 EOF
   start_stub
@@ -349,19 +354,29 @@ EOF
     # Console mirrors and the onboard readiness evaluation (FR-12).
     grep -q 'mission_state,vessel=usv-moos checklist_done=9' "$LINES" && ok "CHECKLIST_STATUS -> mission_state.checklist_*" || bad "checklist not mirrored"
     grep -q 'enc_status="selected:US5LA31M"' "$LINES"   && ok "ENC_STATUS -> mission_state.enc_status"     || bad "enc_status missing"
-    grep -q 'checklist,vessel=usv-moos,seq=000 item="Console checklist 9 / 11 · ticked by douglas"' "$LINES" \
-      && ok "checklist table head row written" || bad "checklist head row missing"
+    grep -q 'checklist,vessel=usv-moos,seq=003 item="Console checklist 9 / 11"' "$LINES" && grep -q 'seq=003 description="ticked by douglas"' "$LINES" \
+      && ok "checklist table footer row written" || bad "checklist footer row missing"
+    grep -q 'checklist,vessel=usv-moos,seq=000 state="TICKED"' "$LINES" && ok "configured item not pending reads TICKED" || bad "ticked item row missing"
+    grep -q 'checklist,vessel=usv-moos,seq=001 description="Current and forecast weather acceptable"' "$LINES" \
+      && ok "checklist item description from checklist_items" || bad "checklist description missing"
     grep -q 'checklist,vessel=usv-moos,seq=002 state="PENDING"' "$LINES" && ok "pending checklist items written as rows" || bad "checklist item rows missing"
+    grep -q 'check=apps evidence="1 / 2 running · missing: pHelmIvP"' "$LINES" && ok "MOOS apps check against DB_CLIENTS" || bad "apps check missing"
+    grep -q '_measurement=\\"readiness\\" AND vessel=\\"usv-moos\\"' "$TMP/deletes.txt" 2>/dev/null \
+      && ok "stale readiness rows erased at bridge start" || bad "readiness erase at start missing"
+    grep -q 'mission,vessel=usv-moos route_length_m=2800' "$LINES" && ok "route length from VIEW_SEGLIST (2800 m)" || bad "route length missing"
+    grep -q 'mission,vessel=usv-moos route_in_region=0' "$LINES" && ok "route vs region test (outside)" || bad "route_in_region missing"
+    grep -q 'check=endurance evidence="route 1.5 nm needs 0.4 h (x1.5) · no fuel level"' "$LINES" \
+      && ok "endurance planned against the route" || bad "endurance evidence wrong"
     grep -q 'mission,vessel=usv-moos region_vertices=4' "$LINES" && ok "OPR_POLY_ACTUAL -> mission.region_vertices" || bad "region_vertices missing"
-    [ "$(grep -c 'readiness,vessel=usv-moos,check=' "$LINES")" -ge 60 ] \
+    [ "$(grep -c 'readiness,vessel=usv-moos,check=' "$LINES")" -ge 64 ] \
       && ok "readiness rows written per check (seq/status/name/evidence)" || bad "readiness rows missing"
     grep -q 'readiness_summary,vessel=usv-moos ready=' "$LINES" && ok "readiness summary written" || bad "readiness summary missing"
     grep -q 'readiness_summary,vessel=usv-moos profile="sim"' "$LINES" && ok "readiness_profile=sim applied" || bad "readiness profile not applied"
     grep -q 'check=checklist evidence="9 / 11 ticked · pending: Weather Conditions,Port Clearance"' "$LINES" \
       && ok "console checklist evaluated (pending items listed)" || bad "checklist evaluation missing"
     grep -q 'check=enc status=0' "$LINES"               && ok "ENC selected -> check PASS"                || bad "ENC check not passing"
-    grep -q 'check=course evidence="R-17 · 5 waypoints · region 4 vertices"' "$LINES" \
-      && ok "course planning check sees route, waypoints, region" || bad "course check evidence wrong"
+    grep -q 'check=course evidence="R-17 · 5 waypoints · 1.5 nm · region 4 vertices · ROUTE OUTSIDE REGION"' "$LINES" \
+      && ok "course planning check sees route, waypoints, length, region and the outside-region fault" || bad "course check evidence wrong"
     grep -q 'check=comms evidence="Signal K UP · Internet UP · 38 ms"' "$LINES" \
       && ok "InfluxDB poller feeds Signal K / Internet into the comms check" || bad "poller values missing in comms check"
     grep -q 'check=can evidence="interface UP · 212 msg/s"' "$LINES" && ok "CAN bus check from can_bridge data" || bad "CAN check missing"

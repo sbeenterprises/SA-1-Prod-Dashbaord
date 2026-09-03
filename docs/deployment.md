@@ -33,6 +33,10 @@ branding; re-run it after changing configs, dashboards, alert rules or a
 Grafana upgrade.
 
 ### Updating a running installation from git
+After the v1.2 upgrade the alert rules live in the "Swift Autonomous
+Dashboard" folder; the old, now empty "USV Alerts" folder can be deleted
+once in Grafana (Dashboards > USV Alerts > Folder actions > Delete).
+
 ```bash
 cd ~/Swift-Autonmous_Dashbaord && git pull
 sudo bash deploy/install.sh                 # rebuilds bridges, re-provisions, re-brands
@@ -58,7 +62,10 @@ and alert rules; enables everything at boot.
 nav bar, favicon, touch icon and login page, replaces the login artwork
 with a navy Swiftships background, sets the browser-tab title
 (`BRAND_TITLE`), the login heading (`BRAND_WELCOME`) and its subtitle
-(`BRAND_SUBTITLE`), and every dashboard carries a header band with the
+(`BRAND_SUBTITLE`), the product name next to the logo in the navigation
+menu (`BRAND_APP_TITLE`, default "SA-1 Dashboard"; Grafana's own name is a
+constant in the OSS build, so `brand.sh` injects a small script into
+`index.html` that rewrites that text node), and every dashboard carries a header band with the
 wordmark, the dashboard name and the selected vessel (visible in `?kiosk`
 mode too). Grafana OSS has no white-label setting, so these are file
 overwrites under `/usr/share/grafana/public`; originals are kept as
@@ -104,7 +111,10 @@ probe to the dish router (192.168.100.1) that is shipped commented out in
 reads N/A elsewhere.
 
 ## Pre-departure readiness (Readiness dashboard)
-Every automatic check is decided onboard by `grafana_bridge`
+The installer makes it Grafana's home dashboard
+(`default_home_dashboard_path` in grafana.ini; `GRAFANA_HOME_DASHBOARD`
+in usv.env picks another file) and the generator puts it first in the
+tab row. Every automatic check is decided onboard by `grafana_bridge`
 (`usv::EvaluateReadiness`, unit-tested) and written as one row per check;
 Grafana displays them. Two ProcessConfig parameters control it:
 `readiness_profile = vessel | sim` (vessel: a check whose sensor data is
@@ -112,8 +122,20 @@ missing FAILS; sim: it reads N/A, because the simulation has no engine,
 CAN, rudder-feedback or camera data) and `readiness_period_s` (default
 5). Values other producers write (Signal K link, Internet probe, CAN
 interface, cameras, host CPU/RAM/disk) are polled from InfluxDB by the
-bridge with the same credentials it writes with, so nothing else needs
-configuring.
+bridge with the same credentials it writes with. Optional vessel
+constants in the same block sharpen three checks: `fuel_tank_l`,
+`cruise_fuel_lph`, `cruise_speed_kn`, `battery_kwh`, `cruise_power_kw`
+and `endurance_margin` (default 1.5) turn the Endurance row from N/A into
+"route 3.2 nm needs 0.8 h · fuel 13.7 h · battery 5.3 h"; `required_apps`
+lists the MOOS apps that must be connected (default: every `Run =` line
+of the mission file's Antler block, checked against DB_CLIENTS) and
+`optional_apps` those that are only reported when absent (default
+pMarineViewer, uMACView, uPlotViewer: GUI viewers on a headless host);
+`checklist_items = Name:Description|Name2:Description2` names the
+console's checklist items so the short-form CHECKLIST_STATUS still yields
+a full table (every item not pending is shown TICKED). The course row
+also reports the route length and fails when any waypoint lies outside
+the operating region; the engine row fails on any active J1939 DTC.
 
 ### Console checklist and ENC selection
 The manual pre-departure checklist lives in the operator console
@@ -124,7 +146,13 @@ CHECKLIST_STATUS = done=9,total=11,pending=Weather Conditions|Port Clearance,by=
 ENC_STATUS       = selected:US5LA31M        // or: none
 ```
 `pending` is the "|"-separated list of unticked items (empty when all are
-ticked); `by` is the operator name. Until the console publishes them the
+ticked); `by` is the operator name. The preferred, full form also carries
+every item with its state and description, so the dashboard shows the
+whole list exactly as the console does (commas inside descriptions are
+fine; avoid "|" and ":" in names):
+```
+CHECKLIST_STATUS = done=9,total=11,by=douglas,items=Chart Navigation System:ticked:Verify charts are loaded and current|GPS Position Fix:ticked:Confirm accurate GPS positioning|Weather Conditions:pending:Current and forecast weather acceptable|Port Clearance:pending:Harbor control and departure clearance
+``` Until the console publishes them the
 Readiness dashboard shows those two rows as CONSOLE and the verdict stays
 NOT READY. Test by hand: `/usr/local/bin/moos_poke 'CHECKLIST_STATUS=done=11,total=11,pending=,by=ops' ENC_STATUS=selected:test` (installed with the bridge; `--port=` when the community is not on 9000).
 

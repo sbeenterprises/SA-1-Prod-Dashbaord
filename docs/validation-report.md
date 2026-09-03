@@ -349,7 +349,7 @@ and the Readiness dashboard with its onboard evaluation.
    sim`, the safety row failing on the scenario's crash stop, and the
    change event. The poll query was checked to restrict CPU to
    `cpu-total`.
-4. **Live on usv01** (first run of the branch): all 15 rows with evidence
+4. **Live on usv01** (first run of the branch): all 15 rows (16 since the endurance and apps checks) with evidence
    within 10 s of the restart, NOT READY with 6 / 2 / 5 / 2 counts. Fixes
    from that run: status mappings had also coloured the "#" column
    (override on Status only, fixed column order); the course check lost
@@ -368,13 +368,27 @@ and the Readiness dashboard with its onboard evaluation.
    and the two PENDING items, and the checklist row failed with the
    pending names. Cosmetic fixes: Item column min width, checks table
    column widths; installer now installs moos_poke with the bridge.
+   Third pass (after the operator / developer review of what a
+   pre-departure check must contain): MOOS apps against DB_CLIENTS,
+   endurance against the route, route inside the region and route
+   length, active DTCs, AIS and radar merged; checklist table with every
+   item and description from the console's full form or the configured
+   item list. Unit tests cover each (270 assertions); the smoke test
+   configures `required_apps`, the fuel constants and `checklist_items`
+   in test.moos and asserts the apps row ("1 / 2 running · missing:
+   pHelmIvP"), route length 2800 m, route outside the ±100 m region,
+   the endurance evidence and the TICKED / description rows (88 PASS).
+   Branding: the navigation menu's "Grafana" label is rewritten to
+   `BRAND_APP_TITLE` by a script injected in index.html; verified on a
+   mock tree with a headless browser (only the exact "Grafana" text node
+   changes, re-renders included).
 5. **Dashboard**: `usv-readiness.json` fills the 24 x 23 grid with no
    overlap (8 tiles, two 18-row tables); tab order Mission, Readiness,
    Navigation ...; the Flux for the checks table reuses the pivot-then-join
    pattern proven live for the contacts table.
 
 Smoke test after this pass: **82 PASS, 0 FAIL, 1 SKIP**. To verify on the
-target: the Readiness tab shows 15 rows with evidence within 10 s of the
+target: the Readiness tab shows 16 rows with evidence within 10 s of the
 bridge restart; the Failed tile and the "Readiness NOT READY: ..." event
 name the blocking checks; poking the two console variables turns the
 CONSOLE rows into PASS.

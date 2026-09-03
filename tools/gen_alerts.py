@@ -181,7 +181,7 @@ def main():
         "groups": [{
             "orgId": 1,
             "name": "usv-alarms",
-            "folder": "USV Alerts",
+            "folder": "Swift Autonomous Dashboard",   # same folder as the dashboards
             "interval": "30s",
             "rules": RULES,
         }],

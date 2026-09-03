@@ -18,16 +18,6 @@
   "links": [
     {
       "type": "link",
-      "title": "Mission",
-      "url": "/d/usv-mission",
-      "keepTime": true,
-      "includeVars": true,
-      "targetBlank": false,
-      "icon": "dashboard",
-      "tooltip": "Open Mission"
-    },
-    {
-      "type": "link",
       "title": "Readiness",
       "url": "/d/usv-readiness",
       "keepTime": true,
@@ -35,6 +25,16 @@
       "targetBlank": false,
       "icon": "dashboard",
       "tooltip": "Open Readiness"
+    },
+    {
+      "type": "link",
+      "title": "Mission",
+      "url": "/d/usv-mission",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Mission"
     },
     {
       "type": "link",

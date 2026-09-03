@@ -48,4 +48,9 @@ ProcessConfig = grafana_bridge
   readiness_profile = sim      // pre-departure checks: "sim" = a check with no
                                // sensor data reads N/A; "vessel" = it FAILS
   readiness_period_s = 5       // evaluation / write period
+  // required_apps = pHelmIvP,pMarinePID,iWebSocket   // default: the Antler block
+  // optional_apps = pMarineViewer,uMACView,uPlotViewer // reported, never a fault
+  // fuel_tank_l = 200  cruise_fuel_lph = 12  cruise_speed_kn = 6   // Endurance check
+  // battery_kwh = 10   cruise_power_kw = 1.5  endurance_margin = 1.5
+  // checklist_items = Chart Navigation System:Verify charts are loaded and current|Weather Conditions:Current and forecast weather acceptable
 }

@@ -484,7 +484,9 @@ static void test_readiness() {
     s.put("radar", "online", 1, now - 2);
 
     auto v = EvaluateReadiness(s, now, false);
-    CHECK(v.size() == 15);
+    CHECK(v.size() == 16);
+    CHECK(find_check(v, "apps").status == READY_NA);          // no app list configured
+    CHECK(find_check(v, "endurance").status == READY_NA);     // no vessel constants
     CHECK(find_check(v, "gps").status == READY_PASS);      // no quality data, sim
     CHECK_EQ_STR(find_check(v, "course").evidence, "Som Rt0 · 4 waypoints · region 5 vertices");
     CHECK(find_check(v, "course").status == READY_PASS);
@@ -500,14 +502,14 @@ static void test_readiness() {
     CHECK(find_check(EvaluateReadiness(s, now, true), "can").status == READY_FAIL);
     CHECK(find_check(v, "engine").status == READY_NA);
     CHECK(find_check(v, "electrical").status == READY_NA);
-    CHECK(find_check(v, "ais").status == READY_NA);
-    CHECK(find_check(v, "radar").status == READY_PASS);
+    CHECK(find_check(v, "ais").status == READY_PASS);         // radar online, no reports
+    CHECK_EQ_STR(find_check(v, "ais").evidence, "no contact reports (5 min) · radar online");
     CHECK(find_check(v, "cameras").status == READY_NA);
     CHECK(find_check(v, "obc").status == READY_PASS);
     CHECK(find_check(v, "safety").status == READY_PASS);
     CHECK(find_check(v, "checklist").status == READY_CONSOLE);
     ReadinessSummary r = SummarizeReadiness(v);
-    CHECK(!r.ready && r.failed == 0 && r.console == 2 && r.na == 6 && r.passed == 7);
+    CHECK(!r.ready && r.failed == 0 && r.console == 2 && r.na == 7 && r.passed == 7);
     CHECK(r.blocking.empty());
 
     // Strict (vessel) profile: missing sensors fail and GPS quality is required.
@@ -515,7 +517,7 @@ static void test_readiness() {
     CHECK(find_check(w, "gps").status == READY_FAIL);
     CHECK(find_check(w, "engine").status == READY_FAIL);
     CHECK(find_check(w, "can").status == READY_FAIL);
-    CHECK(find_check(w, "ais").status == READY_NA);   // empty harbour is not a fault
+    CHECK(find_check(w, "ais").status == READY_PASS);   // empty harbour is not a fault
     ReadinessSummary rw = SummarizeReadiness(w);
     CHECK(!rw.ready && rw.failed >= 5);
     CHECK(rw.blocking.find("Engine pre-start") != std::string::npos);
@@ -537,24 +539,60 @@ static void test_readiness() {
     s.put("electrical", "battery_voltage", 25.6, now);
     s.put("camera", "connected", 1, now);
     s.put("traffic", "reports", 2, now);
-    auto x = EvaluateReadiness(s, now, true);
+    s.put("engine", "active_dtcs", 0, now);
+    s.put("electrical", "soc", 80, now);
+    s.put("mission", "route_length_m", 5926, now);      // 3.2 nm
+    s.put("mission", "route_in_region", 1, now);
+    s.put_str("moos", "clients", "MOOSDB,pHelmIvP,pMarinePID,grafana_bridge,iWebSocket", now);
+    ReadinessConfig cfg;
+    cfg.fuel_tank_l = 200; cfg.cruise_fuel_lph = 12; cfg.cruise_speed_kn = 6;
+    cfg.battery_kwh = 10; cfg.cruise_power_kw = 1.5;
+    cfg.required_apps = {"pHelmIvP", "pMarinePID", "grafana_bridge", "iWebSocket"};
+    auto x = EvaluateReadiness(s, now, true, cfg);
     ReadinessSummary rx = SummarizeReadiness(x);
     CHECK(rx.ready && rx.failed == 0 && rx.console == 0);
+    CHECK_EQ_STR(find_check(x, "apps").evidence, "4 / 4 running");
+    CHECK_EQ_STR(find_check(x, "endurance").evidence,
+                 "route 3.2 nm needs 0.8 h (x1.5) · fuel 13.7 h · battery 5.3 h");
+    CHECK_EQ_STR(find_check(x, "course").evidence,
+                 "Som Rt0 · 4 waypoints · 3.2 nm · region 5 vertices · route inside region");
+    CHECK(find_check(x, "engine").evidence.find("no DTC") != std::string::npos);
     CHECK_EQ_STR(find_check(x, "gps").evidence, "RTK Fixed · 14 sats · HDOP 0.8");
     CHECK_EQ_STR(find_check(x, "steering").evidence, "rudder 2.0° · cmd 3.0°");
     CHECK_EQ_STR(find_check(x, "can").evidence, "interface UP · 212 msg/s");
-    CHECK_EQ_STR(find_check(x, "engine").evidence, "coolant 41 °C · oil 310 kPa · fuel 82 %");
+    CHECK_EQ_STR(find_check(x, "engine").evidence, "coolant 41 °C · oil 310 kPa · fuel 82 % · no DTC");
     CHECK(find_check(x, "ais").status == READY_PASS);
 
     // Faults: rudder not following, low fuel, pending checklist, HIGH risk,
-    // stale position.
+    // stale position, a missing app, active DTCs, route leaving the region,
+    // fuel short for the route.
+    s.put_str("moos", "clients", "MOOSDB,pHelmIvP,grafana_bridge", now);
+    s.put("engine", "active_dtcs", 2, now);
+    s.put("mission", "route_in_region", 0, now);
     s.put("autopilot", "rudder_actual", 20.0, now);
     s.put("engine", "fuel_level", 9, now);
     s.put("mission_state", "checklist_done", 9, now);
     s.put_str("mission_state", "checklist_pending", "Weather Conditions|Port Clearance", now);
     s.put("traffic", "risk_level", 2, now);
     s.put("nav", "lat", 29.7, now - 60);
-    auto y = EvaluateReadiness(s, now, true);
+    auto y = EvaluateReadiness(s, now, true, cfg);
+    CHECK(find_check(y, "apps").status == READY_FAIL);
+    CHECK_EQ_STR(find_check(y, "apps").evidence, "2 / 4 running · missing: pMarinePID, iWebSocket");
+    cfg.optional_apps = {"iWebSocket"};
+    CHECK_EQ_STR(find_check(EvaluateReadiness(s, now, true, cfg), "apps").evidence,
+                 "2 / 3 running · missing: pMarinePID · optional not running: iWebSocket");
+    cfg.required_apps = {"pHelmIvP", "grafana_bridge", "pMarineViewer"};
+    cfg.optional_apps = {"pMarineViewer"};
+    CHECK(find_check(EvaluateReadiness(s, now, true, cfg), "apps").status == READY_PASS);
+    cfg.required_apps = {"pHelmIvP", "pMarinePID", "grafana_bridge", "iWebSocket"};
+    cfg.optional_apps.clear();
+    CHECK(find_check(y, "engine").evidence.find("2 ACTIVE DTC") != std::string::npos);
+    CHECK(find_check(y, "course").status == READY_FAIL);
+    CHECK(find_check(y, "course").evidence.find("ROUTE OUTSIDE REGION") != std::string::npos);
+    CHECK(find_check(y, "endurance").status == READY_PASS);   // fuel 9 % is still 1.5 h for a 0.8 h plan
+    s.put("engine", "fuel_level", 3, now);                     // 0.5 h: short
+    CHECK(find_check(EvaluateReadiness(s, now, true, cfg), "endurance").status == READY_FAIL);
+    s.put("engine", "fuel_level", 9, now);
     CHECK(find_check(y, "steering").status == READY_FAIL);
     CHECK(find_check(y, "steering").evidence.find("NOT FOLLOWING") != std::string::npos);
     CHECK(find_check(y, "engine").status == READY_FAIL);
@@ -565,24 +603,60 @@ static void test_readiness() {
     CHECK(find_check(y, "gps").status == READY_FAIL);
     CHECK_EQ_STR(find_check(y, "gps").evidence, "no position");
     ReadinessSummary ry = SummarizeReadiness(y);
-    CHECK(!ry.ready && ry.failed == 5);
-    CHECK_EQ_STR(ry.blocking, "GPS position fix; Steering / actuators; Engine pre-start; Safety flags; Console checklist");
+    CHECK(!ry.ready && ry.failed == 7);
+    CHECK_EQ_STR(ry.blocking, "GPS position fix; Course planning; MOOS apps; Steering / actuators; Engine pre-start; Safety flags; Console checklist");
 
     // Course planning falls back to the last known route (flagged after 10 min)
     s.put_str("mission_state", "route_name", "Rt WP Alpha", now - 1200);
     CHECK_EQ_STR(find_check(EvaluateReadiness(s, now, true), "course").evidence,
-                 "Rt WP Alpha (last known) · 4 waypoints · region 5 vertices");
+                 "Rt WP Alpha (last known) · 4 waypoints · 3.2 nm · region 5 vertices · ROUTE OUTSIDE REGION");
 
-    // Console checklist rows
+    // Console checklist rows: short form (pending names only)
     auto rows = ChecklistRows(ParseChecklist("done=9,total=11,pending=Weather Conditions|Port Clearance,by=douglas"));
     CHECK(rows.size() == 3);
-    CHECK_EQ_STR(rows[0].item, "Console checklist 9 / 11 · ticked by douglas");
-    CHECK_EQ_STR(rows[0].state, "OPEN");
-    CHECK_EQ_STR(rows[1].item, "Weather Conditions");
-    CHECK_EQ_STR(rows[2].state, "PENDING");
+    CHECK_EQ_STR(rows[0].item, "Weather Conditions");
+    CHECK_EQ_STR(rows[0].state, "PENDING");
+    CHECK_EQ_STR(rows[2].item, "Console checklist 9 / 11");
+    CHECK_EQ_STR(rows[2].state, "OPEN");
     auto done = ChecklistRows(ParseChecklist("done=11,total=11,pending=,by=ops"));
     CHECK(done.size() == 1 && done[0].state == "COMPLETE");
     CHECK(ChecklistRows(ParseChecklist("garbage")).empty());
+    // Short form + configured item list: everything not pending is ticked
+    auto items = ParseChecklistItems("Chart Navigation System:Verify charts are loaded and current|"
+                                     "GPS Position Fix:Confirm accurate GPS positioning|"
+                                     "Weather Conditions:Current and forecast weather acceptable|"
+                                     "Port Clearance:Harbor control and departure clearance");
+    CHECK(items.size() == 4 && items[1].description == "Confirm accurate GPS positioning");
+    auto full = ChecklistRows(ParseChecklist("done=2,total=4,pending=Weather Conditions|Port Clearance,by=douglas"), items);
+    CHECK(full.size() == 5);
+    CHECK(full[0].item == "Chart Navigation System" && full[0].state == "TICKED");
+    CHECK_EQ_STR(full[0].description, "Verify charts are loaded and current");
+    CHECK(full[2].item == "Weather Conditions" && full[2].state == "PENDING");
+    CHECK_EQ_STR(full[4].item, "Console checklist 2 / 4");
+    CHECK_EQ_STR(full[4].description, "ticked by douglas");
+    // Full form from the console (items=Name:state:Description|...), commas in descriptions
+    Checklist cf = ParseChecklist("done=1,total=2,by=ops,items=Engine Pre-Start Check:ticked:Oil, coolant, and fuel levels verified|Port Clearance:pending:Harbor control");
+    CHECK(cf.items.size() == 2);
+    CHECK(cf.items[0].ticked && cf.items[0].description == "Oil, coolant, and fuel levels verified");
+    CHECK(!cf.items[1].ticked);
+    auto cfr = ChecklistRows(cf, items);   // console list wins over config
+    CHECK(cfr.size() == 3 && cfr[0].state == "TICKED" && cfr[1].state == "PENDING");
+
+    // Geometry helpers and the Antler app list
+    std::vector<XY> box = {{0, 0}, {100, 0}, {100, 100}, {0, 100}};
+    CHECK(PointInPolygon(50, 50, box) && !PointInPolygon(150, 50, box));
+    CHECK(RouteInsideRegion({{10, 10}, {90, 90}}, box));
+    CHECK(!RouteInsideRegion({{10, 10}, {190, 90}}, box));
+    CHECK(std::fabs(RouteLengthM({{0, 0}, {300, 400}, {300, 0}}) - 900.0) < 1e-9);
+    auto apps = ParseAntlerApps({"MSBetweenLaunches = 200", "Run = MOOSDB @ NewConsole = false",
+                                 "Run = pHelmIvP @ NewConsole = false", "Run = uTimerScript @ NewConsole=false ~ uTimerScript_A",
+                                 "// Run = pOld @ NewConsole = false", "Run = grafana_bridge @ NewConsole = false // dashboard"});
+    CHECK(apps.size() == 3);
+    CHECK_EQ_STR(apps[0], "pHelmIvP");
+    CHECK_EQ_STR(apps[1], "uTimerScript_A");
+    CHECK_EQ_STR(apps[2], "grafana_bridge");
+    auto miss = MissingApps(apps, "MOOSDB,pHelmIvP,grafana_bridge");
+    CHECK(miss.size() == 1 && miss[0] == "uTimerScript_A");
 
     // LatestStore age test
     CHECK(s.get("nav", "lat", now, 30.0) == nullptr);

@@ -6,7 +6,7 @@
 
 Grafana + InfluxDB monitoring stack for the Swiftships MOOS-IvP / Signal K
 unmanned surface vehicle. Thirteen single-screen operator dashboards
-(Mission, Readiness, Navigation, Autopilot, Vessel Health, CAN Bus,
+(Readiness, Mission, Navigation, Autopilot, Vessel Health, CAN Bus,
 Traffic, Cameras, Comms, System, Replay, Alarms, Fleet), 18 provisioned
 alert rules and a
 Swiftships-branded Grafana, fed by native C++ bridges from the MOOS
@@ -103,8 +103,8 @@ python3 tools/gen_alerts.py --profile sim
 bash tools/smoke_test.sh                 # must end with FAIL: 0
 ```
 
-The smoke test (82 checks) builds every C++ program, runs the
-238-assertion `mission_logic_test`, drives the simulator, the CAN bridge,
+The smoke test (89 checks) builds every C++ program, runs the
+273-assertion `mission_logic_test`, drives the simulator, the CAN bridge,
 the Signal K bridge and (when MOOSDB is on the PATH) the MOOS bridge
 against an InfluxDB stub, and cross-checks every field the dashboards
 query against what the producers actually write. All vessel-side logic
