@@ -38,10 +38,18 @@ apt-get install -y -q curl gnupg ca-certificates apt-transport-https \
 install -d /etc/apt/keyrings
 # --batch --yes: don't stop the installer with an interactive overwrite
 # prompt when the keyring already exists (idempotent re-runs).
-curl -fsSL https://repos.influxdata.com/influxdata-archive.key \
-  | gpg --batch --yes --dearmor -o /etc/apt/keyrings/influxdata.gpg
-echo "deb [signed-by=/etc/apt/keyrings/influxdata.gpg] https://repos.influxdata.com/debian stable main" \
-  > /etc/apt/sources.list.d/influxdata.list
+# The influxdata-archive-keyring package (pulled in by influxdb2) owns
+# /etc/apt/sources.list.d/influxdata.list as a conffile. Writing our own copy
+# makes dpkg stop with an interactive "modified configuration file" prompt
+# on the very first install, so bootstrap the repo only while the keyring
+# package is absent, and never overwrite the file it manages.
+if ! dpkg -s influxdata-archive-keyring >/dev/null 2>&1 && \
+   [[ ! -f /etc/apt/sources.list.d/influxdata.list ]]; then
+  curl -fsSL https://repos.influxdata.com/influxdata-archive.key \
+    | gpg --batch --yes --dearmor -o /etc/apt/keyrings/influxdata.gpg
+  echo "deb [signed-by=/etc/apt/keyrings/influxdata.gpg] https://repos.influxdata.com/debian stable main" \
+    > /etc/apt/sources.list.d/influxdata.list
+fi
 curl -fsSL https://apt.grafana.com/gpg.key \
   | gpg --batch --yes --dearmor -o /etc/apt/keyrings/grafana.gpg
 echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" \
@@ -49,7 +57,12 @@ echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stab
 
 apt-get update -q
 say "Installing influxdb2, telegraf, grafana"
-apt-get install -y -q influxdb2 telegraf grafana
+# Non-interactive, keep any locally modified conffiles, retry slow CDNs
+# (apt.grafana.com is 375 MB and has timed out in the field).
+DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
+  -o Dpkg::Options::="--force-confold" \
+  -o Acquire::Retries=10 -o Acquire::http::Timeout=120 -o Acquire::https::Timeout=120 \
+  influxdb2 telegraf grafana
 
 # ---------------------------------------------------------------- influxdb
 say "Starting InfluxDB and creating org/buckets/token"
@@ -118,8 +131,15 @@ if [[ -n "${MOOS_DIR:-}" ]]; then
 else
   MOOS_HINT=""
 fi
+# A build dir configured for the unit tests only (-DMISSION_LOGIC_TESTS_ONLY=ON,
+# as tools/smoke_test.sh and the docs do) caches that switch; a later
+# configure with MOOS_DIR would silently skip moos_bridge. Reset it.
+if grep -qs "MISSION_LOGIC_TESTS_ONLY:BOOL=ON" \
+     "$REPO/ingestion/moos-cpp/build/CMakeCache.txt"; then
+  rm -rf "$REPO/ingestion/moos-cpp/build"
+fi
 if cmake -S "$REPO/ingestion/moos-cpp" -B "$REPO/ingestion/moos-cpp/build" \
-     -DCMAKE_BUILD_TYPE=Release $MOOS_HINT; then
+     -DCMAKE_BUILD_TYPE=Release -DMISSION_LOGIC_TESTS_ONLY=OFF $MOOS_HINT; then
   cmake --build "$REPO/ingestion/moos-cpp/build" -j"$(nproc)"
   install -m 755 "$REPO/ingestion/moos-cpp/build/moos_bridge" /usr/local/bin/
   # pAntler launches the app as 'grafana_bridge' (see example.moos) — make
