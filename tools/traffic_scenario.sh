@@ -15,17 +15,35 @@
 #   all        the five in sequence, cleaning between them
 #   clean      remove spawned contacts
 #
-# pContactSpawn takes an ABSOLUTE contact heading; the scenarios below
-# assume own heading ~050 (the s1_morgan_city survey's first leg). Pass
-# OWN_HDG=<deg> to adapt: headings are computed relative to it.
+# pContactSpawn takes an ABSOLUTE contact heading; the scenarios compute
+# it from the boat's current heading (read from InfluxDB, or OWN_HDG=<deg>).
+# Run it while the boat is under way on a steady leg.
 set -euo pipefail
 
 MISSION=${1:?usage: traffic_scenario.sh <mission.moos> [step|all|clean]}
 STEP=${2:-all}
-OWN_HDG=${OWN_HDG:-50}
 HOLD=${HOLD:-90}
+VESSEL=${VESSEL:-alpha}
 
 command -v uPokeDB >/dev/null || { echo "uPokeDB not on PATH (source the MOOS environment)"; exit 1; }
+
+# Own heading: taken from the dashboard's own data (nav.heading of $VESSEL
+# in InfluxDB, credentials in /etc/usv/usv.env, read with sudo) unless
+# OWN_HDG is given. Scenario headings are relative to it, so a wrong value
+# turns a head-on into a crossing.
+if [[ -z ${OWN_HDG:-} ]]; then
+  if ENV=$(sudo -n cat /etc/usv/usv.env 2>/dev/null); then
+    eval "$(echo "$ENV" | grep -E '^INFLUX_(URL|ORG|TOKEN)=')"
+    Q="from(bucket: \"telemetry\") |> range(start: -60s) |> filter(fn: (r) => r._measurement == \"nav\" and r._field == \"heading\" and r.vessel == \"$VESSEL\") |> last()"
+    OWN_HDG=$(curl -s -XPOST "$INFLUX_URL/api/v2/query?org=$INFLUX_ORG" \
+                -H "Authorization: Token $INFLUX_TOKEN" -H 'Content-Type: application/vnd.flux' \
+                -d "$Q" | awk -F, 'NR==2 {gsub(/\r/, "", $7); printf "%d", $7}')
+  fi
+  if [[ -z ${OWN_HDG:-} ]]; then
+    echo "own heading unavailable (no sudo / no nav data): pass OWN_HDG=<deg>"; exit 1
+  fi
+  echo "own heading $OWN_HDG deg (from nav.heading of $VESSEL)"
+fi
 
 poke() { uPokeDB "$MISSION" "$@" >/dev/null; echo "  -> $*"; }
 hdg() { echo $(( ( (OWN_HDG + $1) % 360 + 360) % 360 )); }   # own heading + offset

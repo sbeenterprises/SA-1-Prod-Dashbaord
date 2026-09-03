@@ -819,7 +819,11 @@ private:
         for (const auto& [id, c] : contacts_.contacts()) {
             if (c.source == "report") ++reports; else ++radar_only;
             if (c.risk == 2) ++high; else if (c.risk == 1) ++medium;
-            if (c.cpa_m >= 0 && c.tcpa_s >= 0 && (min_cpa < 0 || c.cpa_m < min_cpa)) {
+            // Closing contacts rank first; an opening contact's CPA is its
+            // current range (ComputeCpa), reported with TCPA -1 = opening.
+            const bool closing = c.tcpa_s >= 0, best_closing = min_tcpa >= 0;
+            if (c.cpa_m >= 0 && (min_cpa < 0 || (closing && !best_closing) ||
+                                 (closing == best_closing && c.cpa_m < min_cpa))) {
                 min_cpa = c.cpa_m; min_tcpa = c.tcpa_s;
             }
             if (c.range_m >= 0 && (closest < 0 || c.range_m < closest)) closest = c.range_m;

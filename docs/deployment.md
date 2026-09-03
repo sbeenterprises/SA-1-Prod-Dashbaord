@@ -110,7 +110,9 @@ through RADAR_TARGET) on the simulation host, holding each for 90 s.
 Watch the Traffic tab: head-on must go HIGH with a critical "Collision
 risk HIGH" event and the `usv-collision-risk` alert; the radar step must
 show Radar Only = 1; the opening contact must stay CLEAR with TCPA
-"OPENING". Headings are relative to `OWN_HDG` (default 050).
+"OPENING". Contact headings are computed from the boat's current heading
+(read from InfluxDB via `/etc/usv/usv.env`, hence sudo) or `OWN_HDG=<deg>`;
+run it while the boat is under way on a steady leg.
 
 ## Units
 Speeds are knots everywhere (the bridges convert MOOS m/s). Distances use
