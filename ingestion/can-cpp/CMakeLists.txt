@@ -8,9 +8,10 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 find_package(CURL REQUIRED)
+find_package(Threads REQUIRED)
 
 add_executable(can_bridge main.cpp)
-target_link_libraries(can_bridge PRIVATE CURL::libcurl)
+target_link_libraries(can_bridge PRIVATE CURL::libcurl Threads::Threads)
 target_compile_options(can_bridge PRIVATE -Wall -Wextra)
 
 install(TARGETS can_bridge RUNTIME DESTINATION bin)

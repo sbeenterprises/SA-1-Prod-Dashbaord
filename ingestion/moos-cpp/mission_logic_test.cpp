@@ -250,6 +250,93 @@ static void test_key_values_continuation() {
     CHECK_EQ_STR(kv["c"], "3");
 }
 
+
+// COMMS_LOST phases (iWebSocket comms watchdog): grace keeps the mission
+// running, <action> is the hold, rtb hands over to the return behavior.
+static void test_comms_phases() {
+    CHECK(comms_phase("false") == 0);
+    CHECK(comms_phase("") == 0);
+    CHECK(comms_phase("grace") == 1);
+    CHECK(comms_phase("GRACE") == 1);
+    CHECK(comms_phase("loiter") == 2);
+    CHECK(comms_phase("stop") == 2);
+    CHECK(comms_phase("rtb") == 3);
+    CHECK(!comms_lost_active("grace"));       // survey still driving
+    CHECK(!comms_lost_active("rtb"));         // waypt_return driving
+
+    MissionFlags f;
+    f.waypoint = true;
+    f.comms_lost = "grace";
+    CHECK_EQ_STR(DeriveMissionState(f), "Autonomous");
+    f.comms_lost = "loiter";
+    f.armed = false;
+    f.stationing = true;
+    CHECK_EQ_STR(DeriveMissionState(f), "CommsLost");
+    f.comms_lost = "rtb";                     // iWebSocket posts RETURN=true
+    f.stationing = false;
+    f.returning = true;
+    CHECK_EQ_STR(DeriveMissionState(f), "ReturnToHome");
+    // awaiting_rearm only once the link is back and the hold is released
+    f.comms_lost = "false";
+    f.returning = false;
+    CHECK(awaiting_rearm(f));
+}
+
+static void test_heading_error() {
+    CHECK(std::abs(HeadingError(10, 350) - 20.0) < 1e-9);    // wrap starboard
+    CHECK(std::abs(HeadingError(350, 10) + 20.0) < 1e-9);    // wrap port
+    CHECK(std::abs(HeadingError(90, 90)) < 1e-9);
+    CHECK(std::abs(HeadingError(0, 180) + 180.0) < 1e-9);    // [-180, 180)
+    CHECK(std::abs(HeadingError(270, 45) + 135.0) < 1e-9);
+}
+
+static void test_split_csv() {
+    auto v = SplitCsv(" NAV_YAW, NAV_PITCH ,,GYRO ");
+    CHECK(v.size() == 3);
+    CHECK_EQ_STR(v[0], "NAV_YAW");
+    CHECK_EQ_STR(v[1], "NAV_PITCH");
+    CHECK_EQ_STR(v[2], "GYRO");
+    CHECK(SplitCsv("").empty());
+}
+
+static void test_rate_limiter() {
+    RateLimiter r(5.0);                      // default 200 ms
+    r.set_rate("autopilot.error", 2.0);      // 500 ms
+    CHECK(r.allow("nav.sog", 100.00));
+    CHECK(!r.allow("nav.sog", 100.10));
+    CHECK(r.allow("nav.sog", 100.25));
+    CHECK(r.allow("nav.heading", 100.10));   // independent key
+    CHECK(r.allow("autopilot.error", 1.0));
+    CHECK(!r.allow("autopilot.error", 1.4));
+    CHECK(r.allow("autopilot.error", 1.5));
+    RateLimiter unlimited(0.0);              // 0 Hz = no limiting
+    CHECK(unlimited.allow("x", 1.0));
+    CHECK(unlimited.allow("x", 1.0));
+}
+
+static void test_contact_tracker() {
+    ContactTracker t(10.0);
+    CHECK(t.active(0.0) == 0);
+    CHECK(t.closest_range() < 0);
+    t.post("c1", 0.0, 800.0);
+    t.post("c2", 1.0, 300.0, 250.0, 120.0);
+    t.post("c3", 2.0, 1500.0, 900.0, 600.0);
+    CHECK(t.active(2.0) == 3);
+    CHECK(std::abs(t.closest_range() - 300.0) < 1e-9);
+    CHECK(std::abs(t.worst_cpa().cpa_m - 250.0) < 1e-9);
+    CHECK(std::abs(t.worst_cpa().tcpa_s - 120.0) < 1e-9);
+    CHECK(std::abs(t.last_seen() - 2.0) < 1e-9);
+    t.post("c1", 5.0, 700.0);                // refresh keeps it alive
+    CHECK(t.active(12.5) == 1);              // c2 (t=1), c3 (t=2) expired; c1 seen at 5
+    CHECK(std::abs(t.closest_range() - 700.0) < 1e-9);
+    CHECK(t.worst_cpa().cpa_m < 0);          // c1 never had a CPA
+    CHECK(t.active(20.0) == 0);
+
+    auto kv = ParseKeyValuesLower("NAME=contato_26,TYPE=ship,X=120.5,Y=-40");
+    CHECK_EQ_STR(kv["name"], "contato_26");
+    CHECK_EQ_STR(kv["x"], "120.5");
+}
+
 int main() {
     test_flag_parsing();
     test_allstop_classification();
@@ -265,6 +352,11 @@ int main() {
     test_odometry();
     test_derived_quantities();
     test_key_values_continuation();
+    test_comms_phases();
+    test_heading_error();
+    test_split_csv();
+    test_rate_limiter();
+    test_contact_tracker();
 
     std::printf("mission_logic_test: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;

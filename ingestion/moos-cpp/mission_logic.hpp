@@ -45,11 +45,48 @@ inline bool truthy(const std::string& v) {
     return t == "true" || t == "1" || t == "yes" || t == "on";
 }
 
-// COMMS_LOST: "false" (or empty/0/ok) = link up; anything else is the
-// failsafe action currently in force.
-inline bool comms_lost_active(const std::string& v) {
+// COMMS_LOST phases, as posted by iWebSocket (WebSocket.cpp, comms watchdog):
+//   false          link up                                   -> 0
+//   grace          link down, mission KEEPS RUNNING for
+//                  COMMS_GRACE s; a reconnect just continues -> 1
+//   <action>       grace expired: station-keep hold at the
+//                  loss position, MISSION_ARMED cleared       -> 2
+//   rtb            held COMMS_HOLD s with a base defined:
+//                  return to base (RETURN=true is posted)     -> 3
+inline int comms_phase(const std::string& v) {
     const std::string t = lower(trim(v));
-    return !(t.empty() || t == "false" || t == "0" || t == "ok");
+    if (t.empty() || t == "false" || t == "0" || t == "ok") return 0;
+    if (t == "grace") return 1;
+    if (t == "rtb") return 3;
+    return 2;
+}
+
+// "Lost" for mission-state purposes means the failsafe HOLD is in force.
+// During "grace" the survey is still driving, and during "rtb" the return
+// behavior is driving; both derive their state from the mode flags.
+inline bool comms_lost_active(const std::string& v) {
+    return comms_phase(v) == 2;
+}
+
+// Split "a, b,c" -> {"a","b","c"} (trimmed, empties dropped).
+inline std::vector<std::string> SplitCsv(const std::string& s) {
+    std::vector<std::string> out;
+    size_t start = 0;
+    while (start <= s.size()) {
+        size_t comma = s.find(',', start);
+        std::string item = trim(s.substr(
+            start, comma == std::string::npos ? std::string::npos
+                                              : comma - start));
+        if (!item.empty()) out.push_back(item);
+        if (comma == std::string::npos) break;
+        start = comma + 1;
+    }
+    return out;
+}
+
+// Signed heading error in [-180, 180): positive = desired is to starboard.
+inline double HeadingError(double desired_deg, double actual_deg) {
+    return std::fmod(desired_deg - actual_deg + 540.0, 360.0) - 180.0;
 }
 
 // SURVEY_ENTRY_GATE: defaults open; only the literal "closed" suppresses
@@ -82,6 +119,8 @@ struct MissionFlags {
     bool stationing = false;
     bool pause = false;
     bool manual_override = false;
+    bool remote_control = false;       // REMOTE_CONTROL (manual passthrough)
+    bool crash_stop = false;           // CRASH_STOP (emergency braking)
     bool armed = true;                 // MISSION_ARMED
     bool survey_complete = false;      // latched by waypt_survey endflag
     std::string entry_gate = "open";   // SURVEY_ENTRY_GATE
@@ -295,6 +334,115 @@ private:
     bool has_last_ = false;
     double lx_ = 0.0, ly_ = 0.0, total_ = 0.0;
 };
+
+// ------------------------------------------------------- rate limiting
+
+// Per-key minimum-interval gate. Keys are "measurement.field". NAV_* arrive
+// at 10 Hz and planchaPID outputs at 20 Hz (measured from the vessel
+// .alog); nothing above the dashboard refresh rate is visible, and the
+// 1-minute downsample discards it, so the bridge caps what it writes.
+class RateLimiter {
+public:
+    explicit RateLimiter(double default_hz = 5.0) { set_default(default_hz); }
+    void set_default(double hz) { default_min_ = hz > 0 ? 1.0 / hz : 0.0; }
+    void set_rate(const std::string& key, double hz) {
+        min_[key] = hz > 0 ? 1.0 / hz : 0.0;
+    }
+    // true when a sample for `key` may be written at time `now`.
+    bool allow(const std::string& key, double now) {
+        auto it = min_.find(key);
+        const double min_dt = (it == min_.end()) ? default_min_ : it->second;
+        auto last = last_.find(key);
+        if (last != last_.end() && now - last->second < min_dt) return false;
+        last_[key] = now;
+        return true;
+    }
+
+private:
+    double default_min_ = 0.2;
+    std::map<std::string, double> min_;
+    std::map<std::string, double> last_;
+};
+
+// ------------------------------------------------ radar contact tracking
+
+// Contacts as seen by the vessel (NODE_REPORT from iRadarTargets / AIS /
+// pContactSpawn in simulation, or RADAR_TARGET with CPA/TCPA). Entries
+// expire after `ttl_s` without an update, so the target count follows what
+// the radar currently holds rather than everything ever seen.
+struct Contact {
+    double range_m = -1;   // < 0 = unknown
+    double cpa_m = -1;
+    double tcpa_s = -1;
+    double last_seen = -1e18;
+};
+
+class ContactTracker {
+public:
+    explicit ContactTracker(double ttl_s = 10.0) : ttl_s_(ttl_s) {}
+
+    void post(const std::string& id, double now, double range_m,
+              double cpa_m = -1, double tcpa_s = -1) {
+        Contact& c = contacts_[id];
+        c.range_m = range_m;
+        if (cpa_m >= 0) c.cpa_m = cpa_m;
+        if (tcpa_s >= 0) c.tcpa_s = tcpa_s;
+        c.last_seen = now;
+    }
+
+    // Drops expired contacts; returns the active count.
+    int active(double now) {
+        for (auto it = contacts_.begin(); it != contacts_.end();) {
+            if (now - it->second.last_seen > ttl_s_) it = contacts_.erase(it);
+            else ++it;
+        }
+        return static_cast<int>(contacts_.size());
+    }
+    // Smallest known range among active contacts (< 0 when none).
+    double closest_range() const {
+        double best = -1;
+        for (const auto& [id, c] : contacts_)
+            if (c.range_m >= 0 && (best < 0 || c.range_m < best)) best = c.range_m;
+        return best;
+    }
+    // CPA/TCPA of the contact with the smallest CPA (< 0 when none known).
+    Contact worst_cpa() const {
+        Contact best;
+        for (const auto& [id, c] : contacts_)
+            if (c.cpa_m >= 0 && (best.cpa_m < 0 || c.cpa_m < best.cpa_m)) best = c;
+        return best;
+    }
+    // Time of the most recent post of any contact.
+    double last_seen() const {
+        double t = -1e18;
+        for (const auto& [id, c] : contacts_) t = std::max(t, c.last_seen);
+        return t;
+    }
+
+private:
+    double ttl_s_;
+    std::map<std::string, Contact> contacts_;
+};
+
+// Parse "NAME=x,X=1.0,Y=2.0,..." (NODE_REPORT) or "id=x,range=..,cpa=..,
+// tcpa=.." (RADAR_TARGET) into a key/value map with lower-cased keys.
+inline std::map<std::string, std::string> ParseKeyValuesLower(
+        const std::string& s) {
+    std::map<std::string, std::string> out;
+    size_t start = 0;
+    while (start <= s.size()) {
+        size_t comma = s.find(',', start);
+        const std::string seg = s.substr(
+            start, comma == std::string::npos ? std::string::npos
+                                              : comma - start);
+        size_t eq = seg.find('=');
+        if (eq != std::string::npos)
+            out[lower(trim(seg.substr(0, eq)))] = trim(seg.substr(eq + 1));
+        if (comma == std::string::npos) break;
+        start = comma + 1;
+    }
+    return out;
+}
 
 // ---------------------------------------------------- derived quantities
 
