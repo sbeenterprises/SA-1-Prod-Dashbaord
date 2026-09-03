@@ -86,6 +86,11 @@ option task = {name: "downsample-telemetry-1m", every: 1m, offset: 10s}
 from(bucket: "telemetry")
     |> range(start: -task.every)
     |> filter(fn: (r) => r._measurement != "events" and r._measurement != "alarms")
+    // string fields cannot be averaged: mission_state is all strings, the
+    // others are the named fields (nav fix type, charging state, geometry
+    // is a vertex set, not a time series)
+    |> filter(fn: (r) => r._measurement != "mission_state" and r._measurement != "geometry")
+    |> filter(fn: (r) => r._field != "fix_type" and r._field != "charging_status")
     |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)
     |> to(bucket: "telemetry_1m")
 EOF

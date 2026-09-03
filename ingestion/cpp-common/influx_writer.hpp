@@ -53,6 +53,8 @@ public:
     explicit InfluxWriter(const InfluxOptions& opts) {
         url_ = opts.url + "/api/v2/write?org=" + opts.org +
                "&bucket=" + opts.bucket + "&precision=ns";
+        delete_url_ = opts.url + "/api/v2/delete?org=" + opts.org +
+                      "&bucket=" + opts.bucket;
         token_ = "Authorization: Token " + opts.token;
         vessel_ = opts.vessel;
         static const bool curl_ready = [] {
@@ -74,14 +76,50 @@ public:
     InfluxWriter(const InfluxWriter&) = delete;
     InfluxWriter& operator=(const InfluxWriter&) = delete;
 
+    // ts_ns > 0 pins the point to an explicit timestamp (geometry sets
+    // written as one consistent snapshot); 0 lets the server stamp it.
     void field(const std::string& measurement, const std::string& tags,
-               const std::string& name, double value) {
+               const std::string& name, double value, long long ts_ns = 0) {
         if (std::isnan(value) || std::isinf(value)) return;
         std::ostringstream line;
         line << measurement << ",vessel=" << vessel_;
         if (!tags.empty()) line << "," << tags;
         line << " " << name << "=" << value;
+        if (ts_ns > 0) line << " " << ts_ns;
         push(line.str());
+    }
+
+    // Synchronous delete of every point matching `predicate` (Flux delete
+    // predicate syntax, e.g. _measurement="geometry" AND kind="route") in
+    // this writer's bucket; the vessel tag is always added. Used before
+    // rewriting a geometry set so stale vertices never linger. Bounded
+    // by timeout; returns false on any failure (the caller writes anyway).
+    bool erase(const std::string& predicate, long timeout_ms = 1500) {
+        CURL* curl = curl_easy_init();
+        if (!curl) return false;
+        std::string pred = predicate + " AND vessel=\"" + vessel_ + "\"", esc;
+        for (char c : pred) {           // JSON-escape the predicate string
+            if (c == '"' || c == '\\') esc += '\\';
+            esc += c;
+        }
+        const std::string body =
+            "{\"start\":\"1970-01-01T00:00:00Z\",\"stop\":\"2100-01-01T00:00:00Z\","
+            "\"predicate\":\"" + esc + "\"}";
+        struct curl_slist* headers = nullptr;
+        headers = curl_slist_append(headers, token_.c_str());
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+        curl_easy_setopt(curl, CURLOPT_URL, delete_url_.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout_ms);
+        curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, discard_body);
+        const CURLcode rc = curl_easy_perform(curl);
+        long code = 0;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        return rc == CURLE_OK && code >= 200 && code < 300;
     }
 
     void str_field(const std::string& measurement, const std::string& tags,
@@ -185,7 +223,11 @@ private:
         return ok;
     }
 
-    std::string url_, token_, vessel_;
+    static size_t discard_body(char*, size_t size, size_t nmemb, void*) {
+        return size * nmemb;
+    }
+
+    std::string url_, delete_url_, token_, vessel_;
     std::vector<std::string> batch_;
     std::deque<std::string> queue_;
     mutable std::mutex mu_;

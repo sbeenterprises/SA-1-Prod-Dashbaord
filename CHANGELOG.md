@@ -3,6 +3,44 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [Unreleased]
+
+### Fixed
+- Vessel markers on the Fleet, Navigation and Replay maps did not render:
+  the heading rotation dimension lacked the `max` Grafana needs
+  (`value % max`), giving a NaN rotation that the WebGL marker layer
+  silently dropped. The marker is Grafana's built-in triangle (heading
+  arrow); custom SVG symbols render as a black square on 13.2.1.
+
+### Added
+- Navigation and Replay maps draw the operating region, the planned
+  route with numbered waypoints and the red track around the vessel
+  hull; `grafana_bridge` publishes the helm's route / region vertices in
+  geographic coordinates (`geometry` measurement, mission datum).
+- Comms dashboard: Internet, latency, packet loss, VPN (tailscaled) and
+  Starlink tiles read Telegraf host probes instead of simulator fields.
+
+- Navigation: attitude (roll / pitch) trend alongside heading, speed and
+  XTE. System: InfluxDB reachability tile next to Signal K and MOOS.
+  Comms: bandwidth up / down from the host interfaces.
+- Replay reads the 1-minute archive (`telemetry_1m`) automatically for
+  windows older than the 30-day raw retention; the installer's downsample
+  task now skips string fields (it errored on them before).
+
+- Mission Events: behavior changes are logged only after the new set has
+  held for 5 s (station-keep runs intermittently and flooded the log).
+- Waypoint labels on the maps are 1-based (WP 1 is the first waypoint).
+- Smoke test checks every generated query is complete (from + range).
+
+### Changed
+- Fleet dashboard uses its own `fleet_vessel` variable (default All) so
+  the vessel selected on another tab no longer narrows the fleet view.
+- System dashboard: CPU / GPU / RAM / Disk back as gauges.
+- Mission state `ReturnToHome` renamed `ReturnToBase` (the mission's own
+  term); state tiles and timelines show operator wording ("Return to
+  Base", "Station Keeping", "Awaiting Re-arm", "Comms Lost", "Entering
+  Region"). Data written before this change still maps to the new label.
+
 ## [1.0.0] - 2026-09-03 — simulation baseline
 
 First baseline validated end to end on the simulation host (usv01:

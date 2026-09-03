@@ -10,7 +10,7 @@
 //
 // What it does beyond 1:1 passthrough:
 //  - Derives the operational mission state (Idle / Autonomous / Paused /
-//    StationKeeping / ReturnToHome / EnteringRegion / AwaitingRearm /
+//    StationKeeping / ReturnToBase / EnteringRegion / AwaitingRearm /
 //    CommsLost / Parked / Completed) from the mode flags the Alpha mission
 //    actually publishes (nothing on the vessel publishes MISSION_STATE).
 //  - Parses the active behavior set out of IVPHELM_SUMMARY.
@@ -160,7 +160,7 @@ const std::set<std::string> kFlagVars = {
 const std::set<std::string> kSpecialVars = {
     "COMMS_LOST", "SURVEY_ENTRY_GATE",
     "IVPHELM_STATE", "IVPHELM_ALLSTOP", "IVPHELM_SUMMARY",
-    "OPR_BREACHED", "VIEW_SEGLIST", "OBSTACLE_ALERT",
+    "OPR_BREACHED", "VIEW_SEGLIST", "OPR_POLY_ACTUAL", "OBSTACLE_ALERT",
     "DIST_TO_NEXT_WPT", "WPT_INDEX",
     "ACTIVE_BEHAVIOR", "STATION_KEEP_STATUS",
     "BHV_WARNING", "BHV_ERROR",
@@ -263,6 +263,11 @@ protected:
         if (!signalk_http_.empty() && signalk_http_.find("://") == std::string::npos)
             signalk_http_ = "http://" + signalk_http_;
         m_MissionReader.GetConfigurationParam("signalk_token", signalk_token_);
+        // Map overlays need the MOOS local-grid datum (global block of the
+        // mission file). Without it no geometry is written, nothing else
+        // changes.
+        have_datum_ = m_MissionReader.GetValue("LatOrigin", lat0_) &&
+                      m_MissionReader.GetValue("LongOrigin", lon0_);
 
         telemetry_ = std::make_unique<usv::InfluxWriter>(opts);
         usv::InfluxOptions ev_opts = opts;
@@ -311,6 +316,7 @@ protected:
     bool Iterate() override {
         if (!telemetry_) return true;
         const double now = MonoSeconds();
+        FlushBehaviorEvent(now);
 
         // 1 Hz: autonomy snapshot + derived mission quantities. Periodic
         // (not just on-change) so stat panels stay fresh, the state
@@ -471,6 +477,8 @@ private:
             HandleGeofence(msg.GetString(), now);
         } else if (key == "VIEW_SEGLIST" && msg.IsString()) {
             HandleSeglist(msg.GetString());
+        } else if (key == "OPR_POLY_ACTUAL" && msg.IsString()) {
+            WriteGeometry("region", msg.GetString(), /*close=*/true);
         } else if (key == "OBSTACLE_ALERT" && msg.IsString()) {
             const std::string id = usv::ParseObstacleId(msg.GetString());
             if (obstacles_.post(id, now))
@@ -724,11 +732,27 @@ private:
         telemetry_->str_field("mission_state", "", "helm_summary", summary);
     }
 
+    // The field follows the helm immediately; the EVENT is posted only once
+    // the new set has held for kBehaviorSettleS, because behaviors such as
+    // station-keep run intermittently (inner radius) and would otherwise
+    // flood the mission log with none / station-keep pairs.
+    static constexpr double kBehaviorSettleS = 5.0;
+
     void WriteActiveBehavior(const std::string& active) {
         if (active == last_active_behavior_) return;
         last_active_behavior_ = active;
         telemetry_->str_field("mission_state", "", "active_behavior", active);
-        Event("state_change", "info", "Active behaviors: " + active);
+        pending_behavior_ = active;
+        pending_behavior_since_ = MonoSeconds();
+    }
+
+    void FlushBehaviorEvent(double now) {
+        if (pending_behavior_since_ <= 0.0) return;
+        if (now - pending_behavior_since_ < kBehaviorSettleS) return;
+        pending_behavior_since_ = 0.0;
+        if (pending_behavior_ == announced_behavior_) return;
+        announced_behavior_ = pending_behavior_;
+        Event("state_change", "info", "Active behaviors: " + announced_behavior_);
     }
 
     void HandleGeofence(const std::string& val, double now) {
@@ -740,10 +764,43 @@ private:
         // (also covers the decay back to 0 = recovered).
     }
 
+    // Planned route / operating region as lat-lon vertex sets for the
+    // Navigation, Replay and Fleet maps (measurement "geometry", tag kind,
+    // one series per vertex index, all vertices of a set share one
+    // timestamp). The previous set of the same kind is deleted first so a
+    // shorter route never leaves stale vertices behind. The region polygon
+    // is closed (first vertex repeated) so a route layer draws its outline.
+    void WriteGeometry(const std::string& kind, const std::string& spec,
+                       bool close) {
+        std::string& prev = last_geometry_[kind];
+        if (spec == prev) return;
+        prev = spec;
+        if (!have_datum_) return;
+        std::vector<usv::XY> pts = usv::ParsePts(spec);
+        telemetry_->erase("_measurement=\"geometry\" AND kind=\"" + kind + "\"");
+        if (pts.empty()) { telemetry_->flush(); return; }   // "NONE": cleared
+        if (close) pts.push_back(pts.front());
+        const long long ts = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+        for (size_t i = 0; i < pts.size(); ++i) {
+            const usv::LatLon ll = usv::LocalToLatLon(pts[i].x, pts[i].y, lat0_, lon0_);
+            char tags[64];
+            std::snprintf(tags, sizeof tags, "kind=%s,idx=%03zu", kind.c_str(), i);
+            telemetry_->field("geometry", tags, "lat", ll.lat, ts);
+            telemetry_->field("geometry", tags, "lon", ll.lon, ts);
+            telemetry_->field("geometry", tags, "seq", static_cast<double>(i), ts);
+        }
+        telemetry_->flush();
+    }
+
     void HandleSeglist(const std::string& spec) {
         const usv::SeglistInfo info = usv::ParseSeglist(spec);
         if (info.points <= 0) return;
         seglists_[info.label] = info.points;
+        // The survey (or return) route is the planned track to draw.
+        if (info.label.find("survey") != std::string::npos ||
+            info.label.find("return") != std::string::npos)
+            WriteGeometry("route", spec, /*close=*/false);
         // Prefer the survey route's seglist; fall back to the largest
         // non-return list (labels are "<vessel>_<behavior>").
         int total = 0;
@@ -915,6 +972,8 @@ private:
     std::string helm_state_str_;
     std::string allstop_str_ = "clear";
     std::string last_active_behavior_;
+    std::string pending_behavior_, announced_behavior_;
+    double pending_behavior_since_ = 0.0;
     std::string last_bhv_notice_;
 
     usv::DecayLatch geofence_{30.0};
@@ -946,6 +1005,9 @@ private:
     std::string mission_name_;
     std::string mission_id_;
     std::string signalk_http_ = "http://localhost:3000";
+    bool have_datum_ = false;
+    double lat0_ = 0.0, lon0_ = 0.0;
+    std::map<std::string, std::string> last_geometry_;
     std::string signalk_token_;   // optional bearer token when SK security is on
 
     // The console starts a mission with ID_ROUTE=<Signal K route uuid>; the

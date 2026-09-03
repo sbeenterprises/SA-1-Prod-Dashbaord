@@ -141,7 +141,7 @@ inline const char* DeriveMissionState(const MissionFlags& f) {
     if (f.manual_override)                       return "Parked";
     if (f.pause)                                 return "Paused";
     if (f.stationing)                            return "StationKeeping";
-    if (f.returning)                             return "ReturnToHome";
+    if (f.returning)                             return "ReturnToBase";
     if (f.waypoint && !gate_open(f.entry_gate))  return "EnteringRegion";
     if (f.waypoint && !f.armed)                  return "AwaitingRearm";
     if (f.waypoint)                              return "Autonomous";
@@ -523,6 +523,53 @@ inline std::string RouteDisplayName(const std::string& id,
     if (lower(id) == "return_to_base") return "Return to base";
     const size_t dash = id.find('-');
     return dash != std::string::npos && dash >= 4 ? id.substr(0, dash) : id;
+}
+
+// ------------------------------------------------- geometry (map overlays)
+
+struct XY { double x = 0.0, y = 0.0; };
+
+// Points of a MOOS "pts={x,y:x,y:...}" spec (VIEW_SEGLIST, VIEW_POLYGON,
+// OPR_POLY_ACTUAL). Empty for "NONE", malformed or missing pts.
+inline std::vector<XY> ParsePts(const std::string& spec) {
+    std::vector<XY> out;
+    const size_t open = spec.find("pts={");
+    if (open == std::string::npos) return out;
+    const size_t close = spec.find('}', open);
+    if (close == std::string::npos) return out;
+    const std::string body = spec.substr(open + 5, close - open - 5);
+    size_t start = 0;
+    while (start <= body.size()) {
+        const size_t colon = body.find(':', start);
+        const std::string seg = trim(body.substr(
+            start, colon == std::string::npos ? std::string::npos : colon - start));
+        const size_t comma = seg.find(',');
+        if (comma != std::string::npos) {
+            try {
+                out.push_back({std::stod(seg.substr(0, comma)),
+                               std::stod(seg.substr(comma + 1))});
+            } catch (...) { return {}; }
+        } else if (!seg.empty()) {
+            return {};   // malformed vertex: reject the whole spec
+        }
+        if (colon == std::string::npos) break;
+        start = colon + 1;
+    }
+    return out;
+}
+
+struct LatLon { double lat = 0.0, lon = 0.0; };
+
+// MOOS local grid (x east, y north, metres from LatOrigin/LongOrigin) to
+// geographic coordinates. Metres-per-degree series expansion; well under
+// a metre of error across a mission-sized area.
+inline LatLon LocalToLatLon(double x, double y, double lat0, double lon0) {
+    const double phi = lat0 * M_PI / 180.0;
+    const double m_per_deg_lat = 111132.92 - 559.82 * std::cos(2 * phi)
+                                 + 1.175 * std::cos(4 * phi);
+    const double m_per_deg_lon = 111412.84 * std::cos(phi)
+                                 - 93.5 * std::cos(3 * phi);
+    return {lat0 + y / m_per_deg_lat, lon0 + x / m_per_deg_lon};
 }
 
 }  // namespace usv

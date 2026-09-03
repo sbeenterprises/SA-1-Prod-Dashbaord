@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 185,
+      "id": 186,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -88,7 +88,7 @@
       }
     },
     {
-      "id": 112,
+      "id": 113,
       "type": "stat",
       "title": "Internet",
       "datasource": {
@@ -107,7 +107,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"internet_up\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"result_code\")\n  |> filter(fn: (r) => r.url == \"8.8.8.8\")\n\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -130,87 +130,20 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "OFFLINE",
-                  "color": "red",
-                  "index": 0
-                },
-                "1": {
-                  "text": "ONLINE",
+                  "text": "UP",
                   "color": "#175d8d",
-                  "index": 1
+                  "index": 0
                 }
               }
-            }
-          ]
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "value",
-        "graphMode": "none",
-        "colorMode": "background",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 34,
-          "titleSize": 12
-        }
-      }
-    },
-    {
-      "id": 113,
-      "type": "stat",
-      "title": "Starlink",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 4,
-        "y": 2,
-        "w": 4,
-        "h": 3
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"starlink_up\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#00bcd4",
-                "value": null
-              }
-            ]
-          },
-          "mappings": [
+            },
             {
-              "type": "value",
+              "type": "range",
               "options": {
-                "0": {
-                  "text": "OFFLINE",
+                "from": 1,
+                "to": 99,
+                "result": {
+                  "text": "DOWN",
                   "color": "red",
-                  "index": 0
-                },
-                "1": {
-                  "text": "ONLINE",
-                  "color": "#175d8d",
                   "index": 1
                 }
               }
@@ -238,13 +171,13 @@
     {
       "id": 114,
       "type": "stat",
-      "title": "VPN / Tailscale",
+      "title": "Starlink",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 8,
+        "x": 4,
         "y": 2,
         "w": 4,
         "h": 3
@@ -255,7 +188,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"vpn_up\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"result_code\")\n  |> filter(fn: (r) => r.url == \"192.168.100.1\")\n\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -264,6 +197,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -278,13 +212,20 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "OFFLINE",
-                  "color": "red",
-                  "index": 0
-                },
-                "1": {
-                  "text": "ONLINE",
+                  "text": "UP",
                   "color": "#175d8d",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1,
+                "to": 99,
+                "result": {
+                  "text": "DOWN",
+                  "color": "red",
                   "index": 1
                 }
               }
@@ -311,6 +252,87 @@
     },
     {
       "id": 115,
+      "type": "stat",
+      "title": "VPN / Tailscale",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 2,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"systemd_units\" and r._field == \"active_code\")\n  |> filter(fn: (r) => r.name == \"tailscaled.service\")\n\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "UP",
+                  "color": "#175d8d",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1,
+                "to": 99,
+                "result": {
+                  "text": "DOWN",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 116,
       "type": "stat",
       "title": "Signal K WebSocket",
       "datasource": {
@@ -384,7 +406,7 @@
       }
     },
     {
-      "id": 116,
+      "id": 117,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -403,7 +425,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"latency_ms\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"average_response_ms\")\n  |> filter(fn: (r) => r.url == \"8.8.8.8\")\n\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -451,7 +473,7 @@
       }
     },
     {
-      "id": 117,
+      "id": 118,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -470,7 +492,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"packet_loss_pct\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"percent_packet_loss\")\n  |> filter(fn: (r) => r.url == \"8.8.8.8\")\n\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -518,7 +540,7 @@
       }
     },
     {
-      "id": 118,
+      "id": 119,
       "type": "timeseries",
       "title": "Latency",
       "datasource": {
@@ -537,7 +559,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"latency_ms\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"average_response_ms\")\n  |> filter(fn: (r) => r.url == \"8.8.8.8\")\n\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A",
           "alias": "latency"
         }
@@ -562,78 +584,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*latency_ms.*"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#00bcd4"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 119,
-      "type": "timeseries",
-      "title": "Packet Loss",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 5,
-        "w": 12,
-        "h": 7
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"packet_loss_pct\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
-          "refId": "A",
-          "alias": "loss"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "percent",
-          "min": 0,
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 14,
-            "showPoints": "never",
-            "spanNulls": 60000,
-            "gradientMode": "opacity",
-            "lineInterpolation": "smooth"
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": ".*packet_loss_pct.*"
+              "options": ".*average_response_ms.*"
             },
             "properties": [
               {
@@ -661,7 +612,78 @@
     {
       "id": 120,
       "type": "timeseries",
-      "title": "Bandwidth",
+      "title": "Packet Loss",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"percent_packet_loss\")\n  |> filter(fn: (r) => r.url == \"8.8.8.8\")\n\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A",
+          "alias": "loss"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percent",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 14,
+            "showPoints": "never",
+            "spanNulls": 60000,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*percent_packet_loss.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#00bcd4"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 121,
+      "type": "timeseries",
+      "title": "Bandwidth (host interfaces)",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -678,8 +700,18 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"up_mbps\" or r._field == \"down_mbps\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
-          "refId": "A"
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"net\" and r._field == \"bytes_recv\")\n  |> filter(fn: (r) => r.interface != \"lo\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n",
+          "refId": "A",
+          "alias": "down"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"net\" and r._field == \"bytes_sent\")\n  |> filter(fn: (r) => r.interface != \"lo\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n",
+          "refId": "B",
+          "alias": "up"
         }
       ],
       "fieldConfig": {
@@ -687,7 +719,7 @@
           "color": {
             "mode": "palette-classic"
           },
-          "unit": "Mbits",
+          "unit": "bps",
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
@@ -702,7 +734,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*up_mbps.*"
+              "options": ".*bytes_recv.*"
             },
             "properties": [
               {
@@ -717,7 +749,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*down_mbps.*"
+              "options": ".*bytes_sent.*"
             },
             "properties": [
               {
@@ -743,7 +775,7 @@
       }
     },
     {
-      "id": 121,
+      "id": 122,
       "type": "timeseries",
       "title": "Telemetry Message Rates",
       "datasource": {

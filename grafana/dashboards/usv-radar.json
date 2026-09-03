@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 183,
+      "id": 184,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -88,7 +88,7 @@
       }
     },
     {
-      "id": 93,
+      "id": 94,
       "type": "stat",
       "title": "Radar Status",
       "datasource": {
@@ -162,7 +162,7 @@
       }
     },
     {
-      "id": 94,
+      "id": 95,
       "type": "stat",
       "title": "Tracked Targets",
       "datasource": {
@@ -220,7 +220,7 @@
       }
     },
     {
-      "id": 95,
+      "id": 96,
       "type": "stat",
       "title": "Closest Target",
       "datasource": {
@@ -287,7 +287,7 @@
       }
     },
     {
-      "id": 96,
+      "id": 97,
       "type": "stat",
       "title": "CPA",
       "datasource": {
@@ -354,7 +354,7 @@
       }
     },
     {
-      "id": 97,
+      "id": 98,
       "type": "stat",
       "title": "TCPA",
       "datasource": {
@@ -421,7 +421,7 @@
       }
     },
     {
-      "id": 98,
+      "id": 99,
       "type": "timeseries",
       "title": "Tracked Targets",
       "datasource": {
@@ -490,7 +490,7 @@
       }
     },
     {
-      "id": 99,
+      "id": 100,
       "type": "timeseries",
       "title": "Closest Target / CPA",
       "datasource": {
@@ -574,7 +574,7 @@
       }
     },
     {
-      "id": 100,
+      "id": 101,
       "type": "timeseries",
       "title": "Detection Rate",
       "datasource": {
@@ -646,7 +646,7 @@
       }
     },
     {
-      "id": 101,
+      "id": 102,
       "type": "timeseries",
       "title": "TCPA",
       "datasource": {

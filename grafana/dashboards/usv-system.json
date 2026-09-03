@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 186,
+      "id": 187,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -88,8 +88,8 @@
       }
     },
     {
-      "id": 122,
-      "type": "stat",
+      "id": 123,
+      "type": "gauge",
       "title": "CPU",
       "datasource": {
         "type": "influxdb",
@@ -99,7 +99,7 @@
         "x": 0,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -117,7 +117,8 @@
             "mode": "thresholds"
           },
           "unit": "percent",
-          "decimals": 0,
+          "min": 0,
+          "max": 100,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -143,20 +144,12 @@
           "calcs": [
             "lastNotNull"
           ]
-        },
-        "textMode": "auto",
-        "graphMode": "area",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 26,
-          "titleSize": 12
         }
       }
     },
     {
-      "id": 123,
-      "type": "stat",
+      "id": 124,
+      "type": "gauge",
       "title": "GPU",
       "datasource": {
         "type": "influxdb",
@@ -166,7 +159,7 @@
         "x": 3,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -184,7 +177,8 @@
             "mode": "thresholds"
           },
           "unit": "percent",
-          "decimals": 0,
+          "min": 0,
+          "max": 100,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -210,20 +204,12 @@
           "calcs": [
             "lastNotNull"
           ]
-        },
-        "textMode": "auto",
-        "graphMode": "area",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 26,
-          "titleSize": 12
         }
       }
     },
     {
-      "id": 124,
-      "type": "stat",
+      "id": 125,
+      "type": "gauge",
       "title": "RAM",
       "datasource": {
         "type": "influxdb",
@@ -233,7 +219,7 @@
         "x": 6,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -251,7 +237,8 @@
             "mode": "thresholds"
           },
           "unit": "percent",
-          "decimals": 0,
+          "min": 0,
+          "max": 100,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -277,20 +264,12 @@
           "calcs": [
             "lastNotNull"
           ]
-        },
-        "textMode": "auto",
-        "graphMode": "area",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 26,
-          "titleSize": 12
         }
       }
     },
     {
-      "id": 125,
-      "type": "stat",
+      "id": 126,
+      "type": "gauge",
       "title": "Disk",
       "datasource": {
         "type": "influxdb",
@@ -300,7 +279,7 @@
         "x": 9,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -318,7 +297,8 @@
             "mode": "thresholds"
           },
           "unit": "percent",
-          "decimals": 0,
+          "min": 0,
+          "max": 100,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -344,19 +324,11 @@
           "calcs": [
             "lastNotNull"
           ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 26,
-          "titleSize": 12
         }
       }
     },
     {
-      "id": 126,
+      "id": 127,
       "type": "stat",
       "title": "CPU Temp",
       "datasource": {
@@ -367,7 +339,7 @@
         "x": 12,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -417,15 +389,15 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 34,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 127,
+      "id": 128,
       "type": "stat",
-      "title": "Load (1m)",
+      "title": "InfluxDB",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -434,7 +406,7 @@
         "x": 15,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -442,7 +414,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r._field == \"load1\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"net_response\" and r._field == \"result_code\")\n  |> filter(fn: (r) => r.service == \"influxdb\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -451,7 +423,6 @@
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 2,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -460,7 +431,31 @@
                 "value": null
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "UP",
+                  "color": "#175d8d",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1,
+                "to": 99,
+                "result": {
+                  "text": "DOWN",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -470,18 +465,18 @@
             "lastNotNull"
           ]
         },
-        "textMode": "auto",
+        "textMode": "value",
         "graphMode": "none",
-        "colorMode": "value",
+        "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 34,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 128,
+      "id": 129,
       "type": "stat",
       "title": "Signal K",
       "datasource": {
@@ -492,7 +487,7 @@
         "x": 18,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -556,13 +551,13 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 34,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 129,
+      "id": 130,
       "type": "stat",
       "title": "MOOS",
       "datasource": {
@@ -573,7 +568,7 @@
         "x": 21,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -637,13 +632,13 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 34,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 130,
+      "id": 131,
       "type": "timeseries",
       "title": "CPU",
       "datasource": {
@@ -652,7 +647,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 5,
+        "y": 6,
         "w": 8,
         "h": 6
       },
@@ -739,7 +734,7 @@
       }
     },
     {
-      "id": 131,
+      "id": 132,
       "type": "timeseries",
       "title": "GPU",
       "datasource": {
@@ -748,7 +743,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 5,
+        "y": 6,
         "w": 8,
         "h": 6
       },
@@ -851,7 +846,7 @@
       }
     },
     {
-      "id": 132,
+      "id": 133,
       "type": "timeseries",
       "title": "Memory",
       "datasource": {
@@ -860,7 +855,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 5,
+        "y": 6,
         "w": 8,
         "h": 6
       },
@@ -923,7 +918,7 @@
       }
     },
     {
-      "id": 133,
+      "id": 134,
       "type": "timeseries",
       "title": "Disk I/O",
       "datasource": {
@@ -932,7 +927,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 11,
+        "y": 12,
         "w": 8,
         "h": 6
       },
@@ -1017,7 +1012,7 @@
       }
     },
     {
-      "id": 134,
+      "id": 135,
       "type": "timeseries",
       "title": "Network I/O",
       "datasource": {
@@ -1026,7 +1021,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 11,
+        "y": 12,
         "w": 8,
         "h": 6
       },
@@ -1111,7 +1106,7 @@
       }
     },
     {
-      "id": 135,
+      "id": 136,
       "type": "timeseries",
       "title": "CPU Temp",
       "datasource": {
@@ -1120,7 +1115,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 11,
+        "y": 12,
         "w": 8,
         "h": 6
       },
@@ -1181,7 +1176,7 @@
       }
     },
     {
-      "id": 136,
+      "id": 137,
       "type": "table",
       "title": "Services (systemd)",
       "datasource": {
@@ -1190,9 +1185,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 17,
+        "y": 18,
         "w": 24,
-        "h": 6
+        "h": 5
       },
       "targets": [
         {

@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 181,
+      "id": 182,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -88,7 +88,7 @@
       }
     },
     {
-      "id": 63,
+      "id": 64,
       "type": "volkovlabs-echarts-panel",
       "title": "Tachometer",
       "datasource": {
@@ -154,7 +154,7 @@
       }
     },
     {
-      "id": 64,
+      "id": 65,
       "type": "volkovlabs-echarts-panel",
       "title": "Coolant",
       "datasource": {
@@ -211,7 +211,7 @@
       }
     },
     {
-      "id": 65,
+      "id": 66,
       "type": "volkovlabs-echarts-panel",
       "title": "Oil Pressure",
       "datasource": {
@@ -272,7 +272,7 @@
       }
     },
     {
-      "id": 66,
+      "id": 67,
       "type": "volkovlabs-echarts-panel",
       "title": "Fuel",
       "datasource": {
@@ -334,7 +334,7 @@
       }
     },
     {
-      "id": 67,
+      "id": 68,
       "type": "volkovlabs-echarts-panel",
       "title": "Battery",
       "datasource": {
@@ -395,7 +395,7 @@
       }
     },
     {
-      "id": 68,
+      "id": 69,
       "type": "volkovlabs-echarts-panel",
       "title": "State of Charge",
       "datasource": {
@@ -452,7 +452,7 @@
       }
     },
     {
-      "id": 69,
+      "id": 70,
       "type": "stat",
       "title": "Fuel Rate",
       "datasource": {
@@ -511,7 +511,7 @@
       }
     },
     {
-      "id": 70,
+      "id": 71,
       "type": "stat",
       "title": "Engine Hours",
       "datasource": {
@@ -570,7 +570,7 @@
       }
     },
     {
-      "id": 71,
+      "id": 72,
       "type": "stat",
       "title": "Oil Temp",
       "datasource": {
@@ -637,7 +637,7 @@
       }
     },
     {
-      "id": 72,
+      "id": 73,
       "type": "stat",
       "title": "Engine Load",
       "datasource": {
@@ -696,7 +696,7 @@
       }
     },
     {
-      "id": 73,
+      "id": 74,
       "type": "stat",
       "title": "Battery Current",
       "datasource": {
@@ -755,7 +755,7 @@
       }
     },
     {
-      "id": 74,
+      "id": 75,
       "type": "stat",
       "title": "Charging",
       "datasource": {
@@ -830,7 +830,7 @@
       }
     },
     {
-      "id": 75,
+      "id": 76,
       "type": "stat",
       "title": "Alternator",
       "datasource": {
@@ -889,7 +889,7 @@
       }
     },
     {
-      "id": 76,
+      "id": 77,
       "type": "stat",
       "title": "Total Power",
       "datasource": {
@@ -948,7 +948,7 @@
       }
     },
     {
-      "id": 77,
+      "id": 78,
       "type": "timeseries",
       "title": "Engine RPM",
       "datasource": {
@@ -1018,7 +1018,7 @@
       }
     },
     {
-      "id": 78,
+      "id": 79,
       "type": "timeseries",
       "title": "Coolant Temp / Oil Pressure",
       "datasource": {
@@ -1127,7 +1127,7 @@
       }
     },
     {
-      "id": 79,
+      "id": 80,
       "type": "timeseries",
       "title": "Battery Voltage / Current",
       "datasource": {
@@ -1237,7 +1237,7 @@
       }
     },
     {
-      "id": 80,
+      "id": 81,
       "type": "timeseries",
       "title": "Power / System Voltage",
       "datasource": {
@@ -1347,7 +1347,7 @@
       }
     },
     {
-      "id": 81,
+      "id": 82,
       "type": "timeseries",
       "title": "State of Charge",
       "datasource": {
@@ -1419,7 +1419,7 @@
       }
     },
     {
-      "id": 82,
+      "id": 83,
       "type": "timeseries",
       "title": "Fuel Level / Consumption",
       "datasource": {

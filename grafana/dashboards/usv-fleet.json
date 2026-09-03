@@ -52,8 +52,8 @@
   "templating": {
     "list": [
       {
-        "name": "vessel",
-        "label": "Vessel",
+        "name": "fleet_vessel",
+        "label": "Vessels",
         "type": "query",
         "datasource": {
           "type": "influxdb",
@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 188,
+      "id": 189,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -84,11 +84,11 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **FLEET** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel**"
+        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **FLEET** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$fleet_vessel**"
       }
     },
     {
-      "id": 147,
+      "id": 148,
       "type": "geomap",
       "title": "Fleet Map \u2014 last known positions",
       "datasource": {
@@ -140,19 +140,21 @@
             "config": {
               "style": {
                 "size": {
-                  "fixed": 26
+                  "fixed": 14
                 },
                 "color": {
                   "fixed": "#d9342b"
                 },
                 "opacity": 1,
                 "symbol": {
-                  "fixed": "img/swiftships_boat.svg",
+                  "fixed": "img/icons/marker/triangle.svg",
                   "mode": "fixed"
                 },
                 "rotation": {
                   "field": "heading",
-                  "mode": "field",
+                  "mode": "mod",
+                  "min": -360,
+                  "max": 360,
                   "fixed": 0
                 },
                 "text": {
@@ -162,7 +164,7 @@
                 "textConfig": {
                   "fontSize": 13,
                   "offsetX": 0,
-                  "offsetY": -24,
+                  "offsetY": -18,
                   "textAlign": "center",
                   "textBaseline": "middle"
                 }
@@ -178,10 +180,10 @@
       }
     },
     {
-      "id": 148,
+      "id": 149,
       "type": "row",
-      "title": "Vessel: $vessel",
-      "repeat": "vessel",
+      "title": "Vessel: $fleet_vessel",
+      "repeat": "fleet_vessel",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -192,7 +194,7 @@
       "panels": []
     },
     {
-      "id": 149,
+      "id": 150,
       "type": "stat",
       "title": "Mission State",
       "datasource": {
@@ -211,7 +213,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"state\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
           "refId": "A"
         }
       ],
@@ -254,39 +256,44 @@
                   "index": 3
                 },
                 "StationKeeping": {
-                  "text": "StationKeeping",
+                  "text": "Station Keeping",
                   "color": "#00bcd4",
                   "index": 4
                 },
-                "ReturnToHome": {
-                  "text": "ReturnToHome",
+                "ReturnToBase": {
+                  "text": "Return to Base",
                   "color": "orange",
                   "index": 5
                 },
-                "EnteringRegion": {
-                  "text": "EnteringRegion",
-                  "color": "super-light-blue",
+                "ReturnToHome": {
+                  "text": "Return to Base",
+                  "color": "orange",
                   "index": 6
                 },
-                "AwaitingRearm": {
-                  "text": "AwaitingRearm",
-                  "color": "orange",
+                "EnteringRegion": {
+                  "text": "Entering Region",
+                  "color": "super-light-blue",
                   "index": 7
                 },
-                "CommsLost": {
-                  "text": "CommsLost",
-                  "color": "red",
+                "AwaitingRearm": {
+                  "text": "Awaiting Re-arm",
+                  "color": "orange",
                   "index": 8
+                },
+                "CommsLost": {
+                  "text": "Comms Lost",
+                  "color": "red",
+                  "index": 9
                 },
                 "Parked": {
                   "text": "Parked",
                   "color": "#6e7680",
-                  "index": 9
+                  "index": 10
                 },
                 "Completed": {
                   "text": "Completed",
                   "color": "purple",
-                  "index": 10
+                  "index": 11
                 }
               }
             }
@@ -294,7 +301,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -318,7 +325,7 @@
       }
     },
     {
-      "id": 150,
+      "id": 151,
       "type": "stat",
       "title": "Helm",
       "datasource": {
@@ -337,7 +344,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"helm_state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"helm_state\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
           "refId": "A"
         }
       ],
@@ -390,7 +397,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -414,7 +421,7 @@
       }
     },
     {
-      "id": 151,
+      "id": 152,
       "type": "stat",
       "title": "Armed",
       "datasource": {
@@ -433,7 +440,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"armed\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"armed\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -471,7 +478,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -494,7 +501,7 @@
       }
     },
     {
-      "id": 152,
+      "id": 153,
       "type": "stat",
       "title": "Operator Link",
       "datasource": {
@@ -513,7 +520,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"comms_phase\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"comms_phase\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -561,7 +568,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -584,7 +591,7 @@
       }
     },
     {
-      "id": 153,
+      "id": 154,
       "type": "stat",
       "title": "Geofence",
       "datasource": {
@@ -603,7 +610,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"geofence_breached\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"geofence_breached\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -646,7 +653,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -669,7 +676,7 @@
       }
     },
     {
-      "id": 154,
+      "id": 155,
       "type": "stat",
       "title": "SOG",
       "datasource": {
@@ -688,7 +695,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -711,72 +718,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
-            }
-          ]
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 26,
-          "titleSize": 12
-        }
-      }
-    },
-    {
-      "id": 155,
-      "type": "stat",
-      "title": "Progress",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 18,
-        "y": 13,
-        "w": 2,
-        "h": 3
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission\" and (r._field == \"progress_pct\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "percent",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#00bcd4",
-                "value": null
-              }
-            ]
-          },
-          "links": [
-            {
-              "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -801,6 +743,71 @@
     {
       "id": 156,
       "type": "stat",
+      "title": "Progress",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 13,
+        "w": 2,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission\" and (r._field == \"progress_pct\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percent",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open Mission dashboard",
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 157,
+      "type": "stat",
       "title": "Signal K",
       "datasource": {
         "type": "influxdb",
@@ -818,7 +825,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"signalk_ws_up\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"signalk_ws_up\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -856,7 +863,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -879,7 +886,7 @@
       }
     },
     {
-      "id": 157,
+      "id": 158,
       "type": "stat",
       "title": "MOOS",
       "datasource": {
@@ -898,7 +905,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"moos_connected\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"moos_connected\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -936,7 +943,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -970,7 +977,7 @@
         "enable": true,
         "iconColor": "yellow",
         "target": {
-          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"events\" and r._field == \"message\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n"
+          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"events\" and r._field == \"message\")\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n"
         }
       }
     ]
