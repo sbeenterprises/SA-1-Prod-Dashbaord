@@ -84,7 +84,10 @@ VESSEL_MARKER = {
     "color": {"fixed": "#d9342b"},
     "opacity": 1,
     "symbol": {"fixed": "img/swiftships_boat.svg", "mode": "fixed"},
-    "rotation": {"field": "heading", "mode": "field", "fixed": 0},
+    # Scalar dimension: Grafana applies value % max, so max is required
+    # (without it the rotation is NaN and the WebGL marker is not drawn).
+    "rotation": {"field": "heading", "mode": "mod", "min": -360,
+                 "max": 360, "fixed": 0},
     "text": {"field": "vessel", "mode": "field"},
     "textConfig": {"fontSize": 13, "offsetX": 0, "offsetY": -24,
                    "textAlign": "center", "textBaseline": "middle"},
@@ -103,6 +106,69 @@ def position_query():
             '  |> pivot(rowKey: ["vessel"], columnKey: ["_field"], valueColumn: "_value")\n'
             '  |> filter(fn: (r) => exists r.lat and exists r.lon)\n'
             '  |> keep(columns: ["vessel", "lat", "lon", "heading"])\n')
+
+
+def geometry_query(kind):
+    """Current planned route or operating region (grafana_bridge writes the
+    vertex set with one timestamp and deletes the previous set first, so
+    last() per vertex index is exactly the current geometry)."""
+    return ('from(bucket: "telemetry")\n'
+            '  |> range(start: -90d)\n'
+            f'  |> filter(fn: (r) => r._measurement == "geometry" and r.kind == "{kind}")\n'
+            '  |> filter(fn: (r) => r._field == "lat" or r._field == "lon" or r._field == "seq")\n'
+            '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+            '  |> last()\n'
+            '  |> group()\n'
+            '  |> pivot(rowKey: ["idx"], columnKey: ["_field"], valueColumn: "_value")\n'
+            '  |> filter(fn: (r) => exists r.lat and exists r.lon)\n'
+            '  |> sort(columns: ["seq"])\n'
+            '  |> keep(columns: ["seq", "lat", "lon"])\n')
+
+
+# Map overlay layers shared by Navigation and Replay: operating region
+# outline (cyan, like the console), planned route (green) with numbered
+# waypoints, the vessel's track (red) and the vessel itself.
+TRACK_RED = "#e53935"
+ROUTE_GREEN = "#2e7d32"
+REGION_CYAN = "#00bcd4"
+
+
+def overlay_layers(track_ref="A", vessel_ref="B", route_ref="C",
+                   region_ref="D"):
+    def coords():
+        return {"mode": "coords", "latitude": "lat", "longitude": "lon"}
+    return [
+        {"type": "route", "name": "Operating region",
+         "location": coords(),
+         "filterData": {"id": "byRefId", "options": region_ref},
+         "config": {"style": {"color": {"fixed": REGION_CYAN},
+                              "lineWidth": 3, "opacity": 0.9}}},
+        {"type": "route", "name": "Planned route",
+         "location": coords(),
+         "filterData": {"id": "byRefId", "options": route_ref},
+         "config": {"style": {"color": {"fixed": ROUTE_GREEN},
+                              "lineWidth": 2, "opacity": 0.9}}},
+        {"type": "markers", "name": "Waypoints",
+         "location": coords(),
+         "filterData": {"id": "byRefId", "options": route_ref},
+         "config": {"style": {
+             "size": {"fixed": 6}, "color": {"fixed": ROUTE_GREEN},
+             "opacity": 1,
+             "symbol": {"fixed": "img/icons/marker/circle.svg", "mode": "fixed"},
+             "text": {"field": "seq", "mode": "field"},
+             "textConfig": {"fontSize": 11, "offsetX": 0, "offsetY": -12,
+                            "textAlign": "center", "textBaseline": "middle"},
+         }, "showLegend": False}},
+        {"type": "route", "name": "Track",
+         "location": coords(),
+         "filterData": {"id": "byRefId", "options": track_ref},
+         "config": {"style": {"color": {"fixed": TRACK_RED},
+                              "lineWidth": 2, "opacity": 0.9}}},
+        {"type": "markers", "name": "Vessel",
+         "location": coords(),
+         "filterData": {"id": "byRefId", "options": vessel_ref},
+         "config": {"style": VESSEL_MARKER, "showLegend": False}},
+    ]
 
 
 def track_query(every):
@@ -136,8 +202,10 @@ def _thresholds(steps):
 
 def panel(ptype, title, targets, x, y, w, h, unit=None, thresholds=None,
           options=None, overrides=None, decimals=None, min_=None, max_=None,
-          mappings=None, custom=None):
+          mappings=None, custom=None, no_value=None):
     defaults = {"color": {"mode": "palette-classic"}}
+    if no_value:
+        defaults["noValue"] = no_value
     if unit:
         defaults["unit"] = unit
     if decimals is not None:
@@ -190,9 +258,12 @@ def _is_string_query(query):
 
 def stat(title, query, x, y, w=4, h=4, unit=None, thresholds=None,
          mappings=None, text_mode="auto", decimals=None,
-         color_mode="value", graph_mode="none", string_value=False):
+         color_mode="value", graph_mode="none", string_value=False,
+         no_value=None):
     """color_mode='background' renders a solid status tile (ops wall look);
-    graph_mode='area' adds a trend sparkline behind numeric values."""
+    graph_mode='area' adds a trend sparkline behind numeric values;
+    no_value replaces Grafana's "No data" (e.g. "N/A" for hardware that is
+    not fitted on this vessel)."""
     reduce_opts = {"calcs": ["lastNotNull"]}
     is_str = string_value or _is_string_query(query)
     if is_str:
@@ -210,7 +281,8 @@ def stat(title, query, x, y, w=4, h=4, unit=None, thresholds=None,
                           "justifyMode": "auto",
                           "text": {"valueSize": (22 if is_str else 26)
                                    if h <= 3 else 34,
-                                   "titleSize": 12}})
+                                   "titleSize": 12}},
+                 no_value=no_value)
 
 
 def gauge(title, query, x, y, w=4, h=5, unit="percent", min_=0, max_=100,
@@ -246,10 +318,22 @@ def ts(title, targets_, x, y, w=12, h=8, unit=None, overrides=None,
     return p
 
 
+# Operator wording for the derived mission states (stored values stay the
+# CamelCase identifiers used by the bridge, alerts and docs).
+STATE_LABELS = {
+    "StationKeeping": "Station Keeping", "ReturnToBase": "Return to Base",
+    "EnteringRegion": "Entering Region", "AwaitingRearm": "Awaiting Re-arm",
+    "CommsLost": "Comms Lost",
+    # value written by bridges before v1.0.1 (historical data / replay)
+    "ReturnToHome": "Return to Base",
+}
+
+
 def state_map(pairs):
-    """Value mappings for string states."""
+    """Value mappings for string states; display text from STATE_LABELS."""
     return [{"type": "value",
-             "options": {k: {"text": k, "color": v, "index": i}
+             "options": {k: {"text": STATE_LABELS.get(k, k), "color": v,
+                             "index": i}
                          for i, (k, v) in enumerate(pairs)}}]
 
 
@@ -574,7 +658,8 @@ DASHBOARDS = []
 mission_state_mappings = state_map([
     ("Idle", "#4d545c"), ("Autonomous", TILE_OK), ("Remote", "orange"),
     ("Paused", "yellow"),
-    ("StationKeeping", ACCENT), ("ReturnToHome", "orange"),
+    ("StationKeeping", ACCENT), ("ReturnToBase", "orange"),
+    ("ReturnToHome", "orange"),
     ("EnteringRegion", "super-light-blue"), ("AwaitingRearm", "orange"),
     ("CommsLost", "red"), ("Parked", "#6e7680"), ("Completed", "purple"),
 ])
@@ -782,25 +867,14 @@ gps_fix_mappings = [{"type": "value", "options": {
 
 DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
     panel("geomap", "Position & Track",
-          [target(track_query("5s")), target(position_query(), ref="B")],
+          [target(track_query("5s")), target(position_query(), ref="B"),
+           target(geometry_query("route"), ref="C"),
+           target(geometry_query("region"), ref="D")],
           0, 0, 14, 13,
           options={
               "view": {"id": "fit", "zoom": 15},
               "basemap": {"type": "osm-standard", "name": "OSM"},
-              "layers": [{
-                  "type": "route", "name": "Track",
-                  "location": {"mode": "coords", "latitude": "lat",
-                               "longitude": "lon"},
-                  "filterData": {"id": "byRefId", "options": "A"},
-                  "config": {"style": {"color": {"fixed": "orange"},
-                                       "lineWidth": 2, "opacity": 0.8}},
-              }, {
-                  "type": "markers", "name": "Vessel",
-                  "location": {"mode": "coords", "latitude": "lat",
-                               "longitude": "lon"},
-                  "filterData": {"id": "byRefId", "options": "B"},
-                  "config": {"style": VESSEL_MARKER, "showLegend": False},
-              }],
+              "layers": overlay_layers(),
               "tooltip": {"mode": "details"},
           }),
     # Instruments: compass (HDG + COG needles) and SOG meter.
@@ -1146,37 +1220,6 @@ DASHBOARDS.append(dashboard("usv-camera", "Cameras", [
 ], ["camera"]))
 
 # ----------------------------------------------------------- FR-8 Communication
-DASHBOARDS.append(dashboard("usv-comms", "Comms", [
-    stat("Internet", flux("comms", "internet_up", last=True), 0, 0, 4, 4,
-         mappings=updown_map(), text_mode="value", color_mode="background"),
-    stat("Starlink", flux("comms", "starlink_up", last=True), 4, 0, 4, 4,
-         mappings=updown_map(), text_mode="value", color_mode="background"),
-    stat("VPN / Tailscale", flux("comms", "vpn_up", last=True), 8, 0, 4, 4,
-         mappings=updown_map(), text_mode="value", color_mode="background"),
-    stat("Signal K WebSocket", flux("comms", "signalk_ws_up", last=True),
-         12, 0, 4, 4, mappings=updown_map(), text_mode="value",
-         color_mode="background"),
-    stat("Latency", flux("comms", "latency_ms", last=True), 16, 0, 4, 4,
-         unit="ms", decimals=0,
-         thresholds=[(None, OK), (150, "yellow"), (400, "red")],
-         graph_mode="area"),
-    stat("Packet Loss", flux("comms", "packet_loss_pct", last=True), 20, 0, 4, 4,
-         unit="percent", decimals=1,
-         thresholds=[(None, OK), (2, "yellow"), (10, "red")],
-         graph_mode="area"),
-    ts("Latency", [target(flux("comms", "latency_ms"), "latency")],
-       0, 4, 12, 7, unit="ms"),
-    ts("Packet Loss", [target(flux("comms", "packet_loss_pct"), "loss")],
-       12, 4, 12, 7, unit="percent", min_=0),
-    ts("Bandwidth",
-       [target(flux("comms", ["up_mbps", "down_mbps"]))], 0, 11, 12, 7,
-       unit="Mbits"),
-    ts("Telemetry Message Rates",
-       [target(flux("comms", ["moos_msg_rate", "signalk_msg_rate"]))],
-       12, 11, 12, 7),
-], ["comms"]))
-
-# ---------------------------------------------------------- FR-9 System Health
 # Telegraf tags that pick ONE series per host metric; the rest (per-core
 # cpu, loop/device-mapper block devices, the loopback interface, non-root
 # mounts) would otherwise stack as extra series or a "No data" split.
@@ -1214,10 +1257,64 @@ def tele_last(measurement, field, extra=""):
     return tele(measurement, field, extra=extra).replace(AGG, LAST)
 
 
+
+# Link status comes from Telegraf host probes (telegraf.conf), not from the
+# bench simulator: Internet = ICMP to 8.8.8.8, VPN = tailscaled.service,
+# Starlink = ICMP to the dish router (input enabled on vessels only; the
+# tile reads N/A where it is not fitted).
+PING_INTERNET = '  |> filter(fn: (r) => r.url == "8.8.8.8")\n'
+PING_STARLINK = '  |> filter(fn: (r) => r.url == "192.168.100.1")\n'
+UNIT_SERVICE = '  |> filter(fn: (r) => r.name == "tailscaled.service")\n'
+
+
+def probe_tile(title, query, x, down="DOWN", up="UP", no_value=None):
+    return stat(title, query, x, 0, 4, 4, text_mode="value",
+                color_mode="background", no_value=no_value,
+                mappings=[{"type": "value", "options": {
+                    "0": {"text": up, "color": TILE_OK, "index": 0}}},
+                    {"type": "range", "options": {
+                        "from": 1, "to": 99,
+                        "result": {"text": down, "color": "red", "index": 1}}}])
+
+
+DASHBOARDS.append(dashboard("usv-comms", "Comms", [
+    probe_tile("Internet", tele_last("ping", "result_code", extra=PING_INTERNET), 0),
+    probe_tile("Starlink", tele_last("ping", "result_code", extra=PING_STARLINK), 4,
+               no_value="N/A"),
+    probe_tile("VPN / Tailscale",
+               tele_last("systemd_units", "active_code", extra=UNIT_SERVICE), 8),
+    stat("Signal K WebSocket", flux("comms", "signalk_ws_up", last=True),
+         12, 0, 4, 4, mappings=updown_map(), text_mode="value",
+         color_mode="background"),
+    stat("Latency", tele_last("ping", "average_response_ms", extra=PING_INTERNET),
+         16, 0, 4, 4, unit="ms", decimals=0,
+         thresholds=[(None, OK), (150, "yellow"), (400, "red")],
+         graph_mode="area"),
+    stat("Packet Loss", tele_last("ping", "percent_packet_loss", extra=PING_INTERNET),
+         20, 0, 4, 4, unit="percent", decimals=1,
+         thresholds=[(None, OK), (2, "yellow"), (10, "red")],
+         graph_mode="area"),
+    ts("Latency", [target(tele("ping", "average_response_ms", extra=PING_INTERNET),
+                          "latency")],
+       0, 4, 12, 7, unit="ms"),
+    ts("Packet Loss", [target(tele("ping", "percent_packet_loss", extra=PING_INTERNET),
+                              "loss")],
+       12, 4, 12, 7, unit="percent", min_=0),
+    ts("Bandwidth",
+       [target(flux("comms", ["up_mbps", "down_mbps"]))], 0, 11, 12, 7,
+       unit="Mbits"),
+    ts("Telemetry Message Rates",
+       [target(flux("comms", ["moos_msg_rate", "signalk_msg_rate"]))],
+       12, 11, 12, 7),
+], ["comms"]))
+
+# ---------------------------------------------------------- FR-9 System Health
+
+
 def service_tile(title, service, x):
     return stat(title, tele_last("net_response", "result_code",
                                  extra=f'  |> filter(fn: (r) => r.service == "{service}")'),
-                x, 0, 3, 3, text_mode="value", color_mode="background",
+                x, 0, 3, 4, text_mode="value", color_mode="background",
                 mappings=[{"type": "value", "options": {
                     "0": {"text": "UP", "color": TILE_OK, "index": 0}}},
                     {"type": "range", "options": {
@@ -1225,49 +1322,46 @@ def service_tile(title, service, x):
                         "result": {"text": "DOWN", "color": "red", "index": 1}}}])
 
 
-# Single screen: 8 equal tiles (CPU / GPU / RAM / Disk / CPU temp / load /
-# Signal K / MOOS), six trend charts, service table. GPU utilisation comes
+# Single screen: 8 equal tiles (CPU / GPU / RAM / Disk gauges, CPU temp,
+# load, Signal K / MOOS status), six trend charts, service table. GPU utilisation comes
 # from Telegraf's nvidia_smi input (see telegraf.conf); the tile reads
 # "No data" on hosts without a supported GPU.
 DASHBOARDS.append(dashboard("usv-system", "System", [
-    stat("CPU", tele_last("cpu", "usage_user"), 0, 0, 3, 3, unit="percent",
-         decimals=0, graph_mode="area",
-         thresholds=[(None, OK), (70, "yellow"), (90, "red")]),
-    stat("GPU", tele_last("nvidia_smi", "utilization_gpu"), 3, 0, 3, 3,
-         unit="percent", decimals=0, graph_mode="area",
-         thresholds=[(None, OK), (70, "yellow"), (90, "red")]),
-    stat("RAM", tele_last("mem", "used_percent"), 6, 0, 3, 3, unit="percent",
-         decimals=0, graph_mode="area",
-         thresholds=[(None, OK), (75, "yellow"), (90, "red")]),
-    stat("Disk", tele_last("disk", "used_percent"), 9, 0, 3, 3, unit="percent",
-         decimals=0, thresholds=[(None, OK), (75, "yellow"), (90, "red")]),
-    stat("CPU Temp", tele_last("temp", "temp"), 12, 0, 3, 3, unit="celsius",
+    gauge("CPU", tele_last("cpu", "usage_user"), 0, 0, 3, 4,
+          thresholds=[(None, OK), (70, "yellow"), (90, "red")]),
+    gauge("GPU", tele_last("nvidia_smi", "utilization_gpu"), 3, 0, 3, 4,
+          thresholds=[(None, OK), (70, "yellow"), (90, "red")]),
+    gauge("RAM", tele_last("mem", "used_percent"), 6, 0, 3, 4,
+          thresholds=[(None, OK), (75, "yellow"), (90, "red")]),
+    gauge("Disk", tele_last("disk", "used_percent"), 9, 0, 3, 4,
+          thresholds=[(None, OK), (75, "yellow"), (90, "red")]),
+    stat("CPU Temp", tele_last("temp", "temp"), 12, 0, 3, 4, unit="celsius",
          decimals=0, thresholds=[(None, OK), (70, "yellow"), (85, "red")]),
-    stat("Load (1m)", tele_last("system", "load1"), 15, 0, 3, 3, decimals=2),
+    stat("Load (1m)", tele_last("system", "load1"), 15, 0, 3, 4, decimals=2),
     service_tile("Signal K", "signalk", 18),
     service_tile("MOOS", "moos", 21),
     ts("CPU", [target(tele("cpu", "usage_user"), "user"),
                target(tele("cpu", "usage_system"), "system", ref="B")],
-       0, 3, 8, 6, unit="percent", min_=0, max_=100),
+       0, 4, 8, 6, unit="percent", min_=0, max_=100),
     ts("GPU", [target(tele("nvidia_smi", "utilization_gpu"), "util %"),
                target(tele("nvidia_smi", "temperature_gpu"), "temp °C", ref="B")],
-       8, 3, 8, 6, unit="percent", min_=0, max_=100,
+       8, 4, 8, 6, unit="percent", min_=0, max_=100,
        overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
                    "properties": [{"id": "unit", "value": "celsius"},
                                   {"id": "custom.axisPlacement",
                                    "value": "right"}]}]),
     ts("Memory", [target(tele("mem", "used_percent"), "used %")],
-       16, 3, 8, 6, unit="percent", min_=0, max_=100),
+       16, 4, 8, 6, unit="percent", min_=0, max_=100),
     ts("Disk I/O", [target(tele("diskio", "read_bytes", rate=True), "read"),
                     target(tele("diskio", "write_bytes", rate=True),
                            "write", ref="B")],
-       0, 9, 8, 6, unit="Bps"),
+       0, 10, 8, 6, unit="Bps"),
     ts("Network I/O", [target(tele("net", "bytes_recv", rate=True), "rx"),
                        target(tele("net", "bytes_sent", rate=True),
                               "tx", ref="B")],
-       8, 9, 8, 6, unit="Bps"),
+       8, 10, 8, 6, unit="Bps"),
     ts("CPU Temp", [target(tele("temp", "temp"), "°C")],
-       16, 9, 8, 6, unit="celsius"),
+       16, 10, 8, 6, unit="celsius"),
     panel("table", "Services (systemd)",
           [target('from(bucket: "telemetry")\n'
                   '  |> range(start: -1m)\n'
@@ -1275,7 +1369,7 @@ DASHBOARDS.append(dashboard("usv-system", "System", [
                   'and r._field == "active_code")\n'
                   '  |> last()\n'
                   '  |> keep(columns: ["name", "active", "sub", "_value"])\n')],
-          0, 15, 24, 6, options={"showHeader": True},
+          0, 16, 24, 5, options={"showHeader": True},
           mappings=[{"type": "value", "options": {
               "0": {"text": "active", "color": OK, "index": 0}}},
               {"type": "range", "options": {
@@ -1295,24 +1389,13 @@ DASHBOARDS.append(dashboard("usv-replay", "Replay", [
               "bucket. Use the **Mission events** annotations to locate "
               "waypoint hits and state changes.")}),
     panel("geomap", "GPS Track",
-          [target(track_query("10s")), target(position_query(), ref="B")],
+          [target(track_query("10s")), target(position_query(), ref="B"),
+           target(geometry_query("route"), ref="C"),
+           target(geometry_query("region"), ref="D")],
           0, 2, 14, 9,
           options={"view": {"id": "fit", "zoom": 15},
                    "basemap": {"type": "osm-standard", "name": "OSM"},
-                   "layers": [{"type": "route", "name": "Track",
-                               "location": {"mode": "coords",
-                                            "latitude": "lat",
-                                            "longitude": "lon"},
-                               "filterData": {"id": "byRefId", "options": "A"},
-                               "config": {"style": {"color": {"fixed": "orange"},
-                                                    "lineWidth": 2}}},
-                              {"type": "markers", "name": "Last position",
-                               "location": {"mode": "coords",
-                                            "latitude": "lat",
-                                            "longitude": "lon"},
-                               "filterData": {"id": "byRefId", "options": "B"},
-                               "config": {"style": VESSEL_MARKER,
-                                          "showLegend": False}}]}),
+                   "layers": overlay_layers()}),
     panel("state-timeline", "Mission State",
           [target(flux("mission_state", "state", every="30s", fn="last"))],
           14, 2, 10, 4, mappings=mission_state_mappings,
@@ -1476,12 +1559,19 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms", [
          mappings=updown_map("DISCONNECTED", "CONNECTED"), text_mode="value", color_mode="background"),
     stat("MOOS Rate", flux("comms", "moos_msg_rate", last=True), 8, 14, 4, 4,
          decimals=0, thresholds=[(None, "red"), (1, "yellow"), (10, TILE_OK)], color_mode="background"),
-    stat("Comms Link", flux("comms", "internet_up", last=True), 12, 14, 4, 4,
-         mappings=updown_map("FAILED", "OK"), text_mode="value", color_mode="background"),
-    stat("Latency", flux("comms", "latency_ms", last=True), 16, 14, 4, 4,
+    stat("Comms Link", tele_last("ping", "result_code", extra=PING_INTERNET),
+         12, 14, 4, 4, text_mode="value", color_mode="background",
+         mappings=[{"type": "value", "options": {
+             "0": {"text": "OK", "color": TILE_OK, "index": 0}}},
+             {"type": "range", "options": {
+                 "from": 1, "to": 99,
+                 "result": {"text": "FAILED", "color": "red", "index": 1}}}]),
+    stat("Latency", tele_last("ping", "average_response_ms", extra=PING_INTERNET),
+         16, 14, 4, 4,
          unit="ms", decimals=0,
          thresholds=[(None, TILE_OK), (150, "yellow"), (400, "red")], color_mode="background"),
-    stat("Packet Loss", flux("comms", "packet_loss_pct", last=True), 20, 14, 4, 4,
+    stat("Packet Loss", tele_last("ping", "percent_packet_loss", extra=PING_INTERNET),
+         20, 14, 4, 4,
          unit="percent", decimals=1,
          thresholds=[(None, TILE_OK), (2, "yellow"), (10, "red")], color_mode="background"),
     # Autonomy / mission safety row (Alpha mission).

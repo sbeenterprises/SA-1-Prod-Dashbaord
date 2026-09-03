@@ -152,7 +152,9 @@
                 },
                 "rotation": {
                   "field": "heading",
-                  "mode": "field",
+                  "mode": "mod",
+                  "min": -360,
+                  "max": 360,
                   "fixed": 0
                 },
                 "text": {
@@ -254,39 +256,44 @@
                   "index": 3
                 },
                 "StationKeeping": {
-                  "text": "StationKeeping",
+                  "text": "Station Keeping",
                   "color": "#00bcd4",
                   "index": 4
                 },
-                "ReturnToHome": {
-                  "text": "ReturnToHome",
+                "ReturnToBase": {
+                  "text": "Return to Base",
                   "color": "orange",
                   "index": 5
                 },
-                "EnteringRegion": {
-                  "text": "EnteringRegion",
-                  "color": "super-light-blue",
+                "ReturnToHome": {
+                  "text": "Return to Base",
+                  "color": "orange",
                   "index": 6
                 },
-                "AwaitingRearm": {
-                  "text": "AwaitingRearm",
-                  "color": "orange",
+                "EnteringRegion": {
+                  "text": "Entering Region",
+                  "color": "super-light-blue",
                   "index": 7
                 },
-                "CommsLost": {
-                  "text": "CommsLost",
-                  "color": "red",
+                "AwaitingRearm": {
+                  "text": "Awaiting Re-arm",
+                  "color": "orange",
                   "index": 8
+                },
+                "CommsLost": {
+                  "text": "Comms Lost",
+                  "color": "red",
+                  "index": 9
                 },
                 "Parked": {
                   "text": "Parked",
                   "color": "#6e7680",
-                  "index": 9
+                  "index": 10
                 },
                 "Completed": {
                   "text": "Completed",
                   "color": "purple",
-                  "index": 10
+                  "index": 11
                 }
               }
             }

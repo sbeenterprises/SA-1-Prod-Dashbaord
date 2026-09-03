@@ -79,7 +79,7 @@ Priority order (first match wins), mirroring the semantics documented in
 | 4 | `MOOS_MANUAL_OVERRIDE` | `Parked` | Helm parked; thrust actively zeroed |
 | 5 | `PAUSE` | `Paused` | Zero-speed hold (pause behaviors active) |
 | 6 | `STATIONING` | `StationKeeping` | Operator station-keep or mid-route station waypoint |
-| 7 | `RETURN` | `ReturnToHome` | `waypt_return` driving to base |
+| 7 | `RETURN` | `ReturnToBase` | `waypt_return` driving to base |
 | 8 | `WAYPOINT` and gate `closed` | `EnteringRegion` | Start-outside latch: opr24 recovers the boat inside before the survey may run |
 | 9 | `WAYPOINT` and not `MISSION_ARMED` | `AwaitingRearm` | Link back but no operator re-arm — the explicit no-silent-resume hold |
 | 10 | `WAYPOINT` | `Autonomous` | Survey running |

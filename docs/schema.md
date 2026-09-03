@@ -40,7 +40,7 @@ and yield automatically to any external publisher of the legacy
 
 ### mission_state (FR-1/FR-3) — source: MOOS bridge (strings)
 mission_name, mission_id, route_name, state (derived: Idle | Autonomous |
-Remote | Paused | StationKeeping | ReturnToHome | EnteringRegion |
+Remote | Paused | StationKeeping | ReturnToBase | EnteringRegion |
 AwaitingRearm | CommsLost | Parked | Completed), state_external (a
 MISSION_STATE published by another app, if any), active_behavior (parsed
 from IVPHELM_SUMMARY: the helm's running behavior set; the per-iteration
@@ -59,6 +59,16 @@ the built-in return route, or the id's first block when the lookup fails;
 mission_name comes from the grafana_bridge ProcessConfig (default: the MOOS
 Community name).
 See docs/alpha-mission-integration.md for the state derivation rules.
+
+### geometry (map overlays) — source: MOOS bridge, on change
+Vertex sets for the Navigation / Replay maps, tags `kind` (route |
+region) and `idx` (zero-padded vertex index), fields lat, lon, seq. The
+bridge converts the MOOS local grid (VIEW_SEGLIST of the survey/return
+behavior, OPR_POLY_ACTUAL) to geographic coordinates with the mission
+file's LatOrigin/LongOrigin, deletes the previous set of the same kind
+and writes all vertices with one timestamp, so `last()` per idx is
+exactly the current geometry. The region outline is closed (first vertex
+repeated). "NONE" clears the set. Written only when the datum is present.
 
 ### autonomy (FR-1/FR-3/FR-11) — source: MOOS bridge, 1 Hz snapshot
 Numeric mirrors of the Alpha mission flags so they can be graphed and

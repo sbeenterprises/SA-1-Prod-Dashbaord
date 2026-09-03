@@ -145,6 +145,22 @@
           },
           "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"lat\" or r._field == \"lon\" or r._field == \"heading\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> pivot(rowKey: [\"vessel\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.lat and exists r.lon)\n  |> keep(columns: [\"vessel\", \"lat\", \"lon\", \"heading\"])\n",
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: -90d)\n  |> filter(fn: (r) => r._measurement == \"geometry\" and r.kind == \"route\")\n  |> filter(fn: (r) => r._field == \"lat\" or r._field == \"lon\" or r._field == \"seq\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> pivot(rowKey: [\"idx\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.lat and exists r.lon)\n  |> sort(columns: [\"seq\"])\n  |> keep(columns: [\"seq\", \"lat\", \"lon\"])\n",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: -90d)\n  |> filter(fn: (r) => r._measurement == \"geometry\" and r.kind == \"region\")\n  |> filter(fn: (r) => r._field == \"lat\" or r._field == \"lon\" or r._field == \"seq\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> pivot(rowKey: [\"idx\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.lat and exists r.lon)\n  |> sort(columns: [\"seq\"])\n  |> keep(columns: [\"seq\", \"lat\", \"lon\"])\n",
+          "refId": "D"
         }
       ],
       "fieldConfig": {
@@ -167,6 +183,90 @@
         "layers": [
           {
             "type": "route",
+            "name": "Operating region",
+            "location": {
+              "mode": "coords",
+              "latitude": "lat",
+              "longitude": "lon"
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "D"
+            },
+            "config": {
+              "style": {
+                "color": {
+                  "fixed": "#00bcd4"
+                },
+                "lineWidth": 3,
+                "opacity": 0.9
+              }
+            }
+          },
+          {
+            "type": "route",
+            "name": "Planned route",
+            "location": {
+              "mode": "coords",
+              "latitude": "lat",
+              "longitude": "lon"
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "C"
+            },
+            "config": {
+              "style": {
+                "color": {
+                  "fixed": "#2e7d32"
+                },
+                "lineWidth": 2,
+                "opacity": 0.9
+              }
+            }
+          },
+          {
+            "type": "markers",
+            "name": "Waypoints",
+            "location": {
+              "mode": "coords",
+              "latitude": "lat",
+              "longitude": "lon"
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "C"
+            },
+            "config": {
+              "style": {
+                "size": {
+                  "fixed": 6
+                },
+                "color": {
+                  "fixed": "#2e7d32"
+                },
+                "opacity": 1,
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "text": {
+                  "field": "seq",
+                  "mode": "field"
+                },
+                "textConfig": {
+                  "fontSize": 11,
+                  "offsetX": 0,
+                  "offsetY": -12,
+                  "textAlign": "center",
+                  "textBaseline": "middle"
+                }
+              },
+              "showLegend": false
+            }
+          },
+          {
+            "type": "route",
             "name": "Track",
             "location": {
               "mode": "coords",
@@ -180,15 +280,16 @@
             "config": {
               "style": {
                 "color": {
-                  "fixed": "orange"
+                  "fixed": "#e53935"
                 },
-                "lineWidth": 2
+                "lineWidth": 2,
+                "opacity": 0.9
               }
             }
           },
           {
             "type": "markers",
-            "name": "Last position",
+            "name": "Vessel",
             "location": {
               "mode": "coords",
               "latitude": "lat",
@@ -213,7 +314,9 @@
                 },
                 "rotation": {
                   "field": "heading",
-                  "mode": "field",
+                  "mode": "mod",
+                  "min": -360,
+                  "max": 360,
                   "fixed": 0
                 },
                 "text": {
@@ -288,39 +391,44 @@
                   "index": 3
                 },
                 "StationKeeping": {
-                  "text": "StationKeeping",
+                  "text": "Station Keeping",
                   "color": "#00bcd4",
                   "index": 4
                 },
-                "ReturnToHome": {
-                  "text": "ReturnToHome",
+                "ReturnToBase": {
+                  "text": "Return to Base",
                   "color": "orange",
                   "index": 5
                 },
-                "EnteringRegion": {
-                  "text": "EnteringRegion",
-                  "color": "super-light-blue",
+                "ReturnToHome": {
+                  "text": "Return to Base",
+                  "color": "orange",
                   "index": 6
                 },
-                "AwaitingRearm": {
-                  "text": "AwaitingRearm",
-                  "color": "orange",
+                "EnteringRegion": {
+                  "text": "Entering Region",
+                  "color": "super-light-blue",
                   "index": 7
                 },
-                "CommsLost": {
-                  "text": "CommsLost",
-                  "color": "red",
+                "AwaitingRearm": {
+                  "text": "Awaiting Re-arm",
+                  "color": "orange",
                   "index": 8
+                },
+                "CommsLost": {
+                  "text": "Comms Lost",
+                  "color": "red",
+                  "index": 9
                 },
                 "Parked": {
                   "text": "Parked",
                   "color": "#6e7680",
-                  "index": 9
+                  "index": 10
                 },
                 "Completed": {
                   "text": "Completed",
                   "color": "purple",
-                  "index": 10
+                  "index": 11
                 }
               }
             }

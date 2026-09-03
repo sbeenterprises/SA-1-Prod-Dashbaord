@@ -89,6 +89,22 @@ chosen theme. To switch in place press `c` then `t`; the lasting default is
 Profile -> Preferences -> Interface theme (or Administration -> Default
 preferences for every user).
 
+## Map overlays
+The Navigation and Replay maps draw the operating region (cyan outline),
+the planned route with numbered waypoints (green), the vessel's track
+(red) and the vessel itself (Swiftships hull, rotated by heading). Route
+and region come from the helm (VIEW_SEGLIST, OPR_POLY_ACTUAL) converted
+with the mission file's `LatOrigin` / `LongOrigin`; without that datum
+the overlays stay empty and nothing else is affected.
+
+## Communications probes
+The Comms dashboard's Internet, latency and packet-loss values come from
+Telegraf's ICMP probe to 8.8.8.8, the VPN tile from `tailscaled.service`
+(Telegraf `systemd_units`), and the Starlink tile from a second ICMP
+probe to the dish router (192.168.100.1) that is shipped commented out in
+`telegraf/telegraf.conf`; enable it on vessels with a Starlink, the tile
+reads N/A elsewhere.
+
 ## Units
 Speeds are knots everywhere (the bridges convert MOOS m/s). Distances use
 fixed units chosen per panel: metres for approach distance, cross-track

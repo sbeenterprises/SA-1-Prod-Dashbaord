@@ -89,7 +89,7 @@
     },
     {
       "id": 122,
-      "type": "stat",
+      "type": "gauge",
       "title": "CPU",
       "datasource": {
         "type": "influxdb",
@@ -99,7 +99,7 @@
         "x": 0,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -117,7 +117,8 @@
             "mode": "thresholds"
           },
           "unit": "percent",
-          "decimals": 0,
+          "min": 0,
+          "max": 100,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -143,20 +144,12 @@
           "calcs": [
             "lastNotNull"
           ]
-        },
-        "textMode": "auto",
-        "graphMode": "area",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 26,
-          "titleSize": 12
         }
       }
     },
     {
       "id": 123,
-      "type": "stat",
+      "type": "gauge",
       "title": "GPU",
       "datasource": {
         "type": "influxdb",
@@ -166,7 +159,7 @@
         "x": 3,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -184,7 +177,8 @@
             "mode": "thresholds"
           },
           "unit": "percent",
-          "decimals": 0,
+          "min": 0,
+          "max": 100,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -210,20 +204,12 @@
           "calcs": [
             "lastNotNull"
           ]
-        },
-        "textMode": "auto",
-        "graphMode": "area",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 26,
-          "titleSize": 12
         }
       }
     },
     {
       "id": 124,
-      "type": "stat",
+      "type": "gauge",
       "title": "RAM",
       "datasource": {
         "type": "influxdb",
@@ -233,7 +219,7 @@
         "x": 6,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -251,7 +237,8 @@
             "mode": "thresholds"
           },
           "unit": "percent",
-          "decimals": 0,
+          "min": 0,
+          "max": 100,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -277,20 +264,12 @@
           "calcs": [
             "lastNotNull"
           ]
-        },
-        "textMode": "auto",
-        "graphMode": "area",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 26,
-          "titleSize": 12
         }
       }
     },
     {
       "id": 125,
-      "type": "stat",
+      "type": "gauge",
       "title": "Disk",
       "datasource": {
         "type": "influxdb",
@@ -300,7 +279,7 @@
         "x": 9,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -318,7 +297,8 @@
             "mode": "thresholds"
           },
           "unit": "percent",
-          "decimals": 0,
+          "min": 0,
+          "max": 100,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -344,14 +324,6 @@
           "calcs": [
             "lastNotNull"
           ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 26,
-          "titleSize": 12
         }
       }
     },
@@ -367,7 +339,7 @@
         "x": 12,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -417,7 +389,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 34,
           "titleSize": 12
         }
       }
@@ -434,7 +406,7 @@
         "x": 15,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -475,7 +447,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 34,
           "titleSize": 12
         }
       }
@@ -492,7 +464,7 @@
         "x": 18,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -556,7 +528,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 34,
           "titleSize": 12
         }
       }
@@ -573,7 +545,7 @@
         "x": 21,
         "y": 2,
         "w": 3,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -637,7 +609,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 34,
           "titleSize": 12
         }
       }
@@ -652,7 +624,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 5,
+        "y": 6,
         "w": 8,
         "h": 6
       },
@@ -748,7 +720,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 5,
+        "y": 6,
         "w": 8,
         "h": 6
       },
@@ -860,7 +832,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 5,
+        "y": 6,
         "w": 8,
         "h": 6
       },
@@ -932,7 +904,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 11,
+        "y": 12,
         "w": 8,
         "h": 6
       },
@@ -1026,7 +998,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 11,
+        "y": 12,
         "w": 8,
         "h": 6
       },
@@ -1120,7 +1092,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 11,
+        "y": 12,
         "w": 8,
         "h": 6
       },
@@ -1190,9 +1162,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 17,
+        "y": 18,
         "w": 24,
-        "h": 6
+        "h": 5
       },
       "targets": [
         {

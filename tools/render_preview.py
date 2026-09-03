@@ -367,7 +367,7 @@ def svg_timeline(w, h):
             ("CommsLost", 0.06, "RED"),
             ("AwaitingRearm", 0.06, AMBER),
             ("Autonomous", 0.26, "OK"),
-            ("ReturnToHome", 0.09, AMBER),
+            ("ReturnToBase", 0.09, AMBER),
             ("Completed", 0.065, PURPLE)]
     p = [f'<svg width="{w}" height="{h}">']
     x = 8.0

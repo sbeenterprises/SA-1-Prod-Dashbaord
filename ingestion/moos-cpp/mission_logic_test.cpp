@@ -107,7 +107,7 @@ static void test_state_machine() {
     // Operator requests return-to-base.
     f.waypoint = false;
     f.returning = true;
-    CHECK_EQ_STR(DeriveMissionState(f), "ReturnToHome");
+    CHECK_EQ_STR(DeriveMissionState(f), "ReturnToBase");
 
     // Pause gates waypt_return too (condition PAUSE=false).
     f.pause = true;
@@ -141,6 +141,24 @@ static void test_helm_behaviors_fallback() {
     CHECK_EQ_STR(ParseHelmBehaviors("iter=1,running_bhvs=none,active_bhvs=none"), "");
     CHECK_EQ_STR(ParseHelmBehaviors("iter=1,running_bhvs=a$1$1,active_bhvs=b$1$1"), "a");
     CHECK_EQ_STR(ParseHelmBehaviors("iter=1,active_bhvs=b$1$1"), "b");
+}
+
+static void test_geometry() {
+    auto pts = ParsePts("pts={-6862,302.2:-6762.7,261.5:-6517.9,472.2},label=alpha_waypt_survey");
+    CHECK(pts.size() == 3);
+    CHECK(std::fabs((pts[1].x) - (-6762.7)) < 1e-9);
+    CHECK(std::fabs((pts[2].y) - (472.2)) < 1e-9);
+    CHECK(ParsePts("NONE").empty());
+    CHECK(ParsePts("pts={}").empty());
+    CHECK(ParsePts("pts={1,2:garbage}").empty());
+    // Datum of s1_morgan_city: 1000 m north ~ 0.00904 deg, 1000 m east
+    // ~ 0.01035 deg at 29.7 N.
+    LatLon ll = LocalToLatLon(1000.0, 1000.0, 29.71970895, -91.14705165);
+    CHECK(std::fabs((ll.lat - 29.71970895) - (0.00904)) < 0.00005);
+    CHECK(std::fabs((ll.lon + 91.14705165) - (0.01035)) < 0.00005);
+    LatLon o = LocalToLatLon(0.0, 0.0, 29.7, -91.1);
+    CHECK(std::fabs((o.lat) - (29.7)) < 1e-12);
+    CHECK(std::fabs((o.lon) - (-91.1)) < 1e-12);
 }
 
 static void test_route_naming() {
@@ -313,7 +331,7 @@ static void test_comms_phases() {
     f.comms_lost = "rtb";                     // iWebSocket posts RETURN=true
     f.stationing = false;
     f.returning = true;
-    CHECK_EQ_STR(DeriveMissionState(f), "ReturnToHome");
+    CHECK_EQ_STR(DeriveMissionState(f), "ReturnToBase");
     // awaiting_rearm only once the link is back and the hold is released
     f.comms_lost = "false";
     f.returning = false;
@@ -396,6 +414,7 @@ int main() {
     test_rate_limiter();
     test_contact_tracker();
     test_route_naming();
+    test_geometry();
     test_helm_behaviors_fallback();
 
     std::printf("mission_logic_test: %d passed, %d failed\n", g_pass, g_fail);

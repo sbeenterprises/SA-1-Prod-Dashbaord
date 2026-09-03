@@ -3,6 +3,29 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [Unreleased]
+
+### Fixed
+- Vessel markers on the Fleet, Navigation and Replay maps did not render:
+  the heading rotation dimension lacked the `max` Grafana needs
+  (`value % max`), giving a NaN rotation that the WebGL marker layer
+  silently dropped.
+
+### Added
+- Navigation and Replay maps draw the operating region, the planned
+  route with numbered waypoints and the red track around the vessel
+  hull; `grafana_bridge` publishes the helm's route / region vertices in
+  geographic coordinates (`geometry` measurement, mission datum).
+- Comms dashboard: Internet, latency, packet loss, VPN (tailscaled) and
+  Starlink tiles read Telegraf host probes instead of simulator fields.
+
+### Changed
+- System dashboard: CPU / GPU / RAM / Disk back as gauges.
+- Mission state `ReturnToHome` renamed `ReturnToBase` (the mission's own
+  term); state tiles and timelines show operator wording ("Return to
+  Base", "Station Keeping", "Awaiting Re-arm", "Comms Lost", "Entering
+  Region"). Data written before this change still maps to the new label.
+
 ## [1.0.0] - 2026-09-03 — simulation baseline
 
 First baseline validated end to end on the simulation host (usv01:

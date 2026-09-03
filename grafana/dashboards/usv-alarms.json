@@ -811,7 +811,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"internet_up\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"result_code\")\n  |> filter(fn: (r) => r.url == \"8.8.8.8\")\n\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -834,13 +834,20 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "FAILED",
-                  "color": "red",
-                  "index": 0
-                },
-                "1": {
                   "text": "OK",
                   "color": "#175d8d",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1,
+                "to": 99,
+                "result": {
+                  "text": "FAILED",
+                  "color": "red",
                   "index": 1
                 }
               }
@@ -885,7 +892,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"latency_ms\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"average_response_ms\")\n  |> filter(fn: (r) => r.url == \"8.8.8.8\")\n\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -952,7 +959,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"packet_loss_pct\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"percent_packet_loss\")\n  |> filter(fn: (r) => r.url == \"8.8.8.8\")\n\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -1062,39 +1069,44 @@
                   "index": 3
                 },
                 "StationKeeping": {
-                  "text": "StationKeeping",
+                  "text": "Station Keeping",
                   "color": "#00bcd4",
                   "index": 4
                 },
-                "ReturnToHome": {
-                  "text": "ReturnToHome",
+                "ReturnToBase": {
+                  "text": "Return to Base",
                   "color": "orange",
                   "index": 5
                 },
-                "EnteringRegion": {
-                  "text": "EnteringRegion",
-                  "color": "super-light-blue",
+                "ReturnToHome": {
+                  "text": "Return to Base",
+                  "color": "orange",
                   "index": 6
                 },
-                "AwaitingRearm": {
-                  "text": "AwaitingRearm",
-                  "color": "orange",
+                "EnteringRegion": {
+                  "text": "Entering Region",
+                  "color": "super-light-blue",
                   "index": 7
                 },
-                "CommsLost": {
-                  "text": "CommsLost",
-                  "color": "red",
+                "AwaitingRearm": {
+                  "text": "Awaiting Re-arm",
+                  "color": "orange",
                   "index": 8
+                },
+                "CommsLost": {
+                  "text": "Comms Lost",
+                  "color": "red",
+                  "index": 9
                 },
                 "Parked": {
                   "text": "Parked",
                   "color": "#6e7680",
-                  "index": 9
+                  "index": 10
                 },
                 "Completed": {
                   "text": "Completed",
                   "color": "purple",
-                  "index": 10
+                  "index": 11
                 }
               }
             }

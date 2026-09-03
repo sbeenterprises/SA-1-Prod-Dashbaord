@@ -28,7 +28,9 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 class H(BaseHTTPRequestHandler):
     def do_POST(self):
         n = int(self.headers.get("Content-Length", 0))
-        open("$LINES", "a").write(self.rfile.read(n).decode() + "\n")
+        body = self.rfile.read(n).decode()
+        target = "$TMP/deletes.txt" if self.path.startswith("/api/v2/delete") else "$LINES"
+        open(target, "a").write(body + "\n")
         self.send_response(204); self.end_headers()
     def log_message(self, *a): pass
 HTTPServer(("127.0.0.1", 8086), H).serve_forever()
@@ -95,8 +97,8 @@ have = {tuple(l.split()) for l in open(produced_file) if l.strip()}
 # produced too; the live bridge run below is skipped when MOOSDB is absent.
 src = open(f"{repo}/ingestion/moos-cpp/moos_bridge.cpp").read()
 moos = set(re.findall(r'\{"(\w+)",\s*"(\w+)"(?:,|\})', src))
-moos |= set(re.findall(r'(?:str_)?field\("(\w+)",\s*"",\s*"(\w+)"', src))
-external = {"cpu","mem","disk","diskio","net","temp","system","nvidia_smi","net_response","systemd_units","canbus_pgn"}
+moos |= set(re.findall(r'(?:str_)?field\("(\w+)",\s*[^,]+,\s*"(\w+)"', src))
+external = {"cpu","mem","disk","diskio","net","temp","system","nvidia_smi","ping","net_response","systemd_units","canbus_pgn"}
 missing = sorted((m,f) for m,f in want if m not in external and (m,f) not in have and (m,f) not in moos)
 print(f"  dashboard pairs: {len(want)} | simulator emits: {len(have)} | moos bridge maps: {len(moos)} | telegraf-sourced: skipped")
 if missing:
@@ -187,6 +189,8 @@ if command -v MOOSDB >/dev/null && command -v umm >/dev/null; then
 ServerHost = localhost
 ServerPort = 9010
 Community  = usv-smoke
+LatOrigin  = 29.71970895
+LongOrigin = -91.14705165
 ProcessConfig = grafana_bridge
 {
   AppTick   = 10
@@ -240,6 +244,8 @@ EOF
       ENGINE_SPEED=1850 ENGINE_COOLANT_TEMP=82 ID_ROUTE=R-17 \
       ARRIVAL_STATE=decelerating CRASH_STOP=true \
       'NODE_REPORT=NAME=contato_7,TYPE=ship,TIME=1,X=300,Y=400,SPD=5,HDG=90'
+    sleep 1
+    P 'OPR_POLY_ACTUAL=pts={-100,-100:100,-100:100,100:-100,100}'
     sleep 3
   fi
   kill $DB 2>/dev/null; pkill -f moos_bridge 2>/dev/null; stop_stub
@@ -257,6 +263,16 @@ EOF
     grep -q 'state="AwaitingRearm"' "$LINES"  && ok "link back w/o re-arm -> AwaitingRearm" || bad "derived state AwaitingRearm missing"
     grep -q "mission,.* dist_to_waypoint=650" "$LINES" && ok "DIST_TO_NEXT_WPT -> mission.dist_to_waypoint" || bad "DIST_TO_NEXT_WPT not mapped"
     grep -q "mission,.* waypoints_total=5" "$LINES"    && ok "VIEW_SEGLIST -> waypoints_total=5"            || bad "seglist waypoint count missing"
+    # Map overlays: route vertices in lat/lon from the mission datum, region
+    # polygon closed (5 vertices for a 4-corner box), stale set deleted first.
+    [ "$(grep -c 'geometry,vessel=usv-moos,kind=route,idx=' "$LINES")" -ge 15 ] \
+      && ok "VIEW_SEGLIST -> geometry route vertices (lat/lon/seq)" || bad "route geometry missing"
+    grep -q 'geometry,vessel=usv-moos,kind=region,idx=004 ' "$LINES" \
+      && ok "OPR_POLY_ACTUAL -> closed region outline" || bad "region geometry missing/not closed"
+    grep -q 'kind=route,idx=001 lat=29.7[0-9]*' "$LINES" \
+      && ok "route vertex converted with the mission datum" || bad "datum conversion missing"
+    grep -q 'kind=\\"region\\" AND vessel=\\"usv-moos\\"' "$TMP/deletes.txt" 2>/dev/null \
+      && ok "previous geometry set deleted before rewrite" || bad "geometry delete not issued"
     grep -q "autonomy,.* comms_lost=1" "$LINES"        && ok "autonomy.comms_lost flag written"             || bad "autonomy.comms_lost missing"
     grep -q "autonomy,.* awaiting_rearm=1" "$LINES"    && ok "autonomy.awaiting_rearm hold visible"         || bad "awaiting_rearm missing"
     grep -q "autonomy,.* geofence_breached=1" "$LINES" && ok "OPR_BREACHED -> geofence_breached=1"          || bad "geofence level missing"

@@ -23,7 +23,7 @@ Interface theme.
 | Dashboard | What you watch |
 |---|---|
 | Mission | Status wall (mission state, helm, armed, operator link, geofence, all-stop, arrival, obstacles), readouts (mission, route name, elapsed, ETA, waypoint n of m, remaining, distance to waypoint, distance traveled in nm), progress bar, approach profile, autonomy flags, state timeline, mission events |
-| Navigation | Live map + track, compass (HDG/COG needles), speed meter, GPS fix and satellites, lat/lon, KPI strip (SOG, COG, heading, XTE, distance to WP, HDOP, depth, roll/pitch), trends |
+| Navigation | Live map (operating region in cyan, planned route with numbered waypoints in green, track in red, vessel hull rotated by heading), compass (HDG/COG needles), speed meter, GPS fix and satellites, lat/lon, KPI strip (SOG, COG, heading, XTE, distance to WP, HDOP, depth, roll/pitch), trends |
 | Autopilot | Helm state, all-stop, station keeping, entry gate, re-arm hold, remote control, corridor, crash stop; active behaviors, heading/speed error, rudder/throttle commands, speed cap, next turn; rudder/throttle/heading-error instruments; desired vs actual heading; speed governor (desired / cap / commanded / actual) |
 | Vessel Health | Instrument cluster (tachometer, coolant, oil pressure, fuel, battery volts, SOC), engine and electrical tiles, trends |
 | CAN Bus | Utilization, msgs/s, error/dropped frames, PGN table |
@@ -45,7 +45,10 @@ alert thresholds exactly. Every needle instrument also shows a digital
 readout, and all instruments follow the dark/light theme toggle.
 
 ## Mission states (Mission dashboard)
-Derived onboard from the autonomy stack's own variables:
+Derived onboard from the autonomy stack's own variables. Tiles show the
+operator wording (Station Keeping, Return to Base, Entering Region,
+Awaiting Re-arm, Comms Lost); the identifiers below are the stored values
+used by alerts and queries:
 
 | State | Meaning |
 |---|---|
@@ -53,7 +56,7 @@ Derived onboard from the autonomy stack's own variables:
 | Remote | Operator driving the boat through remote control (REMOTE_CONTROL); autonomy is not in charge |
 | Paused | Operator pause — boat holds at zero speed |
 | StationKeeping | Holding a station point (operator request or station waypoint) |
-| ReturnToHome | Driving back to the base/return point |
+| ReturnToBase (shown "Return to Base") | Driving back to the base/return point |
 | EnteringRegion | Mission started outside the region — recovering inside before the survey may run |
 | AwaitingRearm | Operator link is back but the mission is NOT re-armed; the survey stays held until an operator AUTONOMOUS_START/RESUME |
 | CommsLost | Operator-link failsafe in force (action shown in the events table); boat holds at the loss position |
