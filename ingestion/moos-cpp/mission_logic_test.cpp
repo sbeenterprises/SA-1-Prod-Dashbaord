@@ -578,6 +578,14 @@ static void test_readiness() {
     auto y = EvaluateReadiness(s, now, true, cfg);
     CHECK(find_check(y, "apps").status == READY_FAIL);
     CHECK_EQ_STR(find_check(y, "apps").evidence, "2 / 4 running · missing: pMarinePID, iWebSocket");
+    cfg.optional_apps = {"iWebSocket"};
+    CHECK_EQ_STR(find_check(EvaluateReadiness(s, now, true, cfg), "apps").evidence,
+                 "2 / 3 running · missing: pMarinePID · optional not running: iWebSocket");
+    cfg.required_apps = {"pHelmIvP", "grafana_bridge", "pMarineViewer"};
+    cfg.optional_apps = {"pMarineViewer"};
+    CHECK(find_check(EvaluateReadiness(s, now, true, cfg), "apps").status == READY_PASS);
+    cfg.required_apps = {"pHelmIvP", "pMarinePID", "grafana_bridge", "iWebSocket"};
+    cfg.optional_apps.clear();
     CHECK(find_check(y, "engine").evidence.find("2 ACTIVE DTC") != std::string::npos);
     CHECK(find_check(y, "course").status == READY_FAIL);
     CHECK(find_check(y, "course").evidence.find("ROUTE OUTSIDE REGION") != std::string::npos);
@@ -608,7 +616,7 @@ static void test_readiness() {
     CHECK(rows.size() == 3);
     CHECK_EQ_STR(rows[0].item, "Weather Conditions");
     CHECK_EQ_STR(rows[0].state, "PENDING");
-    CHECK_EQ_STR(rows[2].item, "Console checklist 9 / 11 · ticked by douglas");
+    CHECK_EQ_STR(rows[2].item, "Console checklist 9 / 11");
     CHECK_EQ_STR(rows[2].state, "OPEN");
     auto done = ChecklistRows(ParseChecklist("done=11,total=11,pending=,by=ops"));
     CHECK(done.size() == 1 && done[0].state == "COMPLETE");
@@ -624,7 +632,8 @@ static void test_readiness() {
     CHECK(full[0].item == "Chart Navigation System" && full[0].state == "TICKED");
     CHECK_EQ_STR(full[0].description, "Verify charts are loaded and current");
     CHECK(full[2].item == "Weather Conditions" && full[2].state == "PENDING");
-    CHECK_EQ_STR(full[4].item, "Console checklist 2 / 4 · ticked by douglas");
+    CHECK_EQ_STR(full[4].item, "Console checklist 2 / 4");
+    CHECK_EQ_STR(full[4].description, "ticked by douglas");
     // Full form from the console (items=Name:state:Description|...), commas in descriptions
     Checklist cf = ParseChecklist("done=1,total=2,by=ops,items=Engine Pre-Start Check:ticked:Oil, coolant, and fuel levels verified|Port Clearance:pending:Harbor control");
     CHECK(cf.items.size() == 2);

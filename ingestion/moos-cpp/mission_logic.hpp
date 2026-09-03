@@ -788,7 +788,6 @@ inline std::vector<ChecklistRow> ChecklistRows(const Checklist& c,
     if (c.total < 0) return rows;
     const bool complete = c.done >= c.total;
     const std::string count = std::to_string(c.done) + " / " + std::to_string(c.total);
-    const std::string by = c.by.empty() ? "" : " · ticked by " + c.by;
     const std::vector<std::string> pending = SplitBar(c.pending);
     auto is_pending = [&](const std::string& name) {
         for (const auto& pn : pending) if (lower(pn) == lower(name)) return true;
@@ -808,7 +807,7 @@ inline std::vector<ChecklistRow> ChecklistRows(const Checklist& c,
     } else {
         for (const auto& pn : pending) rows.push_back({pn, "", "PENDING"});
     }
-    rows.push_back({"Console checklist " + count + by, "",
+    rows.push_back({"Console checklist " + count, c.by.empty() ? "" : "ticked by " + c.by,
                     complete ? "COMPLETE" : "OPEN"});
     return rows;
 }
@@ -970,6 +969,7 @@ struct ReadinessConfig {
     double cruise_power_kw = 0.0;   // electrical load under way
     double endurance_margin = 1.5;  // required = route time x margin (return leg, weather)
     std::vector<std::string> required_apps;   // MOOS apps that must be connected
+    std::vector<std::string> optional_apps;   // reported when absent, never a fault (GUI viewers)
     std::vector<ChecklistItem> checklist_items;
 };
 
@@ -1065,15 +1065,25 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         else if (!clients)
             add("apps", "MOOS apps", "DB_CLIENTS not received", READY_FAIL);
         else {
-            const auto missing = MissingApps(cfg.required_apps, clients->str);
-            const std::string n = std::to_string(cfg.required_apps.size() - missing.size()) +
-                                  " / " + std::to_string(cfg.required_apps.size()) + " running";
-            if (missing.empty()) add("apps", "MOOS apps", n, READY_PASS);
-            else {
-                std::string m;
-                for (const auto& a : missing) m += (m.empty() ? "" : ", ") + a;
-                add("apps", "MOOS apps", n + " · missing: " + m, READY_FAIL);
+            std::vector<std::string> must, opt_missing;
+            for (const auto& a : cfg.required_apps) {
+                bool optional = false;
+                for (const auto& o : cfg.optional_apps) if (o == a) optional = true;
+                if (!optional) must.push_back(a);
+                else if (!MissingApps({a}, clients->str).empty()) opt_missing.push_back(a);
             }
+            const auto missing = MissingApps(must, clients->str);
+            std::string ev = std::to_string(must.size() - missing.size()) + " / " +
+                             std::to_string(must.size()) + " running";
+            if (!missing.empty()) {
+                ev += " · missing: ";
+                for (size_t i = 0; i < missing.size(); ++i) ev += (i ? ", " : "") + missing[i];
+            }
+            if (!opt_missing.empty()) {
+                ev += " · optional not running: ";
+                for (size_t i = 0; i < opt_missing.size(); ++i) ev += (i ? ", " : "") + opt_missing[i];
+            }
+            add("apps", "MOOS apps", ev, missing.empty() ? READY_PASS : READY_FAIL);
         }
     }
     // 6 Steering / actuators: rudder feedback (ANGULO_LEME) and command

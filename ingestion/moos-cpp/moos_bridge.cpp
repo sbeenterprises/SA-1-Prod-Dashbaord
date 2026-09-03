@@ -255,6 +255,7 @@ protected:
         //   readiness_period_s = 5          // evaluation and write period
         //   required_apps  = pHelmIvP,...   // MOOS apps that must be connected
         //                                   // (default: every Run= in the Antler block)
+        //   optional_apps  = pMarineViewer,uMACView,uPlotViewer   // reported, never a fault
         //   fuel_tank_l / cruise_fuel_lph / cruise_speed_kn / battery_kwh /
         //   cruise_power_kw / endurance_margin   // Endurance check constants
         //   checklist_items = Name:Description|Name2:Description2   // console
@@ -303,6 +304,9 @@ protected:
                 readiness_cfg_.required_apps =
                     usv::ParseAntlerApps(std::vector<std::string>(antler.begin(), antler.end()));
         }
+        v = "pMarineViewer,uMACView,uPlotViewer";   // GUI viewers: never a departure fault
+        m_MissionReader.GetConfigurationParam("optional_apps", v);
+        for (const auto& a : usv::SplitCsv(v)) readiness_cfg_.optional_apps.push_back(usv::trim(a));
         if (m_MissionReader.GetConfigurationParam("checklist_items", v))
             readiness_cfg_.checklist_items = usv::ParseChecklistItems(v);
         // Map overlays need the MOOS local-grid datum (global block of the
@@ -312,6 +316,10 @@ protected:
                       m_MissionReader.GetValue("LongOrigin", lon0_);
 
         telemetry_ = std::make_unique<usv::InfluxWriter>(opts);
+        // A previous bridge build may have written rows for check ids that
+        // no longer exist; clear them so a restart never shows leftovers.
+        telemetry_->erase("_measurement=\"readiness\"");
+        telemetry_->erase("_measurement=\"checklist\"");
         usv::InfluxOptions ev_opts = opts;
         ev_opts.bucket = events_bucket;
         events_ = std::make_unique<usv::InfluxWriter>(ev_opts);

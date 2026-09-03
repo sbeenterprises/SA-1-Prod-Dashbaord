@@ -354,13 +354,15 @@ EOF
     # Console mirrors and the onboard readiness evaluation (FR-12).
     grep -q 'mission_state,vessel=usv-moos checklist_done=9' "$LINES" && ok "CHECKLIST_STATUS -> mission_state.checklist_*" || bad "checklist not mirrored"
     grep -q 'enc_status="selected:US5LA31M"' "$LINES"   && ok "ENC_STATUS -> mission_state.enc_status"     || bad "enc_status missing"
-    grep -q 'checklist,vessel=usv-moos,seq=003 item="Console checklist 9 / 11 · ticked by douglas"' "$LINES" \
+    grep -q 'checklist,vessel=usv-moos,seq=003 item="Console checklist 9 / 11"' "$LINES" && grep -q 'seq=003 description="ticked by douglas"' "$LINES" \
       && ok "checklist table footer row written" || bad "checklist footer row missing"
     grep -q 'checklist,vessel=usv-moos,seq=000 state="TICKED"' "$LINES" && ok "configured item not pending reads TICKED" || bad "ticked item row missing"
     grep -q 'checklist,vessel=usv-moos,seq=001 description="Current and forecast weather acceptable"' "$LINES" \
       && ok "checklist item description from checklist_items" || bad "checklist description missing"
     grep -q 'checklist,vessel=usv-moos,seq=002 state="PENDING"' "$LINES" && ok "pending checklist items written as rows" || bad "checklist item rows missing"
     grep -q 'check=apps evidence="1 / 2 running · missing: pHelmIvP"' "$LINES" && ok "MOOS apps check against DB_CLIENTS" || bad "apps check missing"
+    grep -q '_measurement=\\"readiness\\" AND vessel=\\"usv-moos\\"' "$TMP/deletes.txt" 2>/dev/null \
+      && ok "stale readiness rows erased at bridge start" || bad "readiness erase at start missing"
     grep -q 'mission,vessel=usv-moos route_length_m=2800' "$LINES" && ok "route length from VIEW_SEGLIST (2800 m)" || bad "route length missing"
     grep -q 'mission,vessel=usv-moos route_in_region=0' "$LINES" && ok "route vs region test (outside)" || bad "route_in_region missing"
     grep -q 'check=endurance evidence="route 1.5 nm needs 0.4 h (x1.5) · no fuel level"' "$LINES" \

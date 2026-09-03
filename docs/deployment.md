@@ -33,6 +33,10 @@ branding; re-run it after changing configs, dashboards, alert rules or a
 Grafana upgrade.
 
 ### Updating a running installation from git
+After the v1.2 upgrade the alert rules live in the "Swift Autonomous
+Dashboard" folder; the old, now empty "USV Alerts" folder can be deleted
+once in Grafana (Dashboards > USV Alerts > Folder actions > Delete).
+
 ```bash
 cd ~/Swift-Autonmous_Dashbaord && git pull
 sudo bash deploy/install.sh                 # rebuilds bridges, re-provisions, re-brands
@@ -124,7 +128,9 @@ constants in the same block sharpen three checks: `fuel_tank_l`,
 and `endurance_margin` (default 1.5) turn the Endurance row from N/A into
 "route 3.2 nm needs 0.8 h · fuel 13.7 h · battery 5.3 h"; `required_apps`
 lists the MOOS apps that must be connected (default: every `Run =` line
-of the mission file's Antler block, checked against DB_CLIENTS);
+of the mission file's Antler block, checked against DB_CLIENTS) and
+`optional_apps` those that are only reported when absent (default
+pMarineViewer, uMACView, uPlotViewer: GUI viewers on a headless host);
 `checklist_items = Name:Description|Name2:Description2` names the
 console's checklist items so the short-form CHECKLIST_STATUS still yields
 a full table (every item not pending is shown TICKED). The course row
