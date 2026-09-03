@@ -2141,19 +2141,19 @@
             "excludeByName": {
               "rel_bearing": true,
               "rel_speed_kn": true,
-              "hdg": true
+              "hdg": true,
+              "type": true,
+              "spd_kn": true
             },
             "indexByName": {
               "contact": 0,
               "source": 1,
-              "type": 2,
-              "range_m": 3,
-              "bearing": 4,
-              "spd_kn": 5,
-              "cpa_m": 6,
-              "tcpa_s": 7,
-              "encounter": 8,
-              "risk": 9
+              "range_m": 2,
+              "bearing": 3,
+              "cpa_m": 4,
+              "tcpa_s": 5,
+              "encounter": 6,
+              "risk": 7
             }
           }
         }
