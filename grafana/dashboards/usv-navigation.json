@@ -72,6 +72,22 @@
   },
   "panels": [
     {
+      "id": 166,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 2
+      },
+      "options": {
+        "mode": "html",
+        "content": "<table width=\"100%\" height=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td width=\"1%\" valign=\"middle\"><img src=\"public/img/swiftships_wordmark_chip.png\" alt=\"Swiftships\" height=\"40\"></td><td valign=\"middle\">&nbsp;&nbsp;&nbsp;<font size=\"4\"><b>NAVIGATION</b></font></td><td align=\"right\" valign=\"middle\"><font size=\"2\">VESSEL&nbsp;&nbsp;<b>$vessel</b></font></td></tr></table>"
+      }
+    },
+    {
       "id": 23,
       "type": "geomap",
       "title": "Live Position & Track",
@@ -81,7 +97,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 2,
         "w": 14,
         "h": 12
       },
@@ -176,7 +192,7 @@
       },
       "gridPos": {
         "x": 14,
-        "y": 0,
+        "y": 2,
         "w": 5,
         "h": 6
       },
@@ -224,7 +240,7 @@
       },
       "gridPos": {
         "x": 19,
-        "y": 0,
+        "y": 2,
         "w": 5,
         "h": 6
       },
@@ -268,7 +284,7 @@
       },
       "gridPos": {
         "x": 14,
-        "y": 6,
+        "y": 8,
         "w": 5,
         "h": 3
       },
@@ -322,7 +338,7 @@
       },
       "gridPos": {
         "x": 19,
-        "y": 6,
+        "y": 8,
         "w": 5,
         "h": 3
       },
@@ -376,7 +392,7 @@
       },
       "gridPos": {
         "x": 14,
-        "y": 9,
+        "y": 11,
         "w": 5,
         "h": 3
       },
@@ -461,7 +477,7 @@
       },
       "gridPos": {
         "x": 19,
-        "y": 9,
+        "y": 11,
         "w": 5,
         "h": 3
       },
@@ -523,7 +539,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 14,
         "w": 8,
         "h": 7
       },
@@ -593,7 +609,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 12,
+        "y": 14,
         "w": 8,
         "h": 7
       },
@@ -679,7 +695,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 12,
+        "y": 14,
         "w": 8,
         "h": 7
       },
@@ -763,7 +779,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 19,
+        "y": 21,
         "w": 12,
         "h": 6
       },
@@ -833,7 +849,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 19,
+        "y": 21,
         "w": 12,
         "h": 6
       },

@@ -72,6 +72,22 @@
   },
   "panels": [
     {
+      "id": 174,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 2
+      },
+      "options": {
+        "mode": "html",
+        "content": "<table width=\"100%\" height=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td width=\"1%\" valign=\"middle\"><img src=\"public/img/swiftships_wordmark_chip.png\" alt=\"Swiftships\" height=\"40\"></td><td valign=\"middle\">&nbsp;&nbsp;&nbsp;<font size=\"4\"><b>MISSION REPLAY</b></font></td><td align=\"right\" valign=\"middle\"><font size=\"2\">VESSEL&nbsp;&nbsp;<b>$vessel</b></font></td></tr></table>"
+      }
+    },
+    {
       "id": 122,
       "type": "text",
       "title": "How to replay",
@@ -81,7 +97,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 2,
         "w": 24,
         "h": 2
       },
@@ -109,7 +125,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 2,
+        "y": 4,
         "w": 14,
         "h": 12
       },
@@ -170,7 +186,7 @@
       },
       "gridPos": {
         "x": 14,
-        "y": 2,
+        "y": 4,
         "w": 10,
         "h": 6
       },
@@ -267,7 +283,7 @@
       },
       "gridPos": {
         "x": 14,
-        "y": 8,
+        "y": 10,
         "w": 10,
         "h": 6
       },
@@ -303,7 +319,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 16,
         "w": 12,
         "h": 6
       },
@@ -375,7 +391,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 14,
+        "y": 16,
         "w": 12,
         "h": 6
       },
@@ -445,7 +461,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 20,
+        "y": 22,
         "w": 12,
         "h": 6
       },
@@ -515,7 +531,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 20,
+        "y": 22,
         "w": 12,
         "h": 6
       },
@@ -585,7 +601,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 26,
+        "y": 28,
         "w": 12,
         "h": 6
       },
@@ -654,7 +670,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 26,
+        "y": 28,
         "w": 12,
         "h": 6
       },
@@ -724,7 +740,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 32,
+        "y": 34,
         "w": 12,
         "h": 6
       },
@@ -787,7 +803,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 32,
+        "y": 34,
         "w": 12,
         "h": 6
       },

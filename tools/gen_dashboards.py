@@ -1273,9 +1273,41 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms & Notifications", [
 ], ["alarms"]))
 
 
+# ------------------------------------------------------------- header band
+# Swiftships wordmark + dashboard name + selected vessel across the top of
+# every dashboard (also visible in ?kiosk mode, where Grafana's own chrome is
+# hidden). The image is served from Grafana's public/img, put there by
+# deploy/brand.sh, so it works offline. Plain HTML attributes only (the text
+# panel sanitizer strips inline styles), hence the pre-composited white chip.
+BRAND_H = 2
+
+
+def brand_panel(title):
+    return {
+        "id": nid(), "type": "text", "title": "", "transparent": True,
+        "gridPos": {"x": 0, "y": 0, "w": 24, "h": BRAND_H},
+        "options": {"mode": "html", "content": (
+            '<table width="100%" height="100%" cellpadding="0" cellspacing="0">'
+            '<tr><td width="1%" valign="middle">'
+            '<img src="public/img/swiftships_wordmark_chip.png" alt="Swiftships" height="40">'
+            '</td><td valign="middle">&nbsp;&nbsp;&nbsp;'
+            f'<font size="4"><b>{title.upper()}</b></font></td>'
+            '<td align="right" valign="middle">'
+            '<font size="2">VESSEL&nbsp;&nbsp;<b>$vessel</b></font></td></tr></table>')},
+    }
+
+
+def add_header_band(d):
+    for p in d["panels"]:
+        p["gridPos"]["y"] += BRAND_H
+    d["panels"].insert(0, brand_panel(d["title"]))
+    return d
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     for d in DASHBOARDS:
+        add_header_band(d)
         path = os.path.join(OUT, f"{d['uid']}.json")
         with open(path, "w") as f:
             json.dump(d, f, indent=2)

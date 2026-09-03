@@ -146,6 +146,21 @@ if cmake -S "$REPO/ingestion/moos-cpp" -B "$REPO/ingestion/moos-cpp/build" \
   # sure that name resolves on PATH.
   ln -sf /usr/local/bin/moos_bridge /usr/local/bin/grafana_bridge
   say "moos_bridge installed (as grafana_bridge) — add 'Run = grafana_bridge' to your mission file"
+  # If pAntler runs from a systemd unit with a private PATH (as on usv01:
+  # moos-antler.service sets PATH to the two MOOS bin dirs only), pAntler
+  # cannot exec /usr/local/bin/grafana_bridge ("Failed exec - not good").
+  # Extend that unit's PATH with a drop-in instead of editing the unit.
+  if [[ -n "${MOOS_ANTLER_UNIT:-}" ]] && systemctl cat "$MOOS_ANTLER_UNIT" &>/dev/null; then
+    cur=$(systemctl show "$MOOS_ANTLER_UNIT" -p Environment --value | tr ' ' '\n' | sed -n 's/^PATH=//p')
+    if [[ -n "$cur" && "$cur" != *"/usr/local/bin"* ]]; then
+      say "Adding /usr/local/bin to PATH of $MOOS_ANTLER_UNIT (drop-in)"
+      install -d "/etc/systemd/system/$MOOS_ANTLER_UNIT.d"
+      printf '[Service]\nEnvironment=PATH=%s:/usr/local/bin:/usr/bin:/bin\n' "$cur" \
+        > "/etc/systemd/system/$MOOS_ANTLER_UNIT.d/10-usv-path.conf"
+      systemctl daemon-reload
+      echo "         restart it after merging example.moos: systemctl restart $MOOS_ANTLER_UNIT"
+    fi
+  fi
 else
   echo "WARNING: MOOS not found. Re-run with MOOS_DIR=<path to MOOSConfig.cmake>"
   echo "         (source tree: ~/moos-ivp/build/MOOS/MOOSCore)"
@@ -247,24 +262,12 @@ sed -i 's/^;*default_theme =.*/default_theme = dark/' /etc/grafana/grafana.ini
 # change it; re-run this installer to apply.
 sed -i "s/^;*http_port =.*/http_port = ${GRAFANA_PORT:-3001}/" /etc/grafana/grafana.ini
 
-# Branding: Swiftships logo in the top-left nav + favicon.
-# OSS Grafana has no white-label config, so we overwrite the shipped image
-# assets; an apt upgrade of grafana restores the originals, so RE-RUN this
-# installer after any Grafana upgrade to re-apply branding.
-# The default theme is dark, so the nav uses the white-knockout mark
-# (swiftships_logo_light.svg) — the official navy mark is invisible on the
-# dark navbar. The favicon keeps the original navy artwork.
-if [[ -f "$REPO/deploy/branding/swiftships_logo.svg" ]]; then
-  say "Applying Swiftships branding"
-  GPUB=/usr/share/grafana/public
-  NAV_LOGO="$REPO/deploy/branding/swiftships_logo_light.svg"
-  [[ -f $NAV_LOGO ]] || NAV_LOGO="$REPO/deploy/branding/swiftships_logo.svg"
-  cp "$NAV_LOGO" "$GPUB/img/grafana_icon.svg"
-  if command -v rsvg-convert &>/dev/null; then
-    rsvg-convert -w 32 -h 32 "$REPO/deploy/branding/swiftships_logo.svg" \
-      -o "$GPUB/img/fav32.png" 2>/dev/null || true
-  fi
-fi
+# Branding (logo, favicon, login page, title): deploy/brand.sh. Grafana OSS
+# has no white-label config, so it overwrites shipped assets; an apt
+# upgrade of grafana restores them until this installer is re-run.
+say "Applying Swiftships branding"
+bash "$REPO/deploy/brand.sh"
+
 systemctl enable --now grafana-server
 systemctl restart grafana-server
 

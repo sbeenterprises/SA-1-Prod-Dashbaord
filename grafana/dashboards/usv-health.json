@@ -72,6 +72,22 @@
   },
   "panels": [
     {
+      "id": 168,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 2
+      },
+      "options": {
+        "mode": "html",
+        "content": "<table width=\"100%\" height=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td width=\"1%\" valign=\"middle\"><img src=\"public/img/swiftships_wordmark_chip.png\" alt=\"Swiftships\" height=\"40\"></td><td valign=\"middle\">&nbsp;&nbsp;&nbsp;<font size=\"4\"><b>VESSEL HEALTH</b></font></td><td align=\"right\" valign=\"middle\"><font size=\"2\">VESSEL&nbsp;&nbsp;<b>$vessel</b></font></td></tr></table>"
+      }
+    },
+    {
       "id": 54,
       "type": "volkovlabs-echarts-panel",
       "title": "Tachometer",
@@ -81,7 +97,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 2,
         "w": 4,
         "h": 6
       },
@@ -147,7 +163,7 @@
       },
       "gridPos": {
         "x": 4,
-        "y": 0,
+        "y": 2,
         "w": 4,
         "h": 6
       },
@@ -204,7 +220,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 0,
+        "y": 2,
         "w": 4,
         "h": 6
       },
@@ -265,7 +281,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 0,
+        "y": 2,
         "w": 4,
         "h": 6
       },
@@ -327,7 +343,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 0,
+        "y": 2,
         "w": 4,
         "h": 6
       },
@@ -388,7 +404,7 @@
       },
       "gridPos": {
         "x": 20,
-        "y": 0,
+        "y": 2,
         "w": 4,
         "h": 6
       },
@@ -445,7 +461,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 6,
+        "y": 8,
         "w": 4,
         "h": 3
       },
@@ -500,7 +516,7 @@
       },
       "gridPos": {
         "x": 4,
-        "y": 6,
+        "y": 8,
         "w": 4,
         "h": 3
       },
@@ -555,7 +571,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 6,
+        "y": 8,
         "w": 4,
         "h": 3
       },
@@ -610,7 +626,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 6,
+        "y": 8,
         "w": 4,
         "h": 3
       },
@@ -680,7 +696,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 6,
+        "y": 8,
         "w": 4,
         "h": 3
       },
@@ -735,7 +751,7 @@
       },
       "gridPos": {
         "x": 20,
-        "y": 6,
+        "y": 8,
         "w": 4,
         "h": 3
       },
@@ -790,7 +806,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 9,
+        "y": 11,
         "w": 12,
         "h": 7
       },
@@ -860,7 +876,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 9,
+        "y": 11,
         "w": 12,
         "h": 7
       },
@@ -969,7 +985,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 16,
+        "y": 18,
         "w": 12,
         "h": 7
       },
@@ -1079,7 +1095,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 16,
+        "y": 18,
         "w": 12,
         "h": 7
       },
@@ -1189,7 +1205,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 23,
+        "y": 25,
         "w": 12,
         "h": 6
       },
@@ -1261,7 +1277,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 23,
+        "y": 25,
         "w": 12,
         "h": 6
       },

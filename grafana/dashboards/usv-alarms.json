@@ -72,6 +72,22 @@
   },
   "panels": [
     {
+      "id": 176,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 2
+      },
+      "options": {
+        "mode": "html",
+        "content": "<table width=\"100%\" height=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td width=\"1%\" valign=\"middle\"><img src=\"public/img/swiftships_wordmark_chip.png\" alt=\"Swiftships\" height=\"40\"></td><td valign=\"middle\">&nbsp;&nbsp;&nbsp;<font size=\"4\"><b>ALARMS & NOTIFICATIONS</b></font></td><td align=\"right\" valign=\"middle\"><font size=\"2\">VESSEL&nbsp;&nbsp;<b>$vessel</b></font></td></tr></table>"
+      }
+    },
+    {
       "id": 145,
       "type": "alertlist",
       "title": "Active Alerts",
@@ -81,7 +97,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 2,
         "w": 12,
         "h": 10
       },
@@ -120,7 +136,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 0,
+        "y": 2,
         "w": 12,
         "h": 10
       },
@@ -156,7 +172,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 10,
+        "y": 12,
         "w": 4,
         "h": 4
       },
@@ -219,7 +235,7 @@
       },
       "gridPos": {
         "x": 4,
-        "y": 10,
+        "y": 12,
         "w": 4,
         "h": 4
       },
@@ -281,7 +297,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 10,
+        "y": 12,
         "w": 4,
         "h": 4
       },
@@ -351,7 +367,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 10,
+        "y": 12,
         "w": 4,
         "h": 4
       },
@@ -414,7 +430,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 10,
+        "y": 12,
         "w": 4,
         "h": 4
       },
@@ -477,7 +493,7 @@
       },
       "gridPos": {
         "x": 20,
-        "y": 10,
+        "y": 12,
         "w": 4,
         "h": 4
       },
@@ -547,7 +563,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 16,
         "w": 4,
         "h": 4
       },
@@ -617,7 +633,7 @@
       },
       "gridPos": {
         "x": 4,
-        "y": 14,
+        "y": 16,
         "w": 4,
         "h": 4
       },
@@ -687,7 +703,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 14,
+        "y": 16,
         "w": 4,
         "h": 4
       },
@@ -749,7 +765,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 14,
+        "y": 16,
         "w": 4,
         "h": 4
       },
@@ -819,7 +835,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 14,
+        "y": 16,
         "w": 4,
         "h": 4
       },
@@ -882,7 +898,7 @@
       },
       "gridPos": {
         "x": 20,
-        "y": 14,
+        "y": 16,
         "w": 4,
         "h": 4
       },
@@ -945,7 +961,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 18,
+        "y": 20,
         "w": 4,
         "h": 4
       },
@@ -1055,7 +1071,7 @@
       },
       "gridPos": {
         "x": 4,
-        "y": 18,
+        "y": 20,
         "w": 4,
         "h": 4
       },
@@ -1125,7 +1141,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 18,
+        "y": 20,
         "w": 4,
         "h": 4
       },
@@ -1195,7 +1211,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 18,
+        "y": 20,
         "w": 4,
         "h": 4
       },
@@ -1270,7 +1286,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 18,
+        "y": 20,
         "w": 4,
         "h": 4
       },
@@ -1340,7 +1356,7 @@
       },
       "gridPos": {
         "x": 20,
-        "y": 18,
+        "y": 20,
         "w": 4,
         "h": 4
       },

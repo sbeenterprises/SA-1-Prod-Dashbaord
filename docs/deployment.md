@@ -35,6 +35,19 @@ installs the Business Charts (Apache ECharts) Grafana plugin for the
 analog instrument panels; provisions the Grafana datasource, dashboards
 and alert rules; enables everything at boot.
 
+## Branding
+`deploy/brand.sh` (run by the installer) puts the Swiftships mark on the
+nav bar, favicon, touch icon and login page, replaces the login artwork
+with a navy Swiftships background, sets the browser-tab title
+(`BRAND_TITLE`) and the login heading (`BRAND_WELCOME`), and every
+dashboard carries a header band with the wordmark, the dashboard name and
+the selected vessel (visible in `?kiosk` mode too). Grafana OSS has no
+white-label setting, so these are file overwrites under
+`/usr/share/grafana/public`; originals are kept as `*.grafana-orig` and
+`sudo deploy/brand.sh --restore` puts them back. Re-run the installer (or
+`sudo deploy/brand.sh`) after any `apt upgrade grafana`. Hard-refresh the
+browser (Ctrl+F5) after branding to drop cached icons.
+
 ## Analog instruments
 The Navigation, Autopilot and Vessel Health dashboards carry an analog
 instrument cluster (compass with HDG/COG needles, speed meter, rudder
@@ -74,7 +87,15 @@ ProcessConfig = grafana_bridge
 }
 ```
 `grafana_bridge` starts, restarts and stops with the rest of the community
-under pAntler. The variable map is **pre-aligned with the Alpha mission**
+under pAntler. **If pAntler itself runs from a systemd unit with a private
+PATH** (e.g. `moos-antler.service` with `Environment=PATH=<moos bins>`),
+pAntler cannot exec `/usr/local/bin/grafana_bridge` and logs
+`Failed exec - not good`; set `MOOS_ANTLER_UNIT=moos-antler.service` in
+`/etc/usv/usv.env` and the installer adds a PATH drop-in for that unit.
+The equivalent manual fix is a file
+`/etc/systemd/system/moos-antler.service.d/10-usv-path.conf` with
+`[Service]` / `Environment=PATH=<existing PATH>:/usr/local/bin:/usr/bin:/bin`,
+then `systemctl daemon-reload && systemctl restart moos-antler`. The variable map is **pre-aligned with the Alpha mission**
 (`alpha.bhv`): mode flags (WAYPOINT/RETURN/STATIONING/PAUSE), the comms
 failsafe (COMMS_LOST + MISSION_ARMED re-arm latch), SURVEY_ENTRY_GATE,
 DIST_TO_NEXT_WPT / WPT_INDEX / VIEW_SEGLIST, geofence (OPR_BREACHED),
