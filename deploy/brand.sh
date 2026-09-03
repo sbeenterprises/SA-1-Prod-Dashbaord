@@ -14,7 +14,7 @@
 # Wording can be tuned in /etc/usv/usv.env:
 #   BRAND_TITLE="Swiftships USV Console"     (browser tab / loading screen)
 #   BRAND_WELCOME="Welcome to Swiftships"    (login heading)
-#   BRAND_SUBTITLE="Swiftships Autonomous Dashboard"  (under the heading)
+#   BRAND_SUBTITLE="Autonomous Dashboard"   (under the heading)
 set -euo pipefail
 
 GPUB=${GPUB:-/usr/share/grafana/public}
@@ -103,7 +103,7 @@ done || true   # no match (already branded) must not abort under pipefail
 # Scoped to body.login-page (Grafana 13 sets it); the card keeps the stable
 # login-content-box class, the heading is the div after the logo img.
 # The subtitle under the heading comes from BRAND_SUBTITLE via ::after.
-SUBTITLE=${BRAND_SUBTITLE:-Swiftships Autonomous Dashboard}
+SUBTITLE=${BRAND_SUBTITLE:-Autonomous Dashboard}
 CSS_FILE=$(mktemp)
 cat > "$CSS_FILE" <<CSS
 <style id="swiftships-brand">
