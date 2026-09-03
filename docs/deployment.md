@@ -60,7 +60,9 @@ with a navy Swiftships background, sets the browser-tab title
 (`BRAND_TITLE`), the login heading (`BRAND_WELCOME`) and its subtitle
 (`BRAND_SUBTITLE`), and every dashboard carries a header band with the
 wordmark, the dashboard name and the selected vessel (visible in `?kiosk`
-mode too). Grafana OSS has no white-label setting, so these are file
+mode too), and the geomap vessel symbol (`swiftships_boat.svg`, the
+Freeboard-style hull rotated by heading) is served from the same place.
+Grafana OSS has no white-label setting, so these are file
 overwrites under `/usr/share/grafana/public`; originals are kept as
 `*.grafana-orig` and `sudo bash deploy/brand.sh --restore` puts them back.
 

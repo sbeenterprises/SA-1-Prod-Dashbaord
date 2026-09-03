@@ -50,10 +50,12 @@ keep "$GPUB/img/apple-touch-icon.png"; cp "$BR/apple-touch-icon.png" "$GPUB/img/
 find "$GPUB/build" -name 'grafana_icon*.svg' 2>/dev/null | while read -r f; do
   keep "$f"; cp "$BR/swiftships_logo_light.svg" "$f"
 done
-# Assets for the dashboards' own header band (text panels reference these).
+# Assets the dashboards reference: header band wordmarks and the geomap
+# vessel symbol (Grafana loads marker SVGs from public/img).
 cp "$BR/swiftships_wordmark.png" "$BR/swiftships_wordmark_light.png" \
    "$BR/swiftships_mark.png" "$BR/swiftships_mark_96.png" \
-   "$BR/swiftships_wordmark_chip.png" "$BR/swiftships_wordmark_chip_sm.png" "$GPUB/img/"
+   "$BR/swiftships_wordmark_chip.png" "$BR/swiftships_wordmark_chip_sm.png" \
+   "$BR/swiftships_boat.svg" "$GPUB/img/"
 
 # ------------------------------------------------------- login background
 # Navy gradient in place of Grafana's orange/purple artwork (both themes).

@@ -74,16 +74,19 @@ def flux(measurement, fields, bucket="telemetry", every='v.windowPeriod', fn="me
     return q + CLEAN_LABELS
 
 
-# Vessel marker: heading-rotated triangle, large and high-contrast on the
-# light OSM chart, name label above.
+# Vessel marker: the Swiftships top-view hull (deploy/branding/
+# swiftships_boat.svg, put in Grafana's public/img by brand.sh), rotated
+# by heading and tinted the same red operators know from the Freeboard
+# console, name label above. Grafana 13 does not render its own
+# img/icons/marker symbols reliably, hence the shipped SVG.
 VESSEL_MARKER = {
-    "size": {"fixed": 18},
-    "color": {"fixed": "#c47b06"},
+    "size": {"fixed": 26},
+    "color": {"fixed": "#d9342b"},
     "opacity": 1,
-    "symbol": {"fixed": "img/icons/marker/triangle.svg", "mode": "fixed"},
+    "symbol": {"fixed": "img/swiftships_boat.svg", "mode": "fixed"},
     "rotation": {"field": "heading", "mode": "field", "fixed": 0},
     "text": {"field": "vessel", "mode": "field"},
-    "textConfig": {"fontSize": 13, "offsetX": 0, "offsetY": -20,
+    "textConfig": {"fontSize": 13, "offsetX": 0, "offsetY": -24,
                    "textAlign": "center", "textBaseline": "middle"},
 }
 

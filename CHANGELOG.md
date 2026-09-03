@@ -17,7 +17,7 @@ InfluxDB 2.x, Telegraf).
   fixed metres); dark and light themes.
 - Fleet support: `usv-signalk-bridge@<vessel>` template unit, `VESSELS`
   in `usv.env`, Fleet dashboard with last known positions and a status
-  row per vessel; heading-rotated vessel markers on every map.
+  row per vessel; heading-rotated Swiftships hull markers on every map.
 - Swiftships branding (`deploy/brand.sh`): logo, favicon, login page
   (artwork, heading, subtitle, card colours), browser title, dashboard
   header band; cache-proof against browsers holding Grafana's immutable
