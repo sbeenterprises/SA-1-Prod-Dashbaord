@@ -74,22 +74,21 @@ def flux(measurement, fields, bucket="telemetry", every='v.windowPeriod', fn="me
     return q + CLEAN_LABELS
 
 
-# Vessel marker: the Swiftships top-view hull (deploy/branding/
-# swiftships_boat.svg, put in Grafana's public/img by brand.sh), rotated
-# by heading and tinted the same red operators know from the Freeboard
-# console, name label above. Grafana 13 does not render its own
-# img/icons/marker symbols reliably, hence the shipped SVG.
+# Vessel marker: Grafana's WebGL-drawn triangle (a heading arrow) in the
+# Freeboard red, rotated by heading, name label above. Custom SVG symbols
+# go through a texture path that rendered as a black square on Grafana
+# 13.2.1, so the marker stays with the built-in shape.
 VESSEL_MARKER = {
-    "size": {"fixed": 26},
+    "size": {"fixed": 14},
     "color": {"fixed": "#d9342b"},
     "opacity": 1,
-    "symbol": {"fixed": "img/swiftships_boat.svg", "mode": "fixed"},
+    "symbol": {"fixed": "img/icons/marker/triangle.svg", "mode": "fixed"},
     # Scalar dimension: Grafana applies value % max, so max is required
     # (without it the rotation is NaN and the WebGL marker is not drawn).
     "rotation": {"field": "heading", "mode": "mod", "min": -360,
                  "max": 360, "fixed": 0},
     "text": {"field": "vessel", "mode": "field"},
-    "textConfig": {"fontSize": 13, "offsetX": 0, "offsetY": -24,
+    "textConfig": {"fontSize": 13, "offsetX": 0, "offsetY": -18,
                    "textAlign": "center", "textBaseline": "middle"},
 }
 
@@ -600,7 +599,10 @@ def dashboard(uid, title, panels, tags, refresh="5s", time_from="now-30m",
         "includeAll": False, "multi": False,
     }
     if fleet:
-        vessel_var.update({"includeAll": True, "multi": True,
+        # Own variable name: the tab links carry var-vessel=<selection>
+        # from the other dashboards, which must not narrow the fleet view.
+        vessel_var.update({"name": "fleet_vessel", "label": "Vessels",
+                           "includeAll": True, "multi": True,
                            "current": {"text": "All", "value": "$__all"}})
     return {
         "uid": uid, "title": title, "tags": ["usv"] + tags,
@@ -1652,10 +1654,23 @@ def add_header_band(d):
     return d
 
 
+def use_fleet_variable(d):
+    """Fleet dashboard: every ${vessel} reference (queries, row repeat,
+    links, header band) follows the fleet_vessel variable instead."""
+    text = json.dumps(d).replace("${vessel}", "${fleet_vessel}") \
+                        .replace("$vessel", "$fleet_vessel") \
+                        .replace('"repeat": "vessel"', '"repeat": "fleet_vessel"')
+    d.clear()
+    d.update(json.loads(text))
+    return d
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     for d in DASHBOARDS:
         add_header_band(d)
+        if d["uid"] == "usv-fleet":
+            use_fleet_variable(d)
         path = os.path.join(OUT, f"{d['uid']}.json")
         with open(path, "w") as f:
             json.dump(d, f, indent=2)

@@ -274,14 +274,14 @@
             "config": {
               "style": {
                 "size": {
-                  "fixed": 26
+                  "fixed": 14
                 },
                 "color": {
                   "fixed": "#d9342b"
                 },
                 "opacity": 1,
                 "symbol": {
-                  "fixed": "img/swiftships_boat.svg",
+                  "fixed": "img/icons/marker/triangle.svg",
                   "mode": "fixed"
                 },
                 "rotation": {
@@ -298,7 +298,7 @@
                 "textConfig": {
                   "fontSize": 13,
                   "offsetX": 0,
-                  "offsetY": -24,
+                  "offsetY": -18,
                   "textAlign": "center",
                   "textBaseline": "middle"
                 }

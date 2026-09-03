@@ -9,7 +9,8 @@ Keep a Changelog; versions are git tags on `main`.
 - Vessel markers on the Fleet, Navigation and Replay maps did not render:
   the heading rotation dimension lacked the `max` Grafana needs
   (`value % max`), giving a NaN rotation that the WebGL marker layer
-  silently dropped.
+  silently dropped. The marker is Grafana's built-in triangle (heading
+  arrow); custom SVG symbols render as a black square on 13.2.1.
 
 ### Added
 - Navigation and Replay maps draw the operating region, the planned
@@ -20,6 +21,8 @@ Keep a Changelog; versions are git tags on `main`.
   Starlink tiles read Telegraf host probes instead of simulator fields.
 
 ### Changed
+- Fleet dashboard uses its own `fleet_vessel` variable (default All) so
+  the vessel selected on another tab no longer narrows the fleet view.
 - System dashboard: CPU / GPU / RAM / Disk back as gauges.
 - Mission state `ReturnToHome` renamed `ReturnToBase` (the mission's own
   term); state tiles and timelines show operator wording ("Return to

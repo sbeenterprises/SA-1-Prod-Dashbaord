@@ -52,8 +52,8 @@
   "templating": {
     "list": [
       {
-        "name": "vessel",
-        "label": "Vessel",
+        "name": "fleet_vessel",
+        "label": "Vessels",
         "type": "query",
         "datasource": {
           "type": "influxdb",
@@ -84,7 +84,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **FLEET** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel**"
+        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **FLEET** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$fleet_vessel**"
       }
     },
     {
@@ -140,14 +140,14 @@
             "config": {
               "style": {
                 "size": {
-                  "fixed": 26
+                  "fixed": 14
                 },
                 "color": {
                   "fixed": "#d9342b"
                 },
                 "opacity": 1,
                 "symbol": {
-                  "fixed": "img/swiftships_boat.svg",
+                  "fixed": "img/icons/marker/triangle.svg",
                   "mode": "fixed"
                 },
                 "rotation": {
@@ -164,7 +164,7 @@
                 "textConfig": {
                   "fontSize": 13,
                   "offsetX": 0,
-                  "offsetY": -24,
+                  "offsetY": -18,
                   "textAlign": "center",
                   "textBaseline": "middle"
                 }
@@ -182,8 +182,8 @@
     {
       "id": 148,
       "type": "row",
-      "title": "Vessel: $vessel",
-      "repeat": "vessel",
+      "title": "Vessel: $fleet_vessel",
+      "repeat": "fleet_vessel",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -213,7 +213,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"state\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
           "refId": "A"
         }
       ],
@@ -301,7 +301,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -344,7 +344,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"helm_state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"helm_state\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
           "refId": "A"
         }
       ],
@@ -397,7 +397,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -440,7 +440,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"armed\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"armed\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -478,7 +478,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -520,7 +520,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"comms_phase\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"comms_phase\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -568,7 +568,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -610,7 +610,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"geofence_breached\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"geofence_breached\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -653,7 +653,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -695,7 +695,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -718,7 +718,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -760,7 +760,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission\" and (r._field == \"progress_pct\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission\" and (r._field == \"progress_pct\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -783,7 +783,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -825,7 +825,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"signalk_ws_up\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"signalk_ws_up\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -863,7 +863,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -905,7 +905,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"moos_connected\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"moos_connected\"))\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -943,7 +943,7 @@
           "links": [
             {
               "title": "Open Mission dashboard",
-              "url": "/d/usv-mission?var-vessel=${vessel}&${__url_time_range}"
+              "url": "/d/usv-mission?var-vessel=${fleet_vessel}&${__url_time_range}"
             }
           ]
         },
@@ -977,7 +977,7 @@
         "enable": true,
         "iconColor": "yellow",
         "target": {
-          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"events\" and r._field == \"message\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n"
+          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"events\" and r._field == \"message\")\n  |> filter(fn: (r) => r.vessel == \"${fleet_vessel}\")\n"
         }
       }
     ]

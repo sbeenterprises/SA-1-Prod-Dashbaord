@@ -23,7 +23,7 @@ Interface theme.
 | Dashboard | What you watch |
 |---|---|
 | Mission | Status wall (mission state, helm, armed, operator link, geofence, all-stop, arrival, obstacles), readouts (mission, route name, elapsed, ETA, waypoint n of m, remaining, distance to waypoint, distance traveled in nm), progress bar, approach profile, autonomy flags, state timeline, mission events |
-| Navigation | Live map (operating region in cyan, planned route with numbered waypoints in green, track in red, vessel hull rotated by heading), compass (HDG/COG needles), speed meter, GPS fix and satellites, lat/lon, KPI strip (SOG, COG, heading, XTE, distance to WP, HDOP, depth, roll/pitch), trends |
+| Navigation | Live map (operating region in cyan, planned route with numbered waypoints in green, track in red, vessel as a red heading arrow), compass (HDG/COG needles), speed meter, GPS fix and satellites, lat/lon, KPI strip (SOG, COG, heading, XTE, distance to WP, HDOP, depth, roll/pitch), trends |
 | Autopilot | Helm state, all-stop, station keeping, entry gate, re-arm hold, remote control, corridor, crash stop; active behaviors, heading/speed error, rudder/throttle commands, speed cap, next turn; rudder/throttle/heading-error instruments; desired vs actual heading; speed governor (desired / cap / commanded / actual) |
 | Vessel Health | Instrument cluster (tachometer, coolant, oil pressure, fuel, battery volts, SOC), engine and electrical tiles, trends |
 | CAN Bus | Utilization, msgs/s, error/dropped frames, PGN table |

@@ -60,9 +60,7 @@ with a navy Swiftships background, sets the browser-tab title
 (`BRAND_TITLE`), the login heading (`BRAND_WELCOME`) and its subtitle
 (`BRAND_SUBTITLE`), and every dashboard carries a header band with the
 wordmark, the dashboard name and the selected vessel (visible in `?kiosk`
-mode too), and the geomap vessel symbol (`swiftships_boat.svg`, the
-Freeboard-style hull rotated by heading) is served from the same place.
-Grafana OSS has no white-label setting, so these are file
+mode too). Grafana OSS has no white-label setting, so these are file
 overwrites under `/usr/share/grafana/public`; originals are kept as
 `*.grafana-orig` and `sudo bash deploy/brand.sh --restore` puts them back.
 
@@ -92,7 +90,7 @@ preferences for every user).
 ## Map overlays
 The Navigation and Replay maps draw the operating region (cyan outline),
 the planned route with numbered waypoints (green), the vessel's track
-(red) and the vessel itself (Swiftships hull, rotated by heading). Route
+(red) and the vessel itself (red heading arrow). Route
 and region come from the helm (VIEW_SEGLIST, OPR_POLY_ACTUAL) converted
 with the mission file's `LatOrigin` / `LongOrigin`; without that datum
 the overlays stay empty and nothing else is affected.
