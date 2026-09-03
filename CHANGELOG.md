@@ -16,6 +16,8 @@ Keep a Changelog; versions are git tags on `main`.
   TICKED / PENDING like the console: full-form `CHECKLIST_STATUS`
   (`items=Name:state:Description|...`) or `checklist_items` in the bridge
   ProcessConfig as the fallback for the short form.
+- Readiness is the first tab and Grafana's home dashboard
+  (`default_home_dashboard_path`, `GRAFANA_HOME_DASHBOARD` in usv.env).
 - Branding: `BRAND_APP_TITLE` (default "SA-1 Dashboard") replaces the
   "Grafana" product name next to the logo in the navigation menu.
 

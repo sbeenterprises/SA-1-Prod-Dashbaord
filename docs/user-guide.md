@@ -49,7 +49,8 @@ alert thresholds exactly. Every needle instrument also shows a digital
 readout, and all instruments follow the dark/light theme toggle.
 
 ## Pre-departure readiness (Readiness dashboard)
-Open the Readiness tab before a mission. The big tile is the verdict:
+Readiness is the first tab and the page Grafana opens on (a user can
+pick another home dashboard in Profile > Preferences). The big tile is the verdict:
 READY only when no automatic check FAILS and nothing is still waiting on
 the console. Each row of the automatic table shows what was actually
 seen (evidence) so a FAIL can be traced: for example "rudder 20.0° · cmd

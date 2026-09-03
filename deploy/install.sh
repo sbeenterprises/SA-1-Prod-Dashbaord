@@ -269,6 +269,17 @@ sed -i 's/^;*default_theme =.*/default_theme = dark/' /etc/grafana/grafana.ini
 # GRAFANA_PORT (default 3001). Set GRAFANA_PORT in /etc/usv/usv.env to
 # change it; re-run this installer to apply.
 sed -i "s/^;*http_port =.*/http_port = ${GRAFANA_PORT:-3001}/" /etc/grafana/grafana.ini
+# Opening Grafana lands on the pre-departure Readiness dashboard (the
+# "home" for every user and org, unless a user picks another in their
+# preferences). GRAFANA_HOME_DASHBOARD in usv.env overrides the file name.
+HOME_DASH=/var/lib/grafana/dashboards/${GRAFANA_HOME_DASHBOARD:-usv-readiness.json}
+if grep -q '^default_home_dashboard_path' /etc/grafana/grafana.ini; then
+  sed -i "s|^default_home_dashboard_path =.*|default_home_dashboard_path = $HOME_DASH|" /etc/grafana/grafana.ini
+elif grep -q '^\[dashboards\]' /etc/grafana/grafana.ini; then
+  sed -i "s|^\[dashboards\]|[dashboards]\ndefault_home_dashboard_path = $HOME_DASH|" /etc/grafana/grafana.ini
+else
+  printf '\n[dashboards]\ndefault_home_dashboard_path = %s\n' "$HOME_DASH" >> /etc/grafana/grafana.ini
+fi
 
 # Branding (logo, favicon, login page, title): deploy/brand.sh. Grafana OSS
 # has no white-label config, so it overwrites shipped assets; an apt

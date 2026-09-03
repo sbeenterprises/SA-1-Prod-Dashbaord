@@ -107,7 +107,10 @@ probe to the dish router (192.168.100.1) that is shipped commented out in
 reads N/A elsewhere.
 
 ## Pre-departure readiness (Readiness dashboard)
-Every automatic check is decided onboard by `grafana_bridge`
+The installer makes it Grafana's home dashboard
+(`default_home_dashboard_path` in grafana.ini; `GRAFANA_HOME_DASHBOARD`
+in usv.env picks another file) and the generator puts it first in the
+tab row. Every automatic check is decided onboard by `grafana_bridge`
 (`usv::EvaluateReadiness`, unit-tested) and written as one row per check;
 Grafana displays them. Two ProcessConfig parameters control it:
 `readiness_profile = vessel | sim` (vessel: a check whose sensor data is

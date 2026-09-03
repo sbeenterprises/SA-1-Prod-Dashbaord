@@ -6,7 +6,7 @@
 
 Grafana + InfluxDB monitoring stack for the Swiftships MOOS-IvP / Signal K
 unmanned surface vehicle. Thirteen single-screen operator dashboards
-(Mission, Readiness, Navigation, Autopilot, Vessel Health, CAN Bus,
+(Readiness, Mission, Navigation, Autopilot, Vessel Health, CAN Bus,
 Traffic, Cameras, Comms, System, Replay, Alarms, Fleet), 18 provisioned
 alert rules and a
 Swiftships-branded Grafana, fed by native C++ bridges from the MOOS

@@ -600,9 +600,10 @@ def meter(title, query, x, y, w, h, min_, max_, unit, zones=None,
 
 # Fixed tab order on every dashboard (Grafana's tag-based link list sorts
 # alphabetically and drops the current dashboard, so the row shifted from
-# page to page). Operational sequence: mission first, support last.
+# page to page). Operational sequence: readiness (also Grafana's home
+# dashboard, see deploy/install.sh) and mission first, support last.
 TAB_ORDER = [
-    ("usv-mission", "Mission"), ("usv-readiness", "Readiness"),
+    ("usv-readiness", "Readiness"), ("usv-mission", "Mission"),
     ("usv-navigation", "Navigation"),
     ("usv-autopilot", "Autopilot"), ("usv-health", "Vessel Health"),
     ("usv-canbus", "CAN Bus"), ("usv-traffic", "Traffic"),
