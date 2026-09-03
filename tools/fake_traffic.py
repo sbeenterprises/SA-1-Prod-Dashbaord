@@ -34,12 +34,17 @@ NM = 1852.0
 
 
 def read_env():
-    """INFLUX_URL / ORG / TOKEN from /etc/usv/usv.env (sudo, root-only)."""
+    """INFLUX_URL / ORG / TOKEN: from the environment if set, otherwise from
+    /etc/usv/usv.env (root-only, so sudo may prompt for the password)."""
+    keys = ("INFLUX_URL", "INFLUX_ORG", "INFLUX_TOKEN")
+    if all(k in os.environ for k in keys):
+        return {k: os.environ[k] for k in keys}
     try:
-        text = subprocess.run(["sudo", "-n", "cat", "/etc/usv/usv.env"],
-                              capture_output=True, text=True, check=True).stdout
+        text = subprocess.run(["sudo", "cat", "/etc/usv/usv.env"],
+                              stdout=subprocess.PIPE, text=True, check=True).stdout
     except subprocess.CalledProcessError:
-        sys.exit("cannot read /etc/usv/usv.env (needs sudo)")
+        sys.exit("cannot read /etc/usv/usv.env (sudo refused); "
+                 "or export INFLUX_URL INFLUX_ORG INFLUX_TOKEN")
     env = dict(re.findall(r'^(INFLUX_(?:URL|ORG|TOKEN))=(.*)$', text, re.M))
     return {k: v.strip().strip('"') for k, v in env.items()}
 
