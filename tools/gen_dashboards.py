@@ -1205,16 +1205,24 @@ CONTACT_STR_FIELDS = ["encounter", "type"]
 
 
 def contacts_query(limit=None, rank=True):
-    """One row per live contact with every field as a column, riskiest first."""
-    fields = " or ".join(f'r._field == "{f}"' for f in CONTACT_FIELDS + CONTACT_STR_FIELDS)
-    q = ('from(bucket: "telemetry")\n'
+    """One row per live contact with every field as a column, riskiest
+    first. Numeric and string fields are pivoted separately and joined:
+    Flux refuses to group float and string _value columns into one table."""
+    nums = " or ".join(f'r._field == "{f}"' for f in CONTACT_FIELDS)
+    strs = " or ".join(f'r._field == "{f}"' for f in CONTACT_STR_FIELDS)
+    q = ('base = from(bucket: "telemetry")\n'
          '  |> range(start: -30s)\n'
-         f'  |> filter(fn: (r) => r._measurement == "contacts" and ({fields}))\n'
+         '  |> filter(fn: (r) => r._measurement == "contacts")\n'
          '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
          '  |> last()\n'
          '  |> drop(columns: ["_start", "_stop", "_measurement", "vessel", "_time"])\n'
+         f'nums = base |> filter(fn: (r) => {nums})\n'
          '  |> group()\n'
          '  |> pivot(rowKey: ["contact", "source"], columnKey: ["_field"], valueColumn: "_value")\n'
+         f'strs = base |> filter(fn: (r) => {strs})\n'
+         '  |> group()\n'
+         '  |> pivot(rowKey: ["contact", "source"], columnKey: ["_field"], valueColumn: "_value")\n'
+         'join(tables: {n: nums, s: strs}, on: ["contact", "source"])\n'
          '  |> filter(fn: (r) => exists r.range_m)\n')
     if rank:
         q += ('  |> sort(columns: ["cpa_m"])\n'
