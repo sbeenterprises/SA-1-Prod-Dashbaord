@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 134,
+      "id": 145,
       "type": "alertlist",
       "title": "Active Alerts",
       "datasource": {
@@ -111,7 +111,7 @@
       }
     },
     {
-      "id": 135,
+      "id": 146,
       "type": "table",
       "title": "Alarm History (events bucket)",
       "datasource": {
@@ -147,7 +147,7 @@
       }
     },
     {
-      "id": 136,
+      "id": 147,
       "type": "stat",
       "title": "Battery SOC",
       "datasource": {
@@ -210,7 +210,7 @@
       }
     },
     {
-      "id": 137,
+      "id": 148,
       "type": "stat",
       "title": "GPS Sats",
       "datasource": {
@@ -272,7 +272,7 @@
       }
     },
     {
-      "id": 138,
+      "id": 149,
       "type": "stat",
       "title": "CAN Bus",
       "datasource": {
@@ -342,7 +342,7 @@
       }
     },
     {
-      "id": 139,
+      "id": 150,
       "type": "stat",
       "title": "Coolant",
       "datasource": {
@@ -405,7 +405,7 @@
       }
     },
     {
-      "id": 140,
+      "id": 151,
       "type": "stat",
       "title": "Fuel",
       "datasource": {
@@ -468,7 +468,7 @@
       }
     },
     {
-      "id": 141,
+      "id": 152,
       "type": "stat",
       "title": "Radar",
       "datasource": {
@@ -538,7 +538,7 @@
       }
     },
     {
-      "id": 142,
+      "id": 153,
       "type": "stat",
       "title": "Camera",
       "datasource": {
@@ -608,7 +608,7 @@
       }
     },
     {
-      "id": 143,
+      "id": 154,
       "type": "stat",
       "title": "Signal K",
       "datasource": {
@@ -678,7 +678,7 @@
       }
     },
     {
-      "id": 144,
+      "id": 155,
       "type": "stat",
       "title": "MOOS Rate",
       "datasource": {
@@ -740,7 +740,7 @@
       }
     },
     {
-      "id": 145,
+      "id": 156,
       "type": "stat",
       "title": "Comms Link",
       "datasource": {
@@ -810,7 +810,7 @@
       }
     },
     {
-      "id": 146,
+      "id": 157,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -873,7 +873,7 @@
       }
     },
     {
-      "id": 147,
+      "id": 158,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -936,7 +936,7 @@
       }
     },
     {
-      "id": 148,
+      "id": 159,
       "type": "stat",
       "title": "Mission State",
       "datasource": {
@@ -1046,7 +1046,7 @@
       }
     },
     {
-      "id": 149,
+      "id": 160,
       "type": "stat",
       "title": "Operator Link",
       "datasource": {
@@ -1116,7 +1116,7 @@
       }
     },
     {
-      "id": 150,
+      "id": 161,
       "type": "stat",
       "title": "Mission Armed",
       "datasource": {
@@ -1186,7 +1186,7 @@
       }
     },
     {
-      "id": 151,
+      "id": 162,
       "type": "stat",
       "title": "Geofence",
       "datasource": {
@@ -1261,7 +1261,7 @@
       }
     },
     {
-      "id": 152,
+      "id": 163,
       "type": "stat",
       "title": "Helm All-Stop",
       "datasource": {
@@ -1331,7 +1331,7 @@
       }
     },
     {
-      "id": 153,
+      "id": 164,
       "type": "stat",
       "title": "Obstacles",
       "datasource": {

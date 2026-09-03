@@ -411,7 +411,21 @@ def meter(title, query, x, y, w, h, min_, max_, unit, zones=None,
                  max_=max_, thresholds=thr)
 
 
-def dashboard(uid, title, panels, tags, refresh="5s", time_from="now-30m"):
+def dashboard(uid, title, panels, tags, refresh="5s", time_from="now-30m",
+              fleet=False):
+    """fleet=True makes the vessel variable multi-select with "All" so rows
+    can repeat per vessel (Fleet Overview)."""
+    vessel_var = {
+        "name": "vessel", "label": "Vessel", "type": "query",
+        "datasource": DS,
+        "query": ('import "influxdata/influxdb/schema"\n'
+                  'schema.tagValues(bucket: "telemetry", tag: "vessel")'),
+        "refresh": 2, "current": {"text": "usv-01", "value": "usv-01"},
+        "includeAll": False, "multi": False,
+    }
+    if fleet:
+        vessel_var.update({"includeAll": True, "multi": True,
+                           "current": {"text": "All", "value": "$__all"}})
     return {
         "uid": uid, "title": title, "tags": ["usv"] + tags,
         "timezone": "browser", "schemaVersion": 39, "version": 1,
@@ -435,14 +449,7 @@ def dashboard(uid, title, panels, tags, refresh="5s", time_from="now-30m"):
             "keepTime": True, "includeVars": True, "targetBlank": False,
             "icon": "external link", "tooltip": "View in dark theme",
         }],
-        "templating": {"list": [{
-            "name": "vessel", "label": "Vessel", "type": "query",
-            "datasource": DS,
-            "query": ('import "influxdata/influxdb/schema"\n'
-                      'schema.tagValues(bucket: "telemetry", tag: "vessel")'),
-            "refresh": 2, "current": {"text": "usv-01", "value": "usv-01"},
-            "includeAll": False, "multi": False,
-        }]},
+        "templating": {"list": [vessel_var]},
         "panels": panels,
         "annotations": {"list": [{
             "name": "Mission events", "datasource": DS, "enable": True,
@@ -486,6 +493,12 @@ geofence_mappings = value_color_map([
     (0, "INSIDE", OK), (1, "BREACH", "red"),
     (2, "RECOVERING", "yellow"),
 ])
+# iWebSocket COMMS_LOST phases (autonomy.comms_phase): 0 link ok, 1 grace
+# (mission continues), 2 failsafe hold (disarmed), 3 return to base.
+comms_phase_mappings = value_color_map([
+    (0, "LINK OK", TILE_OK), (1, "GRACE", "yellow"),
+    (2, "LOST — FAILSAFE", "red"), (3, "LOST — RTB", "orange"),
+])
 flag_timeline_mappings = [{"type": "value", "options": {
     "0": {"text": "—", "color": "rgba(110, 120, 130, 0.12)", "index": 0},
     "1": {"text": "ON", "color": ACCENT, "index": 1}}}]
@@ -508,8 +521,8 @@ DASHBOARDS.append(dashboard("usv-mission", "Mission", [
              "0": {"text": "DISARMED", "color": "orange", "index": 0},
              "1": {"text": "ARMED", "color": TILE_OK, "index": 1}}}],
          text_mode="value", color_mode="background"),
-    stat("Operator Link", flux("autonomy", "comms_lost", last=True),
-         13, 0, 4, 4, mappings=alert_map("LINK OK", "LOST — FAILSAFE"),
+    stat("Operator Link", flux("autonomy", "comms_phase", last=True),
+         13, 0, 4, 4, mappings=comms_phase_mappings,
          text_mode="value", color_mode="background"),
     stat("Geofence", flux("autonomy", "geofence_breached", last=True),
          17, 0, 4, 4, mappings=geofence_mappings, text_mode="value",
@@ -1106,6 +1119,91 @@ DASHBOARDS.append(dashboard("usv-replay", "Mission Replay", [
        [target(flux("mission", "dist_to_waypoint"), "distance m")],
        12, 32, 12, 6, unit="lengthm"),
 ], ["replay"], refresh="", time_from="now-6h"))
+
+# ------------------------------------------------------------ Fleet Overview
+# One row per vessel (Grafana row repeat over the multi-select vessel
+# variable) plus a fleet map. Each tile links to that vessel's Mission
+# dashboard. Data arrives per vessel from its own signalk_bridge instance
+# (usv-signalk-bridge@<vessel>) and grafana_bridge (vessel_id in the
+# mission file); vessels with no data simply show "No data" tiles.
+def fleet_link(p, vessel="${vessel}"):
+    p["fieldConfig"]["defaults"]["links"] = [{
+        "title": "Open Mission dashboard",
+        "url": f"/d/usv-mission?var-vessel={vessel}&${{__url_time_range}}",
+    }]
+    return p
+
+
+def fleet_last(measurement, field):
+    """last() of a field for the row's vessel (row-repeat scopes ${vessel})."""
+    return flux(measurement, field, last=True)
+
+
+fleet_map_query = (
+    'from(bucket: "telemetry")\n'
+    '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+    '  |> filter(fn: (r) => r._measurement == "nav" and (r._field == "lat" or r._field == "lon"))\n'
+    '  |> last()\n'
+    '  |> pivot(rowKey: ["vessel"], columnKey: ["_field"], valueColumn: "_value")\n'
+    '  |> keep(columns: ["vessel", "lat", "lon"])\n')
+
+fleet_panels = [
+    panel("geomap", "Fleet Map — last known positions",
+          [target(fleet_map_query)], 0, 0, 24, 10,
+          options={
+              "view": {"id": "fit", "lat": 0, "lon": 0, "zoom": 11},
+              "basemap": {"type": "osm-standard", "name": "OSM"},
+              "layers": [{
+                  "type": "markers", "name": "Vessels",
+                  "location": {"mode": "coords", "latitude": "lat",
+                               "longitude": "lon"},
+                  "config": {"style": {
+                      "size": {"fixed": 9},
+                      "color": {"fixed": ACCENT},
+                      "symbol": {"fixed": "img/icons/marker/circle.svg",
+                                 "mode": "fixed"},
+                      "text": {"field": "vessel", "mode": "field"},
+                      "textConfig": {"fontSize": 13, "offsetX": 0,
+                                     "offsetY": -14, "textAlign": "center",
+                                     "textBaseline": "middle"},
+                  }, "showLegend": False},
+              }],
+              "controls": {"showZoom": True, "mouseWheelZoom": True},
+          }),
+    # Repeated row: everything below belongs to it (non-collapsed row).
+    {"id": nid(), "type": "row", "title": "Vessel: $vessel",
+     "repeat": "vessel", "collapsed": False,
+     "gridPos": {"x": 0, "y": 10, "w": 24, "h": 1}, "panels": []},
+    fleet_link(stat("Mission State", fleet_last("mission_state", "state"),
+                    0, 11, 4, 3, mappings=mission_state_mappings,
+                    text_mode="value", color_mode="background")),
+    fleet_link(stat("Helm", fleet_last("mission_state", "helm_state"),
+                    4, 11, 3, 3, mappings=helm_state_mappings,
+                    text_mode="value", color_mode="background")),
+    fleet_link(stat("Armed", fleet_last("autonomy", "armed"), 7, 11, 3, 3,
+                    mappings=[{"type": "value", "options": {
+                        "0": {"text": "DISARMED", "color": "orange", "index": 0},
+                        "1": {"text": "ARMED", "color": TILE_OK, "index": 1}}}],
+                    text_mode="value", color_mode="background")),
+    fleet_link(stat("Operator Link", fleet_last("autonomy", "comms_phase"),
+                    10, 11, 3, 3, mappings=comms_phase_mappings,
+                    text_mode="value", color_mode="background")),
+    fleet_link(stat("Geofence", fleet_last("autonomy", "geofence_breached"),
+                    13, 11, 3, 3, mappings=geofence_mappings,
+                    text_mode="value", color_mode="background")),
+    fleet_link(stat("SOG", fleet_last("nav", "sog"), 16, 11, 2, 3,
+                    unit="velocityknot", decimals=1)),
+    fleet_link(stat("Progress", fleet_last("mission", "progress_pct"),
+                    18, 11, 2, 3, unit="percent", decimals=0)),
+    fleet_link(stat("Signal K", fleet_last("comms", "signalk_ws_up"),
+                    20, 11, 2, 3, mappings=updown_map("DOWN", "UP"),
+                    text_mode="value", color_mode="background")),
+    fleet_link(stat("MOOS", fleet_last("comms", "moos_connected"),
+                    22, 11, 2, 3, mappings=updown_map("DOWN", "UP"),
+                    text_mode="value", color_mode="background")),
+]
+DASHBOARDS.append(dashboard("usv-fleet", "Fleet Overview", fleet_panels,
+                            ["fleet"], fleet=True))
 
 # ------------------------------------------------------------- FR-11 Alarms
 DASHBOARDS.append(dashboard("usv-alarms", "Alarms & Notifications", [

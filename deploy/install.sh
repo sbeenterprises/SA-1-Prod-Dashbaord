@@ -135,8 +135,28 @@ say "Installing services"
 id -u usv &>/dev/null || useradd -r -s /usr/sbin/nologin usv
 cp "$REPO"/deploy/systemd/*.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now usv-signalk-bridge usv-can-bridge
+systemctl enable --now usv-can-bridge
 # usv-simulator.service installed but NOT enabled (bench testing only)
+
+# Signal K bridges: one per vessel when VESSELS is set in usv.env
+# ("alpha:3000 bravo:3001 ..."), each an instance of the template unit
+# usv-signalk-bridge@<vessel> with its own /etc/usv/vessels/<vessel>.env.
+# Without VESSELS the single usv-signalk-bridge (SIGNALK_URL) is used.
+if [[ -n "${VESSELS:-}" ]]; then
+  say "Configuring per-vessel Signal K bridges: $VESSELS"
+  install -d -m 750 -o root -g usv /etc/usv/vessels
+  systemctl disable --now usv-signalk-bridge 2>/dev/null || true
+  for spec in $VESSELS; do
+    name=${spec%%:*}; port=${spec##*:}
+    printf 'SIGNALK_URL=ws://localhost:%s/signalk/v1/stream?subscribe=all\nVESSEL_ID=%s\n' \
+      "$port" "$name" > "/etc/usv/vessels/$name.env"
+    chmod 640 "/etc/usv/vessels/$name.env"; chown root:usv "/etc/usv/vessels/$name.env"
+    systemctl enable --now "usv-signalk-bridge@$name"
+    systemctl restart "usv-signalk-bridge@$name"
+  done
+else
+  systemctl enable --now usv-signalk-bridge
+fi
 
 # ---------------------------------------------------------------- grafana
 # grafana-cli needs an explicit homepath when run outside /usr/share/grafana;

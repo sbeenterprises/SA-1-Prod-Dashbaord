@@ -356,7 +356,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"comms_lost\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"comms_phase\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
           "refId": "A"
         }
       ],
@@ -384,9 +384,19 @@
                   "index": 0
                 },
                 "1": {
+                  "text": "GRACE",
+                  "color": "yellow",
+                  "index": 1
+                },
+                "2": {
                   "text": "LOST \u2014 FAILSAFE",
                   "color": "red",
-                  "index": 1
+                  "index": 2
+                },
+                "3": {
+                  "text": "LOST \u2014 RTB",
+                  "color": "orange",
+                  "index": 3
                 }
               }
             }
