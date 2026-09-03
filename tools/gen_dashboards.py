@@ -106,16 +106,38 @@ def panel(ptype, title, targets, x, y, w, h, unit=None, thresholds=None,
     return p
 
 
+# String fields shown on stat tiles. Grafana's stat panel reduces NUMERIC
+# fields only by default (reduceOptions.fields = ""), so a string value
+# renders as "No data" even though the query returns it. For these the
+# query keeps only _value and the panel is told to reduce every field.
+STRING_FIELDS = {
+    "state", "state_external", "helm_state", "mission_name", "mission_id",
+    "allstop_reason", "active_behavior", "station_keep", "comms_failsafe",
+    "entry_gate", "opr_status", "helm_summary", "arrival_state",
+    "corridor_status", "crash_stop_status", "region_warning", "wpt_stat",
+    "fix_type", "charging_status", "message",
+}
+
+
+def _is_string_query(query):
+    fields = _FIELD_RE.findall(query)
+    return bool(fields) and all(f in STRING_FIELDS for f in fields)
+
+
 def stat(title, query, x, y, w=4, h=4, unit=None, thresholds=None,
          mappings=None, text_mode="auto", decimals=None,
          color_mode="value", graph_mode="none"):
     """color_mode='background' renders a solid status tile (ops wall look);
     graph_mode='area' adds a trend sparkline behind numeric values."""
+    reduce_opts = {"calcs": ["lastNotNull"]}
+    if _is_string_query(query):
+        query = query + '  |> keep(columns: ["_value"])\n'
+        reduce_opts["fields"] = "/.*/"
     return panel("stat", title, [target(query)], x, y, w, h, unit=unit,
                  decimals=decimals,
                  thresholds=thresholds or [(None, OK)],
                  mappings=mappings,
-                 options={"reduceOptions": {"calcs": ["lastNotNull"]},
+                 options={"reduceOptions": reduce_opts,
                           "textMode": text_mode, "graphMode": graph_mode,
                           "colorMode": color_mode,
                           "justifyMode": "auto"})
@@ -1289,7 +1311,7 @@ def brand_panel(title):
         "options": {"mode": "html", "content": (
             '<table width="100%" height="100%" cellpadding="0" cellspacing="0">'
             '<tr><td width="1%" valign="middle">'
-            '<img src="public/img/swiftships_wordmark_chip.png" alt="Swiftships" height="40">'
+            '<img src="/public/img/swiftships_wordmark_chip.png" alt="Swiftships" height="40">'
             '</td><td valign="middle">&nbsp;&nbsp;&nbsp;'
             f'<font size="4"><b>{title.upper()}</b></font></td>'
             '<td align="right" valign="middle">'

@@ -84,7 +84,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<table width=\"100%\" height=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td width=\"1%\" valign=\"middle\"><img src=\"public/img/swiftships_wordmark_chip.png\" alt=\"Swiftships\" height=\"40\"></td><td valign=\"middle\">&nbsp;&nbsp;&nbsp;<font size=\"4\"><b>AUTOPILOT (MOOS-IVP)</b></font></td><td align=\"right\" valign=\"middle\"><font size=\"2\">VESSEL&nbsp;&nbsp;<b>$vessel</b></font></td></tr></table>"
+        "content": "<table width=\"100%\" height=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td width=\"1%\" valign=\"middle\"><img src=\"/public/img/swiftships_wordmark_chip.png\" alt=\"Swiftships\" height=\"40\"></td><td valign=\"middle\">&nbsp;&nbsp;&nbsp;<font size=\"4\"><b>AUTOPILOT (MOOS-IVP)</b></font></td><td align=\"right\" valign=\"middle\"><font size=\"2\">VESSEL&nbsp;&nbsp;<b>$vessel</b></font></td></tr></table>"
       }
     },
     {
@@ -107,7 +107,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"active_behavior\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"active_behavior\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> keep(columns: [\"_value\"])\n",
           "refId": "A"
         }
       ],
@@ -132,7 +132,8 @@
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "/.*/"
         },
         "textMode": "value",
         "graphMode": "none",
@@ -466,7 +467,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"helm_state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"helm_state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> keep(columns: [\"_value\"])\n",
           "refId": "A"
         }
       ],
@@ -523,7 +524,8 @@
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "/.*/"
         },
         "textMode": "value",
         "graphMode": "none",
@@ -551,7 +553,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"allstop_reason\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"allstop_reason\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> keep(columns: [\"_value\"])\n",
           "refId": "A"
         }
       ],
@@ -599,7 +601,8 @@
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "/.*/"
         },
         "textMode": "value",
         "graphMode": "none",
