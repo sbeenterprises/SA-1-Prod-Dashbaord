@@ -126,7 +126,7 @@ ENC_STATUS       = selected:US5LA31M        // or: none
 `pending` is the "|"-separated list of unticked items (empty when all are
 ticked); `by` is the operator name. Until the console publishes them the
 Readiness dashboard shows those two rows as CONSOLE and the verdict stays
-NOT READY. Test by hand: `moos_poke 'CHECKLIST_STATUS=done=11,total=11,pending=,by=ops' ENC_STATUS=selected:test`.
+NOT READY. Test by hand: `/usr/local/bin/moos_poke 'CHECKLIST_STATUS=done=11,total=11,pending=,by=ops' ENC_STATUS=selected:test` (installed with the bridge; `--port=` when the community is not on 9000).
 
 Verify the bridge is evaluating (on the vessel, after a restart):
 ```

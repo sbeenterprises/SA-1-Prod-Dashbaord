@@ -1269,14 +1269,16 @@ def status_table(title, query, x, y, w, h, status_col, mappings, name_col,
                                           "value": {"type": "color-background", "mode": "basic"}}]},
                          {"matcher": {"id": "byName", "options": name_col},
                           "properties": [{"id": "displayName", "value": "Check"},
-                                         {"id": "custom.width", "value": 200}]},
+                                         {"id": "custom.width", "value": 170}]},
                          {"matcher": {"id": "byName", "options": "evidence"},
-                          "properties": [{"id": "displayName", "value": "Evidence"}]},
+                          "properties": [{"id": "displayName", "value": "Evidence"},
+                                         {"id": "custom.minWidth", "value": 300}]},
                          {"matcher": {"id": "byName", "options": "seq"},
                           "properties": [{"id": "displayName", "value": "#"},
-                                         {"id": "custom.width", "value": 40}]},
+                                         {"id": "custom.width", "value": 36}]},
                          {"matcher": {"id": "byName", "options": "item"},
-                          "properties": [{"id": "displayName", "value": "Item"}]}])
+                          "properties": [{"id": "displayName", "value": "Item"},
+                                         {"id": "custom.minWidth", "value": 520}]}])
     p["transformations"] = [{"id": "organize", "options": {
         "indexByName": {c: i for i, c in enumerate(columns)}}}]
     if description:

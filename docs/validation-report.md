@@ -360,6 +360,14 @@ and the Readiness dashboard with its onboard evaluation.
    hardware (N/A under the sim profile); the console checklist table is
    now fed by rows the bridge writes (measurement `checklist`) instead of
    a Flux script.
+   Second live run (usv01, after 0034): columns in order, CAN N/A,
+   course row "Rt WP Alpha (last known) · 4 waypoints · no operating
+   region" (region_vertices is new and is first written at the next
+   mission start); poking CHECKLIST_STATUS / ENC_STATUS turned the ENC
+   row PASS, Console 2 -> 0, the checklist table showed the head line
+   and the two PENDING items, and the checklist row failed with the
+   pending names. Cosmetic fixes: Item column min width, checks table
+   column widths; installer now installs moos_poke with the bridge.
 5. **Dashboard**: `usv-readiness.json` fills the 24 x 23 grid with no
    overlap (8 tiles, two 18-row tables); tab order Mission, Readiness,
    Navigation ...; the Flux for the checks table reuses the pivot-then-join

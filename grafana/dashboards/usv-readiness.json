@@ -889,7 +889,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 170
               }
             ]
           },
@@ -902,6 +902,10 @@
               {
                 "id": "displayName",
                 "value": "Evidence"
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 300
               }
             ]
           },
@@ -917,7 +921,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 40
+                "value": 36
               }
             ]
           },
@@ -930,6 +934,10 @@
               {
                 "id": "displayName",
                 "value": "Item"
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 520
               }
             ]
           }
@@ -1055,7 +1063,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 170
               }
             ]
           },
@@ -1068,6 +1076,10 @@
               {
                 "id": "displayName",
                 "value": "Evidence"
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 300
               }
             ]
           },
@@ -1083,7 +1095,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 40
+                "value": 36
               }
             ]
           },
@@ -1096,6 +1108,10 @@
               {
                 "id": "displayName",
                 "value": "Item"
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 520
               }
             ]
           }
