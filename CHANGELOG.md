@@ -5,6 +5,14 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-03 — map overlays, Traffic, Readiness
+
+Verified live on the simulation host usv01 (Grafana 13.2.1 on port 3300,
+six Signal K instances): map overlays, route name and Remote state,
+Traffic with scripted and fake contacts, Readiness with the console
+variables poked by hand. Smoke test 82 PASS, 0 FAIL; mission_logic_test
+238 assertions.
+
 ### Added
 - Readiness dashboard (FR-12, second tab): pre-departure verdict with
   pass / fail / N/A / console counts, automatic checks table (GPS fix,
