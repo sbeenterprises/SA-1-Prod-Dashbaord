@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 171,
+      "id": 184,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -88,7 +88,7 @@
       }
     },
     {
-      "id": 91,
+      "id": 102,
       "type": "stat",
       "title": "Connection",
       "datasource": {
@@ -99,7 +99,7 @@
         "x": 0,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -154,11 +154,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 92,
+      "id": 103,
       "type": "stat",
       "title": "Live Stream",
       "datasource": {
@@ -169,7 +173,7 @@
         "x": 4,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -224,11 +228,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 93,
+      "id": 104,
       "type": "stat",
       "title": "Recording",
       "datasource": {
@@ -239,7 +247,7 @@
         "x": 8,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -294,11 +302,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 94,
+      "id": 105,
       "type": "stat",
       "title": "Frame Rate",
       "datasource": {
@@ -309,7 +321,7 @@
         "x": 12,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -357,11 +369,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 95,
+      "id": 106,
       "type": "stat",
       "title": "Bitrate",
       "datasource": {
@@ -372,7 +388,7 @@
         "x": 16,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -412,11 +428,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 96,
+      "id": 107,
       "type": "stat",
       "title": "Camera Temp",
       "datasource": {
@@ -427,7 +447,7 @@
         "x": 20,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -475,11 +495,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 97,
+      "id": 108,
       "type": "timeseries",
       "title": "Frame Rate",
       "datasource": {
@@ -488,7 +512,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 6,
+        "y": 5,
         "w": 12,
         "h": 7
       },
@@ -548,7 +572,7 @@
       }
     },
     {
-      "id": 98,
+      "id": 109,
       "type": "timeseries",
       "title": "Bitrate",
       "datasource": {
@@ -557,7 +581,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 6,
+        "y": 5,
         "w": 12,
         "h": 7
       },
@@ -618,7 +642,7 @@
       }
     },
     {
-      "id": 99,
+      "id": 110,
       "type": "timeseries",
       "title": "PTZ Position",
       "datasource": {
@@ -627,7 +651,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 13,
+        "y": 12,
         "w": 12,
         "h": 6
       },
@@ -702,7 +726,7 @@
       }
     },
     {
-      "id": 100,
+      "id": 111,
       "type": "timeseries",
       "title": "Camera Temperature",
       "datasource": {
@@ -711,7 +735,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 13,
+        "y": 12,
         "w": 12,
         "h": 6
       },

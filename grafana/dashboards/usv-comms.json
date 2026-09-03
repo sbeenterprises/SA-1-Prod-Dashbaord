@@ -1,6 +1,6 @@
 {
   "uid": "usv-comms",
-  "title": "Communications",
+  "title": "Comms",
   "tags": [
     "usv",
     "comms"
@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 172,
+      "id": 185,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -84,11 +84,11 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **COMMUNICATIONS** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel**"
+        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **COMMS** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel**"
       }
     },
     {
-      "id": 101,
+      "id": 112,
       "type": "stat",
       "title": "Internet",
       "datasource": {
@@ -99,7 +99,7 @@
         "x": 0,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -154,11 +154,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 102,
+      "id": 113,
       "type": "stat",
       "title": "Starlink",
       "datasource": {
@@ -169,7 +173,7 @@
         "x": 4,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -224,11 +228,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 103,
+      "id": 114,
       "type": "stat",
       "title": "VPN / Tailscale",
       "datasource": {
@@ -239,7 +247,7 @@
         "x": 8,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -294,11 +302,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 104,
+      "id": 115,
       "type": "stat",
       "title": "Signal K WebSocket",
       "datasource": {
@@ -309,7 +321,7 @@
         "x": 12,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -364,11 +376,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 105,
+      "id": 116,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -379,7 +395,7 @@
         "x": 16,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -427,11 +443,15 @@
         "textMode": "auto",
         "graphMode": "area",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 106,
+      "id": 117,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -442,7 +462,7 @@
         "x": 20,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -490,11 +510,15 @@
         "textMode": "auto",
         "graphMode": "area",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 107,
+      "id": 118,
       "type": "timeseries",
       "title": "Latency",
       "datasource": {
@@ -503,7 +527,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 6,
+        "y": 5,
         "w": 12,
         "h": 7
       },
@@ -564,7 +588,7 @@
       }
     },
     {
-      "id": 108,
+      "id": 119,
       "type": "timeseries",
       "title": "Packet Loss",
       "datasource": {
@@ -573,7 +597,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 6,
+        "y": 5,
         "w": 12,
         "h": 7
       },
@@ -635,7 +659,7 @@
       }
     },
     {
-      "id": 109,
+      "id": 120,
       "type": "timeseries",
       "title": "Bandwidth",
       "datasource": {
@@ -644,7 +668,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 13,
+        "y": 12,
         "w": 12,
         "h": 7
       },
@@ -719,7 +743,7 @@
       }
     },
     {
-      "id": 110,
+      "id": 121,
       "type": "timeseries",
       "title": "Telemetry Message Rates",
       "datasource": {
@@ -728,7 +752,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 13,
+        "y": 12,
         "w": 12,
         "h": 7
       },

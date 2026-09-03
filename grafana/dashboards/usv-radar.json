@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 170,
+      "id": 183,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -88,7 +88,7 @@
       }
     },
     {
-      "id": 82,
+      "id": 93,
       "type": "stat",
       "title": "Radar Status",
       "datasource": {
@@ -99,7 +99,7 @@
         "x": 0,
         "y": 2,
         "w": 5,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -154,11 +154,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 83,
+      "id": 94,
       "type": "stat",
       "title": "Tracked Targets",
       "datasource": {
@@ -169,7 +173,7 @@
         "x": 5,
         "y": 2,
         "w": 5,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -208,11 +212,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 84,
+      "id": 95,
       "type": "stat",
       "title": "Closest Target",
       "datasource": {
@@ -223,7 +231,7 @@
         "x": 10,
         "y": 2,
         "w": 5,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -271,11 +279,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 85,
+      "id": 96,
       "type": "stat",
       "title": "CPA",
       "datasource": {
@@ -286,7 +298,7 @@
         "x": 15,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -334,11 +346,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 86,
+      "id": 97,
       "type": "stat",
       "title": "TCPA",
       "datasource": {
@@ -349,7 +365,7 @@
         "x": 19,
         "y": 2,
         "w": 5,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -397,11 +413,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 87,
+      "id": 98,
       "type": "timeseries",
       "title": "Tracked Targets",
       "datasource": {
@@ -410,7 +430,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 6,
+        "y": 5,
         "w": 12,
         "h": 8
       },
@@ -470,7 +490,7 @@
       }
     },
     {
-      "id": 88,
+      "id": 99,
       "type": "timeseries",
       "title": "Closest Target / CPA",
       "datasource": {
@@ -479,7 +499,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 6,
+        "y": 5,
         "w": 12,
         "h": 8
       },
@@ -554,7 +574,7 @@
       }
     },
     {
-      "id": 89,
+      "id": 100,
       "type": "timeseries",
       "title": "Detection Rate",
       "datasource": {
@@ -563,7 +583,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 13,
         "w": 12,
         "h": 6
       },
@@ -626,7 +646,7 @@
       }
     },
     {
-      "id": 90,
+      "id": 101,
       "type": "timeseries",
       "title": "TCPA",
       "datasource": {
@@ -635,7 +655,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 14,
+        "y": 13,
         "w": 12,
         "h": 6
       },

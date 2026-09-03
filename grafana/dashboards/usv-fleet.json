@@ -1,6 +1,6 @@
 {
   "uid": "usv-fleet",
-  "title": "Fleet Overview",
+  "title": "Fleet",
   "tags": [
     "usv",
     "fleet"
@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 175,
+      "id": 188,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -84,11 +84,11 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **FLEET OVERVIEW** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel**"
+        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **FLEET** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel**"
       }
     },
     {
-      "id": 134,
+      "id": 147,
       "type": "geomap",
       "title": "Fleet Map \u2014 last known positions",
       "datasource": {
@@ -174,7 +174,7 @@
       }
     },
     {
-      "id": 135,
+      "id": 148,
       "type": "row",
       "title": "Vessel: $vessel",
       "repeat": "vessel",
@@ -188,7 +188,7 @@
       "panels": []
     },
     {
-      "id": 136,
+      "id": 149,
       "type": "stat",
       "title": "Mission State",
       "datasource": {
@@ -301,11 +301,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 137,
+      "id": 150,
       "type": "stat",
       "title": "Helm",
       "datasource": {
@@ -393,11 +397,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 138,
+      "id": 151,
       "type": "stat",
       "title": "Armed",
       "datasource": {
@@ -469,11 +477,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 139,
+      "id": 152,
       "type": "stat",
       "title": "Operator Link",
       "datasource": {
@@ -555,11 +567,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 140,
+      "id": 153,
       "type": "stat",
       "title": "Geofence",
       "datasource": {
@@ -636,11 +652,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 141,
+      "id": 154,
       "type": "stat",
       "title": "SOG",
       "datasource": {
@@ -697,11 +717,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 142,
+      "id": 155,
       "type": "stat",
       "title": "Progress",
       "datasource": {
@@ -758,11 +782,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 143,
+      "id": 156,
       "type": "stat",
       "title": "Signal K",
       "datasource": {
@@ -834,11 +862,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 144,
+      "id": 157,
       "type": "stat",
       "title": "MOOS",
       "datasource": {
@@ -910,7 +942,11 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     }
   ],

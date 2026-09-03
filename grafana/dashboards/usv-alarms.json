@@ -1,6 +1,6 @@
 {
   "uid": "usv-alarms",
-  "title": "Alarms & Notifications",
+  "title": "Alarms",
   "tags": [
     "usv",
     "alarms"
@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 176,
+      "id": 189,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -84,11 +84,11 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **ALARMS & NOTIFICATIONS** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel**"
+        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **ALARMS** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel**"
       }
     },
     {
-      "id": 145,
+      "id": 158,
       "type": "alertlist",
       "title": "Active Alerts",
       "datasource": {
@@ -99,7 +99,7 @@
         "x": 0,
         "y": 2,
         "w": 12,
-        "h": 10
+        "h": 8
       },
       "targets": [],
       "fieldConfig": {
@@ -127,7 +127,7 @@
       }
     },
     {
-      "id": 146,
+      "id": 159,
       "type": "table",
       "title": "Alarm History (events bucket)",
       "datasource": {
@@ -138,7 +138,7 @@
         "x": 12,
         "y": 2,
         "w": 12,
-        "h": 10
+        "h": 8
       },
       "targets": [
         {
@@ -163,7 +163,7 @@
       }
     },
     {
-      "id": 147,
+      "id": 160,
       "type": "stat",
       "title": "Battery SOC",
       "datasource": {
@@ -174,7 +174,7 @@
         "x": 0,
         "y": 12,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -222,11 +222,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 148,
+      "id": 161,
       "type": "stat",
       "title": "GPS Sats",
       "datasource": {
@@ -237,7 +241,7 @@
         "x": 4,
         "y": 12,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -284,11 +288,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 149,
+      "id": 162,
       "type": "stat",
       "title": "CAN Bus",
       "datasource": {
@@ -299,7 +307,7 @@
         "x": 8,
         "y": 12,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -354,11 +362,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 150,
+      "id": 163,
       "type": "stat",
       "title": "Coolant",
       "datasource": {
@@ -369,7 +381,7 @@
         "x": 12,
         "y": 12,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -417,11 +429,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 151,
+      "id": 164,
       "type": "stat",
       "title": "Fuel",
       "datasource": {
@@ -432,7 +448,7 @@
         "x": 16,
         "y": 12,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -480,11 +496,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 152,
+      "id": 165,
       "type": "stat",
       "title": "Radar",
       "datasource": {
@@ -495,7 +515,7 @@
         "x": 20,
         "y": 12,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -550,11 +570,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 153,
+      "id": 166,
       "type": "stat",
       "title": "Camera",
       "datasource": {
@@ -563,7 +587,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 16,
+        "y": 15,
         "w": 4,
         "h": 4
       },
@@ -620,11 +644,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 154,
+      "id": 167,
       "type": "stat",
       "title": "Signal K",
       "datasource": {
@@ -633,7 +661,7 @@
       },
       "gridPos": {
         "x": 4,
-        "y": 16,
+        "y": 15,
         "w": 4,
         "h": 4
       },
@@ -690,11 +718,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 155,
+      "id": 168,
       "type": "stat",
       "title": "MOOS Rate",
       "datasource": {
@@ -703,7 +735,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 16,
+        "y": 15,
         "w": 4,
         "h": 4
       },
@@ -752,11 +784,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 156,
+      "id": 169,
       "type": "stat",
       "title": "Comms Link",
       "datasource": {
@@ -765,7 +801,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 16,
+        "y": 15,
         "w": 4,
         "h": 4
       },
@@ -822,11 +858,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 157,
+      "id": 170,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -835,7 +875,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 16,
+        "y": 15,
         "w": 4,
         "h": 4
       },
@@ -885,11 +925,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 158,
+      "id": 171,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -898,7 +942,7 @@
       },
       "gridPos": {
         "x": 20,
-        "y": 16,
+        "y": 15,
         "w": 4,
         "h": 4
       },
@@ -948,11 +992,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 159,
+      "id": 172,
       "type": "stat",
       "title": "Mission State",
       "datasource": {
@@ -961,7 +1009,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 20,
+        "y": 19,
         "w": 4,
         "h": 4
       },
@@ -1059,11 +1107,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 160,
+      "id": 173,
       "type": "stat",
       "title": "Operator Link",
       "datasource": {
@@ -1072,7 +1124,7 @@
       },
       "gridPos": {
         "x": 4,
-        "y": 20,
+        "y": 19,
         "w": 4,
         "h": 4
       },
@@ -1129,11 +1181,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 161,
+      "id": 174,
       "type": "stat",
       "title": "Mission Armed",
       "datasource": {
@@ -1142,7 +1198,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 20,
+        "y": 19,
         "w": 4,
         "h": 4
       },
@@ -1199,11 +1255,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 162,
+      "id": 175,
       "type": "stat",
       "title": "Geofence",
       "datasource": {
@@ -1212,7 +1272,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 20,
+        "y": 19,
         "w": 4,
         "h": 4
       },
@@ -1274,11 +1334,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 163,
+      "id": 176,
       "type": "stat",
       "title": "Helm All-Stop",
       "datasource": {
@@ -1287,7 +1351,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 20,
+        "y": 19,
         "w": 4,
         "h": 4
       },
@@ -1344,11 +1408,15 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 164,
+      "id": 177,
       "type": "stat",
       "title": "Obstacles",
       "datasource": {
@@ -1357,7 +1425,7 @@
       },
       "gridPos": {
         "x": 20,
-        "y": 20,
+        "y": 19,
         "w": 4,
         "h": 4
       },
@@ -1406,7 +1474,11 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
       }
     }
   ],

@@ -72,7 +72,7 @@
   },
   "panels": [
     {
-      "id": 168,
+      "id": 181,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -88,7 +88,7 @@
       }
     },
     {
-      "id": 54,
+      "id": 63,
       "type": "volkovlabs-echarts-panel",
       "title": "Tachometer",
       "datasource": {
@@ -154,7 +154,7 @@
       }
     },
     {
-      "id": 55,
+      "id": 64,
       "type": "volkovlabs-echarts-panel",
       "title": "Coolant",
       "datasource": {
@@ -211,7 +211,7 @@
       }
     },
     {
-      "id": 56,
+      "id": 65,
       "type": "volkovlabs-echarts-panel",
       "title": "Oil Pressure",
       "datasource": {
@@ -272,7 +272,7 @@
       }
     },
     {
-      "id": 57,
+      "id": 66,
       "type": "volkovlabs-echarts-panel",
       "title": "Fuel",
       "datasource": {
@@ -334,7 +334,7 @@
       }
     },
     {
-      "id": 58,
+      "id": 67,
       "type": "volkovlabs-echarts-panel",
       "title": "Battery",
       "datasource": {
@@ -395,7 +395,7 @@
       }
     },
     {
-      "id": 59,
+      "id": 68,
       "type": "volkovlabs-echarts-panel",
       "title": "State of Charge",
       "datasource": {
@@ -452,7 +452,7 @@
       }
     },
     {
-      "id": 60,
+      "id": 69,
       "type": "stat",
       "title": "Fuel Rate",
       "datasource": {
@@ -462,7 +462,7 @@
       "gridPos": {
         "x": 0,
         "y": 8,
-        "w": 4,
+        "w": 3,
         "h": 3
       },
       "targets": [
@@ -503,21 +503,25 @@
         "textMode": "auto",
         "graphMode": "area",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 61,
+      "id": 70,
       "type": "stat",
-      "title": "Engine Runtime",
+      "title": "Engine Hours",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 4,
+        "x": 3,
         "y": 8,
-        "w": 4,
+        "w": 3,
         "h": 3
       },
       "targets": [
@@ -558,11 +562,141 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 62,
+      "id": 71,
+      "type": "stat",
+      "title": "Oil Temp",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 8,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"engine\" and (r._field == \"oil_temp\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "celsius",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 110
+              },
+              {
+                "color": "red",
+                "value": 125
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 72,
+      "type": "stat",
+      "title": "Engine Load",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 8,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"engine\" and (r._field == \"percent_load\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percent",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 73,
       "type": "stat",
       "title": "Battery Current",
       "datasource": {
@@ -570,9 +704,9 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 8,
+        "x": 12,
         "y": 8,
-        "w": 4,
+        "w": 3,
         "h": 3
       },
       "targets": [
@@ -613,21 +747,25 @@
         "textMode": "auto",
         "graphMode": "area",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 63,
+      "id": 74,
       "type": "stat",
-      "title": "Charging Status",
+      "title": "Charging",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 12,
+        "x": 15,
         "y": 8,
-        "w": 4,
+        "w": 3,
         "h": 3
       },
       "targets": [
@@ -684,21 +822,25 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 64,
+      "id": 75,
       "type": "stat",
-      "title": "Alternator Voltage",
+      "title": "Alternator",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 16,
+        "x": 18,
         "y": 8,
-        "w": 4,
+        "w": 3,
         "h": 3
       },
       "targets": [
@@ -739,11 +881,15 @@
         "textMode": "auto",
         "graphMode": "none",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 65,
+      "id": 76,
       "type": "stat",
       "title": "Total Power",
       "datasource": {
@@ -751,9 +897,9 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 20,
+        "x": 21,
         "y": 8,
-        "w": 4,
+        "w": 3,
         "h": 3
       },
       "targets": [
@@ -794,11 +940,15 @@
         "textMode": "auto",
         "graphMode": "area",
         "colorMode": "value",
-        "justifyMode": "auto"
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     },
     {
-      "id": 66,
+      "id": 77,
       "type": "timeseries",
       "title": "Engine RPM",
       "datasource": {
@@ -808,8 +958,8 @@
       "gridPos": {
         "x": 0,
         "y": 11,
-        "w": 12,
-        "h": 7
+        "w": 8,
+        "h": 6
       },
       "targets": [
         {
@@ -868,7 +1018,7 @@
       }
     },
     {
-      "id": 67,
+      "id": 78,
       "type": "timeseries",
       "title": "Coolant Temp / Oil Pressure",
       "datasource": {
@@ -876,10 +1026,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 12,
+        "x": 8,
         "y": 11,
-        "w": 12,
-        "h": 7
+        "w": 8,
+        "h": 6
       },
       "targets": [
         {
@@ -977,7 +1127,7 @@
       }
     },
     {
-      "id": 68,
+      "id": 79,
       "type": "timeseries",
       "title": "Battery Voltage / Current",
       "datasource": {
@@ -985,10 +1135,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 0,
-        "y": 18,
-        "w": 12,
-        "h": 7
+        "x": 16,
+        "y": 11,
+        "w": 8,
+        "h": 6
       },
       "targets": [
         {
@@ -1087,18 +1237,18 @@
       }
     },
     {
-      "id": 69,
+      "id": 80,
       "type": "timeseries",
-      "title": "Power Consumption / System Voltage",
+      "title": "Power / System Voltage",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 12,
-        "y": 18,
-        "w": 12,
-        "h": 7
+        "x": 0,
+        "y": 17,
+        "w": 8,
+        "h": 6
       },
       "targets": [
         {
@@ -1197,7 +1347,7 @@
       }
     },
     {
-      "id": 70,
+      "id": 81,
       "type": "timeseries",
       "title": "State of Charge",
       "datasource": {
@@ -1205,9 +1355,9 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 0,
-        "y": 25,
-        "w": 12,
+        "x": 8,
+        "y": 17,
+        "w": 8,
         "h": 6
       },
       "targets": [
@@ -1269,7 +1419,7 @@
       }
     },
     {
-      "id": 71,
+      "id": 82,
       "type": "timeseries",
       "title": "Fuel Level / Consumption",
       "datasource": {
@@ -1277,9 +1427,9 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 12,
-        "y": 25,
-        "w": 12,
+        "x": 16,
+        "y": 17,
+        "w": 8,
         "h": 6
       },
       "targets": [

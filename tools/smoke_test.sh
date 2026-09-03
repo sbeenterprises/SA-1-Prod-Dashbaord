@@ -91,9 +91,13 @@ for p in glob.glob(f"{repo}/grafana/dashboards/*.json"):
                 for f in pf.findall(q):
                     want.add((m, f))
 have = {tuple(l.split()) for l in open(produced_file) if l.strip()}
-external = {"cpu","mem","disk","diskio","net","temp","net_response","systemd_units","canbus_pgn"}
-missing = sorted((m,f) for m,f in want if m not in external and (m,f) not in have)
-print(f"  dashboard pairs: {len(want)} | simulator emits: {len(have)} | telegraf-sourced: skipped")
+# Fields the MOOS bridge maps from the helm (its FieldMap table) count as
+# produced too; the live bridge run below is skipped when MOOSDB is absent.
+src = open(f"{repo}/ingestion/moos-cpp/moos_bridge.cpp").read()
+moos = set(re.findall(r'\{"(\w+)",\s*"(\w+)"(?:,|\})', src))
+external = {"cpu","mem","disk","diskio","net","temp","system","nvidia_smi","net_response","systemd_units","canbus_pgn"}
+missing = sorted((m,f) for m,f in want if m not in external and (m,f) not in have and (m,f) not in moos)
+print(f"  dashboard pairs: {len(want)} | simulator emits: {len(have)} | moos bridge maps: {len(moos)} | telegraf-sourced: skipped")
 if missing:
     print("  [FAIL] queried but never written:")
     for m,f in missing: print(f"      {m}.{f}")
