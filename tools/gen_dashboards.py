@@ -1299,23 +1299,21 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms & Notifications", [
 # Swiftships wordmark + dashboard name + selected vessel across the top of
 # every dashboard (also visible in ?kiosk mode, where Grafana's own chrome is
 # hidden). The image is served from Grafana's public/img, put there by
-# deploy/brand.sh, so it works offline. Plain HTML attributes only (the text
-# panel sanitizer strips inline styles), hence the pre-composited white chip.
+# deploy/brand.sh, so it works offline. The white chip renders on both
+# themes without any styling.
 BRAND_H = 2
 
 
 def brand_panel(title):
+    # Markdown mode: Grafana 13's HTML sanitizer strips <img>, Markdown images
+    # are supported. The chip is pre-sized (44 px high) for the band.
     return {
         "id": nid(), "type": "text", "title": "", "transparent": True,
         "gridPos": {"x": 0, "y": 0, "w": 24, "h": BRAND_H},
-        "options": {"mode": "html", "content": (
-            '<table width="100%" height="100%" cellpadding="0" cellspacing="0">'
-            '<tr><td width="1%" valign="middle">'
-            '<img src="/public/img/swiftships_wordmark_chip.png" alt="Swiftships" height="40">'
-            '</td><td valign="middle">&nbsp;&nbsp;&nbsp;'
-            f'<font size="4"><b>{title.upper()}</b></font></td>'
-            '<td align="right" valign="middle">'
-            '<font size="2">VESSEL&nbsp;&nbsp;<b>$vessel</b></font></td></tr></table>')},
+        "options": {"mode": "markdown", "content": (
+            f"![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) "
+            f"&nbsp;&nbsp; **{title.upper()}** &nbsp;&nbsp;&middot;&nbsp;&nbsp; "
+            f"Vessel **$vessel**")},
     }
 
 

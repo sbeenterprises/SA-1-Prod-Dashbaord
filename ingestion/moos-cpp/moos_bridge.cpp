@@ -809,11 +809,28 @@ private:
         // change-only strings and the mission identity.
         telemetry_->str_field("mission_state", "", "state", last_state_);
         for (const char* f : {"arrival_state", "corridor_status",
-                              "crash_stop_status", "mission_id"}) {
+                              "crash_stop_status", "mission_id",
+                              "region_warning"}) {
             auto it = last_str_.find(f);
             if (it != last_str_.end() && !it->second.empty())
                 telemetry_->str_field("mission_state", "", f, it->second);
         }
+        // Change-only helm / mission strings: re-emit so last() over any
+        // dashboard time range finds a value (they may not change for hours).
+        if (!helm_state_str_.empty())
+            telemetry_->str_field("mission_state", "", "helm_state", helm_state_str_);
+        telemetry_->str_field("mission_state", "", "allstop_reason", allstop_str_);
+        if (!last_active_behavior_.empty())
+            telemetry_->str_field("mission_state", "", "active_behavior",
+                                  last_active_behavior_);
+        if (seen_entry_gate_)
+            telemetry_->str_field("mission_state", "", "entry_gate", flags_.entry_gate);
+        telemetry_->str_field("mission_state", "", "comms_failsafe",
+                              usv::comms_phase(flags_.comms_lost) == 0
+                                  ? "ok" : usv::lower(flags_.comms_lost));
+        if (!external_station_keep_)
+            telemetry_->str_field("mission_state", "", "station_keep",
+                                  flags_.stationing ? "true" : "false");
         if (!mission_name_.empty())
             telemetry_->str_field("mission_state", "", "mission_name",
                                   mission_name_);

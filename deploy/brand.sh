@@ -53,7 +53,7 @@ done
 # Assets for the dashboards' own header band (text panels reference these).
 cp "$BR/swiftships_wordmark.png" "$BR/swiftships_wordmark_light.png" \
    "$BR/swiftships_mark.png" "$BR/swiftships_mark_96.png" \
-   "$BR/swiftships_wordmark_chip.png" "$GPUB/img/"
+   "$BR/swiftships_wordmark_chip.png" "$BR/swiftships_wordmark_chip_sm.png" "$GPUB/img/"
 
 # ------------------------------------------------------- login background
 # Navy gradient in place of Grafana's orange/purple artwork (both themes).
