@@ -42,6 +42,7 @@
 namespace {
 
 constexpr double MS_TO_KN = 1.94384;
+constexpr double KN_TO_MS = 1.0 / MS_TO_KN;   // RADAR_TARGET spd is knots ($RATTM)
 
 struct FieldMap {
     const char* measurement;
@@ -687,7 +688,9 @@ private:
             try { return std::stod(it->second); } catch (...) { return -1.0; }
         };
         const double cpa = num("cpa");
-        contacts_.post(id->second, now, num("range"), cpa, num("tcpa"));
+        const double spd = num("spd");
+        contacts_.post_radar(id->second, now, num("range"), num("bearing"),
+                             spd >= 0 ? spd * KN_TO_MS : -1.0, num("cog"), cpa, num("tcpa"));
         if (cpa >= 0 && cpa < radar_cpa_alert_m_ &&
             alerted_contacts_.insert(id->second).second) {
             char m[128];
@@ -819,7 +822,11 @@ private:
         for (const auto& [id, c] : contacts_.contacts()) {
             if (c.source == "report") ++reports; else ++radar_only;
             if (c.risk == 2) ++high; else if (c.risk == 1) ++medium;
-            if (c.cpa_m >= 0 && c.tcpa_s >= 0 && (min_cpa < 0 || c.cpa_m < min_cpa)) {
+            // Closing contacts rank first; an opening contact's CPA is its
+            // current range (ComputeCpa), reported with TCPA -1 = opening.
+            const bool closing = c.tcpa_s >= 0, best_closing = min_tcpa >= 0;
+            if (c.cpa_m >= 0 && (min_cpa < 0 || (closing && !best_closing) ||
+                                 (closing == best_closing && c.cpa_m < min_cpa))) {
                 min_cpa = c.cpa_m; min_tcpa = c.tcpa_s;
             }
             if (c.range_m >= 0 && (closest < 0 || c.range_m < closest)) closest = c.range_m;
@@ -864,23 +871,28 @@ private:
         telemetry_->field("traffic", "", "high_risk", high);
         telemetry_->field("traffic", "", "risk_level", risk_level);
         telemetry_->field("traffic", "", "avoidance_active", avoidance ? 1 : 0);
-        if (closest >= 0) telemetry_->field("traffic", "", "closest_range_m", closest);
-        if (min_cpa >= 0) {
-            telemetry_->field("traffic", "", "min_cpa_m", min_cpa);
-            telemetry_->field("traffic", "", "min_tcpa_s", min_tcpa);
-        }
+        // -1 = nothing to report: the tiles map it to "none" instead of
+        // holding the last real value for the whole dashboard window.
+        telemetry_->field("traffic", "", "closest_range_m", closest >= 0 ? closest : -1.0);
+        telemetry_->field("traffic", "", "min_cpa_m", min_cpa >= 0 ? min_cpa : -1.0);
+        telemetry_->field("traffic", "", "min_tcpa_s", min_cpa >= 0 ? min_tcpa : -1.0);
         const std::string worst = contacts_.worst_id();
         telemetry_->str_field("traffic", "", "worst_contact", worst.empty() ? "-" : worst);
         // MOOS action: the course the route asks for (bearing to the next
         // waypoint), what the helm commands and what the boat does.
-        if (own.valid && !route_pts_.empty() && last_wpt_index_ >= 0 &&
-            last_wpt_index_ < static_cast<int>(route_pts_.size())) {
+        const bool route_active = own.valid && (flags_.waypoint || flags_.returning) &&
+                                  !route_pts_.empty() && last_wpt_index_ >= 0 &&
+                                  last_wpt_index_ < static_cast<int>(route_pts_.size());
+        if (route_active) {
             const usv::XY& wp = route_pts_[last_wpt_index_];
             const double brg = std::fmod(std::atan2(wp.x - own.x, wp.y - own.y) * 180.0 / M_PI + 360.0, 360.0);
             telemetry_->field("traffic", "", "planned_course", brg);
             if (have_desired_hdg_)
                 telemetry_->field("traffic", "", "course_deviation",
                                   usv::WrapDeg180(desired_hdg_ - brg));
+        } else {
+            telemetry_->field("traffic", "", "planned_course", -1.0);   // no route
+            telemetry_->field("traffic", "", "course_deviation", -999.0);
         }
         telemetry_->str_field("traffic", "", "reason",
                               avoidance ? "Collision avoidance active" :

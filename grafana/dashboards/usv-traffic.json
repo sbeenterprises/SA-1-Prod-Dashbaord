@@ -632,7 +632,21 @@
                 "value": 0.27
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": -1,
+                "to": 0,
+                "result": {
+                  "text": "none",
+                  "color": "#3d434b",
+                  "index": 0
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -700,7 +714,21 @@
                 "value": 1000
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": -1,
+                "to": -0.5,
+                "result": {
+                  "text": "none",
+                  "color": "#3d434b",
+                  "index": 0
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -740,7 +768,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n",
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -12s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n",
           "refId": "A"
         },
         {
@@ -784,7 +812,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.contact}))\n  |> keep(columns: [\"_value\"])\n",
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -12s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.contact}))\n  |> keep(columns: [\"_value\"])\n",
           "refId": "A"
         }
       ],
@@ -843,7 +871,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.cpa_m}))\n",
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -12s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.cpa_m}))\n",
           "refId": "A"
         }
       ],
@@ -911,7 +939,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.tcpa_s}))\n",
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -12s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.tcpa_s}))\n",
           "refId": "A"
         }
       ],
@@ -991,7 +1019,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.range_m}))\n",
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -12s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.range_m}))\n",
           "refId": "A"
         }
       ],
@@ -1051,7 +1079,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.bearing}))\n",
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -12s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.bearing}))\n",
           "refId": "A"
         }
       ],
@@ -1111,7 +1139,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.rel_bearing}))\n",
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -12s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.rel_bearing}))\n",
           "refId": "A"
         }
       ],
@@ -1171,7 +1199,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.rel_speed_kn}))\n",
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -12s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.rel_speed_kn}))\n",
           "refId": "A"
         }
       ],
@@ -1231,7 +1259,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.type}))\n  |> keep(columns: [\"_value\"])\n",
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -12s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.type}))\n  |> keep(columns: [\"_value\"])\n",
           "refId": "A"
         }
       ],
@@ -1290,7 +1318,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.encounter}))\n  |> keep(columns: [\"_value\"])\n",
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -12s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.encounter}))\n  |> keep(columns: [\"_value\"])\n",
           "refId": "A"
         }
       ],
@@ -1396,7 +1424,21 @@
                 "value": null
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": -1,
+                "to": -0.5,
+                "result": {
+                  "text": "no route",
+                  "color": "#3d434b",
+                  "index": 0
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -1584,7 +1626,21 @@
                 "value": 30
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": -1000,
+                "to": -500,
+                "result": {
+                  "text": "no route",
+                  "color": "#3d434b",
+                  "index": 0
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -1861,7 +1917,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 12)\n",
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -12s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 12)\n",
           "refId": "A"
         }
       ],
@@ -2085,19 +2141,19 @@
             "excludeByName": {
               "rel_bearing": true,
               "rel_speed_kn": true,
-              "hdg": true
+              "hdg": true,
+              "type": true,
+              "spd_kn": true
             },
             "indexByName": {
               "contact": 0,
               "source": 1,
-              "type": 2,
-              "range_m": 3,
-              "bearing": 4,
-              "spd_kn": 5,
-              "cpa_m": 6,
-              "tcpa_s": 7,
-              "encounter": 8,
-              "risk": 9
+              "range_m": 2,
+              "bearing": 3,
+              "cpa_m": 4,
+              "tcpa_s": 5,
+              "encounter": 6,
+              "risk": 7
             }
           }
         }
@@ -2123,7 +2179,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"min_cpa_m\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"min_cpa_m\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._value >= 0.0)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A",
           "alias": "CPA m"
         },
@@ -2132,7 +2188,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"min_tcpa_s\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"min_tcpa_s\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._value >= 0.0)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "B",
           "alias": "TCPA s"
         }

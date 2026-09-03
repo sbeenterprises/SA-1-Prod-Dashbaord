@@ -73,6 +73,7 @@ tools/                       # dev-side generators (Python, never on the vessel)
   gen_alerts.py              #   regenerate alert rules (--profile sim|vessel)
   render_preview.py          #   render dashboard preview pages (dark/light)
   smoke_test.sh              #   build + unit tests + end-to-end line-protocol checks
+  traffic_scenario.sh        #   scripted contacts for the Traffic dashboard (sim host)
 docs/                        # schema, deployment, user guide, traceability, validation
 ```
 

@@ -6,6 +6,16 @@ Keep a Changelog; versions are git tags on `main`.
 ## [Unreleased]
 
 ### Added
+- `tools/traffic_scenario.sh`: scripted crossing / head-on / overtaking /
+  radar-only / opening contacts for an end-to-end Traffic test on the
+  simulation host.
+
+### Fixed
+- Traffic tiles (closest range, min CPA, planned course, deviation) clear
+  when there is no contact or no active route instead of holding the last
+  value for the whole window.
+
+### Added
 - Traffic dashboard (replaces Radar): collision-risk and avoidance tiles,
   contact counts by source, heading-up polar traffic view with range
   rings, contacts and CPA line, highest-risk contact card, MOOS action

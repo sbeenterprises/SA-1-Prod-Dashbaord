@@ -1202,16 +1202,19 @@ DASHBOARDS.append(dashboard("usv-canbus", "CAN Bus", [
 CONTACT_FIELDS = ["range_m", "bearing", "rel_bearing", "spd_kn", "hdg",
                   "rel_speed_kn", "cpa_m", "tcpa_s", "risk"]
 CONTACT_STR_FIELDS = ["encounter", "type"]
+NO_SENTINEL = '  |> filter(fn: (r) => r._value >= 0.0)'   # drop the "nothing to report" -1 markers
 
 
 def contacts_query(limit=None, rank=True):
     """One row per live contact with every field as a column, riskiest
-    first. Numeric and string fields are pivoted separately and joined:
-    Flux refuses to group float and string _value columns into one table."""
+    first. The window matches the bridge's contact expiry (contact_ttl_s,
+    10 s) so an expired contact leaves the table within seconds. Numeric
+    and string fields are pivoted separately and joined: Flux refuses to
+    group float and string _value columns into one table."""
     nums = " or ".join(f'r._field == "{f}"' for f in CONTACT_FIELDS)
     strs = " or ".join(f'r._field == "{f}"' for f in CONTACT_STR_FIELDS)
     q = ('base = from(bucket: "telemetry")\n'
-         '  |> range(start: -30s)\n'
+         '  |> range(start: -12s)\n'
          '  |> filter(fn: (r) => r._measurement == "contacts")\n'
          '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
          '  |> last()\n'
@@ -1341,9 +1344,13 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
          thresholds=[(None, OK), (1, "red")]),
     stat("Closest Range", flux("traffic", "closest_range_m", last=True, nm=True),
          18, 0, 3, 3, unit=UNIT_NM, decimals=2, no_value="none",
+         mappings=[{"type": "range", "options": {"from": -1, "to": 0,
+                    "result": {"text": "none", "color": "#3d434b", "index": 0}}}],
          thresholds=[(None, "red"), (0.11, "yellow"), (0.27, OK)]),
     stat("Min CPA", flux("traffic", "min_cpa_m", last=True), 21, 0, 3, 3,
          unit=UNIT_M, decimals=0, no_value="none",
+         mappings=[{"type": "range", "options": {"from": -1, "to": -0.5,
+                    "result": {"text": "none", "color": "#3d434b", "index": 0}}}],
          thresholds=[(None, "red"), (500, "yellow"), (1000, OK)]),
     # B — traffic view | highest-risk contact | MOOS action
     (instrument("Traffic View",
@@ -1374,13 +1381,17 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
          text_mode="value", mappings=encounter_mappings, color_mode="background",
          no_value="none", thresholds=[(None, "#3d434b")]),
     kv_tile("Planned Course", flux("traffic", "planned_course", last=True), 17, 3, 4, 3,
-            unit="degree", decimals=0, no_value="no route"),
+            unit="degree", decimals=0, no_value="no route",
+            mappings=[{"type": "range", "options": {"from": -1, "to": -0.5,
+                       "result": {"text": "no route", "color": "#3d434b", "index": 0}}}]),
     kv_tile("Commanded Course", flux("autopilot", "desired_heading", last=True), 21, 3, 3, 3,
             unit="degree", decimals=0),
     kv_tile("Actual Heading", flux("nav", "heading", last=True), 17, 6, 4, 3,
             unit="degree", decimals=0),
     kv_tile("Deviation", flux("traffic", "course_deviation", last=True), 21, 6, 3, 3,
             unit="degree", decimals=0, no_value="no route",
+            mappings=[{"type": "range", "options": {"from": -1000, "to": -500,
+                       "result": {"text": "no route", "color": "#3d434b", "index": 0}}}],
             thresholds=[(None, OK), (10, "yellow"), (30, "orange")]),
     kv_tile("Speed Command", flux("autopilot", "desired_speed", last=True), 17, 9, 4, 3,
             unit="velocityknot", decimals=1),
@@ -1423,8 +1434,8 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
                      {"matcher": {"id": "byRegexp", "options": "rel_bearing|rel_speed_kn|hdg"},
                       "properties": [{"id": "custom.hidden", "value": True}]}]),
     ts("Closest CPA / TCPA",
-       [target(flux("traffic", "min_cpa_m"), "CPA m"),
-        target(flux("traffic", "min_tcpa_s"), "TCPA s", ref="B")],
+       [target(flux("traffic", "min_cpa_m", extra=NO_SENTINEL), "CPA m"),
+        target(flux("traffic", "min_tcpa_s", extra=NO_SENTINEL), "TCPA s", ref="B")],
        12, 16, 12, 5, unit=UNIT_M,
        overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
                    "properties": [{"id": "unit", "value": "s"},
@@ -1435,10 +1446,10 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
 # order and drop the working columns.
 _ct = next(p for p in DASHBOARDS[-1]["panels"] if p["title"].startswith("Contacts —"))
 _ct["transformations"] = [{"id": "organize", "options": {
-    "excludeByName": {"rel_bearing": True, "rel_speed_kn": True, "hdg": True},
-    "indexByName": {"contact": 0, "source": 1, "type": 2, "range_m": 3,
-                    "bearing": 4, "spd_kn": 5, "cpa_m": 6, "tcpa_s": 7,
-                    "encounter": 8, "risk": 9}}}]
+    "excludeByName": {"rel_bearing": True, "rel_speed_kn": True, "hdg": True,
+                      "type": True, "spd_kn": True},
+    "indexByName": {"contact": 0, "source": 1, "range_m": 2, "bearing": 3,
+                    "cpa_m": 4, "tcpa_s": 5, "encounter": 6, "risk": 7}}}]
 
 # --------------------------------------------------------------- FR-7 Camera
 DASHBOARDS.append(dashboard("usv-camera", "Cameras", [

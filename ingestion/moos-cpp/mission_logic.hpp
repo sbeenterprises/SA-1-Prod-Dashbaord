@@ -477,6 +477,22 @@ public:
         if (c.source.empty()) c.source = "radar";
     }
 
+    // Radar target with polar data (RADAR_TARGET: range, true bearing,
+    // speed, course, CPA/TCPA as the radar computed them).
+    void post_radar(const std::string& id, double now, double range_m,
+                    double bearing, double spd_mps, double cog,
+                    double cpa_m, double tcpa_s) {
+        Contact& c = contacts_[id];
+        c.range_m = range_m;
+        if (bearing >= 0) c.bearing = bearing;
+        if (spd_mps >= 0) c.spd_mps = spd_mps;
+        if (cog >= 0) c.hdg = cog;
+        if (cpa_m >= 0) c.cpa_m = cpa_m;
+        c.tcpa_s = tcpa_s >= 0 ? tcpa_s : -1;
+        c.source = "radar";
+        c.last_seen = now;
+    }
+
     // NODE_REPORT / AIS-style contact with position and motion.
     void post_report(const std::string& id, double now, double x, double y,
                      double spd_mps, double hdg, const std::string& type) {
@@ -494,6 +510,19 @@ public:
     void update_geometry(const OwnShip& own, double cpa_alert_m,
                          double tcpa_alert_s) {
         for (auto& [id, c] : contacts_) {
+            if (!c.have_pos && own.valid && c.bearing >= 0) {
+                // Radar-only: polar data from the sensor, relative values
+                // and the encounter type from own heading / course.
+                c.rel_bearing = WrapDeg180(c.bearing - own.hdg);
+                if (c.hdg >= 0) c.encounter = EncounterType(own.hdg, c.hdg);
+                if (c.spd_mps >= 0 && c.hdg >= 0) {
+                    const double ovx = own.spd_mps * std::sin(own.hdg * M_PI / 180.0);
+                    const double ovy = own.spd_mps * std::cos(own.hdg * M_PI / 180.0);
+                    const double cvx = c.spd_mps * std::sin(c.hdg * M_PI / 180.0);
+                    const double cvy = c.spd_mps * std::cos(c.hdg * M_PI / 180.0);
+                    c.rel_speed_mps = std::hypot(cvx - ovx, cvy - ovy);
+                }
+            }
             if (c.have_pos && own.valid) {
                 const double dx = c.x - own.x, dy = c.y - own.y;
                 c.range_m = std::sqrt(dx * dx + dy * dy);
