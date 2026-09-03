@@ -316,6 +316,7 @@ protected:
     bool Iterate() override {
         if (!telemetry_) return true;
         const double now = MonoSeconds();
+        FlushBehaviorEvent(now);
 
         // 1 Hz: autonomy snapshot + derived mission quantities. Periodic
         // (not just on-change) so stat panels stay fresh, the state
@@ -731,11 +732,27 @@ private:
         telemetry_->str_field("mission_state", "", "helm_summary", summary);
     }
 
+    // The field follows the helm immediately; the EVENT is posted only once
+    // the new set has held for kBehaviorSettleS, because behaviors such as
+    // station-keep run intermittently (inner radius) and would otherwise
+    // flood the mission log with none / station-keep pairs.
+    static constexpr double kBehaviorSettleS = 5.0;
+
     void WriteActiveBehavior(const std::string& active) {
         if (active == last_active_behavior_) return;
         last_active_behavior_ = active;
         telemetry_->str_field("mission_state", "", "active_behavior", active);
-        Event("state_change", "info", "Active behaviors: " + active);
+        pending_behavior_ = active;
+        pending_behavior_since_ = MonoSeconds();
+    }
+
+    void FlushBehaviorEvent(double now) {
+        if (pending_behavior_since_ <= 0.0) return;
+        if (now - pending_behavior_since_ < kBehaviorSettleS) return;
+        pending_behavior_since_ = 0.0;
+        if (pending_behavior_ == announced_behavior_) return;
+        announced_behavior_ = pending_behavior_;
+        Event("state_change", "info", "Active behaviors: " + announced_behavior_);
     }
 
     void HandleGeofence(const std::string& val, double now) {
@@ -955,6 +972,8 @@ private:
     std::string helm_state_str_;
     std::string allstop_str_ = "clear";
     std::string last_active_behavior_;
+    std::string pending_behavior_, announced_behavior_;
+    double pending_behavior_since_ = 0.0;
     std::string last_bhv_notice_;
 
     usv::DecayLatch geofence_{30.0};

@@ -128,7 +128,8 @@ def geometry_query(kind):
             '  |> pivot(rowKey: ["idx"], columnKey: ["_field"], valueColumn: "_value")\n'
             '  |> filter(fn: (r) => exists r.lat and exists r.lon)\n'
             '  |> sort(columns: ["seq"])\n'
-            '  |> keep(columns: ["seq", "lat", "lon"])\n')
+            '  |> map(fn: (r) => ({r with wp: string(v: int(v: r.seq) + 1)}))\n'
+            '  |> keep(columns: ["seq", "wp", "lat", "lon"])\n')
 
 
 # Map overlay layers shared by Navigation and Replay: operating region
@@ -161,7 +162,7 @@ def overlay_layers(track_ref="A", vessel_ref="B", route_ref="C",
              "size": {"fixed": 6}, "color": {"fixed": ROUTE_GREEN},
              "opacity": 1,
              "symbol": {"fixed": "img/icons/marker/circle.svg", "mode": "fixed"},
-             "text": {"field": "seq", "mode": "field"},
+             "text": {"field": "wp", "mode": "field"},
              "textConfig": {"fontSize": 11, "offsetX": 0, "offsetY": -12,
                             "textAlign": "center", "textBaseline": "middle"},
          }, "showLegend": False}},
@@ -182,8 +183,9 @@ def track_query(every, archive=False):
     fields arrive as separate tables, so they are merged (group()) before
     the pivot; pivoting first leaves lat and lon in different frames and
     aggregateWindow with no _value column errors out."""
-    return ((ARCHIVE_BUCKET + 'from(bucket: bucket)\n') if archive
-            else 'from(bucket: "telemetry")\n'
+    head = (ARCHIVE_BUCKET + 'from(bucket: bucket)\n') if archive \
+        else 'from(bucket: "telemetry")\n'
+    return (head +
             '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
             '  |> filter(fn: (r) => r._measurement == "nav" and (r._field == "lat" or r._field == "lon"))\n'
             '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'

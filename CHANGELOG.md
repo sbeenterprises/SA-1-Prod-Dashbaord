@@ -27,6 +27,11 @@ Keep a Changelog; versions are git tags on `main`.
   windows older than the 30-day raw retention; the installer's downsample
   task now skips string fields (it errored on them before).
 
+- Mission Events: behavior changes are logged only after the new set has
+  held for 5 s (station-keep runs intermittently and flooded the log).
+- Waypoint labels on the maps are 1-based (WP 1 is the first waypoint).
+- Smoke test checks every generated query is complete (from + range).
+
 ### Changed
 - Fleet dashboard uses its own `fleet_vessel` variable (default All) so
   the vessel selected on another tab no longer narrows the fleet view.

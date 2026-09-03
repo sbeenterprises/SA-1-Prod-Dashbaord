@@ -123,7 +123,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: -90d)\n  |> filter(fn: (r) => r._measurement == \"geometry\" and r.kind == \"route\")\n  |> filter(fn: (r) => r._field == \"lat\" or r._field == \"lon\" or r._field == \"seq\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> pivot(rowKey: [\"idx\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.lat and exists r.lon)\n  |> sort(columns: [\"seq\"])\n  |> keep(columns: [\"seq\", \"lat\", \"lon\"])\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: -90d)\n  |> filter(fn: (r) => r._measurement == \"geometry\" and r.kind == \"route\")\n  |> filter(fn: (r) => r._field == \"lat\" or r._field == \"lon\" or r._field == \"seq\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> pivot(rowKey: [\"idx\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.lat and exists r.lon)\n  |> sort(columns: [\"seq\"])\n  |> map(fn: (r) => ({r with wp: string(v: int(v: r.seq) + 1)}))\n  |> keep(columns: [\"seq\", \"wp\", \"lat\", \"lon\"])\n",
           "refId": "C"
         },
         {
@@ -131,7 +131,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: -90d)\n  |> filter(fn: (r) => r._measurement == \"geometry\" and r.kind == \"region\")\n  |> filter(fn: (r) => r._field == \"lat\" or r._field == \"lon\" or r._field == \"seq\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> pivot(rowKey: [\"idx\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.lat and exists r.lon)\n  |> sort(columns: [\"seq\"])\n  |> keep(columns: [\"seq\", \"lat\", \"lon\"])\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: -90d)\n  |> filter(fn: (r) => r._measurement == \"geometry\" and r.kind == \"region\")\n  |> filter(fn: (r) => r._field == \"lat\" or r._field == \"lon\" or r._field == \"seq\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> pivot(rowKey: [\"idx\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.lat and exists r.lon)\n  |> sort(columns: [\"seq\"])\n  |> map(fn: (r) => ({r with wp: string(v: int(v: r.seq) + 1)}))\n  |> keep(columns: [\"seq\", \"wp\", \"lat\", \"lon\"])\n",
           "refId": "D"
         }
       ],
@@ -223,7 +223,7 @@
                   "mode": "fixed"
                 },
                 "text": {
-                  "field": "seq",
+                  "field": "wp",
                   "mode": "field"
                 },
                 "textConfig": {

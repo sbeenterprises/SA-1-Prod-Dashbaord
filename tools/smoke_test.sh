@@ -79,6 +79,21 @@ grep -q "vessel=usv-smoke" "$LINES" && ok "VESSEL_ID tag applied" || bad "VESSEL
 seen > "$TMP/produced.txt"
 echo "  ($(wc -l < "$TMP/produced.txt") distinct measurement/field pairs)"
 
+hdr "Dashboard query completeness"
+python3 - "$REPO" <<'PY'
+import json, glob, sys
+bad = 0
+for p in glob.glob(f"{sys.argv[1]}/grafana/dashboards/*.json"):
+    for pan in json.load(open(p))["panels"]:
+        for t in pan.get("targets", []):
+            q = t.get("query", "")
+            if q and ("from(bucket" not in q or "|> range(" not in q):
+                bad += 1; print(f"  [FAIL] incomplete query: {p.split('/')[-1]} / {pan['title']} / {t['refId']}")
+print("  [PASS] every dashboard query has from() and range()" if not bad else f"  {bad} incomplete")
+sys.exit(1 if bad else 0)
+PY
+[ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
+
 hdr "Dashboard queries vs simulator output"
 python3 - "$REPO" "$TMP/produced.txt" <<'PY'
 import json, glob, re, sys
