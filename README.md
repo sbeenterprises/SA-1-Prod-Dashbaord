@@ -5,12 +5,13 @@
 # Swift Autonomous Dashboard
 
 Grafana + InfluxDB monitoring stack for the Swiftships MOOS-IvP / Signal K
-unmanned surface vehicle. Twelve single-screen operator dashboards
-(Mission, Navigation, Autopilot, Vessel Health, CAN Bus, Traffic, Cameras,
-Comms, System, Replay, Alarms, Fleet), 18 provisioned alert rules and a
+unmanned surface vehicle. Thirteen single-screen operator dashboards
+(Mission, Readiness, Navigation, Autopilot, Vessel Health, CAN Bus,
+Traffic, Cameras, Comms, System, Replay, Alarms, Fleet), 18 provisioned
+alert rules and a
 Swiftships-branded Grafana, fed by native C++ bridges from the MOOS
 community, the Signal K server and the NMEA 2000 bus. Implements SRS
-FR-1..FR-11 and is integrated with the **Alpha mission** (`alpha.bhv`): the
+FR-1..FR-12 and is integrated with the **Alpha mission** (`alpha.bhv`): the
 bridge subscribes to the mission's real variable set and derives the
 operational mission state onboard (`docs/alpha-mission-integration.md`).
 
@@ -58,16 +59,18 @@ deploy/
   systemd/                   # service units (signalk, signalk@vessel, can, simulator)
 telegraf/telegraf.conf       # OBC metrics, GPU (nvidia_smi), ping, systemd units
 ingestion/                   # all C++
-  cpp-common/                #   async Influx line-protocol writer, HTTP GET helper
+  cpp-common/                #   async Influx line-protocol writer, HTTP GET helper,
+                             #   latest-value poller (readiness inputs from other producers)
   moos-cpp/                  #   grafana_bridge (CMOOSApp) + example.moos
-                             #   + mission_logic.hpp (Alpha state machine,
-                             #     unit-tested) + moos_poke utility
+                             #   + mission_logic.hpp (Alpha state machine, traffic
+                             #     geometry, pre-departure readiness; unit-tested)
+                             #   + moos_poke utility
   can-cpp/                   #   SocketCAN / NMEA 2000 bridge
   signalk-cpp/               #   Signal K WebSocket delta bridge
 simulator/                   # C++ bench generator (scripted Alpha mission)
 grafana/
   provisioning/              # datasource, dashboards provider, alerting
-  dashboards/*.json          # 12 generated dashboards (never edit by hand)
+  dashboards/*.json          # 13 generated dashboards (never edit by hand)
 tools/                       # dev-side generators (Python, never on the vessel)
   gen_dashboards.py          #   regenerate dashboard JSON
   gen_alerts.py              #   regenerate alert rules (--profile sim|vessel)
@@ -100,11 +103,13 @@ python3 tools/gen_alerts.py --profile sim
 bash tools/smoke_test.sh                 # must end with FAIL: 0
 ```
 
-The smoke test builds every C++ program, runs the 141-assertion
-`mission_logic_test`, drives the simulator, the CAN bridge, the Signal K
-bridge and (when MOOSDB is on the PATH) the MOOS bridge against an
-InfluxDB stub, and cross-checks every field the dashboards query against
-what the producers actually write. Work on feature branches, keep commits
+The smoke test (79 checks) builds every C++ program, runs the
+228-assertion `mission_logic_test`, drives the simulator, the CAN bridge,
+the Signal K bridge and (when MOOSDB is on the PATH) the MOOS bridge
+against an InfluxDB stub, and cross-checks every field the dashboards
+query against what the producers actually write. All vessel-side logic
+(mission state, traffic geometry and risk, pre-departure readiness) is
+C++ in the bridge; Grafana only displays it. Work on feature branches, keep commits
 conventional (`dashboards: ...`, `bridge: ...`, `deploy: ...`) and merge
 to `main` through a pull request.
 

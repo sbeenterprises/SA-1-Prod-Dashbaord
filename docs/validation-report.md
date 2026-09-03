@@ -318,3 +318,44 @@ MOOS convention (a 20 kn console target that arrives as 20 m/s shows as
 38.9 kn on the Speed Governor: a console-to-MOOS units question, not a
 dashboard conversion); bravo..foxtrot MOOS communities still to be run as
 services; post-mission report generator deferred.
+
+## 9. Traffic and pre-departure readiness (2026-09-03, branches feat/traffic-view, feat/fake-traffic, feat/readiness)
+
+Scope: the Traffic dashboard (collision-avoidance picture, onboard
+CPA/TCPA, encounter and risk per contact), the fake-traffic test tooling,
+and the Readiness dashboard with its onboard evaluation.
+
+1. **Traffic**: verified live on usv01 with `tools/traffic_scenario.sh`
+   (head-on reached HIGH with CPA 11 m, the critical event and the
+   `usv-collision-risk` alert fired; radar-only target counted; opening
+   contact stayed CLEAR) and with `tools/fake_traffic.py` (harbour scene,
+   six contacts plus a radar track, MEDIUM). Finding for the autonomy
+   team: the simulation helm never engaged an avoidance behavior.
+2. **Readiness, C++ side**: `usv::EvaluateReadiness` decides all 15
+   checks from a `LatestStore` of the newest sample per field;
+   `mission_logic_test` covers the simulation profile (N/A for missing
+   sensors, CONSOLE for the unpublished checklist / ENC), the vessel
+   profile (missing data FAILS, GPS quality required), an all-pass set
+   with the exact evidence strings, and the fault set (rudder not
+   following, low fuel, pending checklist items, HIGH collision risk,
+   stale position; blocking list in check order). 228 assertions, 0 failed.
+3. **Readiness, bridge**: the smoke test's InfluxDB stub answers the
+   bridge's poll query with annotated CSV (Signal K up, Internet up 38 ms,
+   CAN up 212 msg/s, host 4 / 11 / 63 %), and the captured line protocol
+   shows those values inside the comms, CAN and onboard-computer evidence,
+   the console checklist and ENC rows evaluated from the poked
+   `CHECKLIST_STATUS` / `ENC_STATUS`, the course row seeing route,
+   waypoints and region, N/A for the engine under `readiness_profile =
+   sim`, the safety row failing on the scenario's crash stop, and the
+   change event. The poll query was checked to restrict CPU to
+   `cpu-total`.
+4. **Dashboard**: `usv-readiness.json` fills the 24 x 23 grid with no
+   overlap (8 tiles, two 18-row tables); tab order Mission, Readiness,
+   Navigation ...; the Flux for the checks table reuses the pivot-then-join
+   pattern proven live for the contacts table.
+
+Smoke test after this pass: **79 PASS, 0 FAIL, 1 SKIP**. To verify on the
+target: the Readiness tab shows 15 rows with evidence within 10 s of the
+bridge restart; the Failed tile and the "Readiness NOT READY: ..." event
+name the blocking checks; poking the two console variables turns the
+CONSOLE rows into PASS.

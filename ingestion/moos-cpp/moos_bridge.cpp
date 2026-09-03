@@ -36,6 +36,7 @@
 #include <vector>
 
 #include "../cpp-common/http_get.hpp"
+#include "../cpp-common/influx_query.hpp"
 #include "../cpp-common/influx_writer.hpp"
 #include "mission_logic.hpp"
 
@@ -144,6 +145,9 @@ const std::map<std::string, FieldMap> kStringPassthrough = {
     {"CORRIDOR_STATUS",    {"mission_state", "corridor_status"}},
     {"CRASH_STOP_STATUS",  {"mission_state", "crash_stop_status"}},
     {"WPT_STAT",           {"mission_state", "wpt_stat"}},
+    // Operator console (Freeboard) state for the Readiness dashboard:
+    // ENC_STATUS = "selected:<chart name>" | "none"
+    {"ENC_STATUS",         {"mission_state", "enc_status"}},
 };
 
 // Alpha mission mode flags (posted as strings "true"/"false"; some tools
@@ -162,6 +166,7 @@ const std::set<std::string> kSpecialVars = {
     "COMMS_LOST", "SURVEY_ENTRY_GATE",
     "IVPHELM_STATE", "IVPHELM_ALLSTOP", "IVPHELM_SUMMARY",
     "OPR_BREACHED", "VIEW_SEGLIST", "OPR_POLY_ACTUAL", "OBSTACLE_ALERT",
+    "CHECKLIST_STATUS",
     "DIST_TO_NEXT_WPT", "WPT_INDEX",
     "ACTIVE_BEHAVIOR", "STATION_KEEP_STATUS",
     "BHV_WARNING", "BHV_ERROR",
@@ -243,6 +248,11 @@ protected:
         //                                   // /signalk/v{2,1}/api/resources/routes/<id>);
         //                                   // empty disables the lookup
         //   signalk_token  = <jwt>          // only if Signal K security denies reads
+        //   readiness_profile = vessel      // pre-departure checks: "vessel" = a
+        //                                   // check without sensor data FAILS;
+        //                                   // "sim" = it reads N/A (no engine/CAN/
+        //                                   // camera data in simulation)
+        //   readiness_period_s = 5          // evaluation and write period
         double hz = 5.0;
         if (m_MissionReader.GetConfigurationParam("max_rate_hz", hz)) {}
         limiter_.set_default(hz);
@@ -267,6 +277,11 @@ protected:
         if (!signalk_http_.empty() && signalk_http_.find("://") == std::string::npos)
             signalk_http_ = "http://" + signalk_http_;
         m_MissionReader.GetConfigurationParam("signalk_token", signalk_token_);
+        std::string profile = "vessel";
+        m_MissionReader.GetConfigurationParam("readiness_profile", profile);
+        readiness_strict_ = usv::lower(usv::trim(profile)) != "sim";
+        m_MissionReader.GetConfigurationParam("readiness_period_s", readiness_period_s_);
+        if (readiness_period_s_ < 1.0) readiness_period_s_ = 1.0;
         // Map overlays need the MOOS local-grid datum (global block of the
         // mission file). Without it no geometry is written, nothing else
         // changes.
@@ -277,6 +292,29 @@ protected:
         usv::InfluxOptions ev_opts = opts;
         ev_opts.bucket = events_bucket;
         events_ = std::make_unique<usv::InfluxWriter>(ev_opts);
+
+        // Readiness (FR-12): keep the latest value of everything this bridge
+        // writes, and poll InfluxDB for the few fields other producers write
+        // (Telegraf host metrics and probes, Signal K link, CAN bridge,
+        // cameras). Evaluation itself is usv::EvaluateReadiness.
+        telemetry_->observe(
+            [this](const std::string& m, const std::string& f, double v) {
+                latest_.put(m, f, v, MonoSeconds());
+            },
+            [this](const std::string& m, const std::string& f, const std::string& v) {
+                latest_.put_str(m, f, v, MonoSeconds());
+            });
+        poller_.start(opts, {
+            {"comms", "signalk_ws_up", ""},
+            {"ping", "result_code", "r.url == \"8.8.8.8\""},
+            {"ping", "average_response_ms", "r.url == \"8.8.8.8\""},
+            {"canbus", "interface_up", ""},
+            {"canbus", "msg_rate", ""},
+            {"camera", "connected", ""},
+            {"cpu", "usage_user", "r.cpu == \"cpu-total\""},
+            {"mem", "used_percent", ""},
+            {"disk", "used_percent", "r.path == \"/\""},
+        }, readiness_period_s_);
 
         MOOSTrace("grafana_bridge: influx=%s bucket=%s vessel=%s\n",
                   opts.url.c_str(), opts.bucket.c_str(), opts.vessel.c_str());
@@ -342,6 +380,12 @@ protected:
                               m_Comms.IsConnected() ? 1 : 0);
             msg_count_ = 0;
             last_rate_emit_ = now;
+        }
+
+        // Pre-departure readiness, evaluated onboard (mission_logic.hpp).
+        if (now - last_readiness_ >= readiness_period_s_) {
+            last_readiness_ = now;
+            WriteReadiness(now);
         }
         telemetry_->flush();
         return true;
@@ -483,6 +527,8 @@ private:
             HandleSeglist(msg.GetString());
         } else if (key == "OPR_POLY_ACTUAL" && msg.IsString()) {
             WriteGeometry("region", msg.GetString(), /*close=*/true);
+        } else if (key == "CHECKLIST_STATUS" && msg.IsString()) {
+            HandleChecklist(msg.GetString());
         } else if (key == "OBSTACLE_ALERT" && msg.IsString()) {
             const std::string id = usv::ParseObstacleId(msg.GetString());
             if (obstacles_.post(id, now))
@@ -790,6 +836,9 @@ private:
         std::vector<usv::XY> pts = usv::ParsePts(spec);
         if (kind == "route") route_pts_ = pts;
         telemetry_->erase("_measurement=\"geometry\" AND kind=\"" + kind + "\"");
+        if (kind == "region")
+            latest_.put("geometry", "region_vertices",
+                        static_cast<double>(pts.size()), MonoSeconds());
         if (pts.empty()) { telemetry_->flush(); return; }   // "NONE": cleared
         if (close) pts.push_back(pts.front());
         const long long ts = std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -915,6 +964,73 @@ private:
         }
     }
 
+    // Console pre-departure checklist (manual items ticked by the operator),
+    // mirrored on the Readiness dashboard. Stored and re-emitted at 1 Hz.
+    void HandleChecklist(const std::string& spec) {
+        const usv::Checklist c = usv::ParseChecklist(spec);
+        if (c.total < 0) return;
+        checklist_ = c;
+        have_checklist_ = true;
+        if (spec != last_checklist_spec_) {
+            last_checklist_spec_ = spec;
+            char m[160];
+            std::snprintf(m, sizeof m, "Console checklist %d/%d%s%s", c.done, c.total,
+                          c.by.empty() ? "" : " by ", c.by.c_str());
+            Event("state_change", "info", m);
+        }
+        WriteChecklist();
+    }
+
+    void WriteChecklist() {
+        if (!have_checklist_) return;
+        telemetry_->field("mission_state", "", "checklist_done", checklist_.done);
+        telemetry_->field("mission_state", "", "checklist_total", checklist_.total);
+        telemetry_->str_field("mission_state", "", "checklist_pending",
+                              checklist_.pending.empty() ? "-" : checklist_.pending);
+        telemetry_->str_field("mission_state", "", "checklist_by",
+                              checklist_.by.empty() ? "-" : checklist_.by);
+    }
+
+    // One row per check (measurement "readiness", tag check) plus the
+    // summary the tiles read, every readiness_period_s. Values other
+    // producers write come from the InfluxDB poller; their age is carried
+    // over so a stale series still reads as missing.
+    void WriteReadiness(double now) {
+        for (const auto& [key, lv] : poller_.snapshot()) {
+            const size_t dot = key.find('.');
+            if (dot == std::string::npos) continue;
+            latest_.put(key.substr(0, dot), key.substr(dot + 1), lv.value, now - lv.age_s);
+        }
+        const auto checks = usv::EvaluateReadiness(latest_, now, readiness_strict_);
+        const usv::ReadinessSummary sum = usv::SummarizeReadiness(checks);
+        for (const auto& c : checks) {
+            const std::string tags = "check=" + c.id;
+            telemetry_->field("readiness", tags, "seq", c.seq);
+            telemetry_->field("readiness", tags, "status", c.status);
+            telemetry_->str_field("readiness", tags, "name", c.name);
+            telemetry_->str_field("readiness", tags, "evidence", c.evidence);
+        }
+        telemetry_->field("readiness_summary", "", "ready", sum.ready ? 1 : 0);
+        telemetry_->field("readiness_summary", "", "passed", sum.passed);
+        telemetry_->field("readiness_summary", "", "failed", sum.failed);
+        telemetry_->field("readiness_summary", "", "na", sum.na);
+        telemetry_->field("readiness_summary", "", "console", sum.console);
+        telemetry_->field("readiness_summary", "", "checks", static_cast<double>(checks.size()));
+        telemetry_->str_field("readiness_summary", "", "blocking",
+                              sum.blocking.empty() ? "-" : sum.blocking);
+        telemetry_->str_field("readiness_summary", "", "profile",
+                              readiness_strict_ ? "vessel" : "sim");
+        // Change-only event so the Mission Events list shows when the boat
+        // became ready and what blocked it.
+        const std::string state = sum.ready ? "READY" : "NOT READY: " +
+            (sum.blocking.empty() ? std::string("console checklist / ENC not published")
+                                  : sum.blocking);
+        if (state != last_readiness_state_) {
+            last_readiness_state_ = state;
+            Event("readiness", sum.ready ? "info" : "warning", "Readiness " + state);
+        }
+    }
+
     void HandleSeglist(const std::string& spec) {
         const usv::SeglistInfo info = usv::ParseSeglist(spec);
         if (info.points <= 0) return;
@@ -1009,6 +1125,7 @@ private:
             if (it != last_str_.end() && !it->second.empty())
                 telemetry_->str_field("mission_state", "", f, it->second);
         }
+        WriteChecklist();
         // Change-only helm / mission strings: re-emit so last() over any
         // dashboard time range finds a value (they may not change for hours).
         if (!helm_state_str_.empty())
@@ -1145,6 +1262,15 @@ private:
     double radar_cpa_alert_m_ = 500.0;
     double tcpa_alert_s_ = 300.0;
     std::string own_name_;                 // Community: own NODE_REPORT is not a contact
+    usv::Checklist checklist_;
+    bool have_checklist_ = false;
+    std::string last_checklist_spec_;
+    usv::LatestStore latest_;              // latest value per field for the readiness checks
+    usv::LatestPoller poller_;             // fields written by other producers
+    bool readiness_strict_ = true;
+    double readiness_period_s_ = 5.0;
+    double last_readiness_ = 0.0;
+    std::string last_readiness_state_;
     std::vector<usv::XY> route_pts_;       // planned route (local grid) for the planned course
 
     // Change-only string cache: field -> last written value.

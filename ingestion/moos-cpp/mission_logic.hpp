@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdio>
 #include <map>
 #include <string>
 #include <vector>
@@ -717,6 +718,324 @@ inline LatLon LocalToLatLon(double x, double y, double lat0, double lon0) {
     const double m_per_deg_lon = 111412.84 * std::cos(phi)
                                  - 93.5 * std::cos(3 * phi);
     return {lat0 + y / m_per_deg_lat, lon0 + x / m_per_deg_lon};
+}
+
+// ------------------------------------------------- console checklist
+
+// CHECKLIST_STATUS from the operator console (see docs/deployment.md,
+// "Console checklist"): "done=9,total=11,pending=Weather Conditions|Port
+// Clearance,by=douglas". Missing numbers parse as -1.
+struct Checklist {
+    int done = -1, total = -1;
+    std::string pending;   // "|"-separated item names, may be empty
+    std::string by;
+};
+
+inline Checklist ParseChecklist(const std::string& spec) {
+    Checklist c;
+    auto kv = ParseKeyValues(spec);
+    auto num = [&](const char* k) {
+        auto it = kv.find(k);
+        if (it == kv.end()) return -1;
+        try { return std::stoi(it->second); } catch (...) { return -1; }
+    };
+    c.done = num("done");
+    c.total = num("total");
+    if (auto it = kv.find("pending"); it != kv.end()) c.pending = trim(it->second);
+    if (auto it = kv.find("by"); it != kv.end()) c.by = trim(it->second);
+    return c;
+}
+
+// ------------------------------------------------ pre-departure readiness
+// Every automatic check is decided here, onboard, from the latest sample
+// of each telemetry field (what the bridge itself writes plus a few values
+// other producers write to InfluxDB: host metrics, Signal K link, CAN
+// interface, cameras). The dashboard only displays the result. Status
+// codes are shared with the Readiness dashboard's value mappings.
+enum ReadinessStatus { READY_PASS = 0, READY_FAIL = 1, READY_NA = 2, READY_CONSOLE = 3 };
+
+struct Sample {
+    bool is_str = false;
+    double num = 0.0;
+    std::string str;
+    double t = 0.0;   // monotonic seconds when the sample was seen
+};
+
+// Latest value per "measurement.field", with an age test.
+class LatestStore {
+public:
+    void put(const std::string& m, const std::string& f, double v, double t) {
+        Sample& s = map_[m + "." + f];
+        s.is_str = false; s.num = v; s.t = t;
+    }
+    void put_str(const std::string& m, const std::string& f, const std::string& v, double t) {
+        Sample& s = map_[m + "." + f];
+        s.is_str = true; s.str = v; s.t = t;
+    }
+    // nullptr when never seen or older than max_age seconds.
+    const Sample* get(const std::string& m, const std::string& f, double now,
+                      double max_age = 120.0) const {
+        auto it = map_.find(m + "." + f);
+        if (it == map_.end() || now - it->second.t > max_age) return nullptr;
+        return &it->second;
+    }
+    size_t size() const { return map_.size(); }
+
+private:
+    std::map<std::string, Sample> map_;
+};
+
+struct ReadinessCheck {
+    int seq = 0;
+    std::string id;         // tag value on the readiness measurement
+    std::string name;       // operator wording
+    std::string evidence;   // what was seen, one line
+    int status = READY_NA;
+};
+
+struct ReadinessSummary {
+    bool ready = false;
+    int passed = 0, failed = 0, na = 0, console = 0;
+    std::string blocking;   // "; "-separated names of the failed checks
+};
+
+inline std::string fmt1(double v) {
+    char b[32];
+    std::snprintf(b, sizeof b, "%.1f", v);
+    return b;
+}
+inline std::string fmt0(double v) {
+    char b[32];
+    std::snprintf(b, sizeof b, "%.0f", v);
+    return b;
+}
+
+// strict (vessel profile): a check whose sensor data is missing FAILS
+// instead of reading N/A. In simulation there is no engine, CAN or camera
+// data, so the simulation profile reports those as N/A.
+inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, double now,
+                                                     bool strict) {
+    std::vector<ReadinessCheck> out;
+    const int missing = strict ? READY_FAIL : READY_NA;
+    auto add = [&](const char* id, const char* name, const std::string& ev, int st) {
+        ReadinessCheck c;
+        c.seq = static_cast<int>(out.size()) + 1;
+        c.id = id; c.name = name; c.evidence = ev; c.status = st;
+        out.push_back(c);
+    };
+    auto num = [&](const char* m, const char* f, double age = 120.0) {
+        return s.get(m, f, now, age);
+    };
+
+    // 1 GPS position fix
+    {
+        const Sample* lat = num("nav", "lat", 15.0);
+        const Sample* sats = num("nav", "satellites", 30.0);
+        const Sample* hdop = num("nav", "hdop", 30.0);
+        const Sample* fix = num("nav", "fix_type", 30.0);
+        std::string ev;
+        int st;
+        if (!lat) { ev = "no position"; st = READY_FAIL; }
+        else {
+            bool ok = true;
+            if (fix) { ev += fix->str; ok = ok && lower(fix->str) != "none" && lower(fix->str) != "no fix"; }
+            if (sats) { ev += (ev.empty() ? "" : " · ") + fmt0(sats->num) + " sats"; ok = ok && sats->num >= 6.0; }
+            if (hdop) { ev += " · HDOP " + fmt1(hdop->num); ok = ok && hdop->num <= 2.5; }
+            if (!sats && !fix) {
+                ev = "position available, no GPS quality data";
+                st = strict ? READY_FAIL : READY_PASS;
+            } else st = ok ? READY_PASS : READY_FAIL;
+        }
+        add("gps", "GPS position fix", ev, st);
+    }
+    // 2 Course planning: route, waypoints, operating region
+    {
+        const Sample* route = num("mission_state", "route_name", 1e9);
+        const Sample* wpts = num("mission", "waypoints_total", 1e9);
+        const Sample* region = num("geometry", "region_vertices", 1e9);
+        const bool have_route = route && !route->str.empty() && route->str != "-";
+        const bool have_wpts = wpts && wpts->num > 0.0;
+        const bool have_region = region && region->num >= 3.0;
+        std::string ev = have_route ? route->str : "no route loaded";
+        ev += have_wpts ? " · " + fmt0(wpts->num) + " waypoints" : " · no waypoints";
+        ev += have_region ? " · region " + fmt0(region->num) + " vertices" : " · no operating region";
+        add("course", "Course planning", ev,
+            (have_route && have_wpts && have_region) ? READY_PASS : READY_FAIL);
+    }
+    // 3 Chart / ENC selected (console publishes ENC_STATUS)
+    {
+        const Sample* enc = num("mission_state", "enc_status", 1e9);
+        if (!enc) add("enc", "Chart / ENC selected", "console not publishing ENC_STATUS", READY_CONSOLE);
+        else add("enc", "Chart / ENC selected", enc->str,
+                 enc->str.rfind("selected", 0) == 0 ? READY_PASS : READY_FAIL);
+    }
+    // 4 Autonomy stack
+    {
+        const Sample* rate = num("comms", "moos_msg_rate", 20.0);
+        const Sample* helm = num("mission_state", "helm_state", 1e9);
+        const Sample* allstop = num("autonomy", "allstop", 10.0);
+        std::string ev;
+        bool ok = rate && rate->num >= 1.0;
+        ev = rate ? "MOOS " + fmt0(rate->num) + " msg/s" : "no MOOS traffic";
+        if (helm) { ev += " · helm " + helm->str; ok = ok && helm->str != "MALCONFIG"; }
+        else { ev += " · helm state unknown"; ok = false; }
+        if (allstop && allstop->num != 0.0) { ev += " · ALL-STOP"; ok = false; }
+        add("autonomy", "Autonomy stack", ev, ok ? READY_PASS : READY_FAIL);
+    }
+    // 5 Steering / actuators: rudder feedback (ANGULO_LEME) and command
+    {
+        const Sample* act = num("autopilot", "rudder_actual", 15.0);
+        const Sample* cmd = num("autopilot", "rudder_cmd", 15.0);
+        if (!act && !cmd) add("steering", "Steering / actuators", "no rudder feedback or command", missing);
+        else {
+            bool ok = true;
+            std::string ev;
+            if (act) { ev += "rudder " + fmt1(act->num) + "°"; ok = ok && std::fabs(act->num) <= 35.0; }
+            if (cmd) { ev += std::string(ev.empty() ? "" : " · ") + "cmd " + fmt1(cmd->num) + "°"; ok = ok && std::fabs(cmd->num) <= 35.0; }
+            if (act && cmd && std::fabs(act->num - cmd->num) > 10.0) { ev += " · NOT FOLLOWING"; ok = false; }
+            if (!act) { ev += " · no rudder feedback"; if (strict) ok = false; }
+            add("steering", "Steering / actuators", ev, ok ? READY_PASS : READY_FAIL);
+        }
+    }
+    // 6 Operator link and comms
+    {
+        const Sample* sk = num("comms", "signalk_ws_up", 60.0);
+        const Sample* inet = num("ping", "result_code", 120.0);
+        const Sample* lat = num("ping", "average_response_ms", 120.0);
+        const Sample* phase = num("autonomy", "comms_phase", 10.0);
+        std::string ev = sk ? std::string("Signal K ") + (sk->num == 1.0 ? "UP" : "DOWN") : "Signal K unknown";
+        bool ok = sk && sk->num == 1.0;
+        if (inet) { ev += std::string(" · Internet ") + (inet->num == 0.0 ? "UP" : "DOWN"); ok = ok && inet->num == 0.0; }
+        if (lat && inet && inet->num == 0.0) ev += " · " + fmt0(lat->num) + " ms";
+        if (phase && phase->num != 0.0) { ev += " · operator link LOST"; ok = false; }
+        add("comms", "Operator link & comms", ev, ok ? READY_PASS : READY_FAIL);
+    }
+    // 7 CAN bus (NMEA 2000 / J1939 interface)
+    {
+        const Sample* up = num("canbus", "interface_up", 60.0);
+        const Sample* rate = num("canbus", "msg_rate", 60.0);
+        if (!up) add("can", "CAN bus", "no CAN bridge data", missing);
+        else add("can", "CAN bus",
+                 std::string(up->num == 1.0 ? "interface UP" : "interface DOWN") +
+                     (rate ? " · " + fmt0(rate->num) + " msg/s" : ""),
+                 up->num == 1.0 ? READY_PASS : READY_FAIL);
+    }
+    // 8 Engine pre-start (J1939)
+    {
+        const Sample* cool = num("engine", "coolant_temp", 60.0);
+        const Sample* oil = num("engine", "oil_pressure", 60.0);
+        const Sample* fuel = num("engine", "fuel_level", 120.0);
+        if (!cool && !oil && !fuel) add("engine", "Engine pre-start", "no engine data", missing);
+        else {
+            bool ok = true;
+            std::string ev;
+            if (cool) { ev += "coolant " + fmt0(cool->num) + " °C"; ok = ok && cool->num < 105.0; }
+            if (oil) ev += std::string(ev.empty() ? "" : " · ") + "oil " + fmt0(oil->num) + " kPa";
+            if (fuel) { ev += std::string(ev.empty() ? "" : " · ") + "fuel " + fmt0(fuel->num) + " %"; ok = ok && fuel->num > 15.0; }
+            add("engine", "Engine pre-start", ev, ok ? READY_PASS : READY_FAIL);
+        }
+    }
+    // 9 Electrical
+    {
+        const Sample* volt = num("electrical", "battery_voltage", 60.0);
+        const Sample* soc = num("electrical", "soc", 120.0);
+        if (!volt && !soc) add("electrical", "Electrical", "no electrical data", missing);
+        else {
+            bool ok = true;
+            std::string ev;
+            if (volt) {
+                ev += fmt1(volt->num) + " V";
+                // 12 V or 24 V system: low below 11.5 V, or 16..23 V
+                const double v = volt->num;
+                ok = ok && !(v < 11.5 || (v > 16.0 && v < 23.0));
+            }
+            if (soc) { ev += std::string(ev.empty() ? "" : " · ") + "SOC " + fmt0(soc->num) + " %"; ok = ok && soc->num >= 30.0; }
+            add("electrical", "Electrical", ev, ok ? READY_PASS : READY_FAIL);
+        }
+    }
+    // 10 AIS / contact reports. An empty harbour gives zero reports, so a
+    // zero is "nothing to verify", never a fault.
+    {
+        const Sample* rep = num("traffic", "reports", 300.0);
+        if (rep && rep->num > 0.0)
+            add("ais", "AIS / contact reports", fmt0(rep->num) + " reported contacts", READY_PASS);
+        else add("ais", "AIS / contact reports", "no contact reports (5 min)", READY_NA);
+    }
+    // 11 Radar
+    {
+        const Sample* on = num("radar", "online", 60.0);
+        if (!on) add("radar", "Radar", "no radar data", missing);
+        else add("radar", "Radar", on->num == 1.0 ? "online" : "OFFLINE",
+                 on->num == 1.0 ? READY_PASS : READY_FAIL);
+    }
+    // 12 Cameras
+    {
+        const Sample* con = num("camera", "connected", 60.0);
+        if (!con) add("cameras", "Cameras", "no camera data", missing);
+        else add("cameras", "Cameras", con->num == 1.0 ? "connected" : "DISCONNECTED",
+                 con->num == 1.0 ? READY_PASS : READY_FAIL);
+    }
+    // 13 Onboard computer (Telegraf host metrics)
+    {
+        const Sample* cpu = num("cpu", "usage_user", 60.0);
+        const Sample* mem = num("mem", "used_percent", 60.0);
+        const Sample* dsk = num("disk", "used_percent", 120.0);
+        if (!cpu && !mem) add("obc", "Onboard computer", "no host metrics", missing);
+        else {
+            bool ok = true;
+            std::string ev;
+            if (cpu) { ev += "CPU " + fmt0(cpu->num) + " %"; ok = ok && cpu->num < 90.0; }
+            if (mem) { ev += std::string(ev.empty() ? "" : " · ") + "RAM " + fmt0(mem->num) + " %"; ok = ok && mem->num < 90.0; }
+            if (dsk) { ev += " · disk " + fmt0(dsk->num) + " %"; ok = ok && dsk->num < 90.0; }
+            add("obc", "Onboard computer", ev, ok ? READY_PASS : READY_FAIL);
+        }
+    }
+    // 14 Safety flags
+    {
+        const Sample* geo = num("autonomy", "geofence_breached", 10.0);
+        const Sample* risk = num("traffic", "risk_level", 10.0);
+        const Sample* crash = num("autonomy", "crash_stop", 10.0);
+        std::string ev;
+        if (geo && geo->num != 0.0) ev += "GEOFENCE BREACH";
+        if (risk && risk->num >= 2.0) ev += std::string(ev.empty() ? "" : " · ") + "COLLISION RISK HIGH";
+        if (crash && crash->num != 0.0) ev += std::string(ev.empty() ? "" : " · ") + "CRASH STOP";
+        add("safety", "Safety flags",
+            ev.empty() ? "no geofence breach, no HIGH collision risk, no crash stop" : ev,
+            ev.empty() ? READY_PASS : READY_FAIL);
+    }
+    // 15 Console checklist (manual items ticked in Freeboard)
+    {
+        const Sample* done = num("mission_state", "checklist_done", 1e9);
+        const Sample* total = num("mission_state", "checklist_total", 1e9);
+        const Sample* pend = num("mission_state", "checklist_pending", 1e9);
+        if (!done || !total) add("checklist", "Console checklist", "console not publishing CHECKLIST_STATUS", READY_CONSOLE);
+        else {
+            const bool complete = done->num >= total->num;
+            std::string ev = fmt0(done->num) + " / " + fmt0(total->num) + " ticked";
+            if (!complete && pend && !pend->str.empty() && pend->str != "-") {
+                std::string p = pend->str;
+                for (char& c : p) if (c == '|') c = ',';
+                ev += " · pending: " + p;
+            }
+            add("checklist", "Console checklist", ev, complete ? READY_PASS : READY_FAIL);
+        }
+    }
+    return out;
+}
+
+inline ReadinessSummary SummarizeReadiness(const std::vector<ReadinessCheck>& checks) {
+    ReadinessSummary r;
+    for (const auto& c : checks) {
+        switch (c.status) {
+            case READY_PASS: ++r.passed; break;
+            case READY_FAIL: ++r.failed; if (!r.blocking.empty()) r.blocking += "; "; r.blocking += c.name; break;
+            case READY_NA: ++r.na; break;
+            default: ++r.console; break;
+        }
+    }
+    // READY needs every check decided: a CONSOLE item is unknown, not passed.
+    r.ready = r.failed == 0 && r.console == 0;
+    return r;
 }
 
 }  // namespace usv

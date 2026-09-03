@@ -12,7 +12,8 @@
 | FR-8 Communication | `usv-comms.json`; comms measurement; Telegraf ping | Complete — starlink_up/vpn_up need small host probes (see review notes) |
 | FR-9 System Health | `usv-system.json`; Telegraf host (CPU/GPU/RAM/disk/temp/load) + systemd_units + net_response | Complete — GPU via Telegraf nvidia_smi (enable on NVIDIA hosts); Docker container panel replaced by systemd services |
 | FR-10 Mission Replay | `usv-replay.json`; downsample task + 365 d archive | Complete — replay is time-range based (Grafana native), not a play button |
-| FR-11 Alarms | 17 provisioned alert rules (`gen_alerts.py --profile sim|vessel`); `usv-alarms.json` alert list + history + autonomy status row | Complete — geofence/comms-failsafe/all-stop/re-arm rules fire on live autonomy fields fed by grafana_bridge from alpha.bhv |
+| FR-11 Alarms | 18 provisioned alert rules (`gen_alerts.py --profile sim|vessel`); `usv-alarms.json` alert list + history + autonomy status row | Complete — geofence/comms-failsafe/all-stop/re-arm rules fire on live autonomy fields fed by grafana_bridge from alpha.bhv |
+| FR-12 Pre-departure readiness | `usv-readiness.json`: verdict, counts, automatic checks table with evidence, console checklist mirror; `readiness` / `readiness_summary` measurements decided onboard by `usv::EvaluateReadiness` (15 checks incl. steering and CAN bus) from bridge fields plus values polled from InfluxDB; console `CHECKLIST_STATUS` / `ENC_STATUS` mirrors; `readiness` change events | Complete in simulation (sim profile: engine / CAN / cameras / rudder feedback N/A); the vessel profile needs the console to publish the two variables |
 | NFR Performance | 5 s default refresh (1–5 s selectable); batched writes | Complete |
 | NFR Reliability | Auto-reconnect in all bridges; restart: unless-stopped; bounded buffers | Complete |
 | NFR Scalability | `vessel` tag + dashboard variable everywhere; Fleet dashboard; one signalk_bridge instance per vessel | Complete |

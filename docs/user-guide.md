@@ -4,7 +4,7 @@
 Browse to http://<host>:<port> (GRAFANA_PORT in /etc/usv/usv.env: 3001 on
 a vessel, 3300 on the simulation host), log in on the Swiftships login
 page, open folder **Swift Autonomous Dashboard**. The chips across the top
-of every dashboard switch between the twelve dashboards and keep the time
+of every dashboard switch between the thirteen dashboards and keep the time
 range and vessel selection. All dashboards refresh every 5 s (1 to 5 s
 selectable) and fit one 1080p screen without scrolling. The **Vessel**
 dropdown selects the vessel; the **Fleet** dashboard shows all of them. The
@@ -26,6 +26,7 @@ Interface theme.
 | Dashboard | What you watch |
 |---|---|
 | Mission | Status wall (mission state, helm, armed, operator link, geofence, all-stop, arrival, obstacles), readouts (mission, route name, elapsed, ETA, waypoint n of m, remaining, distance to waypoint, distance traveled in nm), progress bar, approach profile, autonomy flags, state timeline, mission events |
+| Readiness | Pre-departure verdict (READY / NOT READY) with pass / fail / N/A / console counts, mission state, route and operator link; the automatic checks table (GPS fix, course planning, chart/ENC, autonomy stack, steering, operator link and comms, CAN bus, engine, electrical, AIS, radar, cameras, onboard computer, safety flags, console checklist) with the evidence behind each verdict; the console checklist mirror (count, who ticked, pending items). Decided onboard every 5 s; the Mission Events list records when the boat became ready and what blocked it |
 | Navigation | Live map (operating region in cyan, planned route with numbered waypoints in green, track in red, vessel as a red heading arrow), compass (HDG/COG needles), speed meter, GPS fix and satellites, lat/lon, KPI strip (SOG, COG, heading, XTE, distance to WP, HDOP, depth, roll/pitch), trends |
 | Autopilot | Helm state, all-stop, station keeping, entry gate, re-arm hold, remote control, corridor, crash stop; active behaviors, heading/speed error, rudder/throttle commands, speed cap, next turn; rudder/throttle/heading-error instruments; desired vs actual heading; speed governor (desired / cap / commanded / actual) |
 | Vessel Health | Instrument cluster (tachometer, coolant, oil pressure, fuel, battery volts, SOC), engine and electrical tiles, trends |
@@ -46,6 +47,20 @@ convention (red to port, green to starboard); machinery meters carry
 semantic bands (green normal, yellow caution, red alarm) that match the
 alert thresholds exactly. Every needle instrument also shows a digital
 readout, and all instruments follow the dark/light theme toggle.
+
+## Pre-departure readiness (Readiness dashboard)
+Open the Readiness tab before a mission. The big tile is the verdict:
+READY only when no automatic check FAILS and nothing is still waiting on
+the console. Each row of the automatic table shows what was actually
+seen (evidence) so a FAIL can be traced: for example "rudder 20.0° · cmd
+3.0° · NOT FOLLOWING" or "9 / 11 ticked · pending: Weather Conditions,
+Port Clearance". N/A means the sensor is not fitted or not reporting; on
+a real vessel the bridge is configured to treat that as a FAIL (see
+docs/deployment.md, readiness_profile). CONSOLE means the operator
+console has not yet published the ENC selection or the checklist. The
+manual items themselves (life jackets, VHF check, port clearance ...) are
+ticked in Freeboard as before; Grafana mirrors the count and the pending
+items and adds the automatic verification on top.
 
 ## Mission states (Mission dashboard)
 Derived onboard from the autonomy stack's own variables. Tiles show the

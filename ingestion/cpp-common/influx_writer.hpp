@@ -15,6 +15,7 @@
 #include <iostream>
 #include <mutex>
 #include <sstream>
+#include <functional>
 #include <string>
 #include <thread>
 #include <vector>
@@ -78,9 +79,20 @@ public:
 
     // ts_ns > 0 pins the point to an explicit timestamp (geometry sets
     // written as one consistent snapshot); 0 lets the server stamp it.
+    // Observers see every field as it is written (the MOOS bridge keeps the
+    // latest value of each for the onboard readiness checks).
+    using FieldObserver = std::function<void(const std::string&, const std::string&, double)>;
+    using StrObserver = std::function<void(const std::string&, const std::string&,
+                                           const std::string&)>;
+    void observe(FieldObserver on_field, StrObserver on_str) {
+        on_field_ = std::move(on_field);
+        on_str_ = std::move(on_str);
+    }
+
     void field(const std::string& measurement, const std::string& tags,
                const std::string& name, double value, long long ts_ns = 0) {
         if (std::isnan(value) || std::isinf(value)) return;
+        if (on_field_) on_field_(measurement, name, value);
         std::ostringstream line;
         line << measurement << ",vessel=" << vessel_;
         if (!tags.empty()) line << "," << tags;
@@ -124,6 +136,7 @@ public:
 
     void str_field(const std::string& measurement, const std::string& tags,
                    const std::string& name, const std::string& value) {
+        if (on_str_) on_str_(measurement, name, value);
         std::string esc;
         esc.reserve(value.size());
         for (char c : value) {
@@ -228,6 +241,8 @@ private:
     }
 
     std::string url_, delete_url_, token_, vessel_;
+    FieldObserver on_field_;
+    StrObserver on_str_;
     std::vector<std::string> batch_;
     std::deque<std::string> queue_;
     mutable std::mutex mu_;

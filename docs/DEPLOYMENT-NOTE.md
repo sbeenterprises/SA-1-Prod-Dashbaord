@@ -25,7 +25,7 @@ mission variable map, derived state machine and design rationale).
  │                                                              │ ▼
  │    InfluxDB 2.x (:8086)  buckets: telemetry / events /       │
  │                          telemetry_1m (downsampled)          │
- │    Grafana (:GRAFANA_PORT) 12 dashboards + 17 alert rules    │
+ │    Grafana (:GRAFANA_PORT) 13 dashboards + 18 alert rules    │
  └──────────────────────────────────────────────────────────────┘
       Operator access: http://<obc>:<GRAFANA_PORT> (3001 vessel / 3300 sim)
 ```
@@ -138,7 +138,7 @@ repo to the OBC, re\-run install.sh.
 | 1 | Services up | `systemctl status influxdb grafana-server telegraf usv-signalk-bridge usv-can-bridge` | all `active (running)` |
 | 2 | DB reachable | `influx ping` | `OK` |
 | 3 | Bench data (no vessel) | `sudo systemctl start usv-simulator` | dashboards populate in \~10 s; the scripted Alpha scenario cycles all mission states and fires the geofence/comms alerts once per \~25 min loop (that IS the alert bench test) |
-| 4 | Grafana login | browse `http://<obc>:<GRAFANA_PORT>` | Swiftships login page; folder "Swift Autonomous Dashboard", 12 dashboards; Swiftships logo in the top\-left nav |
+| 4 | Grafana login | browse `http://<obc>:<GRAFANA_PORT>` | Swiftships login page; folder "Swift Autonomous Dashboard", 13 dashboards; Swiftships logo in the top\-left nav |
 | 5 | Tab navigation | open any dashboard; click the link chips across the top | one click switches dashboard; time range and vessel selection carry over |
 | 6 | Theme toggle | click the "☀ Light" / "☾ Dark" chips at the end of the tab row | dashboard re\-opens in that theme, time range kept |
 | 7 | Tablet check | open any dashboard on a tablet (landscape) | grid scales; below \~768 px panels stack single\-column |

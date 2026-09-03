@@ -29,6 +29,22 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self):
         n = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(n).decode()
+        if self.path.startswith("/api/v2/query"):
+            # Readiness poller: answer as InfluxDB would (annotated CSV) with
+            # the fields other producers write, stamped "now".
+            import datetime
+            open("$TMP/queries.txt", "a").write(body + "\n")
+            t = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000000000Z")
+            rows = [("comms", "signalk_ws_up", 1), ("ping", "result_code", 0),
+                    ("ping", "average_response_ms", 38.2), ("canbus", "interface_up", 1),
+                    ("canbus", "msg_rate", 212), ("cpu", "usage_user", 4.1),
+                    ("mem", "used_percent", 11.3), ("disk", "used_percent", 63)]
+            csv = "#datatype,string,long,dateTime:RFC3339,double,string,string\r\n#group,false,false,false,false,true,true\r\n#default,_result,,,,,\r\n,result,table,_time,_value,_field,_measurement\r\n"
+            csv += "".join(f",,{i},{t},{v},{f},{m}\r\n" for i, (m, f, v) in enumerate(rows)) + "\r\n"
+            data = csv.encode()
+            self.send_response(200); self.send_header("Content-Type", "text/csv")
+            self.send_header("Content-Length", str(len(data))); self.end_headers()
+            self.wfile.write(data); return
         target = "$TMP/deletes.txt" if self.path.startswith("/api/v2/delete") else "$LINES"
         open(target, "a").write(body + "\n")
         self.send_response(204); self.end_headers()
@@ -221,6 +237,8 @@ ProcessConfig = grafana_bridge
   influx_bucket = telemetry
   events_bucket = events
   vessel_id     = usv-moos
+  readiness_profile = sim
+  readiness_period_s = 2
 }
 EOF
   start_stub
@@ -265,6 +283,10 @@ EOF
       'NODE_REPORT=NAME=contato_7,TYPE=ship,TIME=1,X=300,Y=400,SPD=5,HDG=90'
     sleep 1
     P 'OPR_POLY_ACTUAL=pts={-100,-100:100,-100:100,100:-100,100}'
+    sleep 2
+    # Operator console mirrors (Freeboard checklist / ENC selection).
+    P 'CHECKLIST_STATUS=done=9,total=11,pending=Weather Conditions|Port Clearance,by=douglas' \
+      'ENC_STATUS=selected:US5LA31M'
     sleep 3
   fi
   kill $DB 2>/dev/null; pkill -f moos_bridge 2>/dev/null; stop_stub
@@ -324,6 +346,27 @@ EOF
     grep -q "CRASH STOP commanded" "$LINES"            && ok "crash-stop event emitted"                 || bad "crash-stop event missing"
     grep -q "mission,.* waypoints_remaining=5" "$LINES" && ok "waypoints_remaining derived"             || bad "waypoints_remaining missing"
     grep -q "Survey started" "$LINES" && grep -q "start_ms=" "$LINES" && ok "mission span event carries start_ms" || bad "mission start_ms missing"
+    # Console mirrors and the onboard readiness evaluation (FR-12).
+    grep -q 'mission_state,vessel=usv-moos checklist_done=9' "$LINES" && ok "CHECKLIST_STATUS -> mission_state.checklist_*" || bad "checklist not mirrored"
+    grep -q 'enc_status="selected:US5LA31M"' "$LINES"   && ok "ENC_STATUS -> mission_state.enc_status"     || bad "enc_status missing"
+    [ "$(grep -c 'readiness,vessel=usv-moos,check=' "$LINES")" -ge 60 ] \
+      && ok "readiness rows written per check (seq/status/name/evidence)" || bad "readiness rows missing"
+    grep -q 'readiness_summary,vessel=usv-moos ready=' "$LINES" && ok "readiness summary written" || bad "readiness summary missing"
+    grep -q 'readiness_summary,vessel=usv-moos profile="sim"' "$LINES" && ok "readiness_profile=sim applied" || bad "readiness profile not applied"
+    grep -q 'check=checklist evidence="9 / 11 ticked · pending: Weather Conditions,Port Clearance"' "$LINES" \
+      && ok "console checklist evaluated (pending items listed)" || bad "checklist evaluation missing"
+    grep -q 'check=enc status=0' "$LINES"               && ok "ENC selected -> check PASS"                || bad "ENC check not passing"
+    grep -q 'check=course evidence="R-17 · 5 waypoints · region 4 vertices"' "$LINES" \
+      && ok "course planning check sees route, waypoints, region" || bad "course check evidence wrong"
+    grep -q 'check=comms evidence="Signal K UP · Internet UP · 38 ms"' "$LINES" \
+      && ok "InfluxDB poller feeds Signal K / Internet into the comms check" || bad "poller values missing in comms check"
+    grep -q 'check=can evidence="interface UP · 212 msg/s"' "$LINES" && ok "CAN bus check from can_bridge data" || bad "CAN check missing"
+    grep -q 'check=obc evidence="CPU 4 % · RAM 11 % · disk 63 %"' "$LINES" && ok "host metrics check from Telegraf data" || bad "OBC check missing"
+    grep -q 'check=engine status=2' "$LINES"            && ok "sim profile: no engine data reads N/A"    || bad "engine N/A missing"
+    grep -q 'check=safety status=1' "$LINES"            && ok "crash stop / breach fails the safety check" || bad "safety check not failing"
+    grep -q 'Readiness NOT READY' "$LINES"              && ok "readiness change event emitted"           || bad "readiness event missing"
+    grep -q 'r.cpu == "cpu-total"' "$TMP/queries.txt" 2>/dev/null \
+      && ok "poller query restricts cpu to cpu-total" || bad "poller query not issued / wrong"
   else
     skip "Alpha scenario replay (moos_poke not built)"
   fi

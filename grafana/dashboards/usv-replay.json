@@ -28,6 +28,16 @@
     },
     {
       "type": "link",
+      "title": "Readiness",
+      "url": "/d/usv-readiness",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Readiness"
+    },
+    {
+      "type": "link",
       "title": "Navigation",
       "url": "/d/usv-navigation",
       "keepTime": true,
@@ -180,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 207,
+      "id": 218,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -196,7 +206,7 @@
       }
     },
     {
-      "id": 157,
+      "id": 167,
       "type": "text",
       "title": "How to replay",
       "datasource": {
@@ -224,7 +234,7 @@
       }
     },
     {
-      "id": 158,
+      "id": 168,
       "type": "geomap",
       "title": "GPS Track",
       "datasource": {
@@ -446,7 +456,7 @@
       }
     },
     {
-      "id": 159,
+      "id": 169,
       "type": "state-timeline",
       "title": "Mission State",
       "datasource": {
@@ -553,7 +563,7 @@
       }
     },
     {
-      "id": 160,
+      "id": 170,
       "type": "table",
       "title": "Mission Events",
       "datasource": {
@@ -589,7 +599,7 @@
       }
     },
     {
-      "id": 161,
+      "id": 171,
       "type": "timeseries",
       "title": "Heading History",
       "datasource": {
@@ -661,7 +671,7 @@
       }
     },
     {
-      "id": 162,
+      "id": 172,
       "type": "timeseries",
       "title": "Speed History",
       "datasource": {
@@ -731,7 +741,7 @@
       }
     },
     {
-      "id": 163,
+      "id": 173,
       "type": "timeseries",
       "title": "Actuator Commands",
       "datasource": {
@@ -841,7 +851,7 @@
       }
     },
     {
-      "id": 164,
+      "id": 174,
       "type": "timeseries",
       "title": "Cross-Track Error",
       "datasource": {
@@ -911,7 +921,7 @@
       }
     },
     {
-      "id": 165,
+      "id": 175,
       "type": "state-timeline",
       "title": "Autonomy Flags",
       "datasource": {
@@ -974,7 +984,7 @@
       }
     },
     {
-      "id": 166,
+      "id": 176,
       "type": "timeseries",
       "title": "Distance to Next Waypoint",
       "datasource": {
