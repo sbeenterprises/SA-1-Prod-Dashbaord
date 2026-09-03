@@ -45,7 +45,9 @@ the selected vessel (visible in `?kiosk` mode too). Grafana OSS has no
 white-label setting, so these are file overwrites under
 `/usr/share/grafana/public`; originals are kept as `*.grafana-orig` and
 `sudo deploy/brand.sh --restore` puts them back. Re-run the installer (or
-`sudo deploy/brand.sh`) after any `apt upgrade grafana`. Hard-refresh the
+`sudo deploy/brand.sh`) after any `apt upgrade grafana`; the script restarts
+`grafana-server`, which is required because Grafana parses `index.html` once
+at startup and serves it from memory. Hard-refresh the
 browser (Ctrl+F5) after branding to drop cached icons.
 
 ## Analog instruments

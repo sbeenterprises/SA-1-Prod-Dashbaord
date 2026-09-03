@@ -124,5 +124,12 @@ perl -0pi -e 's|<style id="swiftships-brand">.*?</style>\n?||s' "$IDX"
 CSS_FILE="$CSS_FILE" perl -0pi -e 'BEGIN{local $/; open(F, "<", $ENV{CSS_FILE}) or die; $css=<F>; close F} s|</head>|$css</head>|' "$IDX"
 rm -f "$CSS_FILE"
 
+# Grafana parses views/index.html once at startup and serves it from memory:
+# a running server keeps showing the old title/CSS until restarted.
+if [[ -z ${GPUB_NO_RESTART:-} ]] && systemctl is-active --quiet grafana-server 2>/dev/null; then
+  systemctl restart grafana-server
+  echo "grafana-server restarted (index.html is cached in memory at startup)."
+fi
+
 echo "Swiftships branding applied (title: '$TITLE', login: '$WELCOME')."
 echo "Reload the browser with Ctrl+F5 to drop cached Grafana icons."
