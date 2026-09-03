@@ -1,0 +1,2233 @@
+{
+  "uid": "usv-traffic",
+  "title": "Traffic",
+  "tags": [
+    "usv",
+    "traffic"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "editable": true,
+  "style": "dark",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "links": [
+    {
+      "type": "link",
+      "title": "Mission",
+      "url": "/d/usv-mission",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Mission"
+    },
+    {
+      "type": "link",
+      "title": "Navigation",
+      "url": "/d/usv-navigation",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Navigation"
+    },
+    {
+      "type": "link",
+      "title": "Autopilot",
+      "url": "/d/usv-autopilot",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Autopilot"
+    },
+    {
+      "type": "link",
+      "title": "Vessel Health",
+      "url": "/d/usv-health",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Vessel Health"
+    },
+    {
+      "type": "link",
+      "title": "CAN Bus",
+      "url": "/d/usv-canbus",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open CAN Bus"
+    },
+    {
+      "type": "link",
+      "title": "Traffic",
+      "url": "/d/usv-traffic",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Traffic"
+    },
+    {
+      "type": "link",
+      "title": "Cameras",
+      "url": "/d/usv-camera",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Cameras"
+    },
+    {
+      "type": "link",
+      "title": "Comms",
+      "url": "/d/usv-comms",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Comms"
+    },
+    {
+      "type": "link",
+      "title": "System",
+      "url": "/d/usv-system",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open System"
+    },
+    {
+      "type": "link",
+      "title": "Replay",
+      "url": "/d/usv-replay",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Replay"
+    },
+    {
+      "type": "link",
+      "title": "Alarms",
+      "url": "/d/usv-alarms",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Alarms"
+    },
+    {
+      "type": "link",
+      "title": "Fleet",
+      "url": "/d/usv-fleet",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Fleet"
+    },
+    {
+      "type": "link",
+      "title": "\u2600 Light",
+      "url": "/d/usv-traffic?theme=light",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": true,
+      "icon": "external link",
+      "tooltip": "Open in a new tab in the light theme (or press c, t)"
+    },
+    {
+      "type": "link",
+      "title": "\u263e Dark",
+      "url": "/d/usv-traffic?theme=dark",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": true,
+      "icon": "external link",
+      "tooltip": "Open in a new tab in the dark theme (or press c, t)"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "vessel",
+        "label": "Vessel",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "influxdb-usv"
+        },
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"telemetry\", tag: \"vessel\")",
+        "refresh": 2,
+        "current": {
+          "text": "usv-01",
+          "value": "usv-01"
+        },
+        "includeAll": false,
+        "multi": false
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 203,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 2
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **TRAFFIC** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel**"
+      }
+    },
+    {
+      "id": 94,
+      "type": "stat",
+      "title": "Collision Risk",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 2,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"risk_level\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "CLEAR",
+                  "color": "#175d8d",
+                  "index": 0
+                },
+                "1": {
+                  "text": "MEDIUM",
+                  "color": "orange",
+                  "index": 1
+                },
+                "2": {
+                  "text": "HIGH",
+                  "color": "red",
+                  "index": 2
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 95,
+      "type": "stat",
+      "title": "Avoidance",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 3,
+        "y": 2,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"avoidance_active\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "IDLE",
+                  "color": "#3d434b",
+                  "index": 0
+                },
+                "1": {
+                  "text": "ACTIVE",
+                  "color": "orange",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 96,
+      "type": "stat",
+      "title": "Contacts",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 2,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"contacts\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 97,
+      "type": "stat",
+      "title": "Reports / AIS",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 2,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"reports\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 98,
+      "type": "stat",
+      "title": "Radar Only",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 2,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"radar_only\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 99,
+      "type": "stat",
+      "title": "High Risk",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 15,
+        "y": 2,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"high_risk\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 100,
+      "type": "stat",
+      "title": "Closest Range",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 2,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"closest_range_m\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> map(fn: (r) => ({r with _value: r._value / 1852.0}))\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "unit": "suffix: nm",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.11
+              },
+              {
+                "color": "#00bcd4",
+                "value": 0.27
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 101,
+      "type": "stat",
+      "title": "Min CPA",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 2,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"min_cpa_m\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "unit": "suffix: m",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 500
+              },
+              {
+                "color": "#00bcd4",
+                "value": 1000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 102,
+      "type": "volkovlabs-echarts-panel",
+      "title": "Traffic View",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 10,
+        "h": 13
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"heading\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? '#1c2a3d' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(124,156,176,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#7c9cb0' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#00bcd4',\n  text: dark ? '#ffffff' : '#24292e',\n  sub: dark ? '#00bcd4' : '#1e6692',\n  accent: '#00bcd4',\n  accent2: '#42a5f5',\n};\n\nconst ownHdg = val('B') || 0;\nconst rows = [];\nfor (const s of context.panel.data.series) {\n  if (s.refId === 'B') { continue; }\n  const col = {};\n  for (const f of s.fields) { col[f.name] = f.values && f.values.toArray ? f.values.toArray() : f.values; }\n  const n = (col.range_m || []).length;\n  for (let i = 0; i < n; i++) {\n    rows.push({ id: col.contact ? col.contact[i] : ('#' + i),\n      source: col.source ? col.source[i] : 'radar',\n      range: col.range_m[i], rb: col.rel_bearing ? col.rel_bearing[i] : null,\n      hdg: col.hdg ? col.hdg[i] : null, risk: col.risk ? col.risk[i] : 0,\n      cpa: col.cpa_m ? col.cpa_m[i] : null, tcpa: col.tcpa_s ? col.tcpa_s[i] : null });\n  }\n}\nconst NM = 1852;\nlet maxR = 0.5;\nfor (const r of rows) { if (r.rb !== null && r.range / NM > maxR * 0.9) { maxR = r.range / NM > 2 ? 5 : (r.range / NM > 1 ? 2 : 1); } }\nif (maxR > 2 && rows.some(r => r.range / NM > 4.5)) { maxR = 10; }\nconst colorOf = (r) => r.risk >= 2 ? '#ff6b6b' : (r.source === 'report' ? '#5ad8a6' : '#f0b429');\nconst pts = rows.filter(r => r.rb !== null);\nconst scatter = pts.map(r => ({\n  value: [r.range / NM, ((r.rb % 360) + 360) % 360],\n  symbolRotate: r.hdg === null ? 0 : -(r.hdg - ownHdg),\n  itemStyle: { color: colorOf(r) },\n  label: { show: r.risk >= 1, formatter: r.id, color: dark ? '#fff' : '#24292e', fontSize: 11, fontWeight: 600, position: 'top' },\n  name: r.id, risk: r.risk, cpa: r.cpa, tcpa: r.tcpa, source: r.source }));\nconst worst = pts.slice().sort((a, b) => (b.risk - a.risk) || ((a.cpa ?? 1e9) - (b.cpa ?? 1e9)))[0];\nconst series = [{\n  type: 'scatter', coordinateSystem: 'polar', symbol: 'triangle', symbolSize: 14, data: scatter,\n  tooltip: { formatter: (p) => p.data.name + '<br>' + p.data.source + ' \u00b7 risk ' + ['clear','MEDIUM','HIGH'][p.data.risk] +\n    (p.data.cpa != null ? '<br>CPA ' + Math.round(p.data.cpa) + ' m' : '') +\n    (p.data.tcpa != null && p.data.tcpa >= 0 ? ' \u00b7 TCPA ' + Math.round(p.data.tcpa) + ' s' : '') }\n}, {\n  type: 'scatter', coordinateSystem: 'polar', symbol: 'triangle', symbolSize: 18,\n  data: [{ value: [0, 0], itemStyle: { color: '#ffffff', borderColor: '#00bcd4', borderWidth: 2 } }], silent: true, z: 5\n}];\nif (worst && worst.risk >= 1) {\n  series.push({ type: 'line', coordinateSystem: 'polar', silent: true, z: 4, showSymbol: false,\n    lineStyle: { color: '#ff6b6b', type: 'dashed', width: 1.5 },\n    data: [[0, 0], [worst.range / NM, ((worst.rb % 360) + 360) % 360]] });\n}\nconst fmtT = (t) => t == null || t < 0 ? '\u2014' : Math.floor(t / 60) + ':' + ('0' + Math.round(t % 60)).slice(-2);\nreturn {\n  backgroundColor: 'transparent',\n  polar: { center: ['50%', '52%'], radius: '78%' },\n  angleAxis: { type: 'value', min: 0, max: 360, startAngle: 90, clockwise: true, splitNumber: 12,\n    axisLine: { lineStyle: { color: C.tick } }, axisTick: { show: false },\n    axisLabel: { color: C.label, fontSize: 10, formatter: (v) => v === 0 ? 'N' : ('00' + v).slice(-3) },\n    splitLine: { lineStyle: { color: dark ? 'rgba(124,156,176,0.18)' : 'rgba(36,41,46,0.15)' } } },\n  radiusAxis: { min: 0, max: maxR, splitNumber: 4, axisLine: { show: false }, axisTick: { show: false },\n    axisLabel: { color: C.label, fontSize: 9, formatter: (v) => v > 0 ? v + ' nm' : '' },\n    splitLine: { lineStyle: { color: dark ? 'rgba(124,156,176,0.35)' : 'rgba(36,41,46,0.3)', type: 'dashed' } } },\n  tooltip: { trigger: 'item' },\n  graphic: [\n    { type: 'text', left: 8, top: 4, style: { text: 'HEADING UP \u00b7 range ' + maxR + ' nm', fill: C.sub, fontSize: 10, fontWeight: 600 } },\n    { type: 'text', left: 8, bottom: 6, style: { text: '\u25b2 report / AIS   \u25b2 radar   \u25b2 HIGH risk', fill: C.label, fontSize: 10 } },\n    { type: 'text', right: 8, bottom: 6, style: { text: worst && worst.risk >= 1 ? worst.id + '  CPA ' + Math.round(worst.cpa) + ' m \u00b7 TCPA ' + fmtT(worst.tcpa) : 'no risk contacts',\n        fill: worst && worst.risk >= 2 ? '#ff6b6b' : C.text, fontSize: 11, fontWeight: 600 } }\n  ],\n  series: series\n};\n",
+        "renderer": "svg"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "swiftMeta": {
+        "kind": "traffic"
+      }
+    },
+    {
+      "id": 103,
+      "type": "stat",
+      "title": "Highest-Risk Contact",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 5,
+        "w": 7,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.contact}))\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "no contacts",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 22,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 104,
+      "type": "stat",
+      "title": "CPA",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 7,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.cpa_m}))\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "unit": "suffix: m",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 500
+              },
+              {
+                "color": "#00bcd4",
+                "value": 1000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 105,
+      "type": "stat",
+      "title": "TCPA",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 7,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.tcpa_s}))\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "unit": "dtdurations",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 120
+              },
+              {
+                "color": "#00bcd4",
+                "value": 300
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "OPENING",
+                  "color": "#175d8d",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 106,
+      "type": "stat",
+      "title": "Range",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 10,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.range_m}))\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "unit": "suffix: m",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 107,
+      "type": "stat",
+      "title": "Bearing",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 10,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.bearing}))\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "unit": "degree",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 108,
+      "type": "stat",
+      "title": "Rel. Bearing",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 13,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.rel_bearing}))\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "unit": "degree",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 109,
+      "type": "stat",
+      "title": "Rel. Speed",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 13,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.rel_speed_kn}))\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "unit": "velocityknot",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 110,
+      "type": "stat",
+      "title": "Type",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 16,
+        "w": 4,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.type}))\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 22,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 111,
+      "type": "stat",
+      "title": "Encounter",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 16,
+        "w": 3,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.encounter}))\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "head-on": {
+                  "text": "head-on",
+                  "color": "red",
+                  "index": 0
+                },
+                "crossing": {
+                  "text": "crossing",
+                  "color": "orange",
+                  "index": 1
+                },
+                "overtaking": {
+                  "text": "overtaking",
+                  "color": "yellow",
+                  "index": 2
+                },
+                "-": {
+                  "text": "-",
+                  "color": "#3d434b",
+                  "index": 3
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 22,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 112,
+      "type": "stat",
+      "title": "Planned Course",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 17,
+        "y": 5,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"planned_course\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "no route",
+          "unit": "degree",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 113,
+      "type": "stat",
+      "title": "Commanded Course",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 5,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"desired_heading\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "unit": "degree",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 114,
+      "type": "stat",
+      "title": "Actual Heading",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 17,
+        "y": 8,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"heading\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "unit": "degree",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 115,
+      "type": "stat",
+      "title": "Deviation",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 8,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"course_deviation\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "no route",
+          "unit": "degree",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "orange",
+                "value": 30
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 116,
+      "type": "stat",
+      "title": "Speed Command",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 17,
+        "y": 11,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"desired_speed\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "unit": "velocityknot",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 117,
+      "type": "stat",
+      "title": "Actual SOG",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 11,
+        "w": 3,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "unit": "velocityknot",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 118,
+      "type": "stat",
+      "title": "Avoidance Behavior",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 17,
+        "y": 14,
+        "w": 7,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"active_behavior\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 22,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 119,
+      "type": "stat",
+      "title": "Reason",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 17,
+        "y": 16,
+        "w": 7,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"reason\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 22,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 120,
+      "type": "table",
+      "title": "Contacts \u2014 riskiest first",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 12,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "base = from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"contacts\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\nnums = base |> filter(fn: (r) => r._field == \"range_m\" or r._field == \"bearing\" or r._field == \"rel_bearing\" or r._field == \"spd_kn\" or r._field == \"hdg\" or r._field == \"rel_speed_kn\" or r._field == \"cpa_m\" or r._field == \"tcpa_s\" or r._field == \"risk\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\nstrs = base |> filter(fn: (r) => r._field == \"encounter\" or r._field == \"type\")\n  |> group()\n  |> pivot(rowKey: [\"contact\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\njoin(tables: {n: nums, s: strs}, on: [\"contact\", \"source\"])\n  |> filter(fn: (r) => exists r.range_m)\n  |> sort(columns: [\"cpa_m\"])\n  |> sort(columns: [\"risk\"], desc: true)\n  |> limit(n: 12)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "no contacts",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "CLEAR",
+                  "color": "#175d8d",
+                  "index": 0
+                },
+                "1": {
+                  "text": "MEDIUM",
+                  "color": "orange",
+                  "index": 1
+                },
+                "2": {
+                  "text": "HIGH",
+                  "color": "red",
+                  "index": 2
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "range_m"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "suffix: m"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "displayName",
+                "value": "Range"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cpa_m"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "suffix: m"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "displayName",
+                "value": "CPA"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tcpa_s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "displayName",
+                "value": "TCPA"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bearing"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "degree"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "displayName",
+                "value": "Bearing"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "spd_kn"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "velocityknot"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "displayName",
+                "value": "Speed"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "risk"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Risk"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "contact"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Contact"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "source"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Source"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "type"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Type"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "encounter"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Encounter"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "rel_bearing|rel_speed_kn|hdg"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "rel_bearing": true,
+              "rel_speed_kn": true,
+              "hdg": true
+            },
+            "indexByName": {
+              "contact": 0,
+              "source": 1,
+              "type": 2,
+              "range_m": 3,
+              "bearing": 4,
+              "spd_kn": 5,
+              "cpa_m": 6,
+              "tcpa_s": 7,
+              "encounter": 8,
+              "risk": 9
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 121,
+      "type": "timeseries",
+      "title": "Closest CPA / TCPA",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 18,
+        "w": 12,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"min_cpa_m\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A",
+          "alias": "CPA m"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"min_tcpa_s\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "B",
+          "alias": "TCPA s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "suffix: m",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 14,
+            "showPoints": "never",
+            "spanNulls": 60000,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*min_cpa_m.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#00bcd4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*min_tcpa_s.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#42a5f5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "name": "Mission events",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "influxdb-usv"
+        },
+        "enable": true,
+        "iconColor": "yellow",
+        "target": {
+          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"events\" and r._field == \"message\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n"
+        }
+      }
+    ]
+  }
+}

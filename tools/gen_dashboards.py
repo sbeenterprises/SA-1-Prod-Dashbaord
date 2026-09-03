@@ -256,7 +256,8 @@ STRING_FIELDS = {
     "route_name", "allstop_reason", "active_behavior", "station_keep", "comms_failsafe",
     "entry_gate", "opr_status", "helm_summary", "arrival_state",
     "corridor_status", "crash_stop_status", "region_warning", "wpt_stat",
-    "fix_type", "charging_status", "message",
+    "fix_type", "charging_status", "message", "worst_contact", "reason",
+    "encounter", "type", "contact",
 }
 
 
@@ -596,6 +597,19 @@ def meter(title, query, x, y, w, h, min_, max_, unit, zones=None,
                  max_=max_, thresholds=thr)
 
 
+# Fixed tab order on every dashboard (Grafana's tag-based link list sorts
+# alphabetically and drops the current dashboard, so the row shifted from
+# page to page). Operational sequence: mission first, support last.
+TAB_ORDER = [
+    ("usv-mission", "Mission"), ("usv-navigation", "Navigation"),
+    ("usv-autopilot", "Autopilot"), ("usv-health", "Vessel Health"),
+    ("usv-canbus", "CAN Bus"), ("usv-traffic", "Traffic"),
+    ("usv-camera", "Cameras"), ("usv-comms", "Comms"),
+    ("usv-system", "System"), ("usv-replay", "Replay"),
+    ("usv-alarms", "Alarms"), ("usv-fleet", "Fleet"),
+]
+
+
 def dashboard(uid, title, panels, tags, refresh="5s", time_from="now-30m",
               fleet=False):
     """fleet=True makes the vessel variable multi-select with "All" so rows
@@ -630,10 +644,11 @@ def dashboard(uid, title, panels, tags, refresh="5s", time_from="now-30m",
         # Instant in-place switch: press "c" then "t" (Grafana shortcut);
         # lasting default: Profile -> Preferences -> Interface theme.
         "links": [{
-            "type": "dashboards", "title": "", "tags": ["usv"],
-            "asDropdown": False, "keepTime": True, "includeVars": True,
+            "type": "link", "title": name, "url": f"/d/{u}",
+            "keepTime": True, "includeVars": u != "usv-fleet",
             "targetBlank": False, "icon": "dashboard",
-        }, {
+            "tooltip": f"Open {name}",
+        } for u, name in TAB_ORDER] + [{
             "type": "link", "title": "☀ Light", "url": f"/d/{uid}?theme=light",
             "keepTime": True, "includeVars": True, "targetBlank": True,
             "icon": "external link",
@@ -911,11 +926,11 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
     stat("Latitude", flux("nav", "lat", last=True), 14, 9, 5, 4, decimals=6),
     stat("Longitude", flux("nav", "lon", last=True), 19, 9, 5, 4, decimals=6),
     # KPI strip: 8 equal tiles.
-    stat("SOG", flux("nav", "sog", last=True), 0, 13, 3, 3,
-         unit="velocityknot", decimals=1, graph_mode="area"),
+    stat("Speed Cap", flux("autopilot", "speed_cap", last=True), 0, 13, 3, 3,
+         unit="velocityknot", decimals=1),
     stat("COG", flux("nav", "cog", last=True), 3, 13, 3, 3,
          unit="degree", decimals=0),
-    stat("Heading", flux("nav", "heading", last=True), 6, 13, 3, 3,
+    stat("WP Bearing", flux("traffic", "planned_course", last=True), 6, 13, 3, 3,
          unit="degree", decimals=0),
     stat("XTE", flux("nav", "cross_track_error", last=True), 9, 13, 3, 3,
          unit=UNIT_M, decimals=1, graph_mode="area"),
@@ -993,10 +1008,10 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
          unit="velocityknot", decimals=2,
          thresholds=[(None, OK), (1, "yellow"), (2, "red")],
          graph_mode="area"),
-    stat("Rudder Cmd", flux("autopilot", "rudder_cmd", last=True), 12, 3, 3, 3,
-         unit="degree", decimals=1),
-    stat("Throttle Cmd", flux("autopilot", "throttle_cmd", last=True),
-         15, 3, 3, 3, unit="percent", decimals=0),
+    stat("XTE", flux("nav", "cross_track_error", last=True), 12, 3, 3, 3,
+         unit=UNIT_M, decimals=1, graph_mode="area"),
+    stat("Dist to Station", flux("mission", "dist_to_station", last=True),
+         15, 3, 3, 3, unit=UNIT_M, decimals=0),
     stat("Speed Cap", flux("autopilot", "speed_cap", last=True), 18, 3, 3, 3,
          unit="velocityknot", decimals=1),
     stat("Next Turn", flux("autopilot", "next_turn_angle", last=True),
@@ -1179,30 +1194,251 @@ DASHBOARDS.append(dashboard("usv-canbus", "CAN Bus", [
           options={"showHeader": True}),
 ], ["canbus"]))
 
-# ---------------------------------------------------------------- FR-6 Radar
-DASHBOARDS.append(dashboard("usv-radar", "Radar", [
-    stat("Radar Status", flux("radar", "online", last=True), 0, 0, 5, 4,
-         mappings=updown_map(), text_mode="value", color_mode="background"),
-    stat("Tracked Targets", flux("radar", "targets", last=True), 5, 0, 5, 4,
-         decimals=0),
-    stat("Closest Target", flux("radar", "closest_range_m", last=True, nm=True),
-         10, 0, 5, 4, unit=UNIT_NM, decimals=2,
-         thresholds=[(None, "red"), (200, "yellow"), (500, OK)]),
-    stat("CPA", flux("radar", "cpa_m", last=True, nm=True), 15, 0, 4, 4,
-         unit=UNIT_NM, decimals=2,
-         thresholds=[(None, "red"), (0.08, "yellow"), (0.27, OK)]),
-    stat("TCPA", flux("radar", "tcpa_s", last=True), 19, 0, 5, 4, unit="s",
-         decimals=0, thresholds=[(None, "red"), (120, "yellow"), (300, OK)]),
-    ts("Tracked Targets", [target(flux("radar", "targets"), "targets")],
-       0, 4, 12, 8),
-    ts("Closest Target / CPA",
-       [target(flux("radar", ["closest_range_m", "cpa_m"], nm=True))],
-       12, 4, 12, 8, unit=UNIT_NM),
-    ts("Detection Rate", [target(flux("radar", "detection_rate"), "rate")],
-       0, 12, 12, 6, unit="percentunit", min_=0, max_=1),
-    ts("TCPA", [target(flux("radar", "tcpa_s"), "TCPA")], 12, 12, 12, 6,
-       unit="s"),
-], ["radar"]))
+# ------------------------------------------------ FR-6 Traffic (collision avoidance)
+# Contacts come from grafana_bridge: NODE_REPORT / AIS-style reports and
+# radar targets, with range, bearings, CPA / TCPA, encounter type and a
+# risk level computed onboard (mission_logic.hpp). Rows are written only
+# while a contact is active, so a 30 s window is the live picture.
+CONTACT_FIELDS = ["range_m", "bearing", "rel_bearing", "spd_kn", "hdg",
+                  "rel_speed_kn", "cpa_m", "tcpa_s", "risk"]
+CONTACT_STR_FIELDS = ["encounter", "type"]
+
+
+def contacts_query(limit=None, rank=True):
+    """One row per live contact with every field as a column, riskiest
+    first. Numeric and string fields are pivoted separately and joined:
+    Flux refuses to group float and string _value columns into one table."""
+    nums = " or ".join(f'r._field == "{f}"' for f in CONTACT_FIELDS)
+    strs = " or ".join(f'r._field == "{f}"' for f in CONTACT_STR_FIELDS)
+    q = ('base = from(bucket: "telemetry")\n'
+         '  |> range(start: -30s)\n'
+         '  |> filter(fn: (r) => r._measurement == "contacts")\n'
+         '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+         '  |> last()\n'
+         '  |> drop(columns: ["_start", "_stop", "_measurement", "vessel", "_time"])\n'
+         f'nums = base |> filter(fn: (r) => {nums})\n'
+         '  |> group()\n'
+         '  |> pivot(rowKey: ["contact", "source"], columnKey: ["_field"], valueColumn: "_value")\n'
+         f'strs = base |> filter(fn: (r) => {strs})\n'
+         '  |> group()\n'
+         '  |> pivot(rowKey: ["contact", "source"], columnKey: ["_field"], valueColumn: "_value")\n'
+         'join(tables: {n: nums, s: strs}, on: ["contact", "source"])\n'
+         '  |> filter(fn: (r) => exists r.range_m)\n')
+    if rank:
+        q += ('  |> sort(columns: ["cpa_m"])\n'
+              '  |> sort(columns: ["risk"], desc: true)\n')
+    if limit:
+        q += f'  |> limit(n: {limit})\n'
+    return q
+
+
+def worst_contact_query(column, string=False):
+    """A single value (the riskiest contact's column) for a stat tile."""
+    q = contacts_query(limit=1)
+    q += f'  |> map(fn: (r) => ({{_value: r.{column}}}))\n'
+    return q
+
+
+def traffic_js():
+    """Heading-up polar traffic view: own ship at the centre, range rings
+    in nautical miles (auto-scaled 0.5 / 1 / 2 / 5 nm), contacts as
+    heading-rotated triangles coloured by source, HIGH-risk contacts red
+    with a dashed CPA line to the riskiest one."""
+    return ECH_PRELUDE + r"""
+const ownHdg = val('B') || 0;
+const rows = [];
+for (const s of context.panel.data.series) {
+  if (s.refId === 'B') { continue; }
+  const col = {};
+  for (const f of s.fields) { col[f.name] = f.values && f.values.toArray ? f.values.toArray() : f.values; }
+  const n = (col.range_m || []).length;
+  for (let i = 0; i < n; i++) {
+    rows.push({ id: col.contact ? col.contact[i] : ('#' + i),
+      source: col.source ? col.source[i] : 'radar',
+      range: col.range_m[i], rb: col.rel_bearing ? col.rel_bearing[i] : null,
+      hdg: col.hdg ? col.hdg[i] : null, risk: col.risk ? col.risk[i] : 0,
+      cpa: col.cpa_m ? col.cpa_m[i] : null, tcpa: col.tcpa_s ? col.tcpa_s[i] : null });
+  }
+}
+const NM = 1852;
+let maxR = 0.5;
+for (const r of rows) { if (r.rb !== null && r.range / NM > maxR * 0.9) { maxR = r.range / NM > 2 ? 5 : (r.range / NM > 1 ? 2 : 1); } }
+if (maxR > 2 && rows.some(r => r.range / NM > 4.5)) { maxR = 10; }
+const colorOf = (r) => r.risk >= 2 ? '#ff6b6b' : (r.source === 'report' ? '#5ad8a6' : '#f0b429');
+const pts = rows.filter(r => r.rb !== null);
+const scatter = pts.map(r => ({
+  value: [r.range / NM, ((r.rb % 360) + 360) % 360],
+  symbolRotate: r.hdg === null ? 0 : -(r.hdg - ownHdg),
+  itemStyle: { color: colorOf(r) },
+  label: { show: r.risk >= 1, formatter: r.id, color: dark ? '#fff' : '#24292e', fontSize: 11, fontWeight: 600, position: 'top' },
+  name: r.id, risk: r.risk, cpa: r.cpa, tcpa: r.tcpa, source: r.source }));
+const worst = pts.slice().sort((a, b) => (b.risk - a.risk) || ((a.cpa ?? 1e9) - (b.cpa ?? 1e9)))[0];
+const series = [{
+  type: 'scatter', coordinateSystem: 'polar', symbol: 'triangle', symbolSize: 14, data: scatter,
+  tooltip: { formatter: (p) => p.data.name + '<br>' + p.data.source + ' · risk ' + ['clear','MEDIUM','HIGH'][p.data.risk] +
+    (p.data.cpa != null ? '<br>CPA ' + Math.round(p.data.cpa) + ' m' : '') +
+    (p.data.tcpa != null && p.data.tcpa >= 0 ? ' · TCPA ' + Math.round(p.data.tcpa) + ' s' : '') }
+}, {
+  type: 'scatter', coordinateSystem: 'polar', symbol: 'triangle', symbolSize: 18,
+  data: [{ value: [0, 0], itemStyle: { color: '#ffffff', borderColor: '#00bcd4', borderWidth: 2 } }], silent: true, z: 5
+}];
+if (worst && worst.risk >= 1) {
+  series.push({ type: 'line', coordinateSystem: 'polar', silent: true, z: 4, showSymbol: false,
+    lineStyle: { color: '#ff6b6b', type: 'dashed', width: 1.5 },
+    data: [[0, 0], [worst.range / NM, ((worst.rb % 360) + 360) % 360]] });
+}
+const fmtT = (t) => t == null || t < 0 ? '—' : Math.floor(t / 60) + ':' + ('0' + Math.round(t % 60)).slice(-2);
+return {
+  backgroundColor: 'transparent',
+  polar: { center: ['50%', '52%'], radius: '78%' },
+  angleAxis: { type: 'value', min: 0, max: 360, startAngle: 90, clockwise: true, splitNumber: 12,
+    axisLine: { lineStyle: { color: C.tick } }, axisTick: { show: false },
+    axisLabel: { color: C.label, fontSize: 10, formatter: (v) => v === 0 ? 'N' : ('00' + v).slice(-3) },
+    splitLine: { lineStyle: { color: dark ? 'rgba(124,156,176,0.18)' : 'rgba(36,41,46,0.15)' } } },
+  radiusAxis: { min: 0, max: maxR, splitNumber: 4, axisLine: { show: false }, axisTick: { show: false },
+    axisLabel: { color: C.label, fontSize: 9, formatter: (v) => v > 0 ? v + ' nm' : '' },
+    splitLine: { lineStyle: { color: dark ? 'rgba(124,156,176,0.35)' : 'rgba(36,41,46,0.3)', type: 'dashed' } } },
+  tooltip: { trigger: 'item' },
+  graphic: [
+    { type: 'text', left: 8, top: 4, style: { text: 'HEADING UP · range ' + maxR + ' nm', fill: C.sub, fontSize: 10, fontWeight: 600 } },
+    { type: 'text', left: 8, bottom: 6, style: { text: '▲ report / AIS   ▲ radar   ▲ HIGH risk', fill: C.label, fontSize: 10 } },
+    { type: 'text', right: 8, bottom: 6, style: { text: worst && worst.risk >= 1 ? worst.id + '  CPA ' + Math.round(worst.cpa) + ' m · TCPA ' + fmtT(worst.tcpa) : 'no risk contacts',
+        fill: worst && worst.risk >= 2 ? '#ff6b6b' : C.text, fontSize: 11, fontWeight: 600 } }
+  ],
+  series: series
+};
+"""
+
+
+risk_mappings = [{"type": "value", "options": {
+    "0": {"text": "CLEAR", "color": TILE_OK, "index": 0},
+    "1": {"text": "MEDIUM", "color": "orange", "index": 1},
+    "2": {"text": "HIGH", "color": "red", "index": 2}}}]
+encounter_mappings = state_map([("head-on", "red"), ("crossing", "orange"),
+                                ("overtaking", "yellow"), ("-", "#3d434b")])
+
+
+def kv_tile(title, query, x, y, w, h, **kw):
+    """Key/value readout tile for the contact and MOOS action cards; reads
+    "none" instead of Grafana's "No data" while there is no contact."""
+    kw.setdefault("no_value", "none")
+    return stat(title, query, x, y, w, h, **kw)
+
+
+DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
+    # A — risk and counts (8 x 3x3)
+    stat("Collision Risk", flux("traffic", "risk_level", last=True), 0, 0, 3, 3,
+         mappings=risk_mappings, text_mode="value", color_mode="background"),
+    stat("Avoidance", flux("traffic", "avoidance_active", last=True), 3, 0, 3, 3,
+         mappings=[{"type": "value", "options": {
+             "0": {"text": "IDLE", "color": "#3d434b", "index": 0},
+             "1": {"text": "ACTIVE", "color": "orange", "index": 1}}}],
+         text_mode="value", color_mode="background"),
+    stat("Contacts", flux("traffic", "contacts", last=True), 6, 0, 3, 3, decimals=0),
+    stat("Reports / AIS", flux("traffic", "reports", last=True), 9, 0, 3, 3, decimals=0),
+    stat("Radar Only", flux("traffic", "radar_only", last=True), 12, 0, 3, 3, decimals=0),
+    stat("High Risk", flux("traffic", "high_risk", last=True), 15, 0, 3, 3, decimals=0,
+         thresholds=[(None, OK), (1, "red")]),
+    stat("Closest Range", flux("traffic", "closest_range_m", last=True, nm=True),
+         18, 0, 3, 3, unit=UNIT_NM, decimals=2, no_value="none",
+         thresholds=[(None, "red"), (0.11, "yellow"), (0.27, OK)]),
+    stat("Min CPA", flux("traffic", "min_cpa_m", last=True), 21, 0, 3, 3,
+         unit=UNIT_M, decimals=0, no_value="none",
+         thresholds=[(None, "red"), (500, "yellow"), (1000, OK)]),
+    # B — traffic view | highest-risk contact | MOOS action
+    (instrument("Traffic View",
+                [target(contacts_query()),
+                 target(flux("nav", "heading", last=True), ref="B")],
+                0, 3, 10, 13,
+                traffic_js(), {"kind": "traffic"})
+     if ANALOG else
+     panel("table", "Contacts", [target(contacts_query())], 0, 3, 10, 13,
+           options={"showHeader": True})),
+    stat("Highest-Risk Contact", worst_contact_query("contact"), 10, 3, 7, 2,
+         string_value=True, text_mode="value", no_value="no contacts"),
+    kv_tile("CPA", worst_contact_query("cpa_m"), 10, 5, 4, 3, unit=UNIT_M, decimals=0,
+            thresholds=[(None, "red"), (500, "yellow"), (1000, OK)]),
+    kv_tile("TCPA", worst_contact_query("tcpa_s"), 14, 5, 3, 3, unit="dtdurations",
+            decimals=0, thresholds=[(None, "red"), (120, "yellow"), (300, OK)],
+            mappings=[{"type": "value", "options": {
+                "-1": {"text": "OPENING", "color": TILE_OK, "index": 0}}}]),
+    kv_tile("Range", worst_contact_query("range_m"), 10, 8, 4, 3, unit=UNIT_M, decimals=0),
+    kv_tile("Bearing", worst_contact_query("bearing"), 14, 8, 3, 3, unit="degree", decimals=0),
+    kv_tile("Rel. Bearing", worst_contact_query("rel_bearing"), 10, 11, 4, 3,
+            unit="degree", decimals=0),
+    kv_tile("Rel. Speed", worst_contact_query("rel_speed_kn"), 14, 11, 3, 3,
+            unit="velocityknot", decimals=1),
+    stat("Type", worst_contact_query("type"), 10, 14, 4, 2, string_value=True,
+         text_mode="value", no_value="none"),
+    stat("Encounter", worst_contact_query("encounter"), 14, 14, 3, 2, string_value=True,
+         text_mode="value", mappings=encounter_mappings, color_mode="background",
+         no_value="none", thresholds=[(None, "#3d434b")]),
+    kv_tile("Planned Course", flux("traffic", "planned_course", last=True), 17, 3, 4, 3,
+            unit="degree", decimals=0, no_value="no route"),
+    kv_tile("Commanded Course", flux("autopilot", "desired_heading", last=True), 21, 3, 3, 3,
+            unit="degree", decimals=0),
+    kv_tile("Actual Heading", flux("nav", "heading", last=True), 17, 6, 4, 3,
+            unit="degree", decimals=0),
+    kv_tile("Deviation", flux("traffic", "course_deviation", last=True), 21, 6, 3, 3,
+            unit="degree", decimals=0, no_value="no route",
+            thresholds=[(None, OK), (10, "yellow"), (30, "orange")]),
+    kv_tile("Speed Command", flux("autopilot", "desired_speed", last=True), 17, 9, 4, 3,
+            unit="velocityknot", decimals=1),
+    kv_tile("Actual SOG", flux("nav", "sog", last=True), 21, 9, 3, 3,
+            unit="velocityknot", decimals=1),
+    stat("Avoidance Behavior", last_str("mission_state", "active_behavior"), 17, 12, 7, 2,
+         text_mode="value", no_value="none"),
+    stat("Reason", last_str("traffic", "reason"), 17, 14, 7, 2, text_mode="value",
+         string_value=True),
+    # C — contact table and CPA / TCPA trend
+    panel("table", "Contacts — riskiest first", [target(contacts_query(limit=12))],
+          0, 16, 12, 5, options={"showHeader": True}, no_value="no contacts",
+          mappings=risk_mappings,
+          overrides=[{"matcher": {"id": "byName", "options": "range_m"},
+                      "properties": [{"id": "unit", "value": UNIT_M}, {"id": "decimals", "value": 0},
+                                     {"id": "displayName", "value": "Range"}]},
+                     {"matcher": {"id": "byName", "options": "cpa_m"},
+                      "properties": [{"id": "unit", "value": UNIT_M}, {"id": "decimals", "value": 0},
+                                     {"id": "displayName", "value": "CPA"}]},
+                     {"matcher": {"id": "byName", "options": "tcpa_s"},
+                      "properties": [{"id": "unit", "value": "s"}, {"id": "decimals", "value": 0},
+                                     {"id": "displayName", "value": "TCPA"}]},
+                     {"matcher": {"id": "byName", "options": "bearing"},
+                      "properties": [{"id": "unit", "value": "degree"}, {"id": "decimals", "value": 0},
+                                     {"id": "displayName", "value": "Bearing"}]},
+                     {"matcher": {"id": "byName", "options": "spd_kn"},
+                      "properties": [{"id": "unit", "value": "velocityknot"}, {"id": "decimals", "value": 1},
+                                     {"id": "displayName", "value": "Speed"}]},
+                     {"matcher": {"id": "byName", "options": "risk"},
+                      "properties": [{"id": "displayName", "value": "Risk"},
+                                     {"id": "custom.cellOptions", "value": {"type": "color-text"}}]},
+                     {"matcher": {"id": "byName", "options": "contact"},
+                      "properties": [{"id": "displayName", "value": "Contact"}]},
+                     {"matcher": {"id": "byName", "options": "source"},
+                      "properties": [{"id": "displayName", "value": "Source"}]},
+                     {"matcher": {"id": "byName", "options": "type"},
+                      "properties": [{"id": "displayName", "value": "Type"}]},
+                     {"matcher": {"id": "byName", "options": "encounter"},
+                      "properties": [{"id": "displayName", "value": "Encounter"}]},
+                     {"matcher": {"id": "byRegexp", "options": "rel_bearing|rel_speed_kn|hdg"},
+                      "properties": [{"id": "custom.hidden", "value": True}]}]),
+    ts("Closest CPA / TCPA",
+       [target(flux("traffic", "min_cpa_m"), "CPA m"),
+        target(flux("traffic", "min_tcpa_s"), "TCPA s", ref="B")],
+       12, 16, 12, 5, unit=UNIT_M,
+       overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
+                   "properties": [{"id": "unit", "value": "s"},
+                                  {"id": "custom.axisPlacement", "value": "right"}]}]),
+], ["traffic"]))
+
+# Contacts table: the join emits columns alphabetically; fix the reading
+# order and drop the working columns.
+_ct = next(p for p in DASHBOARDS[-1]["panels"] if p["title"].startswith("Contacts —"))
+_ct["transformations"] = [{"id": "organize", "options": {
+    "excludeByName": {"rel_bearing": True, "rel_speed_kn": True, "hdg": True},
+    "indexByName": {"contact": 0, "source": 1, "type": 2, "range_m": 3,
+                    "bearing": 4, "spd_kn": 5, "cpa_m": 6, "tcpa_s": 7,
+                    "encounter": 8, "risk": 9}}}]
 
 # --------------------------------------------------------------- FR-7 Camera
 DASHBOARDS.append(dashboard("usv-camera", "Cameras", [
@@ -1372,10 +1608,10 @@ DASHBOARDS.append(dashboard("usv-system", "System", [
                     target(tele("diskio", "write_bytes", rate=True),
                            "write", ref="B")],
        0, 10, 8, 6, unit="Bps"),
-    ts("Network I/O", [target(tele("net", "bytes_recv", rate=True), "rx"),
-                       target(tele("net", "bytes_sent", rate=True),
-                              "tx", ref="B")],
-       8, 10, 8, 6, unit="Bps"),
+    ts("Load Average", [target(tele("system", "load1"), "1 min"),
+                        target(tele("system", "load5"), "5 min", ref="B"),
+                        target(tele("system", "load15"), "15 min", ref="C")],
+       8, 10, 8, 6),
     ts("CPU Temp", [target(tele("temp", "temp"), "°C")],
        16, 10, 8, 6, unit="celsius"),
     panel("table", "Services (systemd)",

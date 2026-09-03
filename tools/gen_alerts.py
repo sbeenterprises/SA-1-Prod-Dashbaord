@@ -98,6 +98,10 @@ RULES = [
     rule("usv-low-fuel", "Low Fuel Level",
          q("engine", "fuel_level"), "lt", 15, "warning",
          "Fuel level below 15%.", no_data="OK"),
+    rule("usv-collision-risk", "Collision Risk HIGH",
+         q("traffic", "high_risk"), "gt", 0, "critical",
+         "A contact is closing inside the alert CPA within the alert TCPA "
+         "(grafana_bridge radar_cpa_alert_m / tcpa_alert_s).", no_data="OK"),
     rule("usv-radar-offline", "Radar Offline",
          q("radar", "online"), "lt", 1, "warning",
          "Radar is offline — collision avoidance degraded.", no_data="OK"),

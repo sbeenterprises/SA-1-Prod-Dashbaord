@@ -17,16 +17,124 @@
   },
   "links": [
     {
-      "type": "dashboards",
-      "title": "",
-      "tags": [
-        "usv"
-      ],
-      "asDropdown": false,
+      "type": "link",
+      "title": "Mission",
+      "url": "/d/usv-mission",
       "keepTime": true,
       "includeVars": true,
       "targetBlank": false,
-      "icon": "dashboard"
+      "icon": "dashboard",
+      "tooltip": "Open Mission"
+    },
+    {
+      "type": "link",
+      "title": "Navigation",
+      "url": "/d/usv-navigation",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Navigation"
+    },
+    {
+      "type": "link",
+      "title": "Autopilot",
+      "url": "/d/usv-autopilot",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Autopilot"
+    },
+    {
+      "type": "link",
+      "title": "Vessel Health",
+      "url": "/d/usv-health",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Vessel Health"
+    },
+    {
+      "type": "link",
+      "title": "CAN Bus",
+      "url": "/d/usv-canbus",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open CAN Bus"
+    },
+    {
+      "type": "link",
+      "title": "Traffic",
+      "url": "/d/usv-traffic",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Traffic"
+    },
+    {
+      "type": "link",
+      "title": "Cameras",
+      "url": "/d/usv-camera",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Cameras"
+    },
+    {
+      "type": "link",
+      "title": "Comms",
+      "url": "/d/usv-comms",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Comms"
+    },
+    {
+      "type": "link",
+      "title": "System",
+      "url": "/d/usv-system",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open System"
+    },
+    {
+      "type": "link",
+      "title": "Replay",
+      "url": "/d/usv-replay",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Replay"
+    },
+    {
+      "type": "link",
+      "title": "Alarms",
+      "url": "/d/usv-alarms",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Alarms"
+    },
+    {
+      "type": "link",
+      "title": "Fleet",
+      "url": "/d/usv-fleet",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Fleet"
     },
     {
       "type": "link",
@@ -72,7 +180,7 @@
   },
   "panels": [
     {
-      "id": 188,
+      "id": 207,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -88,7 +196,7 @@
       }
     },
     {
-      "id": 138,
+      "id": 157,
       "type": "text",
       "title": "How to replay",
       "datasource": {
@@ -116,7 +224,7 @@
       }
     },
     {
-      "id": 139,
+      "id": 158,
       "type": "geomap",
       "title": "GPS Track",
       "datasource": {
@@ -338,7 +446,7 @@
       }
     },
     {
-      "id": 140,
+      "id": 159,
       "type": "state-timeline",
       "title": "Mission State",
       "datasource": {
@@ -445,7 +553,7 @@
       }
     },
     {
-      "id": 141,
+      "id": 160,
       "type": "table",
       "title": "Mission Events",
       "datasource": {
@@ -481,7 +589,7 @@
       }
     },
     {
-      "id": 142,
+      "id": 161,
       "type": "timeseries",
       "title": "Heading History",
       "datasource": {
@@ -553,7 +661,7 @@
       }
     },
     {
-      "id": 143,
+      "id": 162,
       "type": "timeseries",
       "title": "Speed History",
       "datasource": {
@@ -623,7 +731,7 @@
       }
     },
     {
-      "id": 144,
+      "id": 163,
       "type": "timeseries",
       "title": "Actuator Commands",
       "datasource": {
@@ -733,7 +841,7 @@
       }
     },
     {
-      "id": 145,
+      "id": 164,
       "type": "timeseries",
       "title": "Cross-Track Error",
       "datasource": {
@@ -803,7 +911,7 @@
       }
     },
     {
-      "id": 146,
+      "id": 165,
       "type": "state-timeline",
       "title": "Autonomy Flags",
       "datasource": {
@@ -866,7 +974,7 @@
       }
     },
     {
-      "id": 147,
+      "id": 166,
       "type": "timeseries",
       "title": "Distance to Next Waypoint",
       "datasource": {

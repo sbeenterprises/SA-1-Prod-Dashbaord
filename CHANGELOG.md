@@ -5,6 +5,24 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+### Added
+- Traffic dashboard (replaces Radar): collision-risk and avoidance tiles,
+  contact counts by source, heading-up polar traffic view with range
+  rings, contacts and CPA line, highest-risk contact card, MOOS action
+  block (planned vs commanded course, speed, avoidance behavior, reason),
+  contact table, CPA/TCPA trend. `grafana_bridge` computes range,
+  bearings, CPA/TCPA, encounter type and risk per contact onboard and
+  raises a critical event and the `usv-collision-risk` alert on HIGH risk.
+- Fixed tab order on every dashboard (Mission ... Fleet); the tag-based
+  list sorted alphabetically and dropped the current page.
+
+### Changed
+- De-duplicated panels: Navigation KPI strip shows waypoint bearing and
+  speed cap instead of repeating the compass and speed meter; Autopilot
+  shows XTE and distance to station instead of repeating the rudder and
+  throttle instruments; System shows load average instead of the network
+  throughput already on Comms.
+
 ### Fixed
 - Vessel markers on the Fleet, Navigation and Replay maps did not render:
   the heading rotation dimension lacked the `max` Grafana needs

@@ -17,16 +17,124 @@
   },
   "links": [
     {
-      "type": "dashboards",
-      "title": "",
-      "tags": [
-        "usv"
-      ],
-      "asDropdown": false,
+      "type": "link",
+      "title": "Mission",
+      "url": "/d/usv-mission",
       "keepTime": true,
       "includeVars": true,
       "targetBlank": false,
-      "icon": "dashboard"
+      "icon": "dashboard",
+      "tooltip": "Open Mission"
+    },
+    {
+      "type": "link",
+      "title": "Navigation",
+      "url": "/d/usv-navigation",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Navigation"
+    },
+    {
+      "type": "link",
+      "title": "Autopilot",
+      "url": "/d/usv-autopilot",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Autopilot"
+    },
+    {
+      "type": "link",
+      "title": "Vessel Health",
+      "url": "/d/usv-health",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Vessel Health"
+    },
+    {
+      "type": "link",
+      "title": "CAN Bus",
+      "url": "/d/usv-canbus",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open CAN Bus"
+    },
+    {
+      "type": "link",
+      "title": "Traffic",
+      "url": "/d/usv-traffic",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Traffic"
+    },
+    {
+      "type": "link",
+      "title": "Cameras",
+      "url": "/d/usv-camera",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Cameras"
+    },
+    {
+      "type": "link",
+      "title": "Comms",
+      "url": "/d/usv-comms",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Comms"
+    },
+    {
+      "type": "link",
+      "title": "System",
+      "url": "/d/usv-system",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open System"
+    },
+    {
+      "type": "link",
+      "title": "Replay",
+      "url": "/d/usv-replay",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Replay"
+    },
+    {
+      "type": "link",
+      "title": "Alarms",
+      "url": "/d/usv-alarms",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Alarms"
+    },
+    {
+      "type": "link",
+      "title": "Fleet",
+      "url": "/d/usv-fleet",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Fleet"
     },
     {
       "type": "link",
@@ -72,7 +180,7 @@
   },
   "panels": [
     {
-      "id": 186,
+      "id": 205,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -88,7 +196,7 @@
       }
     },
     {
-      "id": 113,
+      "id": 132,
       "type": "stat",
       "title": "Internet",
       "datasource": {
@@ -169,7 +277,7 @@
       }
     },
     {
-      "id": 114,
+      "id": 133,
       "type": "stat",
       "title": "Starlink",
       "datasource": {
@@ -251,7 +359,7 @@
       }
     },
     {
-      "id": 115,
+      "id": 134,
       "type": "stat",
       "title": "VPN / Tailscale",
       "datasource": {
@@ -332,7 +440,7 @@
       }
     },
     {
-      "id": 116,
+      "id": 135,
       "type": "stat",
       "title": "Signal K WebSocket",
       "datasource": {
@@ -406,7 +514,7 @@
       }
     },
     {
-      "id": 117,
+      "id": 136,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -473,7 +581,7 @@
       }
     },
     {
-      "id": 118,
+      "id": 137,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -540,7 +648,7 @@
       }
     },
     {
-      "id": 119,
+      "id": 138,
       "type": "timeseries",
       "title": "Latency",
       "datasource": {
@@ -610,7 +718,7 @@
       }
     },
     {
-      "id": 120,
+      "id": 139,
       "type": "timeseries",
       "title": "Packet Loss",
       "datasource": {
@@ -681,7 +789,7 @@
       }
     },
     {
-      "id": 121,
+      "id": 140,
       "type": "timeseries",
       "title": "Bandwidth (host interfaces)",
       "datasource": {
@@ -775,7 +883,7 @@
       }
     },
     {
-      "id": 122,
+      "id": 141,
       "type": "timeseries",
       "title": "Telemetry Message Rates",
       "datasource": {

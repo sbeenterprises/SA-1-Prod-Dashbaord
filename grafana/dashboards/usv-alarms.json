@@ -17,16 +17,124 @@
   },
   "links": [
     {
-      "type": "dashboards",
-      "title": "",
-      "tags": [
-        "usv"
-      ],
-      "asDropdown": false,
+      "type": "link",
+      "title": "Mission",
+      "url": "/d/usv-mission",
       "keepTime": true,
       "includeVars": true,
       "targetBlank": false,
-      "icon": "dashboard"
+      "icon": "dashboard",
+      "tooltip": "Open Mission"
+    },
+    {
+      "type": "link",
+      "title": "Navigation",
+      "url": "/d/usv-navigation",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Navigation"
+    },
+    {
+      "type": "link",
+      "title": "Autopilot",
+      "url": "/d/usv-autopilot",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Autopilot"
+    },
+    {
+      "type": "link",
+      "title": "Vessel Health",
+      "url": "/d/usv-health",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Vessel Health"
+    },
+    {
+      "type": "link",
+      "title": "CAN Bus",
+      "url": "/d/usv-canbus",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open CAN Bus"
+    },
+    {
+      "type": "link",
+      "title": "Traffic",
+      "url": "/d/usv-traffic",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Traffic"
+    },
+    {
+      "type": "link",
+      "title": "Cameras",
+      "url": "/d/usv-camera",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Cameras"
+    },
+    {
+      "type": "link",
+      "title": "Comms",
+      "url": "/d/usv-comms",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Comms"
+    },
+    {
+      "type": "link",
+      "title": "System",
+      "url": "/d/usv-system",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open System"
+    },
+    {
+      "type": "link",
+      "title": "Replay",
+      "url": "/d/usv-replay",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Replay"
+    },
+    {
+      "type": "link",
+      "title": "Alarms",
+      "url": "/d/usv-alarms",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Alarms"
+    },
+    {
+      "type": "link",
+      "title": "Fleet",
+      "url": "/d/usv-fleet",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Fleet"
     },
     {
       "type": "link",
@@ -72,7 +180,7 @@
   },
   "panels": [
     {
-      "id": 190,
+      "id": 209,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -88,7 +196,7 @@
       }
     },
     {
-      "id": 159,
+      "id": 178,
       "type": "alertlist",
       "title": "Active Alerts",
       "datasource": {
@@ -127,7 +235,7 @@
       }
     },
     {
-      "id": 160,
+      "id": 179,
       "type": "table",
       "title": "Alarm History (events bucket)",
       "datasource": {
@@ -163,7 +271,7 @@
       }
     },
     {
-      "id": 161,
+      "id": 180,
       "type": "stat",
       "title": "Battery SOC",
       "datasource": {
@@ -230,7 +338,7 @@
       }
     },
     {
-      "id": 162,
+      "id": 181,
       "type": "stat",
       "title": "GPS Sats",
       "datasource": {
@@ -296,7 +404,7 @@
       }
     },
     {
-      "id": 163,
+      "id": 182,
       "type": "stat",
       "title": "CAN Bus",
       "datasource": {
@@ -370,7 +478,7 @@
       }
     },
     {
-      "id": 164,
+      "id": 183,
       "type": "stat",
       "title": "Coolant",
       "datasource": {
@@ -437,7 +545,7 @@
       }
     },
     {
-      "id": 165,
+      "id": 184,
       "type": "stat",
       "title": "Fuel",
       "datasource": {
@@ -504,7 +612,7 @@
       }
     },
     {
-      "id": 166,
+      "id": 185,
       "type": "stat",
       "title": "Radar",
       "datasource": {
@@ -578,7 +686,7 @@
       }
     },
     {
-      "id": 167,
+      "id": 186,
       "type": "stat",
       "title": "Camera",
       "datasource": {
@@ -652,7 +760,7 @@
       }
     },
     {
-      "id": 168,
+      "id": 187,
       "type": "stat",
       "title": "Signal K",
       "datasource": {
@@ -726,7 +834,7 @@
       }
     },
     {
-      "id": 169,
+      "id": 188,
       "type": "stat",
       "title": "MOOS Rate",
       "datasource": {
@@ -792,7 +900,7 @@
       }
     },
     {
-      "id": 170,
+      "id": 189,
       "type": "stat",
       "title": "Comms Link",
       "datasource": {
@@ -873,7 +981,7 @@
       }
     },
     {
-      "id": 171,
+      "id": 190,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -940,7 +1048,7 @@
       }
     },
     {
-      "id": 172,
+      "id": 191,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -1007,7 +1115,7 @@
       }
     },
     {
-      "id": 173,
+      "id": 192,
       "type": "stat",
       "title": "Mission State",
       "datasource": {
@@ -1132,7 +1240,7 @@
       }
     },
     {
-      "id": 174,
+      "id": 193,
       "type": "stat",
       "title": "Operator Link",
       "datasource": {
@@ -1206,7 +1314,7 @@
       }
     },
     {
-      "id": 175,
+      "id": 194,
       "type": "stat",
       "title": "Mission Armed",
       "datasource": {
@@ -1280,7 +1388,7 @@
       }
     },
     {
-      "id": 176,
+      "id": 195,
       "type": "stat",
       "title": "Geofence",
       "datasource": {
@@ -1359,7 +1467,7 @@
       }
     },
     {
-      "id": 177,
+      "id": 196,
       "type": "stat",
       "title": "Helm All-Stop",
       "datasource": {
@@ -1433,7 +1541,7 @@
       }
     },
     {
-      "id": 178,
+      "id": 197,
       "type": "stat",
       "title": "Obstacles",
       "datasource": {

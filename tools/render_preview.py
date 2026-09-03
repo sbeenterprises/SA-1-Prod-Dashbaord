@@ -449,6 +449,36 @@ def _needle(cx, cy, deg, length, color, width=4):
             f'filter="drop-shadow(0 2px 3px rgba(0,0,0,0.45))"/>')
 
 
+def svg_traffic(w, h):
+    """Heading-up polar traffic view preview (sample contacts)."""
+    cx, cy, r = w / 2, h / 2 + 6, min(w, h) * 0.40
+    rings = "".join(f'<circle cx="{cx}" cy="{cy}" r="{r * k:.1f}" fill="none" '
+                    f'stroke="{GRID}" stroke-dasharray="3 3"/>' for k in (0.25, 0.5, 0.75, 1))
+    labels = "".join(f'<text x="{_pol(cx, cy, r + 12, 90 - a)[0]:.1f}" y="{_pol(cx, cy, r + 12, 90 - a)[1] + 4:.1f}" '
+                     f'fill="{DIM}" font-size="10" text-anchor="middle">{"N" if a == 0 else f"{a:03d}"}</text>'
+                     for a in (0, 45, 90, 135, 180, 225, 270, 315))
+    def tri(deg, dist, color, rot=0):
+        x, y = _pol(cx, cy, r * dist, 90 - deg)
+        return (f'<polygon points="0,-7 6,5 -6,5" fill="{color}" '
+                f'transform="translate({x:.1f},{y:.1f}) rotate({rot})"/>')
+    sample = [(37, 0.23, RED, 215), (318, 0.19, GREEN, 40), (94, 0.55, GREEN, 10),
+              (205, 0.8, YELLOW, 0), (150, 0.62, GREEN, 300), (265, 0.9, GREEN, 90),
+              (10, 0.7, RED, 180)]
+    contacts = "".join(tri(*c) for c in sample)
+    wx, wy = _pol(cx, cy, r * 0.23, 90 - 37)
+    cpa = (f'<line x1="{cx}" y1="{cy}" x2="{wx:.1f}" y2="{wy:.1f}" stroke="{RED}" stroke-dasharray="5 4"/>'
+           f'<text x="{wx + 8:.1f}" y="{wy - 6:.1f}" fill="{TEXT}" font-size="11" font-weight="600">TGT-27</text>')
+    own = f'<polygon points="0,-9 6,7 0,4 -6,7" fill="#fff" stroke="{CYAN}" transform="translate({cx},{cy})"/>'
+    return (f'<svg width="{w}" height="{h}">'
+            f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{PANEL}" stroke="{GRID}"/>{rings}'
+            f'<line x1="{cx}" y1="{cy - r}" x2="{cx}" y2="{cy + r}" stroke="{GRID}"/>'
+            f'<line x1="{cx - r}" y1="{cy}" x2="{cx + r}" y2="{cy}" stroke="{GRID}"/>'
+            f'{labels}{cpa}{contacts}{own}'
+            f'<text x="8" y="14" fill="{CYAN}" font-size="10" font-weight="600">HEADING UP · range 2 nm</text>'
+            f'<text x="8" y="{h - 6}" fill="{DIM}" font-size="10">▲ report / AIS  ▲ radar  ▲ HIGH risk</text>'
+            f'<text x="{w - 8}" y="{h - 6}" fill="{RED}" font-size="11" font-weight="600" text-anchor="end">TGT-27  CPA 82 m · TCPA 1:42</text></svg>')
+
+
 def svg_meter_analog(meta, w, h):
     """240° needle meter mirroring the ECharts instrument styling."""
     mn, mx = meta["min"], meta["max"]
@@ -657,6 +687,8 @@ def render_panel(uid, p):
             body = svg_compass(meta, iw, ih)
         elif kind == "rudder":
             body = svg_rudder(meta, iw, ih)
+        elif kind == "traffic":
+            body = svg_traffic(iw, ih)
         else:
             body = svg_meter_analog(meta, iw, ih)
     elif ptype == "state-timeline":
@@ -729,7 +761,7 @@ def render(uid, theme="dark", width=1600):
             dd = json.load(open(os.path.join(DASH, f)))
             all_titles.append((f[:-5], dd["title"]))
     order = ["usv-mission", "usv-navigation", "usv-autopilot", "usv-health",
-             "usv-canbus", "usv-radar", "usv-camera", "usv-comms",
+             "usv-canbus", "usv-traffic", "usv-camera", "usv-comms",
              "usv-system", "usv-replay", "usv-alarms"]
     all_titles.sort(key=lambda t: order.index(t[0]) if t[0] in order else 99)
     tabs = "".join(
