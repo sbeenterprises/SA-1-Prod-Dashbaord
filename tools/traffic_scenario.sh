@@ -32,7 +32,7 @@ command -v uPokeDB >/dev/null || { echo "uPokeDB not on PATH (source the MOOS en
 # OWN_HDG is given. Scenario headings are relative to it, so a wrong value
 # turns a head-on into a crossing.
 if [[ -z ${OWN_HDG:-} ]]; then
-  if ENV=$(sudo -n cat /etc/usv/usv.env 2>/dev/null); then
+  if ENV=$(sudo cat /etc/usv/usv.env); then
     eval "$(echo "$ENV" | grep -E '^INFLUX_(URL|ORG|TOKEN)=')"
     Q="from(bucket: \"telemetry\") |> range(start: -60s) |> filter(fn: (r) => r._measurement == \"nav\" and r._field == \"heading\" and r.vessel == \"$VESSEL\") |> last()"
     OWN_HDG=$(curl -s -XPOST "$INFLUX_URL/api/v2/query?org=$INFLUX_ORG" \
