@@ -3,8 +3,8 @@
 Field reference for installing the **Swift Autonomous Dashboard** (Grafana \+
 InfluxDB monitoring stack) on the USV onboard computer. Native deployment,
 no Docker. All vessel\-side code is C\+\+. The Grafana workspace presents as
-"Swift Autonomous Dashboard" with the Swiftships logo top\-left and 11
-tab\-navigable dashboards. Companion docs: `deployment.md` (full guide),
+"Swift Autonomous Dashboard" with the Swiftships logo top\-left and 12
+tab\-navigable single\-screen dashboards. Companion docs: `deployment.md` (full guide),
 `schema.md`, `traceability.md`, `alpha-mission-integration.md` (the Alpha
 mission variable map, derived state machine and design rationale).
 
@@ -25,9 +25,9 @@ mission variable map, derived state machine and design rationale).
  │                                                              │ ▼
  │    InfluxDB 2.x (:8086)  buckets: telemetry / events /       │
  │                          telemetry_1m (downsampled)          │
- │    Grafana (:3001)       11 dashboards + 15 alert rules      │
+ │    Grafana (:GRAFANA_PORT) 12 dashboards + 17 alert rules    │
  └──────────────────────────────────────────────────────────────┘
-      Operator access: http://<obc>:3001 (Tailscale recommended)
+      Operator access: http://<obc>:<GRAFANA_PORT> (3001 vessel / 3300 sim)
 ```
 
 Data path: all writers batch line protocol to InfluxDB over localhost HTTP;
@@ -62,14 +62,14 @@ Confirm before starting; each item is required.
 #    deploy/branding/swiftships_logo.svg
 
 # 1. Unpack the repo on the OBC, then:
-sudo deploy/install.sh            # creates /etc/usv/usv.env, exits
+sudo bash deploy/install.sh            # creates /etc/usv/usv.env, exits
 
 # 2. Edit secrets. Generate a token first:
 openssl rand -hex 32
 sudo nano /etc/usv/usv.env        # INFLUX_TOKEN, both passwords, VESSEL_ID
 
 # 3. Run the installer for real:
-sudo deploy/install.sh
+sudo bash deploy/install.sh
 #    If MOOS isn't auto-found:
 sudo MOOS_DIR=$HOME/moos-ivp/build/MOOS/MOOSCore deploy/install.sh
 ```
@@ -138,7 +138,7 @@ repo to the OBC, re\-run install.sh.
 | 1 | Services up | `systemctl status influxdb grafana-server telegraf usv-signalk-bridge usv-can-bridge` | all `active (running)` |
 | 2 | DB reachable | `influx ping` | `OK` |
 | 3 | Bench data (no vessel) | `sudo systemctl start usv-simulator` | dashboards populate in \~10 s; the scripted Alpha scenario cycles all mission states and fires the geofence/comms alerts once per \~25 min loop (that IS the alert bench test) |
-| 4 | Grafana login | browse `http://<obc>:3001` | folder "Swift Autonomous Dashboard", 11 dashboards; Swiftships logo in the top\-left nav |
+| 4 | Grafana login | browse `http://<obc>:<GRAFANA_PORT>` | Swiftships login page; folder "Swift Autonomous Dashboard", 12 dashboards; Swiftships logo in the top\-left nav |
 | 5 | Tab navigation | open any dashboard; click the link chips across the top | one click switches dashboard; time range and vessel selection carry over |
 | 6 | Theme toggle | click the "☀ Light" / "☾ Dark" chips at the end of the tab row | dashboard re\-opens in that theme, time range kept |
 | 7 | Tablet check | open any dashboard on a tablet (landscape) | grid scales; below \~768 px panels stack single\-column |
@@ -158,9 +158,9 @@ and the grafana\_bridge console output under pAntler.
 
 - `/etc/usv/usv.env` is root\-only (600). The Influx token also sits in your
   mission file's ProcessConfig — keep mission files off public repos.
-- Bind exposure: Grafana (3001) and InfluxDB (8086) listen on all
+- Bind exposure: Grafana (GRAFANA_PORT) and InfluxDB (8086) listen on all
   interfaces by default. On a Starlink/Tailscale vessel, firewall them to
-  the tailnet: `ufw allow in on tailscale0 to any port 3001` and deny WAN.
+  the tailnet: `ufw allow in on tailscale0 to any port <GRAFANA_PORT>` and deny WAN.
 - Change the Grafana admin password at first login even though the
   installer sets one.
 - The `usv` service user is unprivileged; can\_bridge gets only CAP\_NET\_RAW.
@@ -257,5 +257,5 @@ du -sh /var/lib/influxdb                   # disk growth
 Grafana wall display: append `?kiosk` to any dashboard URL.
 
 ```
-http://<obc>:3001/d/usv-mission?kiosk
+http://<obc>:<GRAFANA_PORT>/d/usv-mission?kiosk
 ```

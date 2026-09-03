@@ -40,8 +40,22 @@ def nid():
     return _id[0]
 
 
+# Series are named by their field alone: the measurement / vessel / host
+# tags would otherwise be appended to every legend entry as labels
+# ("heading alpha", {name="autonomy", vessel="alpha"}).
+CLEAN_LABELS = ('  |> drop(fn: (column) => column =~ '
+                '/^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n')
+
+# Fixed units: Grafana's "lengthm" auto-scales to km above 1000 m, which
+# operators must never see. Short ranges stay in metres, long ones are
+# converted to nautical miles in the query (M_TO_NM).
+UNIT_M = "suffix: m"
+UNIT_NM = "suffix: nm"
+M_TO_NM = '  |> map(fn: (r) => ({r with _value: r._value / 1852.0}))\n'
+
+
 def flux(measurement, fields, bucket="telemetry", every='v.windowPeriod', fn="mean",
-         extra="", last=False):
+         extra="", last=False, nm=False):
     if isinstance(fields, str):
         fields = [fields]
     fieldset = " or ".join(f'r._field == "{f}"' for f in fields)
@@ -55,7 +69,26 @@ def flux(measurement, fields, bucket="telemetry", every='v.windowPeriod', fn="me
         q += '  |> last()\n'
     else:
         q += f'  |> aggregateWindow(every: {every}, fn: {fn}, createEmpty: false)\n'
-    return q
+    if nm:
+        q += M_TO_NM
+    return q + CLEAN_LABELS
+
+
+def track_query(every):
+    """lat/lon pivoted into one frame for the geomap route layer. The two
+    fields arrive as separate tables, so they are merged (group()) before
+    the pivot; pivoting first leaves lat and lon in different frames and
+    aggregateWindow with no _value column errors out."""
+    return ('from(bucket: "telemetry")\n'
+            '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+            '  |> filter(fn: (r) => r._measurement == "nav" and (r._field == "lat" or r._field == "lon"))\n'
+            '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+            f'  |> aggregateWindow(every: {every}, fn: last, createEmpty: false)\n'
+            '  |> group()\n'
+            '  |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")\n'
+            '  |> filter(fn: (r) => exists r.lat and exists r.lon)\n'
+            '  |> keep(columns: ["_time", "lat", "lon"])\n'
+            '  |> sort(columns: ["_time"])\n')
 
 
 def target(query, alias=None, ref="A"):
@@ -112,7 +145,7 @@ def panel(ptype, title, targets, x, y, w, h, unit=None, thresholds=None,
 # query keeps only _value and the panel is told to reduce every field.
 STRING_FIELDS = {
     "state", "state_external", "helm_state", "mission_name", "mission_id",
-    "allstop_reason", "active_behavior", "station_keep", "comms_failsafe",
+    "route_name", "allstop_reason", "active_behavior", "station_keep", "comms_failsafe",
     "entry_gate", "opr_status", "helm_summary", "arrival_state",
     "corridor_status", "crash_stop_status", "region_warning", "wpt_stat",
     "fix_type", "charging_status", "message",
@@ -130,7 +163,8 @@ def stat(title, query, x, y, w=4, h=4, unit=None, thresholds=None,
     """color_mode='background' renders a solid status tile (ops wall look);
     graph_mode='area' adds a trend sparkline behind numeric values."""
     reduce_opts = {"calcs": ["lastNotNull"]}
-    if string_value or _is_string_query(query):
+    is_str = string_value or _is_string_query(query)
+    if is_str:
         query = query + '  |> keep(columns: ["_value"])\n'
         reduce_opts["fields"] = "/.*/"
     # Operator-screen density: capped value size so a 3-row tile reads as a
@@ -143,7 +177,8 @@ def stat(title, query, x, y, w=4, h=4, unit=None, thresholds=None,
                           "textMode": text_mode, "graphMode": graph_mode,
                           "colorMode": color_mode,
                           "justifyMode": "auto",
-                          "text": {"valueSize": 26 if h <= 3 else 34,
+                          "text": {"valueSize": (22 if is_str else 26)
+                                   if h <= 3 else 34,
                                    "titleSize": 12}})
 
 
@@ -461,19 +496,26 @@ def dashboard(uid, title, panels, tags, refresh="5s", time_from="now-30m",
         # clickable link chip across the top of every dashboard. keepTime +
         # includeVars carry the time range and vessel selection across tabs.
         # The Light/Dark chips re-open this dashboard with Grafana's ?theme=
-        # override (per-view; set the lasting default in user preferences).
+        # override. Grafana reads that parameter only when the page loads
+        # (its click interceptor turns same-window links into in-app
+        # navigation, which keeps the current theme), so the chips open a
+        # new tab; the whole session in that tab then stays in that theme.
+        # Instant in-place switch: press "c" then "t" (Grafana shortcut);
+        # lasting default: Profile -> Preferences -> Interface theme.
         "links": [{
             "type": "dashboards", "title": "", "tags": ["usv"],
             "asDropdown": False, "keepTime": True, "includeVars": True,
             "targetBlank": False, "icon": "dashboard",
         }, {
             "type": "link", "title": "☀ Light", "url": f"/d/{uid}?theme=light",
-            "keepTime": True, "includeVars": True, "targetBlank": False,
-            "icon": "external link", "tooltip": "View in light theme",
+            "keepTime": True, "includeVars": True, "targetBlank": True,
+            "icon": "external link",
+            "tooltip": "Open in a new tab in the light theme (or press c, t)",
         }, {
             "type": "link", "title": "☾ Dark", "url": f"/d/{uid}?theme=dark",
-            "keepTime": True, "includeVars": True, "targetBlank": False,
-            "icon": "external link", "tooltip": "View in dark theme",
+            "keepTime": True, "includeVars": True, "targetBlank": True,
+            "icon": "external link",
+            "tooltip": "Open in a new tab in the dark theme (or press c, t)",
         }],
         "templating": {"list": [vessel_var]},
         "panels": panels,
@@ -499,7 +541,8 @@ DASHBOARDS = []
 # States derived by grafana_bridge from the Alpha mission's mode flags
 # (see docs/alpha-mission-integration.md, table in §3).
 mission_state_mappings = state_map([
-    ("Idle", "#4d545c"), ("Autonomous", TILE_OK), ("Paused", "yellow"),
+    ("Idle", "#4d545c"), ("Autonomous", TILE_OK), ("Remote", "orange"),
+    ("Paused", "yellow"),
     ("StationKeeping", ACCENT), ("ReturnToHome", "orange"),
     ("EnteringRegion", "super-light-blue"), ("AwaitingRearm", "orange"),
     ("CommsLost", "red"), ("Parked", "#6e7680"), ("Completed", "purple"),
@@ -560,6 +603,7 @@ events_query = (
     '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
     '  |> filter(fn: (r) => r._measurement == "events" and r._field == "message")\n'
     '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+    '  |> group()\n'
     '  |> keep(columns: ["_time", "_value", "severity"])\n'
     '  |> rename(columns: {_time: "Time", _value: "Event", severity: "Severity"})\n'
     '  |> sort(columns: ["Time"], desc: true)\n'
@@ -603,7 +647,7 @@ DASHBOARDS.append(dashboard("usv-mission", "Mission", [
     # B — identity, timers, route position: 8 equal readouts (3 x 3).
     stat("Mission", last_str("mission_state", "mission_name"), 0, 3, 3, 3,
          text_mode="value"),
-    stat("Route ID", last_str("mission_state", "mission_id"), 3, 3, 3, 3,
+    stat("Route", last_str("mission_state", "route_name"), 3, 3, 3, 3,
          text_mode="value"),
     stat("Elapsed", flux("mission", "elapsed_s", last=True), 6, 3, 3, 3,
          unit="dthms", decimals=0),
@@ -614,10 +658,10 @@ DASHBOARDS.append(dashboard("usv-mission", "Mission", [
     stat("Remaining", flux("mission", "waypoints_remaining", last=True),
          15, 3, 3, 3, decimals=0),
     stat("Dist to WP", flux("mission", "dist_to_waypoint", last=True),
-         18, 3, 3, 3, unit="lengthm", decimals=0,
+         18, 3, 3, 3, unit=UNIT_M, decimals=0,
          thresholds=approach_thresholds),
-    stat("Traveled", flux("mission", "distance_traveled", last=True),
-         21, 3, 3, 3, unit="lengthm", decimals=0),
+    stat("Traveled", flux("mission", "distance_traveled", last=True, nm=True),
+         21, 3, 3, 3, unit=UNIT_NM, decimals=2),
     # C — progress bar across the width.
     panel("bargauge", "Mission Progress",
           [target(flux("mission", "progress_pct", last=True))],
@@ -631,7 +675,7 @@ DASHBOARDS.append(dashboard("usv-mission", "Mission", [
     panel("timeseries", "Approach Profile — Distance to Next Waypoint vs SOG",
           [target(flux("mission", "dist_to_waypoint"), "distance m"),
            target(flux("nav", "sog"), "SOG kn", ref="B")],
-          0, 8, 12, 7, unit="lengthm",
+          0, 8, 12, 7, unit=UNIT_M,
           thresholds=[(None, "transparent"), (20, "red"), (100, "orange"),
                       (500, OK)],
           custom={"drawStyle": "line", "lineWidth": 2, "fillOpacity": 14,
@@ -707,9 +751,7 @@ gps_fix_mappings = [{"type": "value", "options": {
 
 DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
     panel("geomap", "Position & Track",
-          [target(flux("nav", ["lat", "lon"], every="5s", fn="last",
-                       extra=('  |> pivot(rowKey: ["_time"], columnKey: ["_field"], '
-                              'valueColumn: "_value")')))],
+          [target(track_query("5s"))],
           0, 0, 14, 13,
           options={
               "view": {"id": "fit", "lat": 0, "lon": 0, "zoom": 12},
@@ -761,14 +803,14 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
     stat("Heading", flux("nav", "heading", last=True), 6, 13, 3, 3,
          unit="degree", decimals=0),
     stat("XTE", flux("nav", "cross_track_error", last=True), 9, 13, 3, 3,
-         unit="lengthm", decimals=1, graph_mode="area"),
+         unit=UNIT_M, decimals=1, graph_mode="area"),
     stat("Dist to WP", flux("mission", "dist_to_waypoint", last=True),
-         12, 13, 3, 3, unit="lengthm", decimals=0,
+         12, 13, 3, 3, unit=UNIT_M, decimals=0,
          thresholds=approach_thresholds),
     stat("HDOP", flux("nav", "hdop", last=True), 15, 13, 3, 3, decimals=1,
          thresholds=[(None, TILE_OK), (2, "yellow"), (5, "red")]),
     stat("Depth", flux("nav", "depth", last=True), 18, 13, 3, 3,
-         unit="lengthm", decimals=1),
+         unit=UNIT_M, decimals=1),
     stat("Roll / Pitch", flux("nav", "roll", last=True), 21, 13, 3, 3,
          unit="degree", decimals=1),
     # Trends.
@@ -777,7 +819,7 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
     ts("Speed Over Ground", [target(flux("nav", "sog"), "SOG")],
        8, 16, 8, 6, unit="velocityknot"),
     ts("Cross-Track Error", [target(flux("nav", "cross_track_error"), "XTE")],
-       16, 16, 8, 6, unit="lengthm"),
+       16, 16, 8, 6, unit=UNIT_M),
 ], ["navigation"]))
 
 # -------------------------------------------------------------- FR-3 Autopilot
@@ -812,7 +854,7 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
              "1": {"text": "OPEN", "color": TILE_OK, "index": 1}}}],
          text_mode="value", color_mode="background"),
     stat("Re-Arm Hold", flux("autonomy", "awaiting_rearm", last=True),
-         12, 0, 3, 3, mappings=onoff_map("—", "AWAITING", "orange"),
+         12, 0, 3, 3, mappings=onoff_map("CLEAR", "AWAITING", "orange"),
          text_mode="value", color_mode="background"),
     stat("Remote Control", flux("autonomy", "remote_control", last=True),
          15, 0, 3, 3, mappings=onoff_map("OFF", "MANUAL", "orange"),
@@ -1026,19 +1068,19 @@ DASHBOARDS.append(dashboard("usv-radar", "Radar", [
          mappings=updown_map(), text_mode="value", color_mode="background"),
     stat("Tracked Targets", flux("radar", "targets", last=True), 5, 0, 5, 4,
          decimals=0),
-    stat("Closest Target", flux("radar", "closest_range_m", last=True),
-         10, 0, 5, 4, unit="lengthm", decimals=0,
+    stat("Closest Target", flux("radar", "closest_range_m", last=True, nm=True),
+         10, 0, 5, 4, unit=UNIT_NM, decimals=2,
          thresholds=[(None, "red"), (200, "yellow"), (500, OK)]),
-    stat("CPA", flux("radar", "cpa_m", last=True), 15, 0, 4, 4,
-         unit="lengthm", decimals=0,
-         thresholds=[(None, "red"), (150, "yellow"), (500, OK)]),
+    stat("CPA", flux("radar", "cpa_m", last=True, nm=True), 15, 0, 4, 4,
+         unit=UNIT_NM, decimals=2,
+         thresholds=[(None, "red"), (0.08, "yellow"), (0.27, OK)]),
     stat("TCPA", flux("radar", "tcpa_s", last=True), 19, 0, 5, 4, unit="s",
          decimals=0, thresholds=[(None, "red"), (120, "yellow"), (300, OK)]),
     ts("Tracked Targets", [target(flux("radar", "targets"), "targets")],
        0, 4, 12, 8),
     ts("Closest Target / CPA",
-       [target(flux("radar", ["closest_range_m", "cpa_m"]))],
-       12, 4, 12, 8, unit="lengthm"),
+       [target(flux("radar", ["closest_range_m", "cpa_m"], nm=True))],
+       12, 4, 12, 8, unit=UNIT_NM),
     ts("Detection Rate", [target(flux("radar", "detection_rate"), "rate")],
        0, 12, 12, 6, unit="percentunit", min_=0, max_=1),
     ts("TCPA", [target(flux("radar", "tcpa_s"), "TCPA")], 12, 12, 12, 6,
@@ -1106,14 +1148,33 @@ DASHBOARDS.append(dashboard("usv-comms", "Comms", [
 ], ["comms"]))
 
 # ---------------------------------------------------------- FR-9 System Health
-def tele(measurement, field, fn="mean", extra=""):
-    """Telegraf-produced metrics are tagged by host, not vessel."""
-    return (f'from(bucket: "telemetry")\n'
-            f'  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
-            f'  |> filter(fn: (r) => r._measurement == "{measurement}" '
-            f'and r._field == "{field}")\n'
-            + (extra + "\n" if extra else "")
-            + f'  |> aggregateWindow(every: v.windowPeriod, fn: {fn}, createEmpty: false)\n')
+# Telegraf tags that pick ONE series per host metric; the rest (per-core
+# cpu, loop/device-mapper block devices, the loopback interface, non-root
+# mounts) would otherwise stack as extra series or a "No data" split.
+TELE_SELECT = {
+    "cpu": '  |> filter(fn: (r) => r.cpu == "cpu-total")\n',
+    "disk": '  |> filter(fn: (r) => r.path == "/")\n',
+    "diskio": '  |> filter(fn: (r) => r.name !~ /^(loop|dm-|sr)/)\n',
+    "net": '  |> filter(fn: (r) => r.interface != "lo")\n',
+}
+
+
+def tele(measurement, field, fn="mean", extra="", rate=False):
+    """Telegraf-produced metrics are tagged by host, not vessel. rate=True
+    turns a monotonic counter (bytes read/sent) into a per-second rate:
+    derivative() is a separate step, not an aggregateWindow fn."""
+    q = (f'from(bucket: "telemetry")\n'
+         f'  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+         f'  |> filter(fn: (r) => r._measurement == "{measurement}" '
+         f'and r._field == "{field}")\n'
+         + TELE_SELECT.get(measurement, "")
+         + (extra + "\n" if extra else ""))
+    if rate:
+        q += ('  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n'
+              '  |> derivative(unit: 1s, nonNegative: true)\n')
+    else:
+        q += f'  |> aggregateWindow(every: v.windowPeriod, fn: {fn}, createEmpty: false)\n'
+    return q + CLEAN_LABELS
 
 
 LAST = "last()"
@@ -1168,12 +1229,12 @@ DASHBOARDS.append(dashboard("usv-system", "System", [
                                    "value": "right"}]}]),
     ts("Memory", [target(tele("mem", "used_percent"), "used %")],
        16, 3, 8, 6, unit="percent", min_=0, max_=100),
-    ts("Disk I/O", [target(tele("diskio", "read_bytes", fn="derivative"), "read"),
-                    target(tele("diskio", "write_bytes", fn="derivative"),
+    ts("Disk I/O", [target(tele("diskio", "read_bytes", rate=True), "read"),
+                    target(tele("diskio", "write_bytes", rate=True),
                            "write", ref="B")],
        0, 9, 8, 6, unit="Bps"),
-    ts("Network I/O", [target(tele("net", "bytes_recv", fn="derivative"), "rx"),
-                       target(tele("net", "bytes_sent", fn="derivative"),
+    ts("Network I/O", [target(tele("net", "bytes_recv", rate=True), "rx"),
+                       target(tele("net", "bytes_sent", rate=True),
                               "tx", ref="B")],
        8, 9, 8, 6, unit="Bps"),
     ts("CPU Temp", [target(tele("temp", "temp"), "°C")],
@@ -1205,9 +1266,7 @@ DASHBOARDS.append(dashboard("usv-replay", "Replay", [
               "bucket. Use the **Mission events** annotations to locate "
               "waypoint hits and state changes.")}),
     panel("geomap", "GPS Track",
-          [target(flux("nav", ["lat", "lon"], every="10s", fn="last",
-                       extra=('  |> pivot(rowKey: ["_time"], columnKey: ["_field"], '
-                              'valueColumn: "_value")')))],
+          [target(track_query("10s"))],
           0, 2, 14, 9,
           options={"view": {"id": "fit"},
                    "basemap": {"type": "osm-standard", "name": "OSM"},
@@ -1227,8 +1286,10 @@ DASHBOARDS.append(dashboard("usv-replay", "Replay", [
                   '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
                   '  |> filter(fn: (r) => r._measurement == "events" and r._field == "message")\n'
                   '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+                  '  |> group()\n'
                   '  |> keep(columns: ["_time", "_value", "type", "severity"])\n'
-                  '  |> sort(columns: ["_time"], desc: true)\n')],
+                  '  |> rename(columns: {_time: "Time", _value: "Event", type: "Type", severity: "Severity"})\n'
+                  '  |> sort(columns: ["Time"], desc: true)\n')],
           14, 6, 10, 5, options={"showHeader": True}),
     ts("Heading History", [target(flux("nav", "heading"), "heading")],
        0, 11, 8, 5, unit="degree", min_=0, max_=360),
@@ -1243,7 +1304,7 @@ DASHBOARDS.append(dashboard("usv-replay", "Replay", [
                                   {"id": "custom.axisPlacement",
                                    "value": "right"}]}]),
     ts("Cross-Track Error", [target(flux("nav", "cross_track_error"), "XTE")],
-       0, 16, 8, 5, unit="lengthm"),
+       0, 16, 8, 5, unit=UNIT_M),
     panel("state-timeline", "Autonomy Flags",
           [target(flux("autonomy",
                        ["waypoint", "pause", "stationing", "returning",
@@ -1255,7 +1316,7 @@ DASHBOARDS.append(dashboard("usv-replay", "Replay", [
                    "tooltip": {"mode": "single"}}),
     ts("Distance to Next Waypoint",
        [target(flux("mission", "dist_to_waypoint"), "distance m")],
-       16, 16, 8, 5, unit="lengthm"),
+       16, 16, 8, 5, unit=UNIT_M),
 ], ["replay"], refresh="", time_from="now-6h"))
 
 # ------------------------------------------------------------ Fleet Overview
@@ -1282,7 +1343,9 @@ fleet_map_query = (
     '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
     '  |> filter(fn: (r) => r._measurement == "nav" and (r._field == "lat" or r._field == "lon"))\n'
     '  |> last()\n'
+    '  |> group()\n'
     '  |> pivot(rowKey: ["vessel"], columnKey: ["_field"], valueColumn: "_value")\n'
+    '  |> filter(fn: (r) => exists r.lat and exists r.lon)\n'
     '  |> keep(columns: ["vessel", "lat", "lon"])\n')
 
 fleet_panels = [
@@ -1358,8 +1421,10 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms", [
                   '  |> filter(fn: (r) => r._measurement == "events" and r._field == "message")\n'
                   '  |> filter(fn: (r) => r.type == "alarm")\n'
                   '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+                  '  |> group()\n'
                   '  |> keep(columns: ["_time", "_value", "severity"])\n'
-                  '  |> sort(columns: ["_time"], desc: true)\n')],
+                  '  |> rename(columns: {_time: "Time", _value: "Alarm", severity: "Severity"})\n'
+                  '  |> sort(columns: ["Time"], desc: true)\n')],
           12, 0, 12, 8, options={"showHeader": True}),
     stat("Battery SOC", flux("electrical", "soc", last=True), 0, 10, 4, 4,
          unit="percent", decimals=0,

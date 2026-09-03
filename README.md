@@ -4,13 +4,15 @@
 
 # Swift Autonomous Dashboard
 
-Grafana + InfluxDB monitoring stack for a MOOS-IvP / Signal K / NMEA 2000
-unmanned surface vehicle. Implements SRS FR-1..FR-11, integrated with the
-**Alpha mission** (`alpha.bhv`): the bridge subscribes to the mission's real
-variable set (mode flags, comms-loss failsafe + explicit re-arm, entry
-gate, distance-governed approach, geofence, obstacle alerts, helm health)
-and derives the operational mission state onboard — see
-`docs/alpha-mission-integration.md`.
+Grafana + InfluxDB monitoring stack for the Swiftships MOOS-IvP / Signal K
+unmanned surface vehicle. Twelve single-screen operator dashboards
+(Mission, Navigation, Autopilot, Vessel Health, CAN Bus, Radar, Cameras,
+Comms, System, Replay, Alarms, Fleet), 17 provisioned alert rules and a
+Swiftships-branded Grafana, fed by native C++ bridges from the MOOS
+community, the Signal K server and the NMEA 2000 bus. Implements SRS
+FR-1..FR-11 and is integrated with the **Alpha mission** (`alpha.bhv`): the
+bridge subscribes to the mission's real variable set and derives the
+operational mission state onboard (`docs/alpha-mission-integration.md`).
 
 ![Mission dashboard (dark theme)](docs/images/dashboard-dark.png)
 
@@ -22,26 +24,42 @@ and derives the operational mission state onboard — see
     <td><img src="docs/images/dashboard-tablet.png" alt="Tablet layout"/></td>
   </tr>
   <tr>
-    <td align="center">Light theme (one-click ☀/☾ toggle)</td>
+    <td align="center">Light theme (☀/☾ chips, or press c then t)</td>
     <td align="center">Tablet layout (responsive grid)</td>
   </tr>
 </table>
 
-**Deployment model: fully native, no Docker.** InfluxDB, Grafana and
-Telegraf run as apt-installed systemd services on the onboard computer.
-All vessel-side telemetry code is C++: `grafana_bridge` runs under pAntler
-as a regular MOOS community app, `can_bridge` and `signalk_bridge` as
-systemd services.
+## Design rules
+
+- Nautical units only: speeds in knots, long distances in nautical miles,
+  short ranges in fixed metres. Nothing on any dashboard ever scales to km.
+- One screen per dashboard on a 1080p display: rows of equal 3x3 status
+  tiles above instruments and trends, no scrolling during operations.
+- Every dashboard carries the Swiftships header band with the dashboard
+  name and the selected vessel, and works in both Grafana themes.
+- Fleet-ready: every measurement is tagged `vessel`; the Fleet dashboard
+  repeats a status row per vessel and maps last known positions.
+
+## Deployment model
+
+**Fully native, no Docker.** InfluxDB, Grafana and Telegraf run as
+apt-installed systemd services on the onboard computer. All vessel-side
+telemetry code is C++: `grafana_bridge` runs under pAntler as a regular MOOS
+community app, `can_bridge` and `signalk_bridge` as systemd services (one
+`usv-signalk-bridge@<vessel>` instance per Signal K server when several
+vessels are simulated on one host).
 
 ```
 deploy/
-  install.sh                 # one-shot native installer (Debian/Ubuntu)
-  usv.env.example            # -> /etc/usv/usv.env (secrets, vessel id)
-  systemd/                   # service units (signalk, can, simulator)
+  install.sh                 # one-shot native installer (Debian/Ubuntu), idempotent
+  brand.sh                   # Swiftships branding for Grafana OSS (called by install.sh)
+  branding/                  # logos, favicon, wordmark chips
+  usv.env.example            # -> /etc/usv/usv.env (secrets, vessel id, fleet, branding)
+  systemd/                   # service units (signalk, signalk@vessel, can, simulator)
 influxdb/init/               # bucket/downsample reference (installer does this)
-telegraf/telegraf.conf       # OBC metrics, ping, systemd unit supervision
+telegraf/telegraf.conf       # OBC metrics, GPU (nvidia_smi), ping, systemd units
 ingestion/                   # all C++
-  cpp-common/                #   shared Influx line-protocol writer
+  cpp-common/                #   async Influx line-protocol writer, HTTP GET helper
   moos-cpp/                  #   grafana_bridge (CMOOSApp) + example.moos
                              #   + mission_logic.hpp (Alpha state machine,
                              #     unit-tested) + moos_poke utility
@@ -50,25 +68,45 @@ ingestion/                   # all C++
 simulator/                   # C++ bench generator (scripted Alpha mission)
 grafana/
   provisioning/              # datasource, dashboards provider, alerting
-  dashboards/*.json          # 11 generated dashboards
-tools/                       # dev-side generators (Python, never on vessel)
+  dashboards/*.json          # 12 generated dashboards (never edit by hand)
+tools/                       # dev-side generators (Python, never on the vessel)
   gen_dashboards.py          #   regenerate dashboard JSON
-  gen_alerts.py              #   regenerate alert rules
-  render_preview.py          #   render dashboard preview images
-docs/                        # schema, deployment, user guide, traceability
+  gen_alerts.py              #   regenerate alert rules (--profile sim|vessel)
+  render_preview.py          #   render dashboard preview pages (dark/light)
+  smoke_test.sh              #   build + unit tests + end-to-end line-protocol checks
+docs/                        # schema, deployment, user guide, traceability, validation
 ```
 
-Install on the onboard computer:
+## Install on the onboard computer
+
 ```bash
-sudo deploy/install.sh          # first run creates /etc/usv/usv.env
-sudo nano /etc/usv/usv.env      # set secrets
-sudo deploy/install.sh          # installs everything
+sudo bash deploy/install.sh     # first run creates /etc/usv/usv.env and exits
+sudo nano /etc/usv/usv.env      # secrets, GRAFANA_PORT, VESSELS, branding text
+sudo bash deploy/install.sh     # installs, provisions and starts everything
 ```
-Then add `Run = grafana_bridge` to your mission file
-(`ingestion/moos-cpp/example.moos`). Grafana: http://\<obc\>:3001,
-folder "Swift Autonomous Dashboard".
 
-Bench test without the vessel: `sudo systemctl start usv-simulator`.
+Then merge `ingestion/moos-cpp/example.moos` into the mission file
+(`Run = grafana_bridge` plus its ProcessConfig). Grafana listens on
+`GRAFANA_PORT` (3001 by default; the simulation host uses 3300), folder
+"Swift Autonomous Dashboard". Bench test without the vessel:
+`sudo systemctl start usv-simulator`.
 
-See `docs/deployment.md` for details and `docs/traceability.md` for
-requirement coverage.
+## Development workflow
+
+```bash
+python3 tools/gen_dashboards.py          # after editing the generator
+python3 tools/gen_alerts.py --profile sim
+bash tools/smoke_test.sh                 # must end with FAIL: 0
+```
+
+The smoke test builds every C++ program, runs the 140-assertion
+`mission_logic_test`, drives the simulator, the CAN bridge, the Signal K
+bridge and (when MOOSDB is on the PATH) the MOOS bridge against an
+InfluxDB stub, and cross-checks every field the dashboards query against
+what the producers actually write. Work on feature branches, keep commits
+conventional (`dashboards: ...`, `bridge: ...`, `deploy: ...`) and merge
+to `main` through a pull request.
+
+See `docs/deployment.md` for operations, `docs/user-guide.md` for
+operators, `docs/schema.md` for the InfluxDB schema and
+`docs/traceability.md` for requirement coverage.

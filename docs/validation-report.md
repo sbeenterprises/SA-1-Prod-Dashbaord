@@ -246,3 +246,74 @@ remains the live SocketCAN capture, unavailable in the sandbox; the CAN
 failure-path assertions all pass). InfluxDB/Grafana apt repositories are
 not reachable from this rig, so — as in section 1 — server-side rendering
 on the installed Grafana version remains commissioning steps 4–8.
+
+## 8. Simulation-alignment pass (2026-09-03, branch sim-alignment)
+
+Scope: alignment with the simulation community (`simulated.moos`:
+uSimMarineV23, planchaPID, pHelmIvP, iWebSocket, pContactSpawn,
+pContactMgrV20) running on the simulation host usv01 with six Signal K
+instances, plus the operator-screen redesign and Swiftships branding.
+Validated on the target this time: InfluxDB 2.x, Grafana OSS 13.2.1 (port
+3300), Telegraf, six `usv-signalk-bridge@` instances, `can_bridge` and
+`grafana_bridge` under pAntler all running; dashboards checked live in the
+browser.
+
+What changed and how it was verified:
+
+1. **Bridge variable map** extended to the simulation's planchaPID and
+   iWebSocket outputs (SPEED_CAP, CMD_SPEED, XTE_NOW, NEXT_TURN_ANGLE,
+   ARRIVAL_STATE, CORRIDOR_STATUS, CRASH_STOP_STATUS, REMOTE_CONTROL,
+   CRASH_STOP, REGION_WARNING, ID_ROUTE, J1939 ENGINE_*), rate limiting
+   (5 Hz nav, 2 Hz engine), change-only strings re-emitted at 1 Hz,
+   COMMS_LOST phases (false / grace / action / rtb), radar and contact
+   aggregates. Live check: 86 variables subscribed, nav / autopilot /
+   autonomy / mission_state series present in InfluxDB.
+2. **Mission state** gains `Remote` (REMOTE_CONTROL passthrough outranks
+   the helm park it causes); the operator-facing behavior list falls back
+   to the helm's running set when `active_bhvs=none` (verified against a
+   real pHelmIvP IVPHELM_SUMMARY from the s1_morgan_city_signalk log);
+   `route_name` resolved from the Signal K route resource for the ID_ROUTE
+   uuid. `mission_logic_test`: **140 assertions, all passing**.
+3. **Async InfluxWriter** (worker thread, bounded queue, 2 s timeout) so a
+   slow InfluxDB can never stall the MOOS thread; Threads linked in every
+   CMake target.
+4. **Fleet**: `usv-signalk-bridge@<vessel>` template unit, `VESSELS` in
+   usv.env, Fleet dashboard (map of last known positions, repeated status
+   row). Live check: six instances active.
+5. **Dashboards** regenerated as single-screen operator layouts (equal 3x3
+   tiles), Swiftships header band, knots / nautical miles / fixed metres,
+   GPU tile, benign all-stop causes in grey. Live findings fixed on the
+   target: string stat tiles need `reduceOptions.fields="/.*/"`; the text
+   panel sanitizer strips `<img>` (Markdown image instead); geomap track
+   and fleet queries must `group()` before `pivot()`; Telegraf counters
+   need `derivative()` after `aggregateWindow()`, not as its `fn`; event
+   tables `group()` so type/severity are columns; series labels dropped so
+   legends read by field.
+6. **Branding** (`deploy/brand.sh`): logo, favicon, login artwork,
+   title, heading, subtitle and login card colours. Live finding: Grafana's
+   hashed assets are cached immutably by browsers, so the login look is
+   also injected from the never-cached `index.html` with content-hashed
+   asset names. Verified on the target and on a mock Grafana tree (apply,
+   re-apply, restore).
+7. **Themes**: `?theme=` is read by Grafana only on page load and its click
+   interceptor keeps same-window links in-app (confirmed in the 13.2.1
+   bundle), so the theme chips open a new tab; `c t` documented.
+8. **Installer hardening** from the target install: non-interactive apt
+   with retries, keyring conffile handling, unattended-upgrades lock,
+   stale CMake cache reset, pAntler PATH drop-in (`MOOS_ANTLER_UNIT`),
+   `bash deploy/install.sh` when the executable bit is lost on Windows.
+9. **Alert profiles**: `gen_alerts.py --profile sim|vessel` (17 rules;
+   the sim profile omits rules for sensors the simulation lacks).
+
+Smoke test after this pass: **56 PASS, 0 FAIL, 1 SKIP** (live SocketCAN
+capture, unavailable in the sandbox). The dashboard coverage check now
+also accepts fields mapped or written by the MOOS bridge, whose live run
+needs MOOSDB on the PATH.
+
+Known gaps carried forward: GPU input to be enabled once the host's GPU
+vendor is confirmed; CPU temperature depends on the host exposing hwmon
+sensors; the simulation's DESIRED_SPEED reaches the bridge as m/s per the
+MOOS convention (a 20 kn console target that arrives as 20 m/s shows as
+38.9 kn on the Speed Governor: a console-to-MOOS units question, not a
+dashboard conversion); bravo..foxtrot MOOS communities still to be run as
+services; post-mission report generator deferred.

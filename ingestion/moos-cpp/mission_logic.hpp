@@ -129,11 +129,14 @@ struct MissionFlags {
     std::string allstop = "clear";     // IVPHELM_ALLSTOP (informational)
 };
 
-// Operational mission state, priority-ordered (first match wins). Helm
+// Operational mission state, priority-ordered (first match wins). Remote
+// (operator driving through REMOTE_CONTROL passthrough) outranks the helm
+// flags it sets underneath (manual override / park). Helm
 // health is intentionally NOT folded in: a frozen helm while Paused must
 // show as Paused + an all-stop alert, not mask one with the other.
 inline const char* DeriveMissionState(const MissionFlags& f) {
     if (comms_lost_active(f.comms_lost))         return "CommsLost";
+    if (f.remote_control)                        return "Remote";
     if (f.manual_override && f.survey_complete)  return "Completed";
     if (f.manual_override)                       return "Parked";
     if (f.pause)                                 return "Paused";
@@ -182,9 +185,10 @@ inline std::map<std::string, std::string> ParseKeyValues(
 // Extract the active behavior names from IVPHELM_SUMMARY.
 // active_bhvs value: "name$dur$pwt$...:name2$..." ; "none" when empty.
 // Returns "name, name2" (or "" when none).
-inline std::string ParseActiveBehaviors(const std::string& summary) {
+inline std::string ParseBehaviorList(const std::string& summary,
+                                     const std::string& key) {
     auto kv = ParseKeyValues(summary);
-    auto it = kv.find("active_bhvs");
+    auto it = kv.find(key);
     if (it == kv.end()) return "";
     const std::string& v = it->second;
     if (lower(v) == "none" || v.empty()) return "";
@@ -204,6 +208,22 @@ inline std::string ParseActiveBehaviors(const std::string& summary) {
         start = colon + 1;
     }
     return out;
+}
+
+inline std::string ParseActiveBehaviors(const std::string& summary) {
+    return ParseBehaviorList(summary, "active_bhvs");
+}
+
+// The operator-facing behavior list: "active" behaviors in IvP terms are
+// only those producing an objective function THIS iteration, so a helm
+// that is holding station inside its inner radius or driving a survey with
+// a plain speed/course balk reports active_bhvs=none while
+// running_bhvs still lists waypt_survey / station-keep / opr region. Show
+// active when present, otherwise the running set.
+inline std::string ParseHelmBehaviors(const std::string& summary) {
+    const std::string active = ParseActiveBehaviors(summary);
+    if (!active.empty()) return active;
+    return ParseBehaviorList(summary, "running_bhvs");
 }
 
 // --------------------------------------------- VIEW_SEGLIST parsing
@@ -456,6 +476,52 @@ inline double ProgressPct(double wpt_index, int wpt_total) {
 // explode the estimate.
 inline double EtaSeconds(double dist_m, double speed_mps) {
     return dist_m / std::max(0.2, speed_mps);
+}
+
+// ------------------------------------------------------- route naming
+
+// Minimal JSON string-member extraction ("name": "...") for the Signal K
+// route resource; avoids a JSON dependency in the MOOS app. Handles the
+// common escapes (\" \\ \/ \n \t), returns "" when absent.
+inline std::string JsonStringMember(const std::string& body,
+                                    const std::string& key) {
+    const std::string needle = "\"" + key + "\"";
+    size_t pos = 0;
+    while ((pos = body.find(needle, pos)) != std::string::npos) {
+        size_t p = pos + needle.size();
+        while (p < body.size() && isspace(static_cast<unsigned char>(body[p]))) ++p;
+        if (p >= body.size() || body[p] != ':') { pos = p; continue; }
+        ++p;
+        while (p < body.size() && isspace(static_cast<unsigned char>(body[p]))) ++p;
+        if (p >= body.size() || body[p] != '"') return "";
+        std::string out;
+        for (++p; p < body.size() && body[p] != '"'; ++p) {
+            if (body[p] == '\\' && p + 1 < body.size()) {
+                ++p;
+                switch (body[p]) {
+                    case 'n': out += '\n'; break;
+                    case 't': out += '\t'; break;
+                    default:  out += body[p]; break;   // \" \\ \/
+                }
+            } else {
+                out += body[p];
+            }
+        }
+        return out;
+    }
+    return "";
+}
+
+// Human name for an ID_ROUTE value: the Signal K route name when the
+// lookup produced one, a readable label for the built-in return route,
+// otherwise the id shortened to its first block (UUIDs are unreadable on
+// a status tile).
+inline std::string RouteDisplayName(const std::string& id,
+                                    const std::string& sk_name) {
+    if (!sk_name.empty()) return sk_name;
+    if (lower(id) == "return_to_base") return "Return to base";
+    const size_t dash = id.find('-');
+    return dash != std::string::npos && dash >= 4 ? id.substr(0, dash) : id;
 }
 
 }  // namespace usv

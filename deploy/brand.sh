@@ -100,19 +100,34 @@ grep -rl --include='*.js' -e 'Welcome to Grafana' "$GPUB/build" 2>/dev/null | wh
 done || true   # no match (already branded) must not abort under pipefail
 
 # ------------------------------------------------------ login page style
-# Scoped to body.login-page (Grafana 13 sets it); the card keeps the stable
-# login-content-box class, the heading is the div after the logo img.
-# The subtitle under the heading comes from BRAND_SUBTITLE via ::after.
+# Grafana serves its hashed build assets (logo, login artwork, JS chunks)
+# with a one-year immutable cache, so a browser that saw stock Grafana
+# once keeps showing it after the files above are overwritten. The login
+# look is therefore ALSO applied from views/index.html, which browsers
+# never cache: CSS swaps the logo and artwork for Swiftships-named copies
+# (cache-busted by content hash) and sets the heading/subtitle text.
+#
+# Verified Grafana 13 login DOM:
+#   body.login-page > ... > div (::before = fixed background artwork)
+#     > div > div.login-content-box > div > img(logo) + div > h1(heading)
 SUBTITLE=${BRAND_SUBTITLE:-Autonomous Dashboard}
+cp "$BR/swiftships_logo_light.svg" "$GPUB/img/swiftships_login_logo.svg"
+mk_bg "$GPUB/img/swiftships_login_bg.svg"
+LOGO_V=$(md5sum "$GPUB/img/swiftships_login_logo.svg" | cut -c1-8)
+BG_V=$(md5sum "$GPUB/img/swiftships_login_bg.svg" | cut -c1-8)
 CSS_FILE=$(mktemp)
 cat > "$CSS_FILE" <<CSS
 <style id="swiftships-brand">
-/* Grafana 13 login DOM (verified): body.login-page > ... > div.login-content-box
-   > div > [img logo] + [div heading] ; form ; button[type=submit]. */
+/* Swiftships branding (deploy/brand.sh). Cache-proof: assets below carry a
+   content hash, so browsers holding Grafana's stock files still see this. */
+img[src*="grafana_icon"]{content:url("/public/img/swiftships_login_logo.svg?v=$LOGO_V")}
+body.login-page div:has(> div > .login-content-box)::before{background-image:url("/public/img/swiftships_login_bg.svg?v=$BG_V")!important;opacity:1!important}
 body.login-page .login-content-box{background:rgba(8,36,63,.92)!important;border:1px solid rgba(0,188,212,.35)!important;border-radius:10px!important;box-shadow:0 24px 64px rgba(0,0,0,.5)!important}
-body.login-page .login-content-box img+div{color:#e8f1f8!important;letter-spacing:.02em}
-body.login-page .login-content-box img+div::after{content:"$SUBTITLE";display:block;font-size:14px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#00bcd4;margin-top:10px}
 body.login-page .login-content-box img{filter:drop-shadow(0 2px 10px rgba(0,188,212,.35))}
+body.login-page .login-content-box h1{font-size:0!important;line-height:0!important;color:#e8f1f8!important;letter-spacing:.02em}
+body.login-page .login-content-box h1::before{content:"$WELCOME";display:block;font-size:28px;line-height:1.3;font-weight:500}
+body.login-page .login-content-box img+div::after{content:"$SUBTITLE";display:block;font-size:14px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#00bcd4;margin-top:10px}
+body.login-page .login-content-box label,body.login-page .login-content-box legend{color:#c9d6e2!important}
 body.login-page button[type="submit"]{background:#1e6692!important;border-color:#1e6692!important;color:#fff!important}
 body.login-page button[type="submit"]:hover{background:#00bcd4!important;border-color:#00bcd4!important;color:#04121f!important}
 body.login-page input:focus,body.login-page input:focus-visible{box-shadow:0 0 0 2px #00bcd4!important;outline:none!important}

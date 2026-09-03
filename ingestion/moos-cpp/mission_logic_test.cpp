@@ -118,6 +118,43 @@ static void test_state_machine() {
     f.returning = false;
     f.manual_override = true;
     CHECK_EQ_STR(DeriveMissionState(f), "Parked");
+
+    // Operator takes the helm (REMOTE_CONTROL passthrough parks the helm
+    // underneath): Remote, not Parked; comms loss still dominates.
+    f.remote_control = true;
+    CHECK_EQ_STR(DeriveMissionState(f), "Remote");
+    f.comms_lost = "loiter";
+    CHECK_EQ_STR(DeriveMissionState(f), "CommsLost");
+    f.comms_lost = "false";
+    f.remote_control = false;
+}
+
+static void test_helm_behaviors_fallback() {
+    // Real pHelmIvP summary from the s1_morgan_city_signalk log: survey and
+    // op-region running, no objective function this iteration.
+    const std::string summ =
+        "iter=107712,utc_time=1788337837.13,ofnum=0,active_goal=false,"
+        "running_bhvs=waypt_survey$1788337837.13$10/10:opr24$1788310807.00$2/2,"
+        "active_bhvs=none";
+    CHECK_EQ_STR(ParseActiveBehaviors(summ), "");
+    CHECK_EQ_STR(ParseHelmBehaviors(summ), "waypt_survey, opr24");
+    CHECK_EQ_STR(ParseHelmBehaviors("iter=1,running_bhvs=none,active_bhvs=none"), "");
+    CHECK_EQ_STR(ParseHelmBehaviors("iter=1,running_bhvs=a$1$1,active_bhvs=b$1$1"), "b");
+}
+
+static void test_route_naming() {
+    const std::string body =
+        "{\"name\":\"Som Rt0\",\"description\":\"x\",\"feature\":{\"type\":\"Feature\"}}";
+    CHECK_EQ_STR(JsonStringMember(body, "name"), "Som Rt0");
+    CHECK_EQ_STR(JsonStringMember(body, "description"), "x");
+    CHECK_EQ_STR(JsonStringMember(body, "missing"), "");
+    CHECK_EQ_STR(JsonStringMember("{ \"name\" : \"A \\\"B\\\" C\" }", "name"), "A \"B\" C");
+    CHECK_EQ_STR(JsonStringMember("{\"name\": 42}", "name"), "");
+    CHECK_EQ_STR(JsonStringMember("", "name"), "");
+    CHECK_EQ_STR(RouteDisplayName("7a860f96-36e5-4eb3-8a14-1", "Som Rt0"), "Som Rt0");
+    CHECK_EQ_STR(RouteDisplayName("7a860f96-36e5-4eb3-8a14-1", ""), "7a860f96");
+    CHECK_EQ_STR(RouteDisplayName("return_to_base", ""), "Return to base");
+    CHECK_EQ_STR(RouteDisplayName("survey7", ""), "survey7");
 }
 
 static void test_survey_completion() {
@@ -357,6 +394,8 @@ int main() {
     test_split_csv();
     test_rate_limiter();
     test_contact_tracker();
+    test_route_naming();
+    test_helm_behaviors_fallback();
 
     std::printf("mission_logic_test: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;

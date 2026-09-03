@@ -35,6 +35,7 @@
 #include <thread>
 #include <vector>
 
+#include "../cpp-common/http_get.hpp"
 #include "../cpp-common/influx_writer.hpp"
 #include "mission_logic.hpp"
 
@@ -236,6 +237,9 @@ protected:
         //   ignore_vars    = NAV_YAW      // vessel: NAV_YAW is the rudder angle
         //   radar_cpa_alert_m = 500       // radar event threshold (pContactMgr cpa_range)
         //   contact_ttl_s  = 10           // contact expiry without an update
+        //   signalk_http   = localhost:3000  // route-name lookup (ID_ROUTE ->
+        //                                   // /signalk/v1/api/resources/routes/<id>);
+        //                                   // empty disables the lookup
         double hz = 5.0;
         if (m_MissionReader.GetConfigurationParam("max_rate_hz", hz)) {}
         limiter_.set_default(hz);
@@ -253,6 +257,10 @@ protected:
         double ttl = 10.0;
         m_MissionReader.GetConfigurationParam("contact_ttl_s", ttl);
         contacts_ = usv::ContactTracker(ttl);
+        if (m_MissionReader.GetConfigurationParam("signalk_http", v))
+            signalk_http_ = v;
+        if (!signalk_http_.empty() && signalk_http_.find("://") == std::string::npos)
+            signalk_http_ = "http://" + signalk_http_;
 
         telemetry_ = std::make_unique<usv::InfluxWriter>(opts);
         usv::InfluxOptions ev_opts = opts;
@@ -389,7 +397,12 @@ private:
                 prev = msg.GetString();
                 telemetry_->str_field(sp->second.measurement, "",
                                       sp->second.field, prev);
-                if (key == "ID_ROUTE") mission_id_ = prev;
+                if (key == "ID_ROUTE") {
+                    mission_id_ = prev;
+                    last_str_["route_name"] = ResolveRouteName(prev);
+                    telemetry_->str_field("mission_state", "", "route_name",
+                                          last_str_["route_name"]);
+                }
                 if (key == "CRASH_STOP_STATUS" && prev == "braking")
                     Event("alarm", "critical",
                           "Crash stop: emergency braking engaged");
@@ -703,7 +716,7 @@ private:
 
     void HandleHelmSummary(const std::string& summary) {
         if (external_active_behavior_) return;
-        const std::string active = usv::ParseActiveBehaviors(summary);
+        const std::string active = usv::ParseHelmBehaviors(summary);
         WriteActiveBehavior(active.empty() ? "none" : active);
         // Store the raw summary too (debug value for engineers).
         telemetry_->str_field("mission_state", "", "helm_summary", summary);
@@ -809,7 +822,7 @@ private:
         // change-only strings and the mission identity.
         telemetry_->str_field("mission_state", "", "state", last_state_);
         for (const char* f : {"arrival_state", "corridor_status",
-                              "crash_stop_status", "mission_id",
+                              "crash_stop_status", "mission_id", "route_name",
                               "region_warning"}) {
             auto it = last_str_.find(f);
             if (it != last_str_.end() && !it->second.empty())
@@ -930,6 +943,22 @@ private:
     std::set<std::string> ignore_vars_;
     std::string mission_name_;
     std::string mission_id_;
+    std::string signalk_http_ = "http://localhost:3000";
+
+    // The console starts a mission with ID_ROUTE=<Signal K route uuid>; the
+    // operator knows the route by its name, so look it up once per change
+    // (one bounded GET on the MOOS thread, 800 ms worst case). Falls back
+    // to a readable short id when Signal K is unreachable.
+    std::string ResolveRouteName(const std::string& id) {
+        std::string name;
+        if (!signalk_http_.empty() && !id.empty() &&
+            usv::lower(id) != "return_to_base") {
+            const std::string body = usv::HttpGet(
+                signalk_http_ + "/signalk/v1/api/resources/routes/" + id, 800);
+            name = usv::JsonStringMember(body, "name");
+        }
+        return usv::RouteDisplayName(id, name);
+    }
     double radar_cpa_alert_m_ = 500.0;
 
     // Change-only string cache: field -> last written value.
