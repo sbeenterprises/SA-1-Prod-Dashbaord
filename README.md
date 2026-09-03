@@ -117,4 +117,4 @@ See `docs/deployment.md` for operations, `docs/user-guide.md` for
 operators, `docs/schema.md` for the InfluxDB schema,
 `docs/traceability.md` for requirement coverage,
 `docs/validation-report.md` for what was verified and how, and
-`CHANGELOG.md` for release history (current release: v1.1.0; simulation baseline v1.0.0).
+`CHANGELOG.md` for release history (current release: v1.2.0; simulation baseline v1.0.0).

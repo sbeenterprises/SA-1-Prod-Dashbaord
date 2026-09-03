@@ -5,6 +5,15 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-03 — readiness checks, SA-1 branding
+
+Verified live on usv01: 16 automatic checks with evidence, the MOOS app
+inventory (found pMarineViewer absent on the headless host, now an
+optional app), the console checklist mirrored item by item, Readiness as
+the first tab and home dashboard, "SA-1 Dashboard" in the navigation
+menu, alert rules in the dashboards folder. Smoke test 89 PASS, 0 FAIL;
+mission_logic_test 273 assertions.
+
 ### Added
 - Readiness: three more onboard checks and two sharper ones. MOOS apps
   (every Antler `Run =` app, or `required_apps`, present in DB_CLIENTS),
