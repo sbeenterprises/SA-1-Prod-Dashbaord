@@ -1,1 +1,18 @@
-tools/** linguist-vendored
+# Normalise line endings: the repo is edited on Windows and deployed on
+# Linux; scripts and configs must reach the vessel with LF endings.
+* text=auto eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.conf text eol=lf
+*.moos text eol=lf
+*.service text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.png binary
+*.svg text eol=lf
+*.patch text eol=lf
+# Generated artefacts: collapse in GitHub diffs and language stats
+grafana/dashboards/*.json linguist-generated=true
+grafana/provisioning/alerting/alerts.yml linguist-generated=true
+

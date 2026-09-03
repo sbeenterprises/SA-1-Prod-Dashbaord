@@ -56,7 +56,6 @@ deploy/
   branding/                  # logos, favicon, wordmark chips
   usv.env.example            # -> /etc/usv/usv.env (secrets, vessel id, fleet, branding)
   systemd/                   # service units (signalk, signalk@vessel, can, simulator)
-influxdb/init/               # bucket/downsample reference (installer does this)
 telegraf/telegraf.conf       # OBC metrics, GPU (nvidia_smi), ping, systemd units
 ingestion/                   # all C++
   cpp-common/                #   async Influx line-protocol writer, HTTP GET helper
@@ -108,5 +107,7 @@ conventional (`dashboards: ...`, `bridge: ...`, `deploy: ...`) and merge
 to `main` through a pull request.
 
 See `docs/deployment.md` for operations, `docs/user-guide.md` for
-operators, `docs/schema.md` for the InfluxDB schema and
-`docs/traceability.md` for requirement coverage.
+operators, `docs/schema.md` for the InfluxDB schema,
+`docs/traceability.md` for requirement coverage,
+`docs/validation-report.md` for what was verified and how, and
+`CHANGELOG.md` for release history (baseline: v1.0.0).
