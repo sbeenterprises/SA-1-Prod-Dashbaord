@@ -100,20 +100,23 @@ grep -rl --include='*.js' -e 'Welcome to Grafana' "$GPUB/build" 2>/dev/null | wh
 done || true   # no match (already branded) must not abort under pipefail
 
 # ------------------------------------------------------ login page style
-# Grafana 13 generates its login class names, so the rules are scoped to the
-# login page through the form's user input (only present there) with :has().
+# Scoped to body.login-page (Grafana 13 sets it); the card keeps the stable
+# login-content-box class, the heading is the div after the logo img.
 # The subtitle under the heading comes from BRAND_SUBTITLE via ::after.
 SUBTITLE=${BRAND_SUBTITLE:-Swiftships Autonomous Dashboard}
 CSS_FILE=$(mktemp)
 cat > "$CSS_FILE" <<CSS
 <style id="swiftships-brand">
-body:has(input[name="user"]) h1{color:#e8f1f8!important;letter-spacing:.02em;margin-bottom:6px!important}
-body:has(input[name="user"]) h1::after{content:"$SUBTITLE";display:block;font-size:15px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:#00bcd4;margin-top:8px}
-body:has(input[name="user"]) button[type="submit"]{background:#1e6692!important;border-color:#1e6692!important;color:#fff!important}
-body:has(input[name="user"]) button[type="submit"]:hover{background:#00bcd4!important;border-color:#00bcd4!important;color:#04121f!important}
-body:has(input[name="user"]) input:focus,body:has(input[name="user"]) input:focus-visible{box-shadow:0 0 0 2px #00bcd4!important;outline:none!important}
-body:has(input[name="user"]) a{color:#5fc9dd!important}
-body:has(input[name="user"]) div:has(> form):not(:has(div:has(> form))){background:rgba(8,36,63,.92)!important;border:1px solid rgba(0,188,212,.35)!important;border-radius:10px!important;box-shadow:0 24px 64px rgba(0,0,0,.5)!important}
+/* Grafana 13 login DOM (verified): body.login-page > ... > div.login-content-box
+   > div > [img logo] + [div heading] ; form ; button[type=submit]. */
+body.login-page .login-content-box{background:rgba(8,36,63,.92)!important;border:1px solid rgba(0,188,212,.35)!important;border-radius:10px!important;box-shadow:0 24px 64px rgba(0,0,0,.5)!important}
+body.login-page .login-content-box img+div{color:#e8f1f8!important;letter-spacing:.02em}
+body.login-page .login-content-box img+div::after{content:"$SUBTITLE";display:block;font-size:14px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#00bcd4;margin-top:10px}
+body.login-page .login-content-box img{filter:drop-shadow(0 2px 10px rgba(0,188,212,.35))}
+body.login-page button[type="submit"]{background:#1e6692!important;border-color:#1e6692!important;color:#fff!important}
+body.login-page button[type="submit"]:hover{background:#00bcd4!important;border-color:#00bcd4!important;color:#04121f!important}
+body.login-page input:focus,body.login-page input:focus-visible{box-shadow:0 0 0 2px #00bcd4!important;outline:none!important}
+body.login-page a{color:#5fc9dd!important}
 </style>
 CSS
 # Replace any previous block, then insert before </head>.
