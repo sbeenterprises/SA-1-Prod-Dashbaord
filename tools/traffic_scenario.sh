@@ -1,0 +1,67 @@
+#!/bin/bash
+# End-to-end traffic test on the simulation host: spawns scripted contacts
+# through pContactSpawn (and one radar-only target through RADAR_TARGET) so
+# the Traffic dashboard, the collision-risk event and the
+# usv-collision-risk alert can be checked against known situations.
+#
+#   tools/traffic_scenario.sh <mission.moos> [step|all|clean]
+#
+# Steps (each runs ~90 s, watch the Traffic tab while it plays):
+#   crossing   contact 800 m off the starboard bow crossing left  -> MEDIUM/HIGH
+#   headon     reciprocal contact 1200 m dead ahead               -> HIGH
+#   overtaking slow contact 600 m ahead on the same course        -> LOW / MEDIUM
+#   radar      radar-only target (RADAR_TARGET), no AIS report    -> "Radar Only" = 1
+#   opening    contact astern moving away                         -> CLEAR, TCPA "OPENING"
+#   all        the five in sequence, cleaning between them
+#   clean      remove spawned contacts
+#
+# pContactSpawn takes an ABSOLUTE contact heading; the scenarios below
+# assume own heading ~050 (the s1_morgan_city survey's first leg). Pass
+# OWN_HDG=<deg> to adapt: headings are computed relative to it.
+set -euo pipefail
+
+MISSION=${1:?usage: traffic_scenario.sh <mission.moos> [step|all|clean]}
+STEP=${2:-all}
+OWN_HDG=${OWN_HDG:-50}
+HOLD=${HOLD:-90}
+
+command -v uPokeDB >/dev/null || { echo "uPokeDB not on PATH (source the MOOS environment)"; exit 1; }
+
+poke() { uPokeDB "$MISSION" "$@" >/dev/null; echo "  -> $*"; }
+hdg() { echo $(( ( (OWN_HDG + $1) % 360 + 360) % 360 )); }   # own heading + offset
+clean() { poke SPAWN_CLEAN=true; }
+hold() { echo "  holding ${HOLD}s (watch the Traffic tab)"; sleep "$HOLD"; }
+
+run_step() {
+  case "$1" in
+    crossing)
+      echo "[crossing] 800 m, 40 deg off the starboard bow, crossing right to left at 4 m/s"
+      poke "SPAWN_CONTACT=heading=$(hdg -90),relative_bearing=40,distance=800,speed=4,name=TGT-27" ;;
+    headon)
+      echo "[head-on] 1200 m dead ahead, reciprocal course at 4 m/s"
+      poke "SPAWN_CONTACT=heading=$(hdg 180),relative_bearing=0,distance=1200,speed=4,name=SEA-HAWK" ;;
+    overtaking)
+      echo "[overtaking] 600 m ahead, same course, 1.5 m/s"
+      poke "SPAWN_CONTACT=heading=$(hdg 0),relative_bearing=0,distance=600,speed=1.5,name=TUG-12" ;;
+    radar)
+      echo "[radar] radar-only target 900 m on the port beam, no report"
+      poke "RADAR_TARGET=id=R-31,range=900,bearing=$(hdg -90),spd=3,cog=$(hdg 90),cpa=350,tcpa=140" ;;
+    opening)
+      echo "[opening] 500 m astern, moving away at 3 m/s"
+      poke "SPAWN_CONTACT=heading=$(hdg 180),relative_bearing=180,distance=500,speed=3,name=FERRY-2" ;;
+    clean)
+      echo "[clean] removing spawned contacts"; clean; return ;;
+    *) echo "unknown step: $1"; exit 1 ;;
+  esac
+  hold
+  clean
+}
+
+if [[ $STEP == all ]]; then
+  for s in crossing headon overtaking radar opening; do run_step "$s"; sleep 5; done
+  echo "done. Expected on the Traffic tab: risk HIGH during head-on, a critical"
+  echo "'Collision risk HIGH' event in Mission Events, the usv-collision-risk alert"
+  echo "firing on the Alarms tab, Radar Only = 1 during the radar step."
+else
+  run_step "$STEP"
+fi

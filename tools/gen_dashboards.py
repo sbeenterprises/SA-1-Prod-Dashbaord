@@ -1202,6 +1202,7 @@ DASHBOARDS.append(dashboard("usv-canbus", "CAN Bus", [
 CONTACT_FIELDS = ["range_m", "bearing", "rel_bearing", "spd_kn", "hdg",
                   "rel_speed_kn", "cpa_m", "tcpa_s", "risk"]
 CONTACT_STR_FIELDS = ["encounter", "type"]
+NO_SENTINEL = '  |> filter(fn: (r) => r._value >= 0.0)'   # drop the "nothing to report" -1 markers
 
 
 def contacts_query(limit=None, rank=True):
@@ -1341,9 +1342,13 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
          thresholds=[(None, OK), (1, "red")]),
     stat("Closest Range", flux("traffic", "closest_range_m", last=True, nm=True),
          18, 0, 3, 3, unit=UNIT_NM, decimals=2, no_value="none",
+         mappings=[{"type": "range", "options": {"from": -1, "to": 0,
+                    "result": {"text": "none", "color": "#3d434b", "index": 0}}}],
          thresholds=[(None, "red"), (0.11, "yellow"), (0.27, OK)]),
     stat("Min CPA", flux("traffic", "min_cpa_m", last=True), 21, 0, 3, 3,
          unit=UNIT_M, decimals=0, no_value="none",
+         mappings=[{"type": "value", "options": {
+             "-1": {"text": "none", "color": "#3d434b", "index": 0}}}],
          thresholds=[(None, "red"), (500, "yellow"), (1000, OK)]),
     # B — traffic view | highest-risk contact | MOOS action
     (instrument("Traffic View",
@@ -1374,13 +1379,17 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
          text_mode="value", mappings=encounter_mappings, color_mode="background",
          no_value="none", thresholds=[(None, "#3d434b")]),
     kv_tile("Planned Course", flux("traffic", "planned_course", last=True), 17, 3, 4, 3,
-            unit="degree", decimals=0, no_value="no route"),
+            unit="degree", decimals=0, no_value="no route",
+            mappings=[{"type": "value", "options": {
+                "-1": {"text": "no route", "color": "#3d434b", "index": 0}}}]),
     kv_tile("Commanded Course", flux("autopilot", "desired_heading", last=True), 21, 3, 3, 3,
             unit="degree", decimals=0),
     kv_tile("Actual Heading", flux("nav", "heading", last=True), 17, 6, 4, 3,
             unit="degree", decimals=0),
     kv_tile("Deviation", flux("traffic", "course_deviation", last=True), 21, 6, 3, 3,
             unit="degree", decimals=0, no_value="no route",
+            mappings=[{"type": "value", "options": {
+                "-999": {"text": "no route", "color": "#3d434b", "index": 0}}}],
             thresholds=[(None, OK), (10, "yellow"), (30, "orange")]),
     kv_tile("Speed Command", flux("autopilot", "desired_speed", last=True), 17, 9, 4, 3,
             unit="velocityknot", decimals=1),
@@ -1423,8 +1432,8 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
                      {"matcher": {"id": "byRegexp", "options": "rel_bearing|rel_speed_kn|hdg"},
                       "properties": [{"id": "custom.hidden", "value": True}]}]),
     ts("Closest CPA / TCPA",
-       [target(flux("traffic", "min_cpa_m"), "CPA m"),
-        target(flux("traffic", "min_tcpa_s"), "TCPA s", ref="B")],
+       [target(flux("traffic", "min_cpa_m", extra=NO_SENTINEL), "CPA m"),
+        target(flux("traffic", "min_tcpa_s", extra=NO_SENTINEL), "TCPA s", ref="B")],
        12, 16, 12, 5, unit=UNIT_M,
        overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
                    "properties": [{"id": "unit", "value": "s"},
