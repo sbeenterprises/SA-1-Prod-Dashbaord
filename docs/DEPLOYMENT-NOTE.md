@@ -138,13 +138,16 @@ repo to the OBC, re\-run install.sh.
 | 1 | Services up | `systemctl status influxdb grafana-server telegraf usv-signalk-bridge usv-can-bridge` | all `active (running)` |
 | 2 | DB reachable | `influx ping` | `OK` |
 | 3 | Bench data (no vessel) | `sudo systemctl start usv-simulator` | dashboards populate in \~10 s; the scripted Alpha scenario cycles all mission states and fires the geofence/comms alerts once per \~25 min loop (that IS the alert bench test) |
-| 4 | Grafana login | browse `http://<obc>:<GRAFANA_PORT>` | Swiftships login page; folder "Swift Autonomous Dashboard", 13 dashboards; Swiftships logo in the top\-left nav |
+| 4 | Grafana login | browse `http://<obc>:<GRAFANA_PORT>` | Swiftships login page; lands on the Readiness dashboard; folder "Swift Autonomous Dashboard", 13 dashboards; Swiftships logo and "SA-1 Dashboard" (BRAND_APP_TITLE) in the navigation menu |
 | 5 | Tab navigation | open any dashboard; click the link chips across the top | one click switches dashboard; time range and vessel selection carry over |
 | 6 | Theme toggle | click the "☀ Light" / "☾ Dark" chips at the end of the tab row | dashboard re\-opens in that theme, time range kept |
 | 7 | Tablet check | open any dashboard on a tablet (landscape) | grid scales; below \~768 px panels stack single\-column |
 | 8 | Alert rules loaded | Grafana → Alerting → Alert rules | 18 rules, folder "Swift Autonomous Dashboard" |
 | 9 | Stop simulator | `sudo systemctl stop usv-simulator` | required before real ops |
 | 10 | MOOS feed | launch mission with grafana\_bridge; watch Autopilot dashboard | desired/actual heading move |
+| 10a | Readiness evaluation | Readiness dashboard within 15 s of the community start | 16 rows with evidence; "MOOS apps N / N running"; `readiness_profile = vessel` in the ProcessConfig on a real vessel (missing sensors FAIL) |
+| 10b | Console mirrors | tick items in the console, select a chart; or `/usr/local/bin/moos_poke 'CHECKLIST_STATUS=done=11,total=11,pending=,by=ops' ENC_STATUS=selected:test` | Console tile 0, checklist table lists every item, ENC row PASS |
+| 10c | Route plausibility | start a mission with a route and region | Course planning shows route, waypoints, length, region, "route inside region"; Endurance shows fuel / battery hours when the vessel constants are set |
 | 11 | Signal K feed | Navigation \+ Vessel Health dashboards | position, engine, battery live |
 | 12 | CAN feed | `candump can0` shows frames; CAN Bus dashboard | msg rate \> 0, interface UP |
 | 13 | Alert fire test | unplug GPS antenna (or stop Signal K) for 1 min | alarm appears on Alarms dashboard \+ email |

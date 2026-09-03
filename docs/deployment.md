@@ -302,7 +302,12 @@ emails while it runs; always stop it before real operations.
 | Signal K path map | ingestion/signalk-cpp/signalk_bridge.cpp kPaths |
 | PGN decoders | ingestion/can-cpp/main.cpp decode_pgn() |
 | Alert thresholds | tools/gen_alerts.py --profile sim\|vessel -> regenerate -> re-run install.sh (sim profile skips rules for sensors the simulation lacks) |
-| Branding text | BRAND_TITLE / BRAND_WELCOME / BRAND_SUBTITLE in usv.env |
+| Branding text | BRAND_TITLE / BRAND_WELCOME / BRAND_SUBTITLE / BRAND_APP_TITLE in usv.env |
+| Home dashboard | GRAFANA_HOME_DASHBOARD in usv.env (default usv-readiness.json) |
+| Readiness profile, vessel constants, app list, checklist items | grafana_bridge ProcessConfig in the mission file: readiness_profile, readiness_period_s, fuel_tank_l, cruise_fuel_lph, cruise_speed_kn, battery_kwh, cruise_power_kw, endurance_margin, required_apps, optional_apps, checklist_items (see example.moos) |
+| Console mirrors | CHECKLIST_STATUS and ENC_STATUS published by the operator console (spec above) |
+| Tab order, tiles, checks table | tools/gen_dashboards.py (TAB_ORDER, usv-readiness section) -> regenerate -> re-run install.sh |
+| Readiness rules | usv::EvaluateReadiness in ingestion/moos-cpp/mission_logic.hpp (unit-tested in mission_logic_test.cpp) |
 | Fleet instances | VESSELS in usv.env |
 | Alert recipients | grafana/provisioning/alerting/contact-points.yml |
 | Dashboard refresh | per dashboard, default 5 s (1–5 s per SRS) |
