@@ -45,4 +45,7 @@ ProcessConfig = grafana_bridge
                                // (/signalk/v2 or v1/api/resources/routes/<id>);
                                // leave empty to disable
   // signalk_token = <jwt>     // only if Signal K security denies anonymous reads
+  readiness_profile = sim      // pre-departure checks: "sim" = a check with no
+                               // sensor data reads N/A; "vessel" = it FAILS
+  readiness_period_s = 5       // evaluation / write period
 }

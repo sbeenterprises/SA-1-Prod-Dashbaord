@@ -150,6 +150,9 @@ if cmake -S "$REPO/ingestion/moos-cpp" -B "$REPO/ingestion/moos-cpp/build" \
   # pAntler launches the app as 'grafana_bridge' (see example.moos) — make
   # sure that name resolves on PATH.
   ln -sf /usr/local/bin/moos_bridge /usr/local/bin/grafana_bridge
+  # Commissioning helper (moos_poke VAR=VAL ...), documented in deployment.md.
+  [ -x "$REPO/ingestion/moos-cpp/build/moos_poke" ] && \
+    install -m 755 "$REPO/ingestion/moos-cpp/build/moos_poke" /usr/local/bin/
   say "moos_bridge installed (as grafana_bridge) — add 'Run = grafana_bridge' to your mission file"
   # If pAntler runs from a systemd unit with a private PATH (as on usv01:
   # moos-antler.service sets PATH to the two MOOS bin dirs only), pAntler

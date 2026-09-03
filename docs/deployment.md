@@ -103,6 +103,39 @@ probe to the dish router (192.168.100.1) that is shipped commented out in
 `telegraf/telegraf.conf`; enable it on vessels with a Starlink, the tile
 reads N/A elsewhere.
 
+## Pre-departure readiness (Readiness dashboard)
+Every automatic check is decided onboard by `grafana_bridge`
+(`usv::EvaluateReadiness`, unit-tested) and written as one row per check;
+Grafana displays them. Two ProcessConfig parameters control it:
+`readiness_profile = vessel | sim` (vessel: a check whose sensor data is
+missing FAILS; sim: it reads N/A, because the simulation has no engine,
+CAN, rudder-feedback or camera data) and `readiness_period_s` (default
+5). Values other producers write (Signal K link, Internet probe, CAN
+interface, cameras, host CPU/RAM/disk) are polled from InfluxDB by the
+bridge with the same credentials it writes with, so nothing else needs
+configuring.
+
+### Console checklist and ENC selection
+The manual pre-departure checklist lives in the operator console
+(Freeboard). For Grafana to mirror it, the console publishes two MOOS
+variables (strings) whenever they change and at least every minute:
+```
+CHECKLIST_STATUS = done=9,total=11,pending=Weather Conditions|Port Clearance,by=douglas
+ENC_STATUS       = selected:US5LA31M        // or: none
+```
+`pending` is the "|"-separated list of unticked items (empty when all are
+ticked); `by` is the operator name. Until the console publishes them the
+Readiness dashboard shows those two rows as CONSOLE and the verdict stays
+NOT READY. Test by hand: `/usr/local/bin/moos_poke 'CHECKLIST_STATUS=done=11,total=11,pending=,by=ops' ENC_STATUS=selected:test` (installed with the bridge; `--port=` when the community is not on 9000).
+
+Verify the bridge is evaluating (on the vessel, after a restart):
+```
+source /etc/usv/usv.env
+curl -s -XPOST "$INFLUX_URL/api/v2/query?org=$INFLUX_ORG" -H "Authorization: Token $INFLUX_TOKEN" \
+  -H 'Content-Type: application/vnd.flux' \
+  -d 'from(bucket:"telemetry") |> range(start:-1m) |> filter(fn:(r) => r._measurement == "readiness_summary") |> last()'
+```
+
 ## Traffic end-to-end test (simulation)
 `tools/traffic_scenario.sh <mission.moos> [crossing|headon|overtaking|radar|opening|all|clean]`
 spawns scripted contacts through pContactSpawn (and one radar-only target
@@ -174,6 +207,7 @@ ProcessConfig = grafana_bridge
   signalk_http  = localhost:3000   // route name lookup (ID_ROUTE uuid -> name)
   radar_cpa_alert_m = 500          // collision risk HIGH: CPA below this ...
   tcpa_alert_s  = 300              // ... within this many seconds
+  readiness_profile = vessel       // sim on the simulation host
 }
 ```
 The console starts a mission with `ID_ROUTE=<Signal K route uuid>`; the

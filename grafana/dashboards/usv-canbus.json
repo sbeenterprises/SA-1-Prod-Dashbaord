@@ -28,6 +28,16 @@
     },
     {
       "type": "link",
+      "title": "Readiness",
+      "url": "/d/usv-readiness",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Readiness"
+    },
+    {
+      "type": "link",
       "title": "Navigation",
       "url": "/d/usv-navigation",
       "keepTime": true,
@@ -180,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 202,
+      "id": 212,
       "type": "text",
       "title": "",
       "transparent": true,

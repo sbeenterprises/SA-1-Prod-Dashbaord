@@ -28,6 +28,16 @@
     },
     {
       "type": "link",
+      "title": "Readiness",
+      "url": "/d/usv-readiness",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Readiness"
+    },
+    {
+      "type": "link",
       "title": "Navigation",
       "url": "/d/usv-navigation",
       "keepTime": true,
@@ -180,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 205,
+      "id": 216,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -196,7 +206,7 @@
       }
     },
     {
-      "id": 132,
+      "id": 142,
       "type": "stat",
       "title": "Internet",
       "datasource": {
@@ -277,7 +287,7 @@
       }
     },
     {
-      "id": 133,
+      "id": 143,
       "type": "stat",
       "title": "Starlink",
       "datasource": {
@@ -359,7 +369,7 @@
       }
     },
     {
-      "id": 134,
+      "id": 144,
       "type": "stat",
       "title": "VPN / Tailscale",
       "datasource": {
@@ -440,7 +450,7 @@
       }
     },
     {
-      "id": 135,
+      "id": 145,
       "type": "stat",
       "title": "Signal K WebSocket",
       "datasource": {
@@ -514,7 +524,7 @@
       }
     },
     {
-      "id": 136,
+      "id": 146,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -581,7 +591,7 @@
       }
     },
     {
-      "id": 137,
+      "id": 147,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -648,7 +658,7 @@
       }
     },
     {
-      "id": 138,
+      "id": 148,
       "type": "timeseries",
       "title": "Latency",
       "datasource": {
@@ -718,7 +728,7 @@
       }
     },
     {
-      "id": 139,
+      "id": 149,
       "type": "timeseries",
       "title": "Packet Loss",
       "datasource": {
@@ -789,7 +799,7 @@
       }
     },
     {
-      "id": 140,
+      "id": 150,
       "type": "timeseries",
       "title": "Bandwidth (host interfaces)",
       "datasource": {
@@ -883,7 +893,7 @@
       }
     },
     {
-      "id": 141,
+      "id": 151,
       "type": "timeseries",
       "title": "Telemetry Message Rates",
       "datasource": {

@@ -30,6 +30,8 @@ fleet expansion.
 
 ### mission (FR-1) — source: MOOS bridge
 progress_pct (%), waypoint_index, waypoints_total, waypoints_remaining,
+region_vertices (vertex count of the current operating region, written
+with the geometry set; the readiness course check reads it back),
 dist_to_waypoint (m), dist_to_station (m, planchaPID DIST_TO_STATION),
 eta_s (s), distance_traveled (m), elapsed_s (s).
 `dist_to_waypoint` comes from the Alpha mission's `DIST_TO_NEXT_WPT`;
@@ -51,7 +53,10 @@ entry_gate (open | closed), opr_status, helm_summary, arrival_state
 (cruising | decelerating | arrived), corridor_status (none | slow | stop |
 recovering), crash_stop_status (off | braking | stopped), region_warning,
 wpt_stat (all from planchaPID / iWebSocket, written on change and re-emitted
-at 1 Hz). mission_id is fed by iWebSocket's ID_ROUTE (a Signal K route
+at 1 Hz), enc_status (console ENC_STATUS: "selected:<chart>" or "none"),
+checklist_pending ("|"-separated pending item names, "-" when none),
+checklist_by (operator who ticked), plus the numeric checklist_done and
+checklist_total (console CHECKLIST_STATUS, see docs/deployment.md). mission_id is fed by iWebSocket's ID_ROUTE (a Signal K route
 uuid); route_name is that route's name looked up once per change from the
 Signal K server (`signalk_http` in the ProcessConfig; v2 and v1 resource
 paths are both tried, `signalk_token` when security denies anonymous reads), "Return to base" for
@@ -76,6 +81,22 @@ closest_range_m, min_cpa_m, min_tcpa_s, planned_course (bearing to the
 current waypoint), course_deviation (commanded minus planned), strings
 worst_contact and reason. The legacy `radar` aggregates are kept for the
 alert rules.
+
+### readiness / readiness_summary (FR-12) — source: MOOS bridge, every readiness_period_s (5 s)
+readiness, tag `check` (gps | course | enc | autonomy | steering | comms |
+can | engine | electrical | ais | radar | cameras | obc | safety |
+checklist): seq (display order), status (0 PASS, 1 FAIL, 2 N/A, 3
+CONSOLE), name (string, operator wording), evidence (string, what was
+seen). readiness_summary: ready (0/1), passed, failed, na, console,
+checks, blocking (string, "; "-separated names of the failed checks, "-"
+when none), profile ("sim" | "vessel"). checklist, tag `seq`: item and
+state (strings; row 0 is "Console checklist d / t · ticked by X" with
+state COMPLETE | OPEN, then one PENDING row per unticked item), erased
+and rewritten when the console's list changes. Decided by usv::EvaluateReadiness
+(mission_logic.hpp) from the latest value of the bridge's own fields plus
+comms.signalk_ws_up, ping.*, canbus.*, camera.connected and the Telegraf
+cpu/mem/disk fields polled from InfluxDB. A change of verdict raises an
+event of type `readiness`.
 
 ### geometry (map overlays) — source: MOOS bridge, on change
 Vertex sets for the Navigation / Replay maps, tags `kind` (route |

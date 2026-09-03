@@ -6,6 +6,23 @@ Keep a Changelog; versions are git tags on `main`.
 ## [Unreleased]
 
 ### Added
+- Readiness dashboard (FR-12, second tab): pre-departure verdict with
+  pass / fail / N/A / console counts, automatic checks table (GPS fix,
+  course planning, chart/ENC, autonomy stack, steering / actuators,
+  operator link and comms, CAN bus, engine, electrical, AIS, radar,
+  cameras, onboard computer, safety flags, console checklist) with the
+  evidence behind each verdict, and a mirror of the console's manual
+  checklist. All checks are decided onboard in C++ (`usv::EvaluateReadiness`,
+  mission_logic.hpp, unit-tested) and written by `grafana_bridge` as
+  `readiness` / `readiness_summary`; a `LatestPoller` (cpp-common)
+  fetches the few inputs other producers write. Console mirrors:
+  `CHECKLIST_STATUS` and `ENC_STATUS` MOOS variables ->
+  `mission_state.checklist_*` / `enc_status`. New ProcessConfig
+  parameters `readiness_profile` (sim | vessel) and `readiness_period_s`.
+  The console checklist table reads rows the bridge writes (`checklist`
+  measurement); the course check falls back to the last known route,
+  waypoints and region (`mission.region_vertices`) after a community
+  restart.
 - `tools/fake_traffic.py`: fake AIS / radar scene (harbour: 6 vessels +
   radar track; busy: 10) moving around the boat, published as
   NODE_REPORT / RADAR_TARGET for Traffic dashboard and avoidance tests.

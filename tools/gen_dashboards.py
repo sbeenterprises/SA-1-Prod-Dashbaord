@@ -253,7 +253,8 @@ def panel(ptype, title, targets, x, y, w, h, unit=None, thresholds=None,
 # query keeps only _value and the panel is told to reduce every field.
 STRING_FIELDS = {
     "state", "state_external", "helm_state", "mission_name", "mission_id",
-    "route_name", "allstop_reason", "active_behavior", "station_keep", "comms_failsafe",
+    "route_name", "allstop_reason", "enc_status", "checklist_pending", "checklist_by",
+    "blocking", "profile", "name", "evidence", "active_behavior", "station_keep", "comms_failsafe",
     "entry_gate", "opr_status", "helm_summary", "arrival_state",
     "corridor_status", "crash_stop_status", "region_warning", "wpt_stat",
     "fix_type", "charging_status", "message", "worst_contact", "reason",
@@ -601,7 +602,8 @@ def meter(title, query, x, y, w, h, min_, max_, unit, zones=None,
 # alphabetically and drops the current dashboard, so the row shifted from
 # page to page). Operational sequence: mission first, support last.
 TAB_ORDER = [
-    ("usv-mission", "Mission"), ("usv-navigation", "Navigation"),
+    ("usv-mission", "Mission"), ("usv-readiness", "Readiness"),
+    ("usv-navigation", "Navigation"),
     ("usv-autopilot", "Autopilot"), ("usv-health", "Vessel Health"),
     ("usv-canbus", "CAN Bus"), ("usv-traffic", "Traffic"),
     ("usv-camera", "Cameras"), ("usv-comms", "Comms"),
@@ -1193,6 +1195,139 @@ DASHBOARDS.append(dashboard("usv-canbus", "CAN Bus", [
           12, 11, 12, 7,
           options={"showHeader": True}),
 ], ["canbus"]))
+
+# ------------------------------------------------ FR-12 Pre-Departure Readiness
+# Every check is decided onboard by grafana_bridge (usv::EvaluateReadiness in
+# mission_logic.hpp) and written as one row per check (measurement
+# "readiness", tag check: seq, status, name, evidence) plus a
+# "readiness_summary". The dashboard only displays them. Status codes:
+# 0 PASS, 1 FAIL, 2 N/A (sensor not fitted / no data; FAIL under the
+# vessel profile), 3 CONSOLE (the operator console has not published it).
+READINESS_WINDOW = "-60s"   # bridge writes every readiness_period_s (5 s)
+
+
+def readiness_query():
+    """One row per check, in check order. Numeric and string fields are
+    pivoted separately and joined (Flux refuses to group float and string
+    _value columns into one table)."""
+    return ('base = from(bucket: "telemetry")\n'
+            f'  |> range(start: {READINESS_WINDOW})\n'
+            '  |> filter(fn: (r) => r._measurement == "readiness")\n'
+            '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+            '  |> last()\n'
+            '  |> drop(columns: ["_start", "_stop", "_measurement", "vessel", "_time"])\n'
+            'nums = base |> filter(fn: (r) => r._field == "seq" or r._field == "status")\n'
+            '  |> group()\n'
+            '  |> pivot(rowKey: ["check"], columnKey: ["_field"], valueColumn: "_value")\n'
+            'strs = base |> filter(fn: (r) => r._field == "name" or r._field == "evidence")\n'
+            '  |> group()\n'
+            '  |> pivot(rowKey: ["check"], columnKey: ["_field"], valueColumn: "_value")\n'
+            'join(tables: {n: nums, s: strs}, on: ["check"])\n'
+            '  |> sort(columns: ["seq"])\n'
+            '  |> keep(columns: ["seq", "name", "evidence", "status"])\n')
+
+
+def checklist_query():
+    """Console checklist mirror: rows written by grafana_bridge from the
+    console's CHECKLIST_STATUS (measurement checklist, tag seq: a head line
+    with the count and the operator, then one row per pending item)."""
+    return ('from(bucket: "telemetry")\n'
+            f'  |> range(start: {READINESS_WINDOW})\n'
+            '  |> filter(fn: (r) => r._measurement == "checklist" and (r._field == "item" or r._field == "state"))\n'
+            '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+            '  |> last()\n'
+            '  |> drop(columns: ["_start", "_stop", "_measurement", "vessel", "_time"])\n'
+            '  |> group()\n'
+            '  |> pivot(rowKey: ["seq"], columnKey: ["_field"], valueColumn: "_value")\n'
+            '  |> sort(columns: ["seq"])\n'
+            '  |> keep(columns: ["item", "state"])\n')
+
+
+status_mappings = [{"type": "value", "options": {
+    "0": {"text": "PASS", "color": TILE_OK, "index": 0},
+    "1": {"text": "FAIL", "color": "red", "index": 1},
+    "2": {"text": "N/A", "color": "#3d434b", "index": 2},
+    "3": {"text": "CONSOLE", "color": "#6e7680", "index": 3}}}]
+checklist_state_mappings = state_map([("COMPLETE", TILE_OK), ("OPEN", "orange"),
+                                      ("PENDING", "orange"), ("UNKNOWN", "#6e7680")])
+ready_mappings = value_color_map([(0, "NOT READY", "red"), (1, "READY", TILE_OK)])
+
+
+def status_table(title, query, x, y, w, h, status_col, mappings, name_col,
+                 columns, description=None, no_value=None):
+    """Table with a coloured status column (mappings on that column only)
+    and a fixed column order."""
+    p = panel("table", title, [target(query)], x, y, w, h,
+              options={"showHeader": True, "cellHeight": "sm"},
+              no_value=no_value,
+              overrides=[{"matcher": {"id": "byName", "options": status_col},
+                          "properties": [{"id": "displayName", "value": "Status"},
+                                         {"id": "custom.width", "value": 100},
+                                         {"id": "custom.align", "value": "center"},
+                                         {"id": "mappings", "value": mappings},
+                                         {"id": "custom.cellOptions",
+                                          "value": {"type": "color-background", "mode": "basic"}}]},
+                         {"matcher": {"id": "byName", "options": name_col},
+                          "properties": [{"id": "displayName", "value": "Check"},
+                                         {"id": "custom.width", "value": 170}]},
+                         {"matcher": {"id": "byName", "options": "evidence"},
+                          "properties": [{"id": "displayName", "value": "Evidence"},
+                                         {"id": "custom.minWidth", "value": 300}]},
+                         {"matcher": {"id": "byName", "options": "seq"},
+                          "properties": [{"id": "displayName", "value": "#"},
+                                         {"id": "custom.width", "value": 36}]},
+                         {"matcher": {"id": "byName", "options": "item"},
+                          "properties": [{"id": "displayName", "value": "Item"},
+                                         {"id": "custom.minWidth", "value": 520}]}])
+    p["transformations"] = [{"id": "organize", "options": {
+        "indexByName": {c: i for i, c in enumerate(columns)}}}]
+    if description:
+        p["description"] = description
+    return p
+
+
+DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
+    # A — verdict and counts (8 tiles, 3 rows)
+    stat("Readiness", flux("readiness_summary", "ready", last=True), 0, 0, 4, 3,
+         mappings=ready_mappings, text_mode="value", color_mode="background",
+         no_value="NO BRIDGE"),
+    stat("Passed", flux("readiness_summary", "passed", last=True), 4, 0, 3, 3, decimals=0),
+    stat("Failed", flux("readiness_summary", "failed", last=True), 7, 0, 3, 3, decimals=0,
+         thresholds=[(None, OK), (1, "red")]),
+    stat("N/A", flux("readiness_summary", "na", last=True), 10, 0, 3, 3, decimals=0,
+         thresholds=[(None, "#8e9299")]),
+    stat("Console", flux("readiness_summary", "console", last=True), 13, 0, 3, 3, decimals=0,
+         thresholds=[(None, "#8e9299"), (1, "orange")]),
+    stat("Mission State", last_str("mission_state", "state"), 16, 0, 3, 3,
+         mappings=mission_state_mappings, text_mode="value", color_mode="background"),
+    stat("Route", last_str("mission_state", "route_name"), 19, 0, 3, 3, text_mode="value",
+         no_value="no route"),
+    stat("Operator Link", flux("autonomy", "comms_phase", last=True), 22, 0, 2, 3,
+         mappings=comms_phase_mappings, text_mode="value", color_mode="background"),
+    # B — the two lists
+    status_table("Automatic checks — verified onboard from live telemetry",
+                 readiness_query(), 0, 3, 12, 18, "status", status_mappings, "name",
+                 ["seq", "name", "evidence", "status"],
+                 no_value="grafana_bridge not writing readiness (bridge older than v1.1 or not restarted)",
+                 description=(
+                     "Decided by grafana_bridge every 5 s from the latest telemetry "
+                     "(GPS ≥ 6 satellites and HDOP ≤ 2.5, rudder within ±35° and "
+                     "following the command, coolant < 105 °C, fuel > 15 %, SOC ≥ 30 %, "
+                     "host load < 90 %). N/A = sensor not fitted or no data; under "
+                     "readiness_profile = vessel it counts as FAIL. CONSOLE = the "
+                     "operator console has not published it (ENC selection, checklist). "
+                     "READY needs no FAIL and no CONSOLE item.")),
+    status_table("Console checklist — manual items ticked in Freeboard",
+                 checklist_query(), 12, 3, 12, 18, "state", checklist_state_mappings, "item",
+                 ["item", "state"],
+                 no_value="console not publishing CHECKLIST_STATUS (docs/deployment.md, Console checklist)",
+                 description=(
+                     "Mirror of the console's pre-departure checklist "
+                     "(CHECKLIST_STATUS from the operator UI). Items are ticked in "
+                     "Freeboard; Grafana shows the count, who ticked and what is "
+                     "still pending. Blocking items: see the Failed tile and the "
+                     "Mission Events list (Readiness NOT READY: ...).")),
+], ["readiness"]))
 
 # ------------------------------------------------ FR-6 Traffic (collision avoidance)
 # Contacts come from grafana_bridge: NODE_REPORT / AIS-style reports and

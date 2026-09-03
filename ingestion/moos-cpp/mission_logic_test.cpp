@@ -210,6 +210,17 @@ static void test_traffic_geometry() {
     CHECK_EQ_STR(t.worst_id(), "R-31");
 }
 
+static void test_checklist() {
+    Checklist c = ParseChecklist("done=9,total=11,pending=Weather Conditions|Port Clearance,by=douglas");
+    CHECK(c.done == 9 && c.total == 11);
+    CHECK_EQ_STR(c.pending, "Weather Conditions|Port Clearance");
+    CHECK_EQ_STR(c.by, "douglas");
+    Checklist d = ParseChecklist("done=11,total=11,pending=,by=ops");
+    CHECK(d.done == 11 && d.pending.empty());
+    Checklist e = ParseChecklist("garbage");
+    CHECK(e.done == -1 && e.total == -1);
+}
+
 static void test_route_naming() {
     const std::string body =
         "{\"name\":\"Som Rt0\",\"description\":\"x\",\"feature\":{\"type\":\"Feature\"}}";
@@ -442,6 +453,143 @@ static void test_contact_tracker() {
     CHECK_EQ_STR(kv["x"], "120.5");
 }
 
+static const ReadinessCheck& find_check(const std::vector<ReadinessCheck>& v, const char* id) {
+    for (const auto& c : v) if (c.id == id) return c;
+    static ReadinessCheck none;
+    return none;
+}
+
+static void test_readiness() {
+    LatestStore s;
+    const double now = 1000.0;
+    // Simulation host: position, route, region, helm, MOOS, Signal K,
+    // host metrics, no engine / CAN / camera data, console silent.
+    s.put("nav", "lat", 29.7, now - 1);
+    s.put_str("mission_state", "route_name", "Som Rt0", now - 50);
+    s.put("mission", "waypoints_total", 4, now - 5);
+    s.put("mission", "region_vertices", 5, now - 500);
+    s.put("comms", "moos_msg_rate", 61, now - 3);
+    s.put_str("mission_state", "helm_state", "PARK", now - 1);
+    s.put("autonomy", "allstop", 0, now - 1);
+    s.put("comms", "signalk_ws_up", 1, now - 4);
+    s.put("ping", "result_code", 0, now - 20);
+    s.put("ping", "average_response_ms", 38, now - 20);
+    s.put("autonomy", "comms_phase", 0, now - 1);
+    s.put("cpu", "usage_user", 4, now - 8);
+    s.put("mem", "used_percent", 11, now - 8);
+    s.put("disk", "used_percent", 63, now - 8);
+    s.put("autonomy", "geofence_breached", 0, now - 1);
+    s.put("autonomy", "crash_stop", 0, now - 1);
+    s.put("traffic", "risk_level", 0, now - 1);
+    s.put("radar", "online", 1, now - 2);
+
+    auto v = EvaluateReadiness(s, now, false);
+    CHECK(v.size() == 15);
+    CHECK(find_check(v, "gps").status == READY_PASS);      // no quality data, sim
+    CHECK_EQ_STR(find_check(v, "course").evidence, "Som Rt0 · 4 waypoints · region 5 vertices");
+    CHECK(find_check(v, "course").status == READY_PASS);
+    CHECK(find_check(v, "enc").status == READY_CONSOLE);
+    CHECK(find_check(v, "autonomy").status == READY_PASS);
+    CHECK_EQ_STR(find_check(v, "autonomy").evidence, "MOOS 61 msg/s · helm PARK");
+    CHECK(find_check(v, "steering").status == READY_NA);
+    CHECK(find_check(v, "comms").status == READY_PASS);
+    CHECK_EQ_STR(find_check(v, "comms").evidence, "Signal K UP · Internet UP · 38 ms");
+    CHECK(find_check(v, "can").status == READY_NA);
+    s.put("canbus", "interface_up", 0, now);
+    CHECK(find_check(EvaluateReadiness(s, now, false), "can").status == READY_NA);   // sim host, no hardware
+    CHECK(find_check(EvaluateReadiness(s, now, true), "can").status == READY_FAIL);
+    CHECK(find_check(v, "engine").status == READY_NA);
+    CHECK(find_check(v, "electrical").status == READY_NA);
+    CHECK(find_check(v, "ais").status == READY_NA);
+    CHECK(find_check(v, "radar").status == READY_PASS);
+    CHECK(find_check(v, "cameras").status == READY_NA);
+    CHECK(find_check(v, "obc").status == READY_PASS);
+    CHECK(find_check(v, "safety").status == READY_PASS);
+    CHECK(find_check(v, "checklist").status == READY_CONSOLE);
+    ReadinessSummary r = SummarizeReadiness(v);
+    CHECK(!r.ready && r.failed == 0 && r.console == 2 && r.na == 6 && r.passed == 7);
+    CHECK(r.blocking.empty());
+
+    // Strict (vessel) profile: missing sensors fail and GPS quality is required.
+    auto w = EvaluateReadiness(s, now, true);
+    CHECK(find_check(w, "gps").status == READY_FAIL);
+    CHECK(find_check(w, "engine").status == READY_FAIL);
+    CHECK(find_check(w, "can").status == READY_FAIL);
+    CHECK(find_check(w, "ais").status == READY_NA);   // empty harbour is not a fault
+    ReadinessSummary rw = SummarizeReadiness(w);
+    CHECK(!rw.ready && rw.failed >= 5);
+    CHECK(rw.blocking.find("Engine pre-start") != std::string::npos);
+
+    // Console publishes, sensors arrive, everything passes.
+    s.put_str("mission_state", "enc_status", "selected:US5LA31M", now);
+    s.put("mission_state", "checklist_done", 11, now);
+    s.put("mission_state", "checklist_total", 11, now);
+    s.put("nav", "satellites", 14, now);
+    s.put("nav", "hdop", 0.8, now);
+    s.put_str("nav", "fix_type", "RTK Fixed", now);
+    s.put("autopilot", "rudder_actual", 2.0, now);
+    s.put("autopilot", "rudder_cmd", 3.0, now);
+    s.put("canbus", "interface_up", 1, now);
+    s.put("canbus", "msg_rate", 212, now);
+    s.put("engine", "coolant_temp", 41, now);
+    s.put("engine", "oil_pressure", 310, now);
+    s.put("engine", "fuel_level", 82, now);
+    s.put("electrical", "battery_voltage", 25.6, now);
+    s.put("camera", "connected", 1, now);
+    s.put("traffic", "reports", 2, now);
+    auto x = EvaluateReadiness(s, now, true);
+    ReadinessSummary rx = SummarizeReadiness(x);
+    CHECK(rx.ready && rx.failed == 0 && rx.console == 0);
+    CHECK_EQ_STR(find_check(x, "gps").evidence, "RTK Fixed · 14 sats · HDOP 0.8");
+    CHECK_EQ_STR(find_check(x, "steering").evidence, "rudder 2.0° · cmd 3.0°");
+    CHECK_EQ_STR(find_check(x, "can").evidence, "interface UP · 212 msg/s");
+    CHECK_EQ_STR(find_check(x, "engine").evidence, "coolant 41 °C · oil 310 kPa · fuel 82 %");
+    CHECK(find_check(x, "ais").status == READY_PASS);
+
+    // Faults: rudder not following, low fuel, pending checklist, HIGH risk,
+    // stale position.
+    s.put("autopilot", "rudder_actual", 20.0, now);
+    s.put("engine", "fuel_level", 9, now);
+    s.put("mission_state", "checklist_done", 9, now);
+    s.put_str("mission_state", "checklist_pending", "Weather Conditions|Port Clearance", now);
+    s.put("traffic", "risk_level", 2, now);
+    s.put("nav", "lat", 29.7, now - 60);
+    auto y = EvaluateReadiness(s, now, true);
+    CHECK(find_check(y, "steering").status == READY_FAIL);
+    CHECK(find_check(y, "steering").evidence.find("NOT FOLLOWING") != std::string::npos);
+    CHECK(find_check(y, "engine").status == READY_FAIL);
+    CHECK(find_check(y, "checklist").status == READY_FAIL);
+    CHECK_EQ_STR(find_check(y, "checklist").evidence, "9 / 11 ticked · pending: Weather Conditions,Port Clearance");
+    CHECK(find_check(y, "safety").status == READY_FAIL);
+    CHECK_EQ_STR(find_check(y, "safety").evidence, "COLLISION RISK HIGH");
+    CHECK(find_check(y, "gps").status == READY_FAIL);
+    CHECK_EQ_STR(find_check(y, "gps").evidence, "no position");
+    ReadinessSummary ry = SummarizeReadiness(y);
+    CHECK(!ry.ready && ry.failed == 5);
+    CHECK_EQ_STR(ry.blocking, "GPS position fix; Steering / actuators; Engine pre-start; Safety flags; Console checklist");
+
+    // Course planning falls back to the last known route (flagged after 10 min)
+    s.put_str("mission_state", "route_name", "Rt WP Alpha", now - 1200);
+    CHECK_EQ_STR(find_check(EvaluateReadiness(s, now, true), "course").evidence,
+                 "Rt WP Alpha (last known) · 4 waypoints · region 5 vertices");
+
+    // Console checklist rows
+    auto rows = ChecklistRows(ParseChecklist("done=9,total=11,pending=Weather Conditions|Port Clearance,by=douglas"));
+    CHECK(rows.size() == 3);
+    CHECK_EQ_STR(rows[0].item, "Console checklist 9 / 11 · ticked by douglas");
+    CHECK_EQ_STR(rows[0].state, "OPEN");
+    CHECK_EQ_STR(rows[1].item, "Weather Conditions");
+    CHECK_EQ_STR(rows[2].state, "PENDING");
+    auto done = ChecklistRows(ParseChecklist("done=11,total=11,pending=,by=ops"));
+    CHECK(done.size() == 1 && done[0].state == "COMPLETE");
+    CHECK(ChecklistRows(ParseChecklist("garbage")).empty());
+
+    // LatestStore age test
+    CHECK(s.get("nav", "lat", now, 30.0) == nullptr);
+    CHECK(s.get("nav", "lat", now, 120.0) != nullptr);
+    CHECK(s.get("nav", "nothing", now) == nullptr);
+}
+
 int main() {
     test_flag_parsing();
     test_allstop_classification();
@@ -463,9 +611,11 @@ int main() {
     test_rate_limiter();
     test_contact_tracker();
     test_route_naming();
+    test_checklist();
     test_geometry();
     test_traffic_geometry();
     test_helm_behaviors_fallback();
+    test_readiness();
 
     std::printf("mission_logic_test: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
