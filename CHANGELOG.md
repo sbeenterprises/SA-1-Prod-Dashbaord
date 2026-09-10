@@ -5,6 +5,14 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+### Fixed
+- Installer opens `GRAFANA_PORT` in ufw when ufw is active. Found on usv01:
+  Grafana answered on localhost, but ufw dropped port 3300 from the LAN, so
+  operator browsers hung on a dark screen. Rules allow the LAN subnet of the
+  default-route interface and 100.64.0.0/10 (Tailscale) only, tagged
+  `usv-grafana`; `GRAFANA_ALLOW_FROM` in usv.env overrides the sources or
+  disables the step (`none`).
+
 ## [1.2.0] - 2026-09-03 — readiness checks, SA-1 branding
 
 Verified live on usv01: 16 automatic checks with evidence, the MOOS app

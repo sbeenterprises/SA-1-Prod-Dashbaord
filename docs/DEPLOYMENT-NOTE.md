@@ -162,8 +162,11 @@ and the grafana\_bridge console output under pAntler.
 - `/etc/usv/usv.env` is root\-only (600). The Influx token also sits in your
   mission file's ProcessConfig — keep mission files off public repos.
 - Bind exposure: Grafana (GRAFANA_PORT) and InfluxDB (8086) listen on all
-  interfaces by default. On a Starlink/Tailscale vessel, firewall them to
-  the tailnet: `ufw allow in on tailscale0 to any port <GRAFANA_PORT>` and deny WAN.
+  interfaces by default. When ufw is active, install.sh allows GRAFANA_PORT/tcp
+  only from the LAN subnet of the default-route interface and the Tailscale
+  range 100.64.0.0/10 (rule comment `usv-grafana`). Override the sources with
+  `GRAFANA_ALLOW_FROM` in `/etc/usv/usv.env`, or set it to `none` to manage
+  ufw yourself. Keep 8086 closed to the network; every writer uses localhost.
 - Change the Grafana admin password at first login even though the
   installer sets one.
 - The `usv` service user is unprivileged; can\_bridge gets only CAP\_NET\_RAW.

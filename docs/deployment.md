@@ -309,6 +309,7 @@ emails while it runs; always stop it before real operations.
 | Tab order, tiles, checks table | tools/gen_dashboards.py (TAB_ORDER, usv-readiness section) -> regenerate -> re-run install.sh |
 | Readiness rules | usv::EvaluateReadiness in ingestion/moos-cpp/mission_logic.hpp (unit-tested in mission_logic_test.cpp) |
 | Fleet instances | VESSELS in usv.env |
+| Firewall sources for Grafana | GRAFANA_ALLOW_FROM in usv.env (CIDR list; unset = LAN subnet + 100.64.0.0/10; `none` = leave ufw alone) |
 | Alert recipients | grafana/provisioning/alerting/contact-points.yml |
 | Dashboard refresh | per dashboard, default 5 s (1–5 s per SRS) |
 
@@ -331,6 +332,7 @@ Administration -> Users.
 | Symptom | Check |
 |---|---|
 | Empty dashboards | `systemctl status usv-*` ; Influx Data Explorer at :8086 |
+| Dashboard hangs on a dark screen from another PC, but `curl http://localhost:<GRAFANA_PORT>/api/health` returns 200 on the OBC | ufw is dropping the port: `sudo ufw status \| grep <GRAFANA_PORT>`. Re-run install.sh (opens it to the LAN and the tailnet, see GRAFANA_ALLOW_FROM in usv.env) or `sudo ufw allow from <lan-cidr> to any port <GRAFANA_PORT> proto tcp` |
 | Stock Grafana logo / "Welcome to Grafana" | Browser cache of Grafana's immutable assets: Ctrl+F5 once; `sudo bash deploy/brand.sh` re-applies after an upgrade |
 | Light theme chip "does nothing" | It opens a new tab (Grafana reads ?theme only on page load); press `c` then `t` to switch in place |
 | grafana_bridge missing under pAntler (`Failed exec - not good`) | set MOOS_ANTLER_UNIT in usv.env and re-run install.sh (PATH drop-in) |

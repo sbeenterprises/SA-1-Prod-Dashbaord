@@ -290,5 +290,41 @@ bash "$REPO/deploy/brand.sh"
 systemctl enable --now grafana-server
 systemctl restart grafana-server
 
+# ---------------------------------------------------------------- firewall
+# An active ufw with a default-deny policy silently drops operator browsers
+# on GRAFANA_PORT: the page hangs on a dark screen while localhost checks
+# all pass. Open the port to the LAN and the tailnet only, never the WAN.
+# GRAFANA_ALLOW_FROM in usv.env: CIDR list, empty = auto, "none" = skip.
+GPORT=${GRAFANA_PORT:-3001}
+if [[ ${GRAFANA_ALLOW_FROM:-} == none ]]; then
+  say "Firewall: GRAFANA_ALLOW_FROM=none, leaving ufw untouched"
+elif ! command -v ufw >/dev/null 2>&1; then
+  say "Firewall: ufw not installed, nothing to open for port $GPORT"
+elif ! ufw status 2>/dev/null | grep -q '^Status: active'; then
+  say "Firewall: ufw inactive, port $GPORT reachable (rules not added)"
+else
+  ALLOW_FROM=${GRAFANA_ALLOW_FROM:-}
+  if [[ -z $ALLOW_FROM ]]; then
+    LAN_DEV=$(ip -4 route show default 2>/dev/null | awk '{print $5; exit}')
+    if [[ -n $LAN_DEV ]]; then
+      ALLOW_FROM=$(ip -o -4 route show dev "$LAN_DEV" proto kernel scope link 2>/dev/null \
+                   | awk '{print $1}' | tr '\n' ' ')
+    fi
+    ALLOW_FROM=$(echo $ALLOW_FROM 100.64.0.0/10)   # word-split on purpose: trims spaces
+  fi
+  say "Firewall: allowing Grafana port $GPORT/tcp from: $ALLOW_FROM"
+  for SRC in $ALLOW_FROM; do
+    # ufw skips a rule that already exists, so re-runs stay idempotent.
+    ufw allow from "$SRC" to any port "$GPORT" proto tcp comment 'usv-grafana' >/dev/null
+  done
+  ufw status | grep -E "^$GPORT/tcp" || true
+  # Rules for an earlier GRAFANA_PORT are left in place; remove them by hand
+  # (sudo ufw status numbered, then sudo ufw delete <n>).
+  if ufw status | grep 'usv-grafana' | grep -vqE "^$GPORT/tcp"; then
+    echo "NOTE: ufw still has usv-grafana rules for another port:"
+    ufw status | grep 'usv-grafana' | grep -vE "^$GPORT/tcp" || true
+  fi
+fi
+
 say "Done. Grafana: http://$(hostname -I | awk '{print $1}'):${GRAFANA_PORT:-3001} (folder 'Swift Autonomous Dashboard')"
 say "Reminder: merge ingestion/moos-cpp/example.moos into your mission file."
