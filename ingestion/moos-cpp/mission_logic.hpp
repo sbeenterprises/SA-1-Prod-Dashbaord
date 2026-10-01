@@ -1002,7 +1002,14 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         if (!lat) { ev = "no position"; st = READY_FAIL; }
         else {
             bool ok = true;
-            if (fix) { ev += fix->str; ok = ok && lower(fix->str) != "none" && lower(fix->str) != "no fix"; }
+            if (fix) {
+                const std::string f = lower(fix->str);
+                ev += fix->str;
+                // "none" / "no fix" (GNSS), "INS aligning" / "GNSS lost"
+                // (VectorNav INS via Signal K) are not a usable fix.
+                ok = ok && f != "none" && f != "no fix"
+                        && f != "ins aligning" && f != "gnss lost";
+            }
             if (sats) { ev += (ev.empty() ? "" : " · ") + fmt0(sats->num) + " sats"; ok = ok && sats->num >= 6.0; }
             if (hdop) { ev += " · HDOP " + fmt1(hdop->num); ok = ok && hdop->num <= 2.5; }
             if (!sats && !fix) {

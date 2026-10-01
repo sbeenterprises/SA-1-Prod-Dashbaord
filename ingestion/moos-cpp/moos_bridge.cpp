@@ -337,6 +337,14 @@ protected:
             });
         poller_.start(opts, {
             {"comms", "signalk_ws_up", ""},
+            // Position and fix quality written by signalk_bridge, for vessels
+            // whose GNSS/INS feeds Signal K rather than MOOS NAV_LAT/NAV_LONG
+            // (own fresher NAV_* samples still take precedence).
+            {"nav", "lat", ""},
+            {"nav", "lon", ""},
+            {"nav", "fix_type", ""},
+            {"nav", "satellites", ""},
+            {"nav", "hdop", ""},
             {"ping", "result_code", "r.url == \"8.8.8.8\""},
             {"ping", "average_response_ms", "r.url == \"8.8.8.8\""},
             {"canbus", "interface_up", ""},

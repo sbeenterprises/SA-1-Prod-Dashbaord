@@ -606,6 +606,24 @@ static void test_readiness() {
     CHECK(!ry.ready && ry.failed == 7);
     CHECK_EQ_STR(ry.blocking, "GPS position fix; Course planning; MOOS apps; Steering / actuators; Engine pre-start; Safety flags; Console checklist");
 
+    // GPS via Signal K: VectorNav INS mode mapped to fix_type by signalk_bridge
+    // (position polled back from InfluxDB). Only "INS tracking" is a fix.
+    {
+        LatestStore g;
+        g.put("nav", "lat", 29.72, now);
+        g.put("nav", "lon", -91.21, now);
+        g.put_str("nav", "fix_type", "INS aligning", now);
+        CHECK(find_check(EvaluateReadiness(g, now, true), "gps").status == READY_FAIL);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(g, now, true), "gps").evidence, "INS aligning");
+        g.put_str("nav", "fix_type", "GNSS lost", now);
+        CHECK(find_check(EvaluateReadiness(g, now, true), "gps").status == READY_FAIL);
+        g.put_str("nav", "fix_type", "INS tracking", now);
+        CHECK(find_check(EvaluateReadiness(g, now, true), "gps").status == READY_PASS);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(g, now, true), "gps").evidence, "INS tracking");
+        g.put_str("nav", "fix_type", "no fix", now);
+        CHECK(find_check(EvaluateReadiness(g, now, true), "gps").status == READY_FAIL);
+    }
+
     // Course planning falls back to the last known route (flagged after 10 min)
     s.put_str("mission_state", "route_name", "Rt WP Alpha", now - 1200);
     CHECK_EQ_STR(find_check(EvaluateReadiness(s, now, true), "course").evidence,

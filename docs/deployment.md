@@ -121,8 +121,13 @@ Grafana displays them. Two ProcessConfig parameters control it:
 missing FAILS; sim: it reads N/A, because the simulation has no engine,
 CAN, rudder-feedback or camera data) and `readiness_period_s` (default
 5). Values other producers write (Signal K link, Internet probe, CAN
-interface, cameras, host CPU/RAM/disk) are polled from InfluxDB by the
-bridge with the same credentials it writes with. Optional vessel
+interface, cameras, host CPU/RAM/disk, and the Signal K position with its
+fix quality) are polled from InfluxDB by the
+bridge with the same credentials it writes with. The GPS row therefore
+passes on a vessel whose GNSS/INS feeds Signal K only (no NAV_LAT in
+MOOSDB); with a VectorNav INS through the `signalk-vectornav-vnins`
+plugin the row shows the INS mode ("INS tracking" passes, "INS aligning"
+and "GNSS lost" fail). Optional vessel
 constants in the same block sharpen three checks: `fuel_tank_l`,
 `cruise_fuel_lph`, `cruise_speed_kn`, `battery_kwh`, `cruise_power_kw`
 and `endurance_margin` (default 1.5) turn the Endurance row from N/A into

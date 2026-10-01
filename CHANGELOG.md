@@ -5,6 +5,27 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-10-01 — GPS readiness from Signal K / VectorNav INS
+
+Found on usv-722 at commissioning: position enters through Signal K (the
+`signalk-vectornav-vnins` plugin) and MOOSDB carries no NAV_LAT, so the
+Readiness GPS row read "no position" while the Navigation map showed the
+boat.
+
+### Added
+- `signalk_bridge` maps `navigation.vectornav.insMode` (0 not tracking,
+  1 aligning, 2 tracking, 3 GNSS lost) to `nav.fix_type` ("no fix",
+  "INS aligning", "INS tracking", "GNSS lost") and writes `nav.ins_mode`.
+  The Navigation "GPS Fix" tile shows it.
+- `grafana_bridge` polls `nav.lat`, `nav.lon`, `nav.fix_type`,
+  `nav.satellites` and `nav.hdop` back from InfluxDB, so the GPS check
+  accepts a position written by the Signal K bridge; a fresher own
+  NAV_LAT/NAV_LONG sample still takes precedence.
+
+### Changed
+- GPS readiness check fails on fix_type "INS aligning" or "GNSS lost"
+  (in addition to "none" / "no fix"). mission_logic_test: 279 assertions.
+
 ## [1.2.1] - 2026-10-01 — production profile
 
 First release intended for a real vessel OBC. Everything that shipped in a

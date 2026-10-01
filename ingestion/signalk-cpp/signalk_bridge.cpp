@@ -152,6 +152,17 @@ private:
                 writer_.field("nav", "", "yaw", value["yaw"].get<double>() * RAD);
         } else if (path == "navigation.gnss.type" && value.is_string()) {
             writer_.str_field("nav", "", "fix_type", value.get<std::string>());
+        } else if (path == "navigation.vectornav.insMode" && value.is_number()) {
+            // VectorNav INS (signalk-vectornav-vnins plugin): 0 not tracking,
+            // 1 aligning, 2 tracking, 3 GNSS lost (dead reckoning). Mapped to
+            // the fix_type string the Readiness GPS check and the Navigation
+            // "GPS Fix" tile read; only "INS tracking" counts as a fix.
+            static const char* kInsMode[] = {"no fix", "INS aligning",
+                                             "INS tracking", "GNSS lost"};
+            const int mode = value.get<int>();
+            writer_.field("nav", "", "ins_mode", mode);
+            if (mode >= 0 && mode <= 3)
+                writer_.str_field("nav", "", "fix_type", kInsMode[mode]);
         } else if (path == "electrical.batteries.0.chargingMode"
                    && value.is_string()) {
             writer_.str_field("electrical", "", "charging_status",
