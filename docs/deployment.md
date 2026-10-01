@@ -314,7 +314,7 @@ emails while it runs; always stop it before real operations.
 | MOOS variable map | ingestion/moos-cpp/moos_bridge.cpp |
 | Signal K path map | ingestion/signalk-cpp/signalk_bridge.cpp kPaths |
 | PGN decoders | ingestion/can-cpp/main.cpp decode_pgn() |
-| Alert thresholds | tools/gen_alerts.py --profile sim\|vessel -> regenerate -> re-run install.sh (sim profile skips rules for sensors the simulation lacks) |
+| Alert thresholds | tools/gen_alerts.py --profile sim\|vessel -> regenerate -> re-run install.sh (vessel profile: GPS Signal Loss and CAN Bus Failure also alert on missing data; engine and battery rules never do, the Readiness dashboard reports silent sensors) |
 | Branding text | BRAND_TITLE / BRAND_WELCOME / BRAND_SUBTITLE / BRAND_APP_TITLE in usv.env |
 | Home dashboard | GRAFANA_HOME_DASHBOARD in usv.env (default usv-readiness.json) |
 | Readiness profile, vessel constants, app list, checklist items | grafana_bridge ProcessConfig in the mission file: readiness_profile, readiness_period_s, fuel_tank_l, cruise_fuel_lph, cruise_speed_kn, battery_kwh, cruise_power_kw, endurance_margin, required_apps, optional_apps, checklist_items (see example.moos) |

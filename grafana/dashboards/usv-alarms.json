@@ -309,14 +309,19 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "unit": "percent",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "#3d434b",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -350,7 +355,7 @@
     {
       "id": 191,
       "type": "stat",
-      "title": "GPS Sats",
+      "title": "GPS Fix",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -367,7 +372,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"satellites\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"fix_type\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
           "refId": "A"
         }
       ],
@@ -376,24 +381,47 @@
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "#3d434b",
                 "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 5
-              },
-              {
-                "color": "#175d8d",
-                "value": 8
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "RTK Fixed": {
+                  "text": "RTK FIXED",
+                  "color": "#175d8d",
+                  "index": 0
+                },
+                "RTK Float": {
+                  "text": "RTK FLOAT",
+                  "color": "yellow",
+                  "index": 1
+                },
+                "3D": {
+                  "text": "3D",
+                  "color": "yellow",
+                  "index": 2
+                },
+                "2D": {
+                  "text": "2D",
+                  "color": "orange",
+                  "index": 3
+                },
+                "None": {
+                  "text": "NO FIX",
+                  "color": "red",
+                  "index": 4
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -401,9 +429,10 @@
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "/.*/"
         },
-        "textMode": "auto",
+        "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
         "justifyMode": "auto",
@@ -446,7 +475,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -583,14 +612,19 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "unit": "percent",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "#3d434b",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -654,7 +688,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -728,7 +762,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -802,7 +836,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -877,8 +911,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "#3d434b",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -942,7 +980,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -1157,7 +1195,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -1282,7 +1320,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -1356,7 +1394,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -1430,7 +1468,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -1509,7 +1547,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]

@@ -238,7 +238,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -317,7 +317,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -630,8 +630,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "#3d434b",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -712,8 +716,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "#3d434b",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -897,8 +905,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "#3d434b",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -965,8 +977,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "#3d434b",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -1430,7 +1446,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]

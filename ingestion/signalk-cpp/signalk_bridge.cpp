@@ -45,10 +45,8 @@ struct Mapping {
 
 const std::map<std::string, Mapping> kPaths = {
     // Navigation (FR-2)
-    {"navigation.speedOverGround",
-     {"nav", "sog", [](double v) { return v * MS_TO_KN; }}},
-    {"navigation.courseOverGroundTrue",
-     {"nav", "cog", [](double v) { return v * RAD; }}},
+    // navigation.speedOverGround / courseOverGroundTrue: handled in
+    // handle_value (COG is suppressed below kCogMinSogKn).
     {"navigation.headingTrue",
      {"nav", "heading", [](double v) { return v * RAD; }}},
     {"navigation.gnss.satellites",
@@ -132,6 +130,9 @@ public:
     }
 
 private:
+    static constexpr double kCogMinSogKn = 0.5;   // COG published above this SOG
+    double last_sog_kn_ = 0.0;
+
     static double mono_s() {
         using namespace std::chrono;
         return duration<double>(steady_clock::now().time_since_epoch()).count();
@@ -152,6 +153,16 @@ private:
                 writer_.field("nav", "", "yaw", value["yaw"].get<double>() * RAD);
         } else if (path == "navigation.gnss.type" && value.is_string()) {
             writer_.str_field("nav", "", "fix_type", value.get<std::string>());
+        } else if (path == "navigation.speedOverGround" && value.is_number()) {
+            last_sog_kn_ = value.get<double>() * MS_TO_KN;
+            writer_.field("nav", "", "sog", last_sog_kn_);
+        } else if (path == "navigation.courseOverGroundTrue" && value.is_number()) {
+            // COG is undefined at rest: an INS derives it from near-zero
+            // velocities and it swings through 360 deg alongside. Written
+            // only under way so the compass needle and trend show a real
+            // course; the heading tiles are unaffected.
+            if (last_sog_kn_ >= kCogMinSogKn)
+                writer_.field("nav", "", "cog", value.get<double>() * RAD);
         } else if (path == "navigation.vectornav.insMode" && value.is_number()) {
             // VectorNav INS (signalk-vectornav-vnins plugin): 0 not tracking,
             // 1 aligning, 2 tracking, 3 GNSS lost (dead reckoning). Mapped to

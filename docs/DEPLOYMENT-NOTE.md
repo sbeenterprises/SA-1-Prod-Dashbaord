@@ -25,7 +25,7 @@ mission variable map, derived state machine and design rationale).
  │                                                              │ ▼
  │    InfluxDB 2.x (:8086)  buckets: telemetry / events /       │
  │                          telemetry_1m (downsampled)          │
- │    Grafana (:GRAFANA_PORT) 13 dashboards + 18 alert rules    │
+ │    Grafana (:GRAFANA_PORT) 13 dashboards + 20 alert rules    │
  └──────────────────────────────────────────────────────────────┘
       Operator access: http://<obc>:<GRAFANA_PORT> (3001 vessel / 3300 sim)
 ```
@@ -142,7 +142,7 @@ repo to the OBC, re\-run install.sh.
 | 5 | Tab navigation | open any dashboard; click the link chips across the top | one click switches dashboard; time range and vessel selection carry over |
 | 6 | Theme toggle | click the "☀ Light" / "☾ Dark" chips at the end of the tab row | dashboard re\-opens in that theme, time range kept |
 | 7 | Tablet check | open any dashboard on a tablet (landscape) | grid scales; below \~768 px panels stack single\-column |
-| 8 | Alert rules loaded | Grafana → Alerting → Alert rules | 18 rules, folder "Swift Autonomous Dashboard" |
+| 8 | Alert rules loaded | Grafana → Alerting → Alert rules | 20 rules, folder "Swift Autonomous Dashboard" |
 | 9 | Stop simulator | `sudo systemctl stop usv-simulator` | required before real ops |
 | 10 | MOOS feed | launch mission with grafana\_bridge; watch Autopilot dashboard | desired/actual heading move |
 | 10a | Readiness evaluation | Readiness dashboard within 15 s of the community start | 16 rows with evidence; "MOOS apps N / N running"; `readiness_profile = vessel` in the ProcessConfig on a real vessel (missing sensors FAIL) |

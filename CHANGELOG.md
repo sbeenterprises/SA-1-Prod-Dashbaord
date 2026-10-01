@@ -5,6 +5,41 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.6] - 2026-10-01 — dockside review of all 13 dashboards on usv-722
+
+Walk-through of every dashboard with the boat alongside (engine, CAN,
+AIS, radar and cameras off; INS position only).
+
+### Fixed
+- "No data" never looks like a verdict: stat tiles driven by value
+  mappings get a neutral base colour, and numeric tiles with a red or
+  OK base (Satellites, HDOP, Dist to WP, CPA, TCPA, Closest Range,
+  Min CPA, Battery SOC, Fuel, MOOS Rate, Frame Rate) paint grey when
+  empty while real values keep their colours (`neutral_base`).
+- Analog meters (tachometer, coolant, oil, fuel, battery, SOC, rudder,
+  throttle, heading error, speed) show "N/A" with no needle when there
+  is no sample, instead of resting at the gauge minimum (0 rpm, 40 C,
+  10.00 V, -45 deg off course).
+- WP Bearing reads "no route" for the bridge's -1 sentinel.
+- Satellites / HDOP tiles read N/A on an INS feed; the Alarms "GPS
+  Sats" tile is now "GPS Fix" (fix type), which INS and GNSS both fill.
+- Services (systemd) table: the Flux result is ungrouped so unit, state
+  and detail arrive as columns (Grafana showed one raw labelled cell).
+- Bandwidth chart shows physical interfaces only (docker/bridge/veth/
+  tunnel interfaces excluded).
+- COG is written only above 0.5 kn: at rest an INS derives it from
+  near-zero velocities and the compass/trend swung through 360 deg.
+
+### Changed
+- Alert rules (20): "GPS Signal Loss" now means no position for two
+  minutes from any source (no-data alerting on the vessel profile);
+  "GPS Fix Degraded" (satellites < 4, warning) and "INS Not Tracking"
+  (VectorNav mode other than 2, critical) added. "Engine Over
+  Temperature" and "Low Battery Voltage" no longer alert on missing data
+  in either profile: alongside with the engine off they fired for hours;
+  the Readiness dashboard reports silent sensors instead.
+- Simulator writes `nav.ins_mode = 2`.
+
 ## [1.2.5] - 2026-10-01 — GPU probe hang
 
 Found on usv-722: `usv_gpu_probe` never returned. It ran `timeout` as the

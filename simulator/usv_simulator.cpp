@@ -412,6 +412,7 @@ int main() {
         tel.field("nav", "", "yaw", heading);
         tel.field("nav", "", "satellites", std::floor(uni(9, 15)));
         tel.field("nav", "", "hdop", uni(0.7, 1.4));
+        tel.field("nav", "", "ins_mode", 2.0);   // INS tracking (VectorNav hulls)
         tel.str_field("nav", "", "fix_type",
                       uni(0, 1) > 0.05 ? "RTK Fixed" : "3D");
         tel.field("nav", "", "cross_track_error",

@@ -267,6 +267,18 @@ def _is_string_query(query):
     return bool(fields) and all(f in STRING_FIELDS for f in fields)
 
 
+NEUTRAL = "#3d434b"   # "no data" / idle / none: never a verdict colour
+
+
+def neutral_base(thresholds, floor=0):
+    """Thresholds whose base step (what Grafana paints when there is NO
+    data) is neutral grey, with the original base colour starting at
+    `floor` instead. A tile with no data then reads grey, not red or OK,
+    while every real value keeps its colour. Only for values >= floor."""
+    base, *rest = thresholds
+    return [(None, NEUTRAL), (floor, base[1])] + rest
+
+
 def stat(title, query, x, y, w=4, h=4, unit=None, thresholds=None,
          mappings=None, text_mode="auto", decimals=None,
          color_mode="value", graph_mode="none", string_value=False,
@@ -274,7 +286,11 @@ def stat(title, query, x, y, w=4, h=4, unit=None, thresholds=None,
     """color_mode='background' renders a solid status tile (ops wall look);
     graph_mode='area' adds a trend sparkline behind numeric values;
     no_value replaces Grafana's "No data" (e.g. "N/A" for hardware that is
-    not fitted on this vessel)."""
+    not fitted on this vessel). A tile driven by value mappings gets a
+    neutral base colour: mappings colour the known states, and "No data"
+    must not look like a healthy state."""
+    if thresholds is None and mappings:
+        thresholds = [(None, NEUTRAL)]
     reduce_opts = {"calcs": ["lastNotNull"]}
     is_str = string_value or _is_string_query(query)
     if is_str:
@@ -444,7 +460,8 @@ def meter_js(min_, max_, unit, zones=None, decimals=0, split=6, sub="",
                   else f"(x) => x.toFixed({decimals}) + ' {unit}'")
     return ECH_PRELUDE + f"""\
 let v = val();
-if (v === null || isNaN(v)) {{ v = {min_}; }}
+const nodata = (v === null || isNaN(v));
+if (nodata) {{ v = {min_}; }}
 v = Math.max({min_}, Math.min({max_}, v));
 return {{
   series: [{{
@@ -458,18 +475,18 @@ return {{
     axisTick: {{ length: 6, distance: -6, splitNumber: 5,
                 lineStyle: {{ color: C.tick, width: 1 }} }},
     axisLabel: {{ distance: 15, color: C.label, fontSize: 10{label_fmt} }},
-    pointer: {{ width: 4, length: '62%',
+    pointer: {{ show: !nodata, width: 4, length: '62%',
                itemStyle: {{ color: C.needle,
                             shadowColor: 'rgba(0,0,0,0.45)',
                             shadowBlur: 6, shadowOffsetY: 2 }} }},
-    anchor: {{ show: true, size: 10, showAbove: true,
+    anchor: {{ show: !nodata, size: 10, showAbove: true,
               itemStyle: {{ color: C.pivot, borderColor: C.needle,
                            borderWidth: 2 }} }},
     title: {{ show: true, offsetCenter: [0, '92%'], color: C.sub,
              fontSize: 10 }},
     detail: {{ valueAnimation: true, color: C.text, fontSize: 17,
               fontWeight: 600, offsetCenter: [0, '60%'],
-              formatter: {detail_fmt} }},
+              formatter: nodata ? (() => 'N/A') : ({detail_fmt}) }},
     data: [{{ value: v, name: '{sub}' }}],
   }}],
 }};
@@ -923,9 +940,10 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
     stat("GPS Fix", last_str("nav", "fix_type"), 14, 6, 5, 3,
          text_mode="value", color_mode="background",
          mappings=gps_fix_mappings),
+    # Satellites / HDOP are N/A on an INS feed (VectorNav publishes neither).
     stat("Satellites", flux("nav", "satellites", last=True), 19, 6, 5, 3,
-         decimals=0, thresholds=[(None, "red"), (5, "yellow"), (8, TILE_OK)],
-         color_mode="background"),
+         decimals=0, thresholds=neutral_base([(None, "red"), (5, "yellow"), (8, TILE_OK)]),
+         color_mode="background", no_value="N/A"),
     stat("Latitude", flux("nav", "lat", last=True), 14, 9, 5, 4, decimals=6),
     stat("Longitude", flux("nav", "lon", last=True), 19, 9, 5, 4, decimals=6),
     # KPI strip: 8 equal tiles.
@@ -934,14 +952,18 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
     stat("COG", flux("nav", "cog", last=True), 3, 13, 3, 3,
          unit="degree", decimals=0),
     stat("WP Bearing", flux("traffic", "planned_course", last=True), 6, 13, 3, 3,
-         unit="degree", decimals=0),
+         unit="degree", decimals=0, no_value="no route",
+         mappings=[{"type": "range", "options": {"from": -1.5, "to": -0.5,
+                    "result": {"text": "no route", "color": NEUTRAL, "index": 0}}}],
+         thresholds=[(None, OK)]),
     stat("XTE", flux("nav", "cross_track_error", last=True), 9, 13, 3, 3,
          unit=UNIT_M, decimals=1, graph_mode="area"),
     stat("Dist to WP", flux("mission", "dist_to_waypoint", last=True),
          12, 13, 3, 3, unit=UNIT_M, decimals=0,
-         thresholds=approach_thresholds),
+         thresholds=neutral_base(approach_thresholds), no_value="no route"),
     stat("HDOP", flux("nav", "hdop", last=True), 15, 13, 3, 3, decimals=1,
-         thresholds=[(None, TILE_OK), (2, "yellow"), (5, "red")]),
+         thresholds=neutral_base([(None, TILE_OK), (2, "yellow"), (5, "red")]),
+         no_value="N/A"),
     stat("Depth", flux("nav", "depth", last=True), 18, 13, 3, 3,
          unit=UNIT_M, decimals=1),
     stat("Roll / Pitch", flux("nav", "roll", last=True), 21, 13, 3, 3,
@@ -1491,12 +1513,12 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
          18, 0, 3, 3, unit=UNIT_NM, decimals=2, no_value="none",
          mappings=[{"type": "range", "options": {"from": -1, "to": 0,
                     "result": {"text": "none", "color": "#3d434b", "index": 0}}}],
-         thresholds=[(None, "red"), (0.11, "yellow"), (0.27, OK)]),
+         thresholds=neutral_base([(None, "red"), (0.11, "yellow"), (0.27, OK)])),
     stat("Min CPA", flux("traffic", "min_cpa_m", last=True), 21, 0, 3, 3,
          unit=UNIT_M, decimals=0, no_value="none",
          mappings=[{"type": "range", "options": {"from": -1, "to": -0.5,
                     "result": {"text": "none", "color": "#3d434b", "index": 0}}}],
-         thresholds=[(None, "red"), (500, "yellow"), (1000, OK)]),
+         thresholds=neutral_base([(None, "red"), (500, "yellow"), (1000, OK)])),
     # B — traffic view | highest-risk contact | MOOS action
     (instrument("Traffic View",
                 [target(contacts_query()),
@@ -1509,9 +1531,9 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
     stat("Highest-Risk Contact", worst_contact_query("contact"), 10, 3, 7, 2,
          string_value=True, text_mode="value", no_value="no contacts"),
     kv_tile("CPA", worst_contact_query("cpa_m"), 10, 5, 4, 3, unit=UNIT_M, decimals=0,
-            thresholds=[(None, "red"), (500, "yellow"), (1000, OK)]),
+            thresholds=neutral_base([(None, "red"), (500, "yellow"), (1000, OK)])),
     kv_tile("TCPA", worst_contact_query("tcpa_s"), 14, 5, 3, 3, unit="dtdurations",
-            decimals=0, thresholds=[(None, "red"), (120, "yellow"), (300, OK)],
+            decimals=0, thresholds=neutral_base([(None, "red"), (120, "yellow"), (300, OK)]),
             mappings=[{"type": "value", "options": {
                 "-1": {"text": "OPENING", "color": TILE_OK, "index": 0}}}]),
     kv_tile("Range", worst_contact_query("range_m"), 10, 8, 4, 3, unit=UNIT_M, decimals=0),
@@ -1608,8 +1630,8 @@ DASHBOARDS.append(dashboard("usv-camera", "Cameras", [
          mappings=updown_map("STOPPED", "RECORDING"), text_mode="value",
          color_mode="background"),
     stat("Frame Rate", flux("camera", "fps", last=True), 12, 0, 4, 4,
-         unit="fps" if True else None, decimals=1,
-         thresholds=[(None, "red"), (15, "yellow"), (24, OK)]),
+         unit="fps", decimals=1,
+         thresholds=neutral_base([(None, "red"), (15, "yellow"), (24, OK)])),
     stat("Bitrate", flux("camera", "bitrate_kbps", last=True), 16, 0, 4, 4,
          unit="Kbits", decimals=0),
     stat("Camera Temp", flux("camera", "temp_c", last=True), 20, 0, 4, 4,
@@ -1637,7 +1659,9 @@ TELE_SELECT = {
              '  |> filter(fn: (r) => r._value > -50.0 and r._value < 150.0)\n'),
     "disk": '  |> filter(fn: (r) => r.path == "/")\n',
     "diskio": '  |> filter(fn: (r) => r.name !~ /^(loop|dm-|sr)/)\n',
-    "net": '  |> filter(fn: (r) => r.interface != "lo")\n',
+    # Physical links only: docker/bridge/veth/tunnel interfaces would
+    # otherwise fill the legend (12+ series on the OBC).
+    "net": '  |> filter(fn: (r) => r.interface !~ /^(lo|docker|br-|veth|virbr|tun|tap|wg)/)\n',
 }
 
 
@@ -1796,7 +1820,10 @@ DASHBOARDS.append(dashboard("usv-system", "System", [
                   '  |> filter(fn: (r) => r._measurement == "systemd_units" '
                   'and r._field == "active_code")\n'
                   '  |> last()\n'
-                  '  |> keep(columns: ["name", "active", "sub", "_value"])\n')],
+                  '  |> group()\n'
+                  '  |> keep(columns: ["name", "active", "sub", "_value"])\n'
+                  '  |> rename(columns: {name: "unit", active: "state", sub: "detail", _value: "code"})\n'
+                  '  |> sort(columns: ["unit"])\n')],
           0, 16, 24, 5, options={"showHeader": True},
           mappings=[{"type": "value", "options": {
               "0": {"text": "active", "color": OK, "index": 0}}},
@@ -1967,18 +1994,19 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms", [
                   '  |> sort(columns: ["Time"], desc: true)\n')],
           12, 0, 12, 8, options={"showHeader": True}),
     stat("Battery SOC", flux("electrical", "soc", last=True), 0, 10, 4, 4,
-         unit="percent", decimals=0,
-         thresholds=[(None, "red"), (25, "yellow"), (50, TILE_OK)], color_mode="background"),
-    stat("GPS Sats", flux("nav", "satellites", last=True), 4, 10, 4, 4,
-         decimals=0, thresholds=[(None, "red"), (5, "yellow"), (8, TILE_OK)], color_mode="background"),
+         unit="percent", decimals=0, no_value="N/A",
+         thresholds=neutral_base([(None, "red"), (25, "yellow"), (50, TILE_OK)]), color_mode="background"),
+    # Fix quality rather than a satellite count: INS feeds report no count.
+    stat("GPS Fix", last_str("nav", "fix_type"), 4, 10, 4, 4,
+         text_mode="value", color_mode="background", mappings=gps_fix_mappings),
     stat("CAN Bus", flux("canbus", "interface_up", last=True), 8, 10, 4, 4,
          mappings=updown_map("FAIL", "OK"), text_mode="value", color_mode="background"),
     stat("Coolant", flux("engine", "coolant_temp", last=True), 12, 10, 4, 4,
          unit="celsius", decimals=0,
          thresholds=[(None, TILE_OK), (95, "yellow"), (105, "red")], color_mode="background"),
     stat("Fuel", flux("engine", "fuel_level", last=True), 16, 10, 4, 4,
-         unit="percent", decimals=0,
-         thresholds=[(None, "red"), (15, "yellow"), (30, TILE_OK)], color_mode="background"),
+         unit="percent", decimals=0, no_value="N/A",
+         thresholds=neutral_base([(None, "red"), (15, "yellow"), (30, TILE_OK)]), color_mode="background"),
     stat("Radar", flux("radar", "online", last=True), 20, 10, 4, 4,
          mappings=updown_map(), text_mode="value", color_mode="background"),
     stat("Camera", flux("camera", "connected", last=True), 0, 14, 4, 4,
@@ -1986,7 +2014,7 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms", [
     stat("Signal K", flux("comms", "signalk_ws_up", last=True), 4, 14, 4, 4,
          mappings=updown_map("DISCONNECTED", "CONNECTED"), text_mode="value", color_mode="background"),
     stat("MOOS Rate", flux("comms", "moos_msg_rate", last=True), 8, 14, 4, 4,
-         decimals=0, thresholds=[(None, "red"), (1, "yellow"), (10, TILE_OK)], color_mode="background"),
+         decimals=0, thresholds=neutral_base([(None, "red"), (1, "yellow"), (10, TILE_OK)]), color_mode="background"),
     stat("Comms Link", tele_last("ping", "result_code", extra=PING_INTERNET),
          12, 14, 4, 4, text_mode="value", color_mode="background",
          mappings=[{"type": "value", "options": {

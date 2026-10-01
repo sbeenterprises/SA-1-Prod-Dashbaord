@@ -63,7 +63,7 @@ groups:
     title: Low Battery Voltage
     condition: C
     for: 1m
-    noDataState: Alerting
+    noDataState: OK
     execErrState: Alerting
     labels:
       severity: critical
@@ -123,6 +123,60 @@ groups:
       severity: critical
       system: usv
     annotations:
+      summary: "No position for 2 minutes \u2014 GPS / INS feed lost."
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"nav\" and r._field == \"lat\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - -999
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-gps-degraded
+    title: GPS Fix Degraded
+    condition: C
+    for: 30s
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: warning
+      system: usv
+    annotations:
       summary: "GPS satellites below 4 \u2014 position solution unreliable."
     data:
     - refId: A
@@ -158,6 +212,61 @@ groups:
             type: lt
             params:
             - 4
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-ins-not-tracking
+    title: INS Not Tracking
+    condition: C
+    for: 30s
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: "INS not in tracking mode (aligning or GNSS lost) \u2014 position is dead reckoning."
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"nav\" and r._field == \"ins_mode\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: outside_range
+            params:
+            - 1.5
+            - 2.5
           operator:
             type: and
           query:
@@ -225,7 +334,7 @@ groups:
     title: Engine Over Temperature
     condition: C
     for: 1m
-    noDataState: Alerting
+    noDataState: OK
     execErrState: Alerting
     labels:
       severity: critical

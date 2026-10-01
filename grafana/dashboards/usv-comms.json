@@ -238,7 +238,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -320,7 +320,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -401,7 +401,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -482,7 +482,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -818,7 +818,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"net\" and r._field == \"bytes_recv\")\n  |> filter(fn: (r) => r.interface != \"lo\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"net\" and r._field == \"bytes_recv\")\n  |> filter(fn: (r) => r.interface !~ /^(lo|docker|br-|veth|virbr|tun|tap|wg)/)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n",
           "refId": "A",
           "alias": "down"
         },
@@ -827,7 +827,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"net\" and r._field == \"bytes_sent\")\n  |> filter(fn: (r) => r.interface != \"lo\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"net\" and r._field == \"bytes_sent\")\n  |> filter(fn: (r) => r.interface !~ /^(lo|docker|br-|veth|virbr|tun|tap|wg)/)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n",
           "refId": "B",
           "alias": "up"
         }

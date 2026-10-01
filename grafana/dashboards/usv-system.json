@@ -545,7 +545,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -626,7 +626,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -707,7 +707,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#00bcd4",
+                "color": "#3d434b",
                 "value": null
               }
             ]
@@ -1336,7 +1336,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"systemd_units\" and r._field == \"active_code\")\n  |> last()\n  |> keep(columns: [\"name\", \"active\", \"sub\", \"_value\"])\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"systemd_units\" and r._field == \"active_code\")\n  |> last()\n  |> group()\n  |> keep(columns: [\"name\", \"active\", \"sub\", \"_value\"])\n  |> rename(columns: {name: \"unit\", active: \"state\", sub: \"detail\", _value: \"code\"})\n  |> sort(columns: [\"unit\"])\n",
           "refId": "A"
         }
       ],

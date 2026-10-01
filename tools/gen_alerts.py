@@ -10,7 +10,11 @@ Profiles decide what "no data" means for the sensor-backed rules:
   sim     (default) the simulation community has no CAN bus, engine, GPS
           quality, battery or fuel sensors, so those rules must NOT page on
           missing data; they still fire if a value crosses the threshold.
-  vessel  sensor rules page on missing data (a silent sensor is a fault).
+  vessel  the position and CAN rules page on missing data (no position for
+          two minutes, CAN interface gone). Engine and battery rules do
+          not: a boat alongside with the engine off would page for hours
+          (seen on usv-722); the Readiness dashboard reports those silent
+          sensors instead.
 """
 import os
 import sys
@@ -32,7 +36,8 @@ def q(measurement, field, bucket="telemetry", extra=""):
 
 def rule(uid, title, query, op, threshold, severity, summary,
          for_="1m", no_data="Alerting"):
-    """op: 'lt' or 'gt' — alert when last value is < / > threshold."""
+    """op: 'lt' or 'gt' (threshold is a number) or 'outside_range'
+    (threshold is [low, high]) — alert when the last value matches."""
     return {
         "uid": uid,
         "title": title,
@@ -62,7 +67,7 @@ def rule(uid, title, query, op, threshold, severity, summary,
                 "model": {"refId": "C", "type": "threshold", "expression": "B",
                           "datasource": {"type": "__expr__", "uid": "__expr__"},
                           "conditions": [{
-                              "evaluator": {"type": op, "params": [threshold]},
+                              "evaluator": {"type": op, "params": (list(threshold) if isinstance(threshold, (list, tuple)) else [threshold])},
                               "operator": {"type": "and"},
                               "query": {"params": ["C"]},
                               "reducer": {"type": "last", "params": []},
@@ -84,17 +89,32 @@ RULES = [
          no_data="OK"),
     rule("usv-low-batt-voltage", "Low Battery Voltage",
          q("electrical", "battery_voltage"), "lt", 11.8, "critical",
-         "Battery voltage below 11.8 V."),
+         "Battery voltage below 11.8 V.", no_data="OK"),
+    # Position: no nav.lat written for two minutes (any source: Signal K
+    # position or MOOS NAV_LAT) means the boat has no fix. The value test
+    # never fires on its own; the rule exists for its no-data state, which
+    # the vessel profile sets to Alerting.
     rule("usv-gps-loss", "GPS Signal Loss",
-         q("nav", "satellites"), "lt", 4, "critical",
-         "GPS satellites below 4 — position solution unreliable.",
+         q("nav", "lat"), "lt", -999, "critical",
+         "No position for 2 minutes — GPS / INS feed lost.",
          for_="30s"),
+    # Fix quality, where the receiver reports it: satellite count (GNSS
+    # receivers) and INS mode (VectorNav: 0 not tracking, 1 aligning,
+    # 2 tracking, 3 GNSS lost). Missing data is not a fault here.
+    rule("usv-gps-degraded", "GPS Fix Degraded",
+         q("nav", "satellites"), "lt", 4, "warning",
+         "GPS satellites below 4 — position solution unreliable.",
+         for_="30s", no_data="OK"),
+    rule("usv-ins-not-tracking", "INS Not Tracking",
+         q("nav", "ins_mode"), "outside_range", [1.5, 2.5], "critical",
+         "INS not in tracking mode (aligning or GNSS lost) — position is dead reckoning.",
+         for_="30s", no_data="OK"),
     rule("usv-can-failure", "CAN Bus Failure",
          q("canbus", "interface_up"), "lt", 1, "critical",
          "CAN interface down or no frames received.", for_="30s"),
     rule("usv-engine-overtemp", "Engine Over Temperature",
          q("engine", "coolant_temp"), "gt", 105, "critical",
-         "Engine coolant temperature above 105 °C."),
+         "Engine coolant temperature above 105 °C.", no_data="OK"),
     rule("usv-low-fuel", "Low Fuel Level",
          q("engine", "fuel_level"), "lt", 15, "warning",
          "Fuel level below 15%.", no_data="OK"),
@@ -157,8 +177,8 @@ RULES = [
 
 # Rules whose data source is a physical sensor that the simulation does not
 # have. In the "vessel" profile their noDataState becomes "Alerting".
-SENSOR_RULES = {"usv-low-batt-voltage", "usv-gps-loss", "usv-can-failure",
-                "usv-engine-overtemp"}
+# Rules whose no-data state follows the profile (Alerting on a vessel).
+SENSOR_RULES = {"usv-gps-loss", "usv-can-failure"}
 
 
 def apply_profile(rules, profile):
