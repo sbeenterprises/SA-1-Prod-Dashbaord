@@ -1047,16 +1047,29 @@ private:
     // items ticked since disappear; rows are re-emitted every readiness
     // period so the table window stays fresh.
     void WriteChecklist() {
-        if (!have_checklist_) return;
+        if (!have_checklist_) {
+            // No console checklist on this vessel: one explanatory row so
+            // the Readiness checklist panel is not an empty placeholder.
+            // Rewritten every period: the panel reads the last 60 s only.
+            if (!readiness_cfg_.console_checklist) {
+                if (checklist_rows_written_ != 1) {
+                    telemetry_->erase("_measurement=\"checklist\"");
+                    checklist_rows_written_ = 1;
+                }
+                telemetry_->field("checklist", "seq=000", "seq", 0.0);
+                telemetry_->str_field("checklist", "seq=000", "item", "Console checklist");
+                telemetry_->str_field("checklist", "seq=000", "description", "not published by this console");
+                telemetry_->str_field("checklist", "seq=000", "state", "N/A");
+            }
+            return;
+        }
         telemetry_->field("mission_state", "", "checklist_done", checklist_.done);
         telemetry_->field("mission_state", "", "checklist_total", checklist_.total);
         telemetry_->str_field("mission_state", "", "checklist_pending",
                               checklist_.pending.empty() ? "-" : checklist_.pending);
         telemetry_->str_field("mission_state", "", "checklist_by",
                               checklist_.by.empty() ? "-" : checklist_.by);
-        auto rows = usv::ChecklistRows(checklist_, readiness_cfg_.checklist_items);
-        if (!readiness_cfg_.console_checklist && rows.empty())
-            rows.push_back({"Console checklist", "not published by this console", "N/A"});
+        const auto rows = usv::ChecklistRows(checklist_, readiness_cfg_.checklist_items);
         if (rows.size() != checklist_rows_written_) {
             telemetry_->erase("_measurement=\"checklist\"");
             checklist_rows_written_ = rows.size();

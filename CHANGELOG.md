@@ -5,6 +5,15 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.8] - 2026-10-01 — N/A tiles, checklist placeholder
+
+### Fixed
+- Background status tiles read "N/A" in their base colour when empty;
+  Grafana's own "No data" placeholder ignored the thresholds and painted
+  Coolant, Radar, Camera and the camera status tiles as healthy.
+- With `console_checklist = false` the Readiness checklist panel shows
+  one "not published by this console" line instead of the placeholder.
+
 ## [1.2.7] - 2026-10-01 — console-fed rows optional
 
 usv-722 has no ENC chart system and its console (Swiftships UI) does not

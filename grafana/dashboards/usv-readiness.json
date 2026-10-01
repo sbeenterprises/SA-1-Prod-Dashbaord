@@ -1073,6 +1073,11 @@
                         "text": "UNKNOWN",
                         "color": "#6e7680",
                         "index": 4
+                      },
+                      "N/A": {
+                        "text": "N/A",
+                        "color": "#3d434b",
+                        "index": 5
                       }
                     }
                   }

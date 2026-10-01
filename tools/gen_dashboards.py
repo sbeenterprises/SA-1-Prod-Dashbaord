@@ -1279,7 +1279,7 @@ status_mappings = [{"type": "value", "options": {
     "3": {"text": "CONSOLE", "color": "#6e7680", "index": 3}}}]
 checklist_state_mappings = state_map([("COMPLETE", TILE_OK), ("OPEN", "orange"),
                                       ("TICKED", "#4d545c"), ("PENDING", "orange"),
-                                      ("UNKNOWN", "#6e7680")])
+                                      ("UNKNOWN", "#6e7680"), ("N/A", "#3d434b")])
 ready_mappings = value_color_map([(0, "NOT READY", "red"), (1, "READY", TILE_OK)])
 
 
