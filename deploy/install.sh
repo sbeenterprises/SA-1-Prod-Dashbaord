@@ -281,6 +281,38 @@ else
   printf '\n[dashboards]\ndefault_home_dashboard_path = %s\n' "$HOME_DASH" >> /etc/grafana/grafana.ini
 fi
 
+# ---------------------------------------------------------------- email (SMTP)
+# Alert emails leave the vessel only when Grafana has an SMTP relay. The
+# settings come from SMTP_* in /etc/usv/usv.env and are written as a marked
+# [smtp] block at the end of grafana.ini (Grafana merges a repeated section,
+# later keys win), so the stock file and its comments stay intact. With
+# SMTP_HOST empty the block is removed and only webhook contact points deliver.
+GINI=/etc/grafana/grafana.ini
+sed -i '/^# >>> usv-smtp >>>$/,/^# <<< usv-smtp <<<$/d' "$GINI"
+if [ -n "${SMTP_HOST:-}" ]; then
+  say "Configuring Grafana SMTP (${SMTP_HOST})"
+  {
+    echo '# >>> usv-smtp >>>'
+    echo '[smtp]'
+    echo 'enabled = true'
+    echo "host = ${SMTP_HOST}"
+    echo "user = ${SMTP_USER:-}"
+    echo "password = ${SMTP_PASSWORD:-}"
+    echo "from_address = ${SMTP_FROM_ADDRESS:-sa1-dashboard@localhost}"
+    echo "from_name = ${SMTP_FROM_NAME:-SA-1 Dashboard}"
+    echo "skip_verify = ${SMTP_SKIP_VERIFY:-false}"
+    [ -n "${SMTP_STARTTLS_POLICY:-}" ] && echo "startTLS_policy = ${SMTP_STARTTLS_POLICY}"
+    echo '# <<< usv-smtp <<<'
+  } >> "$GINI"
+  chmod 640 "$GINI"; chown root:grafana "$GINI"
+else
+  say "SMTP_HOST not set: Grafana email delivery stays disabled"
+fi
+if grep -q 'ops@example.com' "$REPO/grafana/provisioning/alerting/contact-points.yml"; then
+  echo "WARNING: grafana/provisioning/alerting/contact-points.yml still has the"
+  echo "         placeholder address ops@example.com. Alerts will go nowhere."
+fi
+
 # Branding (logo, favicon, login page, title): deploy/brand.sh. Grafana OSS
 # has no white-label config, so it overwrites shipped assets; an apt
 # upgrade of grafana restores them until this installer is re-run.

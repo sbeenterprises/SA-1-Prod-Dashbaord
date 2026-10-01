@@ -5,6 +5,28 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-01 — production profile
+
+First release intended for a real vessel OBC. Everything that shipped in a
+simulation configuration now defaults to the vessel profile.
+
+### Changed
+- Alert rules are generated with `--profile vessel`: Low Battery Voltage,
+  GPS Loss, CAN Bus Failure and Engine Overtemperature now alert on no
+  data (a silent sensor is a fault). Simulation hosts regenerate with
+  `python3 tools/gen_alerts.py --profile sim` before installing.
+- `example.moos` sets `readiness_profile = vessel`.
+- `ECHARTS_PANEL_VERSION` is pinned (7.2.5) in `usv.env.example` for
+  reproducible installs.
+
+### Added
+- Grafana SMTP from `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`,
+  `SMTP_FROM_ADDRESS`, `SMTP_FROM_NAME` (optional `SMTP_STARTTLS_POLICY`,
+  `SMTP_SKIP_VERIFY`) in usv.env; the installer writes a marked `[smtp]`
+  block into grafana.ini and removes it when `SMTP_HOST` is empty.
+- The installer warns when contact-points.yml still carries the
+  placeholder address `ops@example.com`.
+
 ### Fixed
 - Installer opens `GRAFANA_PORT` in ufw when ufw is active. Found on usv01:
   Grafana answered on localhost, but ufw dropped port 3300 from the LAN, so

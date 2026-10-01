@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate Grafana unified-alerting provisioning (FR-11).
 
-Run:  python3 tools/gen_alerts.py [--profile sim|vessel]
+Run:  python3 tools/gen_alerts.py [--profile sim|vessel]   (committed: vessel)
 Output: grafana/provisioning/alerting/alerts.yml
 
 Each rule: Flux query (A) -> reduce last (B) -> threshold (C).

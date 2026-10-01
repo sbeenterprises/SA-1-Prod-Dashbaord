@@ -45,8 +45,9 @@ ProcessConfig = grafana_bridge
                                // (/signalk/v2 or v1/api/resources/routes/<id>);
                                // leave empty to disable
   // signalk_token = <jwt>     // only if Signal K security denies anonymous reads
-  readiness_profile = sim      // pre-departure checks: "sim" = a check with no
-                               // sensor data reads N/A; "vessel" = it FAILS
+  readiness_profile = vessel   // pre-departure checks: "vessel" = a check with no
+                               // sensor data FAILS; "sim" = it reads N/A
+                               // (simulation hosts only, never on a vessel)
   readiness_period_s = 5       // evaluation / write period
   // required_apps = pHelmIvP,pMarinePID,iWebSocket   // default: the Antler block
   // optional_apps = pMarineViewer,uMACView,uPlotViewer // reported, never a fault

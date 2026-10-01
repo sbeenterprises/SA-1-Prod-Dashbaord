@@ -63,7 +63,7 @@ groups:
     title: Low Battery Voltage
     condition: C
     for: 1m
-    noDataState: OK
+    noDataState: Alerting
     execErrState: Alerting
     labels:
       severity: critical
@@ -117,7 +117,7 @@ groups:
     title: GPS Signal Loss
     condition: C
     for: 30s
-    noDataState: OK
+    noDataState: Alerting
     execErrState: Alerting
     labels:
       severity: critical
@@ -171,7 +171,7 @@ groups:
     title: CAN Bus Failure
     condition: C
     for: 30s
-    noDataState: OK
+    noDataState: Alerting
     execErrState: Alerting
     labels:
       severity: critical
@@ -225,7 +225,7 @@ groups:
     title: Engine Over Temperature
     condition: C
     for: 1m
-    noDataState: OK
+    noDataState: Alerting
     execErrState: Alerting
     labels:
       severity: critical
