@@ -1751,12 +1751,13 @@ def service_tile(title, service, x):
 
 # Single screen: 8 equal tiles (CPU / GPU / RAM / Disk gauges, CPU temp,
 # InfluxDB / Signal K / MOOS reachability), six trend charts, service table. GPU utilisation comes
-# from Telegraf's nvidia_smi input (see telegraf.conf); the tile reads
+# from Telegraf's "gpu" measurement (telegraf.conf: intel_gpu_top probe for
+# Intel Arc/Xe, nvidia_smi with name_override for NVIDIA); the tile reads
 # "No data" on hosts without a supported GPU.
 DASHBOARDS.append(dashboard("usv-system", "System", [
     gauge("CPU", tele_last("cpu", "usage_user"), 0, 0, 3, 4,
           thresholds=[(None, OK), (70, "yellow"), (90, "red")]),
-    gauge("GPU", tele_last("nvidia_smi", "utilization_gpu"), 3, 0, 3, 4,
+    gauge("GPU", tele_last("gpu", "utilization_gpu"), 3, 0, 3, 4,
           thresholds=[(None, OK), (70, "yellow"), (90, "red")]),
     gauge("RAM", tele_last("mem", "used_percent"), 6, 0, 3, 4,
           thresholds=[(None, OK), (75, "yellow"), (90, "red")]),
@@ -1770,8 +1771,8 @@ DASHBOARDS.append(dashboard("usv-system", "System", [
     ts("CPU", [target(tele("cpu", "usage_user"), "user"),
                target(tele("cpu", "usage_system"), "system", ref="B")],
        0, 4, 8, 6, unit="percent", min_=0, max_=100),
-    ts("GPU", [target(tele("nvidia_smi", "utilization_gpu"), "util %"),
-               target(tele("nvidia_smi", "temperature_gpu"), "temp °C", ref="B")],
+    ts("GPU", [target(tele("gpu", "utilization_gpu"), "util %"),
+               target(tele("gpu", "temperature_gpu"), "temp °C", ref="B")],
        8, 4, 8, 6, unit="percent", min_=0, max_=100,
        overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
                    "properties": [{"id": "unit", "value": "celsius"},

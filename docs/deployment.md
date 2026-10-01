@@ -196,10 +196,17 @@ traveled and radar ranges. Grafana's auto-scaling length unit is not used,
 so no value ever turns into km.
 
 ## GPU tile (System dashboard)
-The GPU tile and trend read Telegraf's `nvidia_smi` input. It is shipped
-commented out in `telegraf/telegraf.conf`; on a host with an NVIDIA GPU
-and `nvidia-smi` on the PATH uncomment it and restart telegraf. Hosts
-without a supported GPU show "No data" there.
+The GPU tile and trend read the Telegraf measurement `gpu`
+(`utilization_gpu`, plus `temperature_gpu` where the vendor reports it).
+Intel Arc / Xe / iGPU: the installer puts `usv_gpu_probe` in
+/usr/local/bin and, when `intel_gpu_top` is installed
+(`apt install intel-gpu-tools`), a sudoers rule letting the telegraf user
+run that one binary; the probe reports the busiest engine as utilisation
+plus render/video busy, frequency and power every 10 s. NVIDIA: uncomment
+the `nvidia_smi` input in `telegraf/telegraf.conf` (it carries
+`name_override = "gpu"`) and re-run the installer. Hosts without a
+supported GPU show "No data" there. Check by hand:
+`sudo -u telegraf /usr/local/bin/usv_gpu_probe`.
 
 ## Analog instruments
 The Navigation, Autopilot and Vessel Health dashboards carry an analog

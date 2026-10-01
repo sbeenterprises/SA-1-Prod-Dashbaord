@@ -129,7 +129,7 @@ have = {tuple(l.split()) for l in open(produced_file) if l.strip()}
 src = open(f"{repo}/ingestion/moos-cpp/moos_bridge.cpp").read()
 moos = set(re.findall(r'\{"(\w+)",\s*"(\w+)"(?:,|\})', src))
 moos |= set(re.findall(r'(?:str_)?field\("(\w+)",\s*[^,]+,\s*"(\w+)"', src))
-external = {"cpu","mem","disk","diskio","net","temp","system","nvidia_smi","ping","net_response","systemd_units","canbus_pgn"}
+external = {"cpu","mem","disk","diskio","net","temp","system","gpu","ping","net_response","systemd_units","canbus_pgn"}
 missing = sorted((m,f) for m,f in want if m not in external and (m,f) not in have and (m,f) not in moos)
 print(f"  dashboard pairs: {len(want)} | simulator emits: {len(have)} | moos bridge maps: {len(moos)} | telegraf-sourced: skipped")
 if missing:

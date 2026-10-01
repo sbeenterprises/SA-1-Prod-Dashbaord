@@ -5,6 +5,25 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-10-01 — Intel Arc GPU on the System dashboard
+
+usv-722 carries an Intel Arc Pro A60 (i915); the GPU tile only knew
+nvidia_smi.
+
+### Added
+- `deploy/usv_gpu_probe` (installed to /usr/local/bin): Telegraf exec
+  probe that samples `intel_gpu_top -J` for 2.5 s and writes measurement
+  `gpu` (utilization_gpu = busiest engine, render_busy, video_busy,
+  frequency_mhz, power_w, rc6_pct). Prints nothing without an Intel GPU.
+- The installer writes `/etc/sudoers.d/usv-telegraf-gpu` (telegraf may
+  run intel_gpu_top as root, that binary only) when intel_gpu_top is
+  installed, validated with visudo; removed otherwise.
+
+### Changed
+- GPU tile and trend read measurement `gpu`; the nvidia_smi input (still
+  commented out) carries `name_override = "gpu"` so NVIDIA hosts write
+  the same series. Smoke test treats `gpu` as Telegraf-sourced.
+
 ## [1.2.3] - 2026-10-01 — System tiles on real hardware, Starlink probe
 
 Found on usv-722 (OnLogic K800): the System dashboard's CPU Temp tile

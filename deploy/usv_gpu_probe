@@ -1,0 +1,48 @@
+#!/bin/bash
+# Telegraf exec probe: Intel GPU (Arc / Xe / iGPU) utilisation for the System
+# dashboard, as InfluxDB line protocol on stdout (measurement "gpu", the same
+# one Telegraf's nvidia_smi input writes on NVIDIA hosts via name_override).
+#
+#   gpu,vendor=intel utilization_gpu=<max engine busy %>,render_busy=..,
+#       video_busy=..,frequency_mhz=..,power_w=..,rc6_pct=..
+#
+# intel_gpu_top needs perf access, so Telegraf runs it through sudo; the
+# installer writes /etc/sudoers.d/usv-telegraf-gpu (that one binary only).
+# Samples for ~2.5 s and reports the last complete sample (the first one
+# intel_gpu_top prints is a partial period). Prints nothing when no Intel
+# GPU is present, so the tile reads "No data" rather than a wrong value.
+set -u
+IGT=${INTEL_GPU_TOP:-/usr/bin/intel_gpu_top}
+[ -x "$IGT" ] || exit 0
+if [ "$(id -u)" -eq 0 ]; then RUN=""; else RUN="sudo -n"; fi
+OUT=$(timeout -s INT 2.6 $RUN "$IGT" -J -s 1000 2>/dev/null)
+[ -n "$OUT" ] || exit 0
+printf '%s' "$OUT" | python3 -c '
+import json, sys
+txt = sys.stdin.read()
+dec = json.JSONDecoder()
+objs, i = [], 0
+while True:
+    j = txt.find("{", i)
+    if j < 0: break
+    try:
+        obj, end = dec.raw_decode(txt, j)
+    except ValueError:
+        break
+    objs.append(obj); i = end
+if not objs: sys.exit(0)
+s = objs[-1]
+eng = s.get("engines", {})
+def busy(prefix):
+    v = [e.get("busy", 0.0) for k, e in eng.items() if k.startswith(prefix)]
+    return max(v) if v else 0.0
+fields = {
+    "utilization_gpu": max([e.get("busy", 0.0) for e in eng.values()] or [0.0]),
+    "render_busy": busy("Render"),
+    "video_busy": busy("Video"),
+    "frequency_mhz": s.get("frequency", {}).get("actual", 0.0),
+    "power_w": s.get("power", {}).get("GPU", 0.0),
+    "rc6_pct": s.get("rc6", {}).get("value", 0.0),
+}
+print("gpu,vendor=intel " + ",".join(f"{k}={float(v)}" for k, v in fields.items()))
+'

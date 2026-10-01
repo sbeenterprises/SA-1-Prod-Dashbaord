@@ -97,6 +97,23 @@ EOF
 
 # ---------------------------------------------------------------- telegraf
 say "Configuring Telegraf"
+# GPU probe (Intel Arc / Xe via intel_gpu_top). intel_gpu_top needs perf
+# access, so Telegraf gets a sudoers rule for that one binary only.
+install -m 755 "$REPO/deploy/usv_gpu_probe" /usr/local/bin/usv_gpu_probe
+if command -v intel_gpu_top >/dev/null 2>&1; then
+  IGT=$(command -v intel_gpu_top)
+  printf 'telegraf ALL=(root) NOPASSWD: %s\n' "$IGT" > /etc/sudoers.d/usv-telegraf-gpu
+  chmod 440 /etc/sudoers.d/usv-telegraf-gpu
+  if ! visudo -cf /etc/sudoers.d/usv-telegraf-gpu >/dev/null; then
+    rm -f /etc/sudoers.d/usv-telegraf-gpu
+    echo "WARNING: sudoers rule for intel_gpu_top rejected; GPU tile stays empty"
+  else
+    say "GPU probe: intel_gpu_top at $IGT (sudoers rule usv-telegraf-gpu)"
+  fi
+else
+  rm -f /etc/sudoers.d/usv-telegraf-gpu
+  say "GPU probe: intel_gpu_top not installed (apt install intel-gpu-tools for Intel GPUs)"
+fi
 sed -e "s|__INFLUX_TOKEN__|$INFLUX_TOKEN|" \
     -e "s|__INFLUX_ORG__|$INFLUX_ORG|" \
     -e "s|__VESSEL_ID__|$VESSEL_ID|" \
