@@ -234,6 +234,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -492,6 +493,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",

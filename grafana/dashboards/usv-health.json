@@ -901,6 +901,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [

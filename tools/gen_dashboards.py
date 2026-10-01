@@ -291,6 +291,11 @@ def stat(title, query, x, y, w=4, h=4, unit=None, thresholds=None,
     must not look like a healthy state."""
     if thresholds is None and mappings:
         thresholds = [(None, NEUTRAL)]
+    # A solid status tile with nothing to show reads "N/A" in its base
+    # colour; Grafana's own "No data" placeholder ignores the thresholds
+    # and paints the tile as if healthy (seen on usv-722).
+    if no_value is None and color_mode == "background":
+        no_value = "N/A"
     reduce_opts = {"calcs": ["lastNotNull"]}
     is_str = string_value or _is_string_query(query)
     if is_str:
@@ -2003,7 +2008,7 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms", [
          mappings=updown_map("FAIL", "OK"), text_mode="value", color_mode="background"),
     stat("Coolant", flux("engine", "coolant_temp", last=True), 12, 10, 4, 4,
          unit="celsius", decimals=0,
-         thresholds=[(None, TILE_OK), (95, "yellow"), (105, "red")], color_mode="background"),
+         thresholds=neutral_base([(None, TILE_OK), (95, "yellow"), (105, "red")], floor=-50), color_mode="background"),
     stat("Fuel", flux("engine", "fuel_level", last=True), 16, 10, 4, 4,
          unit="percent", decimals=0, no_value="N/A",
          thresholds=neutral_base([(None, "red"), (15, "yellow"), (30, TILE_OK)]), color_mode="background"),

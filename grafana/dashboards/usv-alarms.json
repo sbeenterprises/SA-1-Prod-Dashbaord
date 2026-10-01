@@ -381,6 +381,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -471,6 +472,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -545,14 +547,19 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "unit": "celsius",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "#175d8d",
+                "color": "#3d434b",
                 "value": null
+              },
+              {
+                "color": "#175d8d",
+                "value": -50
               },
               {
                 "color": "yellow",
@@ -684,6 +691,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -758,6 +766,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -832,6 +841,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -906,6 +916,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
@@ -976,6 +987,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1057,6 +1069,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "unit": "ms",
           "decimals": 0,
           "thresholds": {
@@ -1124,6 +1137,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "unit": "percent",
           "decimals": 1,
           "thresholds": {
@@ -1191,6 +1205,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1316,6 +1331,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1390,6 +1406,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1464,6 +1481,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1543,6 +1561,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1617,6 +1636,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
