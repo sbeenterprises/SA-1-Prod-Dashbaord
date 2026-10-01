@@ -624,6 +624,23 @@ static void test_readiness() {
         CHECK(find_check(EvaluateReadiness(g, now, true), "gps").status == READY_FAIL);
     }
 
+    // Vessels without ENC / without a console checklist: N/A, not CONSOLE,
+    // and they no longer hold the verdict at NOT READY.
+    {
+        ReadinessConfig nc;
+        nc.enc_fitted = false;
+        nc.console_checklist = false;
+        LatestStore e;
+        auto v2 = EvaluateReadiness(e, now, false, nc);
+        CHECK(find_check(v2, "enc").status == READY_NA);
+        CHECK_EQ_STR(find_check(v2, "enc").evidence, "no ENC chart system on this vessel");
+        CHECK(find_check(v2, "checklist").status == READY_NA);
+        CHECK(SummarizeReadiness(v2).console == 0);
+        auto v3 = EvaluateReadiness(e, now, false);
+        CHECK(find_check(v3, "enc").status == READY_CONSOLE);
+        CHECK(find_check(v3, "checklist").status == READY_CONSOLE);
+    }
+
     // Course planning falls back to the last known route (flagged after 10 min)
     s.put_str("mission_state", "route_name", "Rt WP Alpha", now - 1200);
     CHECK_EQ_STR(find_check(EvaluateReadiness(s, now, true), "course").evidence,

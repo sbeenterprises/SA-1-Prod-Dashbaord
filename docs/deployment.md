@@ -138,7 +138,11 @@ of the mission file's Antler block, checked against DB_CLIENTS) and
 pMarineViewer, uMACView, uPlotViewer: GUI viewers on a headless host);
 `checklist_items = Name:Description|Name2:Description2` names the
 console's checklist items so the short-form CHECKLIST_STATUS still yields
-a full table (every item not pending is shown TICKED). The course row
+a full table (every item not pending is shown TICKED). On a vessel with
+no ENC chart system set `enc_fitted = false`, and where the console does
+not publish CHECKLIST_STATUS set `console_checklist = false`: those rows
+then read N/A and no longer hold the verdict at NOT READY (a CONSOLE row
+blocks READY because it is undecided). The course row
 also reports the route length and fails when any waypoint lies outside
 the operating region; the engine row fails on any active J1939 DTC.
 
@@ -317,7 +321,7 @@ emails while it runs; always stop it before real operations.
 | Alert thresholds | tools/gen_alerts.py --profile sim\|vessel -> regenerate -> re-run install.sh (vessel profile: GPS Signal Loss and CAN Bus Failure also alert on missing data; engine and battery rules never do, the Readiness dashboard reports silent sensors) |
 | Branding text | BRAND_TITLE / BRAND_WELCOME / BRAND_SUBTITLE / BRAND_APP_TITLE in usv.env |
 | Home dashboard | GRAFANA_HOME_DASHBOARD in usv.env (default usv-readiness.json) |
-| Readiness profile, vessel constants, app list, checklist items | grafana_bridge ProcessConfig in the mission file: readiness_profile, readiness_period_s, fuel_tank_l, cruise_fuel_lph, cruise_speed_kn, battery_kwh, cruise_power_kw, endurance_margin, required_apps, optional_apps, checklist_items (see example.moos) |
+| Readiness profile, vessel constants, app list, checklist items | grafana_bridge ProcessConfig in the mission file: readiness_profile, readiness_period_s, fuel_tank_l, cruise_fuel_lph, cruise_speed_kn, battery_kwh, cruise_power_kw, endurance_margin, required_apps, optional_apps, checklist_items, enc_fitted, console_checklist (see example.moos) |
 | Console mirrors | CHECKLIST_STATUS and ENC_STATUS published by the operator console (spec above) |
 | Tab order, tiles, checks table | tools/gen_dashboards.py (TAB_ORDER, usv-readiness section) -> regenerate -> re-run install.sh |
 | Readiness rules | usv::EvaluateReadiness in ingestion/moos-cpp/mission_logic.hpp (unit-tested in mission_logic_test.cpp) |

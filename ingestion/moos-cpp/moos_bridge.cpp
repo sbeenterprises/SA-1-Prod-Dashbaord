@@ -259,6 +259,8 @@ protected:
         //   fuel_tank_l / cruise_fuel_lph / cruise_speed_kn / battery_kwh /
         //   cruise_power_kw / endurance_margin   // Endurance check constants
         //   checklist_items = Name:Description|Name2:Description2   // console
+        //   enc_fitted = false          // no ENC chart system: row reads N/A
+        //   console_checklist = false   // console does not publish CHECKLIST_STATUS: N/A
         //                                   // checklist item list (short-form fallback)
         double hz = 5.0;
         if (m_MissionReader.GetConfigurationParam("max_rate_hz", hz)) {}
@@ -309,6 +311,10 @@ protected:
         for (const auto& a : usv::SplitCsv(v)) readiness_cfg_.optional_apps.push_back(usv::trim(a));
         if (m_MissionReader.GetConfigurationParam("checklist_items", v))
             readiness_cfg_.checklist_items = usv::ParseChecklistItems(v);
+        // Console-fed readiness rows: N/A instead of CONSOLE on vessels
+        // without an ENC chart system / without a published checklist.
+        m_MissionReader.GetConfigurationParam("enc_fitted", readiness_cfg_.enc_fitted);
+        m_MissionReader.GetConfigurationParam("console_checklist", readiness_cfg_.console_checklist);
         // Map overlays need the MOOS local-grid datum (global block of the
         // mission file). Without it no geometry is written, nothing else
         // changes.
@@ -1048,7 +1054,9 @@ private:
                               checklist_.pending.empty() ? "-" : checklist_.pending);
         telemetry_->str_field("mission_state", "", "checklist_by",
                               checklist_.by.empty() ? "-" : checklist_.by);
-        const auto rows = usv::ChecklistRows(checklist_, readiness_cfg_.checklist_items);
+        auto rows = usv::ChecklistRows(checklist_, readiness_cfg_.checklist_items);
+        if (!readiness_cfg_.console_checklist && rows.empty())
+            rows.push_back({"Console checklist", "not published by this console", "N/A"});
         if (rows.size() != checklist_rows_written_) {
             telemetry_->erase("_measurement=\"checklist\"");
             checklist_rows_written_ = rows.size();

@@ -5,6 +5,18 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.7] - 2026-10-01 — console-fed rows optional
+
+usv-722 has no ENC chart system and its console (Swiftships UI) does not
+publish the pre-departure checklist; the two CONSOLE rows held the
+verdict at NOT READY permanently.
+
+### Added
+- grafana_bridge ProcessConfig `enc_fitted = false` (Chart / ENC row N/A)
+  and `console_checklist = false` (Console checklist row N/A, checklist
+  table shows one N/A line). Default true: unchanged behaviour.
+  mission_logic_test: 285 assertions.
+
 ## [1.2.6] - 2026-10-01 — dockside review of all 13 dashboards on usv-722
 
 Walk-through of every dashboard with the boat alongside (engine, CAN,

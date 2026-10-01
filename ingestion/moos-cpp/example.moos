@@ -54,4 +54,6 @@ ProcessConfig = grafana_bridge
   // fuel_tank_l = 200  cruise_fuel_lph = 12  cruise_speed_kn = 6   // Endurance check
   // battery_kwh = 10   cruise_power_kw = 1.5  endurance_margin = 1.5
   // checklist_items = Chart Navigation System:Verify charts are loaded and current|Weather Conditions:Current and forecast weather acceptable
+  // enc_fitted = false          // no ENC chart system: the Chart/ENC row reads N/A
+  // console_checklist = false   // console does not publish CHECKLIST_STATUS: row reads N/A
 }

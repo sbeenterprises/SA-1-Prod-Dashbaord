@@ -971,6 +971,11 @@ struct ReadinessConfig {
     std::vector<std::string> required_apps;   // MOOS apps that must be connected
     std::vector<std::string> optional_apps;   // reported when absent, never a fault (GUI viewers)
     std::vector<ChecklistItem> checklist_items;
+    // Console-fed rows. A vessel without an ENC chart system, or whose
+    // console does not publish the pre-departure checklist, reads N/A on
+    // those rows instead of waiting for the console (CONSOLE blocks READY).
+    bool enc_fitted = true;
+    bool console_checklist = true;
 };
 
 // strict (vessel profile): a check whose sensor data is missing FAILS
@@ -1046,7 +1051,8 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
     // 3 Chart / ENC selected (console publishes ENC_STATUS)
     {
         const Sample* enc = num("mission_state", "enc_status", 1e9);
-        if (!enc) add("enc", "Chart / ENC selected", "console not publishing ENC_STATUS", READY_CONSOLE);
+        if (!cfg.enc_fitted) add("enc", "Chart / ENC selected", "no ENC chart system on this vessel", READY_NA);
+        else if (!enc) add("enc", "Chart / ENC selected", "console not publishing ENC_STATUS", READY_CONSOLE);
         else add("enc", "Chart / ENC selected", enc->str,
                  enc->str.rfind("selected", 0) == 0 ? READY_PASS : READY_FAIL);
     }
@@ -1255,7 +1261,8 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         const Sample* done = num("mission_state", "checklist_done", 1e9);
         const Sample* total = num("mission_state", "checklist_total", 1e9);
         const Sample* pend = num("mission_state", "checklist_pending", 1e9);
-        if (!done || !total) add("checklist", "Console checklist", "console not publishing CHECKLIST_STATUS", READY_CONSOLE);
+        if (!cfg.console_checklist) add("checklist", "Console checklist", "not published by this console", READY_NA);
+        else if (!done || !total) add("checklist", "Console checklist", "console not publishing CHECKLIST_STATUS", READY_CONSOLE);
         else {
             const bool complete = done->num >= total->num;
             std::string ev = fmt0(done->num) + " / " + fmt0(total->num) + " ticked";
