@@ -6,7 +6,7 @@ contactPoints:
       - uid: usv-email
         type: email
         settings:
-          addresses: ops@example.com   # CHANGE: operator distribution list
+          addresses: mali@swiftships.com   # operator distribution list
           singleEmail: true
       # Uncomment and configure for Slack/Teams/webhook delivery:
       # - uid: usv-webhook
