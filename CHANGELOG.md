@@ -5,6 +5,26 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-10-01 — System tiles on real hardware, Starlink probe
+
+Found on usv-722 (OnLogic K800): the System dashboard's CPU Temp tile
+drew every sensor at once, including acpitz at -273 C, and the MOOS
+service tile showed DOWN and UP side by side after MOOSDB came up
+(two net_response series in the window, result=connection_failed and
+result=success).
+
+### Fixed
+- Telegraf stat tiles (`tele_last`) collapse to the single most recent
+  sample across series: service tiles (InfluxDB, Signal K, MOOS), ping
+  tiles, host gauges. CPU Temp takes the hottest CPU sensor; acpitz,
+  nvme, pch and wifi sensors and readings outside -50..150 C are dropped
+  from the tile and the trend.
+
+### Changed
+- `telegraf.conf` ships the Starlink dish probe (ping 192.168.100.1)
+  enabled: the production vessel has one. Comment it out on hosts
+  without a routable dish.
+
 ## [1.2.2] - 2026-10-01 — GPS readiness from Signal K / VectorNav INS
 
 Found on usv-722 at commissioning: position enters through Signal K (the

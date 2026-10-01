@@ -1631,6 +1631,10 @@ DASHBOARDS.append(dashboard("usv-camera", "Cameras", [
 # mounts) would otherwise stack as extra series or a "No data" split.
 TELE_SELECT = {
     "cpu": '  |> filter(fn: (r) => r.cpu == "cpu-total")\n',
+    # CPU sensors only: acpitz reports -273 C on some boards (OnLogic K800)
+    # and chipset/NVMe sensors are not the CPU.
+    "temp": ('  |> filter(fn: (r) => r.sensor !~ /^(acpitz|nvme|pch|iwlwifi)/)\n'
+             '  |> filter(fn: (r) => r._value > -50.0 and r._value < 150.0)\n'),
     "disk": '  |> filter(fn: (r) => r.path == "/")\n',
     "diskio": '  |> filter(fn: (r) => r.name !~ /^(loop|dm-|sr)/)\n',
     "net": '  |> filter(fn: (r) => r.interface != "lo")\n',
@@ -1659,8 +1663,23 @@ LAST = "last()"
 AGG = "aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)"
 
 
-def tele_last(measurement, field, extra=""):
-    return tele(measurement, field, extra=extra).replace(AGG, LAST)
+# A Telegraf series can split over the time range (net_response gains a
+# second series tagged result=connection_failed while the probed service
+# is down; temp has one per sensor). A stat tile must show the single
+# most recent sample, never one value per series side by side.
+LATEST_ACROSS_SERIES = ('  |> group()\n'
+                        '  |> sort(columns: ["_time"])\n'
+                        '  |> last()\n')
+
+
+def tele_last(measurement, field, extra="", reduce="latest"):
+    """Latest Telegraf sample for a stat tile. reduce='latest' takes the
+    most recent sample across all series; 'max' the highest of each
+    series' latest sample (hottest CPU sensor)."""
+    q = tele(measurement, field, extra=extra).replace(AGG, LAST)
+    collapse = ('  |> group()\n  |> max()\n' if reduce == "max"
+                else LATEST_ACROSS_SERIES)
+    return q.replace(CLEAN_LABELS, collapse + CLEAN_LABELS)
 
 
 
@@ -1743,7 +1762,7 @@ DASHBOARDS.append(dashboard("usv-system", "System", [
           thresholds=[(None, OK), (75, "yellow"), (90, "red")]),
     gauge("Disk", tele_last("disk", "used_percent"), 9, 0, 3, 4,
           thresholds=[(None, OK), (75, "yellow"), (90, "red")]),
-    stat("CPU Temp", tele_last("temp", "temp"), 12, 0, 3, 4, unit="celsius",
+    stat("CPU Temp", tele_last("temp", "temp", reduce="max"), 12, 0, 3, 4, unit="celsius",
          decimals=0, thresholds=[(None, OK), (70, "yellow"), (85, "red")]),
     service_tile("InfluxDB", "influxdb", 15),
     service_tile("Signal K", "signalk", 18),
