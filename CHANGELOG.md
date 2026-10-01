@@ -5,6 +5,19 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.5] - 2026-10-01 — GPU probe hang
+
+Found on usv-722: `usv_gpu_probe` never returned. It ran `timeout` as the
+telegraf user around `sudo intel_gpu_top`; the unprivileged timeout could
+not stop the root process, which kept the pipe open.
+
+### Fixed
+- Telegraf runs the probe itself as root (`sudo -n /usr/local/bin/usv_gpu_probe`;
+  sudoers rule for that root-owned script only, `!requiretty`), so
+  `timeout -k 1 -s INT 2.6` and intel_gpu_top share one uid and the exit
+  is unconditional. Verified against a SIGINT-ignoring stand-in: returns
+  in 3.6 s with the last sample.
+
 ## [1.2.4] - 2026-10-01 — Intel Arc GPU on the System dashboard
 
 usv-722 carries an Intel Arc Pro A60 (i915); the GPU tile only knew

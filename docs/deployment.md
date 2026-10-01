@@ -201,12 +201,13 @@ The GPU tile and trend read the Telegraf measurement `gpu`
 Intel Arc / Xe / iGPU: the installer puts `usv_gpu_probe` in
 /usr/local/bin and, when `intel_gpu_top` is installed
 (`apt install intel-gpu-tools`), a sudoers rule letting the telegraf user
-run that one binary; the probe reports the busiest engine as utilisation
+run that root-owned probe script as root (intel_gpu_top needs perf
+access); the probe reports the busiest engine as utilisation
 plus render/video busy, frequency and power every 10 s. NVIDIA: uncomment
 the `nvidia_smi` input in `telegraf/telegraf.conf` (it carries
 `name_override = "gpu"`) and re-run the installer. Hosts without a
 supported GPU show "No data" there. Check by hand:
-`sudo -u telegraf /usr/local/bin/usv_gpu_probe`.
+`sudo -u telegraf sudo -n /usr/local/bin/usv_gpu_probe`.
 
 ## Analog instruments
 The Navigation, Autopilot and Vessel Health dashboards carry an analog

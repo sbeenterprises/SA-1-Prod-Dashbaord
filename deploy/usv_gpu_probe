@@ -6,16 +6,21 @@
 #   gpu,vendor=intel utilization_gpu=<max engine busy %>,render_busy=..,
 #       video_busy=..,frequency_mhz=..,power_w=..,rc6_pct=..
 #
-# intel_gpu_top needs perf access, so Telegraf runs it through sudo; the
-# installer writes /etc/sudoers.d/usv-telegraf-gpu (that one binary only).
-# Samples for ~2.5 s and reports the last complete sample (the first one
-# intel_gpu_top prints is a partial period). Prints nothing when no Intel
-# GPU is present, so the tile reads "No data" rather than a wrong value.
+# intel_gpu_top needs perf access, so Telegraf runs this whole script as
+# root (telegraf.conf: "sudo -n /usr/local/bin/usv_gpu_probe"; the installer
+# writes /etc/sudoers.d/usv-telegraf-gpu for this root-owned script only).
+# Running timeout and intel_gpu_top under one uid matters: an unprivileged
+# timeout cannot stop a root intel_gpu_top, which then holds the pipe open
+# and the probe never returns. Samples for ~2.5 s and reports the last
+# complete sample (the first one intel_gpu_top prints is a partial period).
+# Prints nothing when no Intel GPU is present, so the tile reads "No data"
+# rather than a wrong value.
 set -u
 IGT=${INTEL_GPU_TOP:-/usr/bin/intel_gpu_top}
 [ -x "$IGT" ] || exit 0
-if [ "$(id -u)" -eq 0 ]; then RUN=""; else RUN="sudo -n"; fi
-OUT=$(timeout -s INT 2.6 $RUN "$IGT" -J -s 1000 2>/dev/null)
+# SIGINT lets intel_gpu_top flush its JSON; SIGKILL one second later makes
+# the exit unconditional. </dev/null: never wait on a terminal.
+OUT=$(timeout -k 1 -s INT 2.6 "$IGT" -J -s 1000 2>/dev/null </dev/null)
 [ -n "$OUT" ] || exit 0
 printf '%s' "$OUT" | python3 -c '
 import json, sys

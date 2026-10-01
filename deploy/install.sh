@@ -98,11 +98,12 @@ EOF
 # ---------------------------------------------------------------- telegraf
 say "Configuring Telegraf"
 # GPU probe (Intel Arc / Xe via intel_gpu_top). intel_gpu_top needs perf
-# access, so Telegraf gets a sudoers rule for that one binary only.
-install -m 755 "$REPO/deploy/usv_gpu_probe" /usr/local/bin/usv_gpu_probe
+# access, so Telegraf may run the root-owned probe script as root (sudoers
+# rule for that script only; the script's content is what root executes).
+install -o root -g root -m 755 "$REPO/deploy/usv_gpu_probe" /usr/local/bin/usv_gpu_probe
 if command -v intel_gpu_top >/dev/null 2>&1; then
   IGT=$(command -v intel_gpu_top)
-  printf 'telegraf ALL=(root) NOPASSWD: %s\n' "$IGT" > /etc/sudoers.d/usv-telegraf-gpu
+  printf 'Defaults!/usr/local/bin/usv_gpu_probe !requiretty\ntelegraf ALL=(root) NOPASSWD: /usr/local/bin/usv_gpu_probe\n' > /etc/sudoers.d/usv-telegraf-gpu
   chmod 440 /etc/sudoers.d/usv-telegraf-gpu
   if ! visudo -cf /etc/sudoers.d/usv-telegraf-gpu >/dev/null; then
     rm -f /etc/sudoers.d/usv-telegraf-gpu
