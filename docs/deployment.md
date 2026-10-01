@@ -106,9 +106,12 @@ the overlays stay empty and nothing else is affected.
 The Comms dashboard's Internet, latency and packet-loss values come from
 Telegraf's ICMP probe to 8.8.8.8, the VPN tile from `tailscaled.service`
 (Telegraf `systemd_units`), and the Starlink tile from a second ICMP
-probe to the dish router (192.168.100.1) that is shipped commented out in
-`telegraf/telegraf.conf`; enable it on vessels with a Starlink, the tile
-reads N/A elsewhere.
+probe to the dish at 192.168.100.1, shipped enabled in
+`telegraf/telegraf.conf` (the production vessel has a Starlink; the dish
+must be routable from the OBC, otherwise comment the probe out and the
+tile reads N/A). A VPN that terminates on the boat router rather than
+the OBC (OpenVPN on usv-722) has no local unit to watch; the tile reads
+N/A until it is pointed at a ping across the tunnel.
 
 ## Pre-departure readiness (Readiness dashboard)
 The installer makes it Grafana's home dashboard

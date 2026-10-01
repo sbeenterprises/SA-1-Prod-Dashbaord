@@ -57,7 +57,7 @@ deploy/
   branding/                  # logos, favicon, wordmark chips
   usv.env.example            # -> /etc/usv/usv.env (secrets, vessel id, fleet, branding)
   systemd/                   # service units (signalk, signalk@vessel, can, simulator)
-telegraf/telegraf.conf       # OBC metrics, GPU (nvidia_smi), ping, systemd units
+telegraf/telegraf.conf       # OBC metrics, GPU (Intel via usv_gpu_probe / NVIDIA), ping, systemd units
 ingestion/                   # all C++
   cpp-common/                #   async Influx line-protocol writer, HTTP GET helper,
                              #   latest-value poller (readiness inputs from other producers)
@@ -117,4 +117,7 @@ See `docs/deployment.md` for operations, `docs/user-guide.md` for
 operators, `docs/schema.md` for the InfluxDB schema,
 `docs/traceability.md` for requirement coverage,
 `docs/validation-report.md` for what was verified and how, and
-`CHANGELOG.md` for release history (current release: v1.2.0; simulation baseline v1.0.0).
+`CHANGELOG.md` for release history (current release: v1.2.9, production on
+usv-722; simulation baseline v1.0.0), `docs/commissioning-usv-722.md` for
+the commissioning record and `docs/runbook-usv-722.md` for day-to-day
+operation of the production vessel.

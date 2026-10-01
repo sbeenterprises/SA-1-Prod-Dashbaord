@@ -185,13 +185,16 @@ and the grafana\_bridge console output under pAntler.
 4. **Radar (FR\-6) and camera (FR\-7) need feed adapters.** Dashboards and
    schema exist; something must write the `radar` and `camera`
    measurements (vendor API / ONVIF probe). Simulator covers them for demo.
-5. **starlink\_up / vpn\_up / internet\_up** are fed by the simulator only.
-   Real probes (Starlink gRPC at 192.168.100.1, `tailscale status`) are a
-   small addition, not yet implemented. Latency/packet loss ARE real
-   (Telegraf ping).
+5. **Comms tiles.** Internet, latency and packet loss are Telegraf ICMP
+   probes to 8.8.8.8; Starlink is an ICMP probe to the dish at
+   192.168.100.1 (shipped enabled; the dish must be routable from the
+   OBC). The VPN tile watches `tailscaled.service` and reads N/A on a
+   vessel whose VPN terminates on the router rather than the OBC
+   (usv-722: OpenVPN on the boat router); point it at a ping across the
+   tunnel once the tunnel address is known.
 6. **Alert rule provisioning is Grafana\-version\-sensitive.** Validated as
-   YAML; confirm the 15 rules appear in the UI on your installed Grafana
-   version during commissioning step 8.
+   YAML; confirm the 20 rules appear in the UI on your installed Grafana
+   version during commissioning step 8 (verified on Grafana 13.2.1).
 7. **Mission replay** is Grafana\-native time\-range scrubbing, not a
    play/pause button.
 8. **Retention:** raw 30 d, events \+ 1\-min downsample 365 d. Missions older

@@ -5,6 +5,20 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.9] - 2026-10-01 — documentation
+
+### Added
+- `docs/commissioning-usv-722.md`: commissioning record for the
+  production vessel (hardware found, releases produced, checklist
+  results, open items).
+- `docs/runbook-usv-722.md`: operations runbook, including the exact
+  grafana_bridge block added to `real.moos` and what each line does.
+
+### Changed
+- README, DEPLOYMENT-NOTE, deployment, traceability and schema docs
+  updated to the production state: GPU measurement `gpu`, Starlink probe
+  enabled, VPN tile semantics, 20 alert rules, INS fix_type / ins_mode.
+
 ## [1.2.8] - 2026-10-01 — N/A tiles, checklist placeholder
 
 ### Fixed

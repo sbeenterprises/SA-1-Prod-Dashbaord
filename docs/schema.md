@@ -21,7 +21,8 @@ fleet expansion.
 | cog, heading, yaw, pitch, roll | float | deg | |
 | satellites | float | count | |
 | hdop | float | | |
-| fix_type | string | | e.g. "RTK Fixed", "3D" |
+| fix_type | string | | GNSS: e.g. "RTK Fixed", "3D"; VectorNav INS via Signal K: "no fix", "INS aligning", "INS tracking", "GNSS lost" |
+| ins_mode | float | | VectorNav INS mode 0..3 (signalk_bridge, from navigation.vectornav.insMode) |
 | cross_track_error | float | m | |
 | x, y | float | m | MOOS local grid |
 | depth | float | m | NAV_DEPTH |
@@ -171,6 +172,11 @@ Standard Telegraf measurements: `cpu`, `mem`, `disk`, `diskio`, `net`,
 `temp`, `system`, `ping`, `systemd_units` (tag `name`), `net_response`
 (tag `service`: signalk | moos | influxdb). Tagged by `host`, plus global
 tag `vessel`.
+
+`gpu` (tag `vendor`): utilization_gpu (%), and per vendor: Intel
+(usv_gpu_probe / intel_gpu_top) render_busy, video_busy, frequency_mhz,
+power_w, rc6_pct; NVIDIA (nvidia_smi with name_override) temperature_gpu,
+memory_used and the rest of that input's fields.
 
 ## Measurements (bucket: events)
 
