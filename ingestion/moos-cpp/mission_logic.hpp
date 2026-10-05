@@ -720,6 +720,44 @@ inline LatLon LocalToLatLon(double x, double y, double lat0, double lon0) {
     return {lat0 + y / m_per_deg_lat, lon0 + x / m_per_deg_lon};
 }
 
+// Inverse of LocalToLatLon: geographic coordinates to the MOOS local grid
+// of the given datum. Used for AIS / NODE_REPORT contacts that carry
+// LAT/LON, so their position never depends on the datum the posting app
+// used for its own X/Y.
+inline XY LatLonToLocal(double lat, double lon, double lat0, double lon0) {
+    const double phi = lat0 * M_PI / 180.0;
+    const double m_per_deg_lat = 111132.92 - 559.82 * std::cos(2 * phi)
+                                 + 1.175 * std::cos(4 * phi);
+    const double m_per_deg_lon = 111412.84 * std::cos(phi)
+                                 - 93.5 * std::cos(3 * phi);
+    XY p;
+    p.x = (lon - lon0) * m_per_deg_lon;
+    p.y = (lat - lat0) * m_per_deg_lat;
+    return p;
+}
+
+// LAT / LON (or LONG) from a parsed NODE_REPORT. False when absent,
+// unparsable, out of range, or the 0,0 placeholder some posters send
+// before they have a fix.
+inline bool ReportLatLon(const std::map<std::string, std::string>& kv,
+                         double* lat, double* lon) {
+    auto la = kv.find("lat");
+    auto lo = kv.find("lon");
+    if (lo == kv.end()) lo = kv.find("long");
+    if (la == kv.end() || lo == kv.end() || la->second.empty() || lo->second.empty())
+        return false;
+    try {
+        *lat = std::stod(la->second);
+        *lon = std::stod(lo->second);
+    } catch (...) {
+        return false;
+    }
+    if (!std::isfinite(*lat) || !std::isfinite(*lon)) return false;
+    if (std::fabs(*lat) > 90.0 || std::fabs(*lon) > 180.0) return false;
+    if (*lat == 0.0 && *lon == 0.0) return false;
+    return true;
+}
+
 // ------------------------------------------------- console checklist
 
 // CHECKLIST_STATUS from the operator console (see docs/deployment.md,

@@ -75,8 +75,11 @@ hdg, rel_speed_kn, cpa_m, tcpa_s (-1 = opening), risk (0 clear, 1 medium,
 2 high), strings encounter (head-on | crossing | overtaking) and type.
 Geometry is computed onboard from the own-ship state (mission_logic.hpp:
 ComputeCpa, EncounterType, RiskLevel; thresholds radar_cpa_alert_m /
-tcpa_alert_s). Rows stop when a contact expires (contact_ttl_s), so a
-30-second window is the live picture.
+tcpa_alert_s). A NODE_REPORT contact is positioned from its LAT/LON on
+the mission datum (LatOrigin/LongOrigin) when it carries them, else from
+its X/Y; own ship from a fresh own fix (NAV_LAT/NAV_LONG or Signal K
+nav.lat/lon) on the same datum, else NAV_X/NAV_Y. Rows stop when a contact
+expires (contact_ttl_s), so a 30-second window is the live picture.
 `traffic`: contacts, reports, radar_only, high_risk, risk_level,
 avoidance_active (helm running an avd*/colreg*/avoid* behavior),
 closest_range_m, min_cpa_m, min_tcpa_s, planned_course (bearing to the
@@ -156,7 +159,7 @@ Tag: `pgn`. Field: rate (msgs/s per PGN)
 pContactSpawn / AIS; RADAR_TARGET + RADAR_TTM_RATE once iRadarTargets
 publishes them)
 online (0/1: TTM heartbeat or any contact update within 30 s), targets
-(active contacts, 10 s TTL), closest_range_m (from own NAV_X/Y),
+(active contacts, 10 s TTL), closest_range_m (own ship vs contacts, see above),
 cpa_m, tcpa_s (RADAR_TARGET only), ttm_rate (/s), detection_rate (0-1)
 
 ### camera (FR-7) — source: camera manager (adapter TBD)

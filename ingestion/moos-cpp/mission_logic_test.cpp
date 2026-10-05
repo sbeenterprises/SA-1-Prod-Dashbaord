@@ -159,6 +159,28 @@ static void test_geometry() {
     LatLon o = LocalToLatLon(0.0, 0.0, 29.7, -91.1);
     CHECK(std::fabs((o.lat) - (29.7)) < 1e-12);
     CHECK(std::fabs((o.lon) - (-91.1)) < 1e-12);
+    // LatLonToLocal is the exact inverse of LocalToLatLon.
+    XY back = LatLonToLocal(ll.lat, ll.lon, 29.71970895, -91.14705165);
+    CHECK(std::fabs(back.x - 1000.0) < 1e-6);
+    CHECK(std::fabs(back.y - 1000.0) < 1e-6);
+    XY zero = LatLonToLocal(29.7, -91.1, 29.7, -91.1);
+    CHECK(std::fabs(zero.x) < 1e-9 && std::fabs(zero.y) < 1e-9);
+    // usv-722 symptom: a contact at Morgan City converted with a 0 latitude
+    // origin lands ~3,300 km north of an own ship on the real datum; from
+    // LAT/LON on the mission datum it is a few hundred metres away.
+    XY wrong = LatLonToLocal(29.7250, -91.1450, 0.0, -91.14705165);
+    CHECK(wrong.y > 3.2e6);
+    XY right = LatLonToLocal(29.7250, -91.1450, 29.71970895, -91.14705165);
+    CHECK(std::hypot(right.x, right.y) < 1000.0);
+    // NODE_REPORT LAT/LON parsing (keys already lower-cased).
+    double la = 0, lo = 0;
+    CHECK(ReportLatLon(ParseKeyValuesLower("NAME=AIS367045970,X=1,Y=2,LAT=29.72,LON=-91.15"), &la, &lo));
+    CHECK(std::fabs(la - 29.72) < 1e-12 && std::fabs(lo + 91.15) < 1e-12);
+    CHECK(ReportLatLon(ParseKeyValuesLower("NAME=a,LAT=29.72,LONG=-91.15"), &la, &lo));
+    CHECK(!ReportLatLon(ParseKeyValuesLower("NAME=a,X=1,Y=2"), &la, &lo));
+    CHECK(!ReportLatLon(ParseKeyValuesLower("NAME=a,LAT=0,LON=0"), &la, &lo));
+    CHECK(!ReportLatLon(ParseKeyValuesLower("NAME=a,LAT=95,LON=10"), &la, &lo));
+    CHECK(!ReportLatLon(ParseKeyValuesLower("NAME=a,LAT=abc,LON=10"), &la, &lo));
 }
 
 static void test_traffic_geometry() {
