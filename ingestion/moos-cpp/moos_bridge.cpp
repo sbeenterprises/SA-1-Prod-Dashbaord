@@ -752,8 +752,9 @@ private:
     }
 
     // NODE_REPORT: "NAME=contato_26,TYPE=ship,TIME=...,X=..,Y=..,SPD=..,HDG=.."
-    // (iRadarTargets / pContactSpawn / AIS). Range is computed from our own
-    // NAV_X/Y in the local grid; no CPA/TCPA here.
+    // (iRadarTargets / pContactSpawn / AIS). Position: LAT/LON converted
+    // with this mission's datum when the report carries them, else X/Y.
+    // Range and CPA are computed in WriteTraffic against own ship.
     void HandleNodeReport(const std::string& report, double now) {
         auto kv = usv::ParseKeyValuesLower(report);
         auto name = kv.find("name");
@@ -765,13 +766,36 @@ private:
             try { return std::stod(it->second); } catch (...) { return dflt; }
         };
         auto x = kv.find("x"), y = kv.find("y");
-        if (x == kv.end() || y == kv.end()) {
+        const bool have_xy = x != kv.end() && y != kv.end();
+        // Prefer LAT/LON converted with this mission's datum: the app that
+        // posts AIS contacts may compute its X/Y from a different origin
+        // (or none), which shifts every contact by the datum difference.
+        double lat = 0.0, lon = 0.0;
+        const bool have_ll = have_datum_ && usv::ReportLatLon(kv, &lat, &lon);
+        if (!have_xy && !have_ll) {
             contacts_.post(name->second, now, -1);
             return;
         }
+        double cx = num("x", 0.0), cy = num("y", 0.0);
+        if (have_ll) {
+            const usv::XY p = usv::LatLonToLocal(lat, lon, lat0_, lon0_);
+            if (have_xy && !warned_report_datum_ &&
+                std::hypot(p.x - cx, p.y - cy) > kDatumMismatchM) {
+                warned_report_datum_ = true;
+                char m[256];
+                std::snprintf(m, sizeof(m),
+                              "NODE_REPORT %s: X/Y differ from LAT/LON by %.0f km; "
+                              "the posting app uses another datum. Using LAT/LON.",
+                              name->second.c_str(),
+                              std::hypot(p.x - cx, p.y - cy) / 1000.0);
+                Event("traffic", "warning", m);
+                std::fprintf(stderr, "grafana_bridge: %s\n", m);
+            }
+            cx = p.x; cy = p.y;
+        }
         std::string type;
         if (auto t = kv.find("type"); t != kv.end()) type = t->second;
-        contacts_.post_report(name->second, now, num("x", 0.0), num("y", 0.0),
+        contacts_.post_report(name->second, now, cx, cy,
                               num("spd", -1.0), num("hdg", -1.0), type);
     }
 
@@ -922,7 +946,40 @@ private:
         usv::OwnShip own;
         own.valid = have_x_ && have_y_;
         own.x = nav_x_; own.y = nav_y_; own.spd_mps = last_speed_mps_; own.hdg = nav_hdg_;
+        // Own position in the same frame as LAT/LON contacts: a fresh own
+        // fix (NAV_LAT/NAV_LONG, or Signal K's nav.lat/lon via the poller)
+        // converted with the mission datum, so own ship and contacts never
+        // sit on two different origins.
+        if (have_datum_) {
+            const usv::Sample* la = latest_.get("nav", "lat", now, kOwnFixMaxAgeS);
+            const usv::Sample* lo = latest_.get("nav", "lon", now, kOwnFixMaxAgeS);
+            if (la && lo && !la->is_str && !lo->is_str &&
+                !(la->num == 0.0 && lo->num == 0.0) &&
+                std::fabs(la->num) <= 90.0 && std::fabs(lo->num) <= 180.0) {
+                const usv::XY p = usv::LatLonToLocal(la->num, lo->num, lat0_, lon0_);
+                own.x = p.x; own.y = p.y; own.valid = true;
+            }
+        }
         contacts_.update_geometry(own, radar_cpa_alert_m_, tcpa_alert_s_);
+        // AIS cannot hear a ship 100 nm away: a reported contact that far
+        // out means own ship and contacts sit on different datums. Warn
+        // once per run so the cause shows up on the Alarms dashboard.
+        if (!warned_far_contact_) {
+            for (const auto& [id, c] : contacts_.contacts()) {
+                if (c.source == "report" && c.range_m > kImplausibleContactM) {
+                    warned_far_contact_ = true;
+                    char m[256];
+                    std::snprintf(m, sizeof(m),
+                                  "Contact %s reported %.0f nm away: own ship and "
+                                  "contacts use different datums (check LatOrigin/"
+                                  "LongOrigin of the app posting NODE_REPORT)",
+                                  id.c_str(), c.range_m / 1852.0);
+                    Event("traffic", "warning", m);
+                    std::fprintf(stderr, "grafana_bridge: %s\n", m);
+                    break;
+                }
+            }
+        }
         const int n = contacts_.active(now);
         if (n == 0) alerted_contacts_.clear();
 
@@ -1327,6 +1384,14 @@ private:
     std::string mission_id_;
     std::string signalk_http_ = "http://localhost:3000";
     bool have_datum_ = false;
+    // Traffic frame: a NODE_REPORT whose X/Y and LAT/LON disagree by more
+    // than this is posted with another datum (warned once per run); an own
+    // LAT/LON fix older than kOwnFixMaxAgeS falls back to NAV_X/NAV_Y.
+    static constexpr double kDatumMismatchM = 1000.0;
+    static constexpr double kOwnFixMaxAgeS = 10.0;
+    bool warned_report_datum_ = false;
+    static constexpr double kImplausibleContactM = 100.0 * 1852.0;
+    bool warned_far_contact_ = false;
     double lat0_ = 0.0, lon0_ = 0.0;
     std::map<std::string, std::string> last_geometry_;
     std::string signalk_token_;   // optional bearer token when SK security is on

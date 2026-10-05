@@ -286,6 +286,9 @@ EOF
       ENGINE_SPEED=1850 ENGINE_COOLANT_TEMP=82 ID_ROUTE=R-17 \
       ARRIVAL_STATE=decelerating CRASH_STOP=true \
       'NODE_REPORT=NAME=contato_7,TYPE=ship,TIME=1,X=300,Y=400,SPD=5,HDG=90'
+    # AIS contact posted with X/Y on another datum (Y ~3,300 km, the usv-722
+    # symptom) but correct LAT/LON 1000 m north of the mission origin.
+    P 'NODE_REPORT=NAME=AIS367045970,TYPE=ship,TIME=1,X=0,Y=3300000,LAT=29.728730336,LON=-91.14705165,SPD=2,HDG=180'
     sleep 1
     P 'OPR_POLY_ACTUAL=pts={-100,-100:100,-100:100,100:-100,100}'
     sleep 2
@@ -325,8 +328,14 @@ EOF
       && ok "NODE_REPORT -> contacts row with bearing" || bad "contact bearing missing"
     grep -q 'contacts,vessel=usv-moos,contact=contato_7,source=report risk=' "$LINES" \
       && ok "contact risk level written" || bad "contact risk missing"
-    grep -q 'traffic,vessel=usv-moos contacts=1' "$LINES" \
+    grep -q 'traffic,vessel=usv-moos contacts=[12]' "$LINES" \
       && ok "traffic summary counts the contact" || bad "traffic summary missing"
+    grep -Eq 'contacts,vessel=usv-moos,contact=AIS367045970,source=report range_m=(999\.9|1000(\.0| |$))' "$LINES" \
+      && ok "AIS contact positioned from LAT/LON on the mission datum (1000 m)" || bad "AIS contact still uses the poster's X/Y"
+    grep -q "X/Y differ from LAT/LON" "$LINES" \
+      && ok "datum-mismatch warning event emitted" || bad "datum-mismatch event missing"
+    ! grep -q "reported [0-9]* nm away" "$LINES" \
+      && ok "no implausible-range warning once LAT/LON is used" || bad "implausible-range warning fired"
     grep -q "autonomy,.* comms_lost=1" "$LINES"        && ok "autonomy.comms_lost flag written"             || bad "autonomy.comms_lost missing"
     grep -q "autonomy,.* awaiting_rearm=1" "$LINES"    && ok "autonomy.awaiting_rearm hold visible"         || bad "awaiting_rearm missing"
     grep -q "autonomy,.* geofence_breached=1" "$LINES" && ok "OPR_BREACHED -> geofence_breached=1"          || bad "geofence level missing"
@@ -345,7 +354,7 @@ EOF
     grep -q "engine,vessel=usv-moos,instance=0 rpm=1850" "$LINES" && ok "ENGINE_SPEED -> engine.rpm{instance=0}" || bad "ENGINE_SPEED not mapped"
     grep -q 'mission_id="R-17"' "$LINES"               && ok "ID_ROUTE -> mission_state.mission_id"     || bad "ID_ROUTE not mapped"
     grep -q 'arrival_state="decelerating"' "$LINES"    && ok "ARRIVAL_STATE -> mission_state"           || bad "ARRIVAL_STATE not mapped"
-    grep -q "radar,.* targets=1" "$LINES"              && ok "NODE_REPORT -> radar.targets=1"           || bad "contact tracking missing"
+    grep -Eq "radar,.* targets=[12]" "$LINES"            && ok "NODE_REPORT -> radar.targets counted"           || bad "contact tracking missing"
     grep -q "radar,.* closest_range_m=500" "$LINES"    && ok "contact range from NAV_X/Y (500 m)"       || bad "contact range missing"
     grep -q "autonomy,.* crash_stop=1" "$LINES"        && ok "CRASH_STOP -> autonomy.crash_stop"        || bad "crash_stop missing"
     grep -q "CRASH STOP commanded" "$LINES"            && ok "crash-stop event emitted"                 || bad "crash-stop event missing"

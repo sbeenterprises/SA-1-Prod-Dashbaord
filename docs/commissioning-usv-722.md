@@ -31,6 +31,7 @@ the same day. All from `sbeenterprises/SA-1-Prod-Dashbaord`.
 | v1.2.7 | `enc_fitted` / `console_checklist` bridge options | CONSOLE rows held the verdict at NOT READY permanently |
 | v1.2.8 | Background tiles read N/A; checklist panel line | Grafana's No data placeholder painted empty tiles as healthy |
 | v1.2.9 | Documentation: this record, runbook, schema/comms/GPU/alert text | |
+| v1.2.10 | AIS contacts positioned from LAT/LON on the mission datum; own ship on the same datum; datum-mismatch warnings | Traffic tab read ~1,794 nm for every AIS contact |
 
 ## Checklist results
 

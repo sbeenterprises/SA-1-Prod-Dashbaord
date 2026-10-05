@@ -5,6 +5,32 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.10] - 2026-10-05 — AIS contacts on the mission datum
+
+On usv-722 every AIS contact on the Traffic dashboard read about
+1,794 nm / 3,320,000 m away: the app posting the AIS NODE_REPORTs computes
+X/Y from a different local-grid origin than the navigation, so range, CPA,
+bearing and risk were all computed across two datums.
+
+### Fixed
+- grafana_bridge positions a NODE_REPORT contact from its LAT/LON (or
+  LONG), converted with the mission file's LatOrigin/LongOrigin, whenever
+  the report carries them; X/Y is used only when it does not.
+- Own ship for the traffic picture comes from a fresh own fix (NAV_LAT /
+  NAV_LONG, or Signal K nav.lat/lon via the poller, under 10 s old) on the
+  same datum, falling back to NAV_X/NAV_Y. Own ship and contacts now always
+  share one frame.
+
+### Added
+- One "traffic" warning event per run when a NODE_REPORT's X/Y and LAT/LON
+  disagree by more than 1 km (names the contact and the offset).
+- One "traffic" warning event per run when a reported contact is more than
+  100 nm away (AIS cannot hear that far; a datum mismatch on a poster that
+  sends X/Y only).
+- `LatLonToLocal` / `ReportLatLon` in mission_logic.hpp with unit tests
+  (round trip, the usv-722 symptom, parsing edge cases); smoke-test checks
+  for an AIS report posted on a foreign datum.
+
 ## [1.2.9] - 2026-10-01 — documentation
 
 ### Added
