@@ -156,8 +156,8 @@ active_pgns, interface_up (0/1)
 Tag: `pgn`. Field: rate (msgs/s per PGN)
 
 ### radar (FR-6) — source: MOOS bridge (NODE_REPORT from iRadarTargets /
-pContactSpawn / AIS; RADAR_TARGET + RADAR_TTM_RATE once iRadarTargets
-publishes them)
+pContactSpawn / AIS; RADAR_TARGET + RADAR_TTM_RATE from mayara_bridge,
+i.e. the mayara-server ARPA tracker, while the radar transmits)
 online (0/1: TTM heartbeat or any contact update within 30 s), targets
 (active contacts, 10 s TTL), closest_range_m (own ship vs contacts, see above),
 cpa_m, tcpa_s (RADAR_TARGET only), ttm_rate (/s), detection_rate (0-1)

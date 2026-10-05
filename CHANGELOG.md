@@ -5,6 +5,32 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.11] - 2026-10-05 — radar targets from mayara-server
+
+usv-722 runs mayara-server 3.x for the Simrad Halo. mayara tracks ARPA /
+MARPA targets itself, but nothing posted them to the MOOSDB, so the Traffic
+dashboard showed AIS contacts only.
+
+### Added
+- `mayara_bridge` (ingestion/moos-cpp): polls the mayara Signal K Radar API
+  (`/radars`, `/{id}/controls/power`, `/{id}/targets`) and posts each
+  tracked target as `RADAR_TARGET`
+  ("id=R3,range=..,bearing=..,spd=..,cog=..,cpa=..,tcpa=..", degrees true,
+  knots), plus `RADAR_TTM_RATE` (radar liveness) and
+  `MAYARA_BRIDGE_STATUS`. grafana_bridge already consumes these, so radar
+  targets appear on the Traffic tab as `source=radar` contacts with
+  CPA/TCPA, risk and the radar CPA alert. No grafana_bridge or mission
+  change is needed.
+- Display only: no NODE_REPORT is posted, so pContactMgrV20 and the helm
+  never see radar targets and collision avoidance is unchanged.
+- Posts only while the radar transmits; lost targets are skipped, targets
+  still acquiring are skipped unless `MAYARA_INCLUDE_ACQUIRING=1`, and a
+  passed CPA (negative TCPA) is not reported (no stale CPA alerts).
+- `usv-mayara-bridge.service` (plain MOOS client, reconnects to MOOSDB
+  and mayara on its own); install.sh builds it with moos_bridge and
+  enables it only when `MAYARA_URL` is set in `/etc/usv/usv.env`.
+- `mayara_logic.hpp` with unit tests (`mayara_logic_test`, ctest).
+
 ## [1.2.10] - 2026-10-05 — AIS contacts on the mission datum
 
 On usv-722 every AIS contact on the Traffic dashboard read about

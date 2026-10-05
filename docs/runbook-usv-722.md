@@ -143,6 +143,7 @@ Rollback: `git checkout <previous tag>` and the same install command.
 | Change | Where | Then |
 |---|---|---|
 | Secrets, port, vessel id, SMTP, plugin pin | `/etc/usv/usv.env` | `sudo bash deploy/install.sh` |
+| Radar targets on/off, radar id (MAYARA_URL, MAYARA_RADAR) | `/etc/usv/usv.env` | `sudo bash deploy/install.sh` |
 | Bridge options, readiness profile, vessel constants, ENC / checklist flags | `real.moos` grafana_bridge block | restart the community |
 | Alert recipients | `grafana/provisioning/alerting/contact-points.yml` in the repo | commit, tag, install |
 | Alert thresholds | `tools/gen_alerts.py --profile vessel` on a workstation | commit, tag, install |
@@ -190,6 +191,8 @@ retention (`du -sh /var/lib/influxdb`).
 | Stock Grafana logo / wrong tile colours after an upgrade | Ctrl+F5; `sudo bash deploy/brand.sh` after any `apt upgrade grafana` |
 | Dashboard unreachable from the LAN | `curl localhost:3100/api/health` on the OBC; ufw is inactive on usv-722, so check the network path |
 | Empty dashboards | `systemctl status usv-*`; `influx ping` |
+| No radar contacts on the Traffic tab | Radar transmitting? Target acquired in mayara (guard zone / click)? `journalctl -u usv-mayara-bridge -n 20`; `curl -s localhost:3001/signalk/v2/api/vessels/self/radars/nav6959/targets` |
+| Each radar target shown twice | iRadarTargets and mayara_bridge both post RADAR_TARGET: keep one |
 
 ## Known gaps on this hull (as of v1.2.8)
 

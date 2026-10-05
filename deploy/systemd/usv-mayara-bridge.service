@@ -1,0 +1,16 @@
+[Unit]
+Description=USV mayara radar targets -> MOOSDB RADAR_TARGET bridge (dashboard display only)
+After=network-online.target mayara.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/usv/usv.env
+ExecStart=/usr/local/bin/mayara_bridge
+Restart=always
+RestartSec=5
+User=usv
+Group=usv
+
+[Install]
+WantedBy=multi-user.target

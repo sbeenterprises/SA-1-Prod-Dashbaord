@@ -288,6 +288,32 @@ Poke variables during commissioning with the bundled utility, e.g.
 `moos_poke WAYPOINT=true DIST_TO_NEXT_WPT=350` (values parse as numbers
 when numeric, strings otherwise).
 
+## Radar targets from mayara-server (optional)
+On a vessel whose radar runs through mayara-server (usv-722: Simrad Halo,
+mayara on port 3001), `mayara_bridge` puts mayara's tracked ARPA targets
+on the Traffic dashboard. Set in `/etc/usv/usv.env` and re-run the
+installer:
+```
+MAYARA_URL=http://localhost:3001
+#MAYARA_RADAR=nav6959      # default: first radar found
+```
+The bridge polls `/signalk/v2/api/vessels/self/radars/<id>/targets` once a
+second and posts each tracked target to the MOOSDB (MOOS_HOST/MOOS_PORT,
+default localhost:9000) as
+`RADAR_TARGET = id=R3,range=1067.0,bearing=133.8,spd=5.70,cog=232.6,cpa=350.1,tcpa=138`
+(metres, degrees true, knots, seconds), plus `RADAR_TTM_RATE` and
+`MAYARA_BRIDGE_STATUS` (`radar=..,power=..,targets=..,mayara=ok`).
+grafana_bridge already subscribes to these; nothing is added to the
+mission file. It is **display only**: no NODE_REPORT is posted, so the
+helm and pContactMgrV20 do not react to radar targets.
+
+Targets exist only while the radar **transmits** and mayara has acquired
+them (guard zone, click-to-acquire, or Doppler auto track). If
+`iRadarTargets` also publishes RADAR_TARGET on the same vessel, run only
+one of the two to avoid duplicate contacts. Check with
+`journalctl -u usv-mayara-bridge -f` and
+`curl -s localhost:3001/signalk/v2/api/vessels/self/radars/<id>/targets`.
+
 ## Services
 | Unit | Role |
 |---|---|
@@ -297,6 +323,7 @@ when numeric, strings otherwise).
 | usv-signalk-bridge.service | Signal K deltas -> Influx (single vessel) |
 | usv-signalk-bridge@<vessel>.service | one per `VESSELS` entry (simulation fleet) |
 | usv-can-bridge.service | CAN/N2K frames -> Influx (CAP_NET_RAW) |
+| usv-mayara-bridge.service | mayara radar targets -> MOOSDB RADAR_TARGET (only when MAYARA_URL is set) |
 | usv-simulator.service | bench-test data (installed, NOT enabled) |
 | grafana_bridge (pAntler) | MOOS -> Influx, managed by your mission |
 
