@@ -12,6 +12,10 @@ Keep a Changelog; versions are git tags on `main`.
   recording; plus a camera_summary row. Readiness "Cameras" now reads
   "N / M cameras streaming"; cameras disabled in Frigate (configured but
   unpowered) are not counted. Enabled by `FRIGATE_URL` in usv.env.
+- Cameras dashboard: the top row shows Frigate NVR up/down and counts
+  (enabled, streaming, network connected); a table lists each camera with
+  Network / Stream / Frame rate / Recording. The single-camera stat tiles
+  drew every camera on top of each other once several reported.
 
 ### Fixed
 - Battery and power panels read "No data" on usv-722: signalk_bridge only

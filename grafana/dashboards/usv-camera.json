@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 215,
+      "id": 214,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -206,9 +206,9 @@
       }
     },
     {
-      "id": 132,
+      "id": 133,
       "type": "stat",
-      "title": "Connection",
+      "title": "Frigate NVR",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -216,7 +216,7 @@
       "gridPos": {
         "x": 0,
         "y": 2,
-        "w": 4,
+        "w": 6,
         "h": 3
       },
       "targets": [
@@ -225,7 +225,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"camera\" and (r._field == \"connected\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"camera_summary\" and (r._field == \"frigate_up\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -249,87 +249,12 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "DISCONNECTED",
+                  "text": "DOWN",
                   "color": "red",
                   "index": 0
                 },
                 "1": {
-                  "text": "CONNECTED",
-                  "color": "#175d8d",
-                  "index": 1
-                }
-              }
-            }
-          ]
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "value",
-        "graphMode": "none",
-        "colorMode": "background",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 34,
-          "titleSize": 12
-        }
-      }
-    },
-    {
-      "id": 133,
-      "type": "stat",
-      "title": "Live Stream",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 4,
-        "y": 2,
-        "w": 4,
-        "h": 3
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"camera\" and (r._field == \"stream_up\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "N/A",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#3d434b",
-                "value": null
-              }
-            ]
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "UNAVAILABLE",
-                  "color": "red",
-                  "index": 0
-                },
-                "1": {
-                  "text": "AVAILABLE",
+                  "text": "UP",
                   "color": "#175d8d",
                   "index": 1
                 }
@@ -358,15 +283,15 @@
     {
       "id": 134,
       "type": "stat",
-      "title": "Recording",
+      "title": "Cameras Enabled",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 8,
+        "x": 6,
         "y": 2,
-        "w": 4,
+        "w": 6,
         "h": 3
       },
       "targets": [
@@ -375,7 +300,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"camera\" and (r._field == \"recording\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"camera_summary\" and (r._field == \"enabled\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -384,153 +309,6 @@
           "color": {
             "mode": "thresholds"
           },
-          "noValue": "N/A",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#3d434b",
-                "value": null
-              }
-            ]
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "STOPPED",
-                  "color": "red",
-                  "index": 0
-                },
-                "1": {
-                  "text": "RECORDING",
-                  "color": "#175d8d",
-                  "index": 1
-                }
-              }
-            }
-          ]
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "value",
-        "graphMode": "none",
-        "colorMode": "background",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 34,
-          "titleSize": 12
-        }
-      }
-    },
-    {
-      "id": 135,
-      "type": "stat",
-      "title": "Frame Rate",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 2,
-        "w": 4,
-        "h": 3
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"camera\" and (r._field == \"fps\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "fps",
-          "decimals": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#3d434b",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 0
-              },
-              {
-                "color": "yellow",
-                "value": 15
-              },
-              {
-                "color": "#00bcd4",
-                "value": 24
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 34,
-          "titleSize": 12
-        }
-      }
-    },
-    {
-      "id": 136,
-      "type": "stat",
-      "title": "Bitrate",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 16,
-        "y": 2,
-        "w": 4,
-        "h": 3
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"camera\" and (r._field == \"bitrate_kbps\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "Kbits",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
@@ -561,17 +339,17 @@
       }
     },
     {
-      "id": 137,
+      "id": 135,
       "type": "stat",
-      "title": "Camera Temp",
+      "title": "Streaming",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 20,
+        "x": 12,
         "y": 2,
-        "w": 4,
+        "w": 6,
         "h": 3
       },
       "targets": [
@@ -580,7 +358,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"camera\" and (r._field == \"temp_c\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"camera_summary\" and (r._field == \"streaming\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -589,22 +367,13 @@
           "color": {
             "mode": "thresholds"
           },
-          "unit": "celsius",
-          "decimals": 1,
+          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "#00bcd4",
                 "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 60
-              },
-              {
-                "color": "red",
-                "value": 75
               }
             ]
           }
@@ -628,7 +397,296 @@
       }
     },
     {
-      "id": 138,
+      "id": 136,
+      "type": "stat",
+      "title": "Network Connected",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 2,
+        "w": 6,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"camera_summary\" and (r._field == \"connected\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 132,
+      "type": "table",
+      "title": "Cameras",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"camera\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"connected\" or r._field == \"stream_up\" or r._field == \"fps\" or r._field == \"recording\")\n  |> last()\n  |> drop(columns: [\"_start\", \"_stop\", \"_measurement\", \"vessel\", \"_time\"])\n  |> group()\n  |> pivot(rowKey: [\"cam\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> sort(columns: [\"cam\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "no camera enabled in Frigate"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cam"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Camera"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "connected"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Network"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "NO ANSWER",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "CONNECTED",
+                        "color": "#175d8d",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "stream_up"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Stream"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "NO VIDEO",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "LIVE",
+                        "color": "#175d8d",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "recording"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Recording"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "off",
+                        "color": "#3d434b",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "RECORDING",
+                        "color": "#175d8d",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "fps"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Frame rate"
+              },
+              {
+                "id": "unit",
+                "value": "fps"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "cam": 0,
+              "connected": 1,
+              "stream_up": 2,
+              "fps": 3,
+              "recording": 4
+            }
+          }
+        }
+      ],
+      "description": "One row per camera enabled in Frigate. A camera that is configured but disabled there (not yet powered) is not listed."
+    },
+    {
+      "id": 137,
       "type": "timeseries",
       "title": "Frame Rate",
       "datasource": {
@@ -636,7 +694,7 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 0,
+        "x": 12,
         "y": 5,
         "w": 12,
         "h": 7
@@ -657,6 +715,7 @@
           "color": {
             "mode": "palette-classic"
           },
+          "unit": "fps",
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
@@ -697,7 +756,7 @@
       }
     },
     {
-      "id": 139,
+      "id": 138,
       "type": "timeseries",
       "title": "Bitrate",
       "datasource": {
@@ -705,10 +764,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 12,
-        "y": 5,
-        "w": 12,
-        "h": 7
+        "x": 0,
+        "y": 12,
+        "w": 8,
+        "h": 6
       },
       "targets": [
         {
@@ -767,7 +826,7 @@
       }
     },
     {
-      "id": 140,
+      "id": 139,
       "type": "timeseries",
       "title": "PTZ Position",
       "datasource": {
@@ -775,9 +834,9 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 0,
+        "x": 8,
         "y": 12,
-        "w": 12,
+        "w": 8,
         "h": 6
       },
       "targets": [
@@ -851,7 +910,7 @@
       }
     },
     {
-      "id": 141,
+      "id": 140,
       "type": "timeseries",
       "title": "Camera Temperature",
       "datasource": {
@@ -859,9 +918,9 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 12,
+        "x": 16,
         "y": 12,
-        "w": 12,
+        "w": 8,
         "h": 6
       },
       "targets": [

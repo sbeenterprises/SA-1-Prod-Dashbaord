@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 218,
+      "id": 217,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -206,7 +206,7 @@
       }
     },
     {
-      "id": 167,
+      "id": 166,
       "type": "text",
       "title": "How to replay",
       "datasource": {
@@ -234,7 +234,7 @@
       }
     },
     {
-      "id": 168,
+      "id": 167,
       "type": "geomap",
       "title": "GPS Track",
       "datasource": {
@@ -456,7 +456,7 @@
       }
     },
     {
-      "id": 169,
+      "id": 168,
       "type": "state-timeline",
       "title": "Mission State",
       "datasource": {
@@ -563,7 +563,7 @@
       }
     },
     {
-      "id": 170,
+      "id": 169,
       "type": "table",
       "title": "Mission Events",
       "datasource": {
@@ -599,7 +599,7 @@
       }
     },
     {
-      "id": 171,
+      "id": 170,
       "type": "timeseries",
       "title": "Heading History",
       "datasource": {
@@ -671,7 +671,7 @@
       }
     },
     {
-      "id": 172,
+      "id": 171,
       "type": "timeseries",
       "title": "Speed History",
       "datasource": {
@@ -741,7 +741,7 @@
       }
     },
     {
-      "id": 173,
+      "id": 172,
       "type": "timeseries",
       "title": "Actuator Commands",
       "datasource": {
@@ -851,7 +851,7 @@
       }
     },
     {
-      "id": 174,
+      "id": 173,
       "type": "timeseries",
       "title": "Cross-Track Error",
       "datasource": {
@@ -921,7 +921,7 @@
       }
     },
     {
-      "id": 175,
+      "id": 174,
       "type": "state-timeline",
       "title": "Autonomy Flags",
       "datasource": {
@@ -984,7 +984,7 @@
       }
     },
     {
-      "id": 176,
+      "id": 175,
       "type": "timeseries",
       "title": "Distance to Next Waypoint",
       "datasource": {

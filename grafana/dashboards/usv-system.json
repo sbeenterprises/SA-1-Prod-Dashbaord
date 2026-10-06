@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 217,
+      "id": 216,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -206,7 +206,7 @@
       }
     },
     {
-      "id": 152,
+      "id": 151,
       "type": "gauge",
       "title": "CPU",
       "datasource": {
@@ -266,7 +266,7 @@
       }
     },
     {
-      "id": 153,
+      "id": 152,
       "type": "gauge",
       "title": "GPU",
       "datasource": {
@@ -326,7 +326,7 @@
       }
     },
     {
-      "id": 154,
+      "id": 153,
       "type": "gauge",
       "title": "RAM",
       "datasource": {
@@ -386,7 +386,7 @@
       }
     },
     {
-      "id": 155,
+      "id": 154,
       "type": "gauge",
       "title": "Disk",
       "datasource": {
@@ -446,7 +446,7 @@
       }
     },
     {
-      "id": 156,
+      "id": 155,
       "type": "stat",
       "title": "CPU Temp",
       "datasource": {
@@ -513,7 +513,7 @@
       }
     },
     {
-      "id": 157,
+      "id": 156,
       "type": "stat",
       "title": "InfluxDB",
       "datasource": {
@@ -595,7 +595,7 @@
       }
     },
     {
-      "id": 158,
+      "id": 157,
       "type": "stat",
       "title": "Signal K",
       "datasource": {
@@ -677,7 +677,7 @@
       }
     },
     {
-      "id": 159,
+      "id": 158,
       "type": "stat",
       "title": "MOOS",
       "datasource": {
@@ -759,7 +759,7 @@
       }
     },
     {
-      "id": 160,
+      "id": 159,
       "type": "timeseries",
       "title": "CPU",
       "datasource": {
@@ -855,7 +855,7 @@
       }
     },
     {
-      "id": 161,
+      "id": 160,
       "type": "timeseries",
       "title": "GPU",
       "datasource": {
@@ -967,7 +967,7 @@
       }
     },
     {
-      "id": 162,
+      "id": 161,
       "type": "timeseries",
       "title": "Memory",
       "datasource": {
@@ -1039,7 +1039,7 @@
       }
     },
     {
-      "id": 163,
+      "id": 162,
       "type": "timeseries",
       "title": "Disk I/O",
       "datasource": {
@@ -1133,7 +1133,7 @@
       }
     },
     {
-      "id": 164,
+      "id": 163,
       "type": "timeseries",
       "title": "Load Average",
       "datasource": {
@@ -1250,7 +1250,7 @@
       }
     },
     {
-      "id": 165,
+      "id": 164,
       "type": "timeseries",
       "title": "CPU Temp",
       "datasource": {
@@ -1320,7 +1320,7 @@
       }
     },
     {
-      "id": 166,
+      "id": 165,
       "type": "table",
       "title": "Services (systemd)",
       "datasource": {
