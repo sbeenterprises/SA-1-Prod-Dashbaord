@@ -32,7 +32,7 @@ Interface theme.
 | Vessel Health | Instrument cluster (tachometer, coolant, oil pressure, fuel, battery volts, SOC), engine and electrical tiles, trends |
 | CAN Bus | Utilization, msgs/s, error/dropped frames, PGN table |
 | Traffic | Collision avoidance picture: risk level, avoidance state, contact counts by source, closest range and CPA; heading-up polar traffic view with range rings, contacts and CPA line; highest-risk contact card (CPA, TCPA, range, bearings, relative speed, type, encounter); MOOS action (planned vs commanded course, actual heading, speed command vs SOG, avoidance behavior, reason); contact table and CPA/TCPA trend |
-| Cameras | Connection, stream, FPS, bitrate, recording, PTZ |
+| Cameras | Frigate NVR up/down; cameras enabled, streaming and network-connected; one row per camera (Network, Stream, Frame rate, Recording); frame-rate trend. Bitrate, PTZ and temperature charts are reserved for a camera-API source |
 | Comms | Internet/Starlink/VPN/Signal K status, latency, loss, bandwidth |
 | System | CPU, GPU, RAM, disk, CPU temperature, load, Signal K and MOOS reachability, trends, systemd services |
 | Replay | Historical playback: GPS track, mission state, events, heading/speed/actuator history |

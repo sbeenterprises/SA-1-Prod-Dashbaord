@@ -48,7 +48,10 @@ apt-installed systemd services on the onboard computer. All vessel-side
 telemetry code is C++: `grafana_bridge` runs under pAntler as a regular MOOS
 community app, `can_bridge` and `signalk_bridge` as systemd services (one
 `usv-signalk-bridge@<vessel>` instance per Signal K server when several
-vessels are simulated on one host).
+vessels are simulated on one host). Two optional systemd services feed
+vessel sensors when configured in `/etc/usv/usv.env`: `mayara_bridge`
+(radar ARPA targets from mayara-server, `MAYARA_URL`) and `frigate_bridge`
+(camera status from the Frigate NVR, `FRIGATE_URL`).
 
 ```
 deploy/

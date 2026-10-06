@@ -33,6 +33,7 @@ the same day. All from `sbeenterprises/SA-1-Prod-Dashbaord`.
 | v1.2.9 | Documentation: this record, runbook, schema/comms/GPU/alert text | |
 | v1.2.10 | AIS contacts positioned from LAT/LON on the mission datum; own ship on the same datum; datum-mismatch warnings | Traffic tab read ~1,794 nm for every AIS contact |
 | v1.2.11 | mayara_bridge: mayara-server ARPA targets posted as RADAR_TARGET for the Traffic tab (display only), usv-mayara-bridge.service | Halo radar targets tracked by mayara did not reach the dashboard |
+| v1.2.12 | Battery from any Signal K instance (House), readiness reads Signal K battery/engine, own ship from Signal K while MOOS NAV_* is 0, frigate_bridge camera status and per-camera Cameras page, short radar ids and CPA gate | Power panels and Electrical "no data"; AIS contacts ~3,300 km away (MOOS own ship at 0N 0E); Cameras "no camera data" |
 
 ## Checklist results
 
@@ -81,5 +82,7 @@ electrical, AIS/radar, cameras.
 4. SMTP credentials in `/etc/usv/usv.env`, then the alert fire test — ops.
 5. VPN tile: tunnel address the OBC can ping — network.
 6. Reboot test and a mission autostart unit — ops/autonomy.
-7. Cameras adapter (known gap), ENC (planned), console checklist
-   publication (if ever wanted) — product.
+7. ENC (planned), console checklist publication (if ever wanted) — product.
+8. MOOS own-ship NAV_* = 0: iDivisorNMEA valid-RMC/HDT fix and Signal K
+   RMC/HDT output (note handed to the developer) — autonomy.
+9. Cameras 3 to 6 and FLIR: PoE switch / network, then enable in Frigate — electrical.

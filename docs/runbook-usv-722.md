@@ -107,15 +107,17 @@ readiness rows). Always check before launching.
 **Read the Readiness page.** PASS / FAIL rows are decided onboard from
 live data; N/A rows are not fitted on this hull; CONSOLE would mean the
 console is expected to publish something (none on usv-722 at present).
-READY needs zero FAIL and zero CONSOLE. Alongside with the engine off,
-Steering, Engine, Electrical, AIS/radar and Cameras read FAIL; that is
-correct.
+READY needs zero FAIL and zero CONSOLE. Alongside with the engine off and
+no mission loaded, Course planning, Steering and Engine read FAIL; that is
+correct. GPS reads FAIL while the VectorNav reports "INS aligning" (it
+re-aligns after a long stop or a power cycle; it tracks once under way).
+Cameras reads "N / M cameras streaming" for the cameras enabled in Frigate.
 
-**Services.** `systemctl status influxdb grafana-server telegraf usv-signalk-bridge usv-can-bridge`.
+**Services.** `systemctl status influxdb grafana-server telegraf usv-signalk-bridge usv-can-bridge usv-mayara-bridge usv-frigate-bridge`.
 All are enabled at boot. `usv-simulator` must stay disabled on the vessel
 (`systemctl is-enabled usv-simulator` -> `disabled`).
 
-**Logs.** `sudo journalctl -u usv-signalk-bridge -u usv-can-bridge -f`;
+**Logs.** `sudo journalctl -u usv-signalk-bridge -u usv-can-bridge -u usv-mayara-bridge -u usv-frigate-bridge -f`;
 `grafana_bridge` prints to the pAntler console.
 
 ## Upgrading to a new release
@@ -144,6 +146,8 @@ Rollback: `git checkout <previous tag>` and the same install command.
 |---|---|---|
 | Secrets, port, vessel id, SMTP, plugin pin | `/etc/usv/usv.env` | `sudo bash deploy/install.sh` |
 | Radar targets on/off, radar id (MAYARA_URL, MAYARA_RADAR) | `/etc/usv/usv.env` | `sudo bash deploy/install.sh` |
+| Camera status on/off (FRIGATE_URL), charted battery (SIGNALK_BATTERY) | `/etc/usv/usv.env` | `sudo bash deploy/install.sh` |
+| Which cameras count for Readiness | Frigate: enable / disable the camera (Configuration Editor, Save & Restart) | nothing; picked up within 60 s |
 | Bridge options, readiness profile, vessel constants, ENC / checklist flags | `real.moos` grafana_bridge block | restart the community |
 | Alert recipients | `grafana/provisioning/alerting/contact-points.yml` in the repo | commit, tag, install |
 | Alert thresholds | `tools/gen_alerts.py --profile vessel` on a workstation | commit, tag, install |
@@ -193,11 +197,26 @@ retention (`du -sh /var/lib/influxdb`).
 | Empty dashboards | `systemctl status usv-*`; `influx ping` |
 | No radar contacts on the Traffic tab | Radar transmitting? Target acquired in mayara (guard zone / click)? `journalctl -u usv-mayara-bridge -n 20`; `curl -s localhost:3001/signalk/v2/api/vessels/self/radars/nav6959/targets` |
 | Each radar target shown twice | iRadarTargets and mayara_bridge both post RADAR_TARGET: keep one |
+| Cameras row FAIL "N / M cameras streaming" | The camera named DOWN on the Cameras page: power / cable (runbook of the camera system), or disable it in Frigate if it is not fitted yet; `journalctl -u usv-frigate-bridge -n 5` |
+| Cameras row "Frigate NVR not reachable" | `sudo docker ps --filter name=frigate`; `curl -s http://127.0.0.1:5000/api/stats \| head -c 200` |
+| Electrical / Power panels No data | `curl -s localhost:3000/signalk/v1/api/vessels/self/electrical`: battery instance name; set SIGNALK_BATTERY if it is not the first one |
+| AIS contacts thousands of km away, Rel. Bearing wrong | MOOS NAV_LAT/NAV_LONG = 0 (no RMC/HDT reaching iDivisorNMEA); the dashboard falls back to Signal K and logs one "traffic" warning; fix on the mission side |
 
-## Known gaps on this hull (as of v1.2.8)
+## Known gaps on this hull (as of v1.2.12)
 
-- Cameras: no adapter writes the `camera` measurement; the row stays FAIL
-  until one exists (or the check is made N/A by configuration).
+- Own-ship navigation in MOOS: iDivisorNMEA posts NAV_LAT/NAV_LONG/
+  NAV_HEADING = 0 because its UDP feed (port 10111) carries only AIS; the
+  helm and pContactMgrV20 therefore see own ship at 0N 0E. Fix with the
+  mission developer (valid-RMC/HDT publishing, any talker) plus RMC and
+  HDT enabled in Signal K's NMEA0183 output. No autonomous missions until
+  `uXMS --server_port=9000 NAV_LAT` reads about 29.73. The dashboard uses
+  Signal K meanwhile.
+- Rudder feedback: no `$AGRSA` on the same feed, so Steering reads FAIL.
+- Cameras: cameras 3 to 6 and the FLIR are not powered / networked yet;
+  keep them disabled in Frigate until they are, so Readiness counts only
+  live cameras. Bitrate, temperature and PTZ have no source.
+- State of charge and charging mode: the VE.Direct shunt publishes
+  voltage and current only.
 - ENC: none fitted; `enc_fitted = false`.
 - Console checklist: not published by the UI; `console_checklist = false`.
 - VPN tile: N/A (tunnel on the router).
