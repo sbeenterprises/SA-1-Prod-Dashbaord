@@ -14,6 +14,10 @@ Keep a Changelog; versions are git tags on `main`.
   current -> battery_current and, without `electrical.loads.total.power`,
   power.total_power = V x -I (power drawn from the battery);
   stateOfCharge -> soc; chargingMode -> charging_status.
+- Readiness "Electrical" / "Engine pre-start" read "no data" when the
+  battery and engine reach Signal K rather than MOOS: grafana_bridge now
+  also reads battery voltage, SOC, coolant, oil pressure and fuel level
+  written by signalk_bridge.
 
 ## [1.2.11] - 2026-10-05 — radar targets from mayara-server
 
