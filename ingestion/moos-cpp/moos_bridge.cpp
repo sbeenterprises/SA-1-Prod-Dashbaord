@@ -348,6 +348,10 @@ protected:
             // (own fresher NAV_* samples still take precedence).
             {"nav", "lat", ""},
             {"nav", "lon", ""},
+            // Own heading (deg) / SOG (kn) for the traffic picture while MOOS
+            // NAV_* are unusable (NAV_LAT/NAV_LONG = 0).
+            {"nav", "heading", ""},
+            {"nav", "sog", ""},
             {"nav", "fix_type", ""},
             {"nav", "satellites", ""},
             {"nav", "hdop", ""},
@@ -464,6 +468,33 @@ private:
     void HandleMessage(const CMOOSMsg& msg, double now) {
         const std::string& key = msg.GetKey();
         if (ignore_vars_.count(key)) return;
+        // MOOS own-ship navigation sanity. On usv-722 (2026-10-06)
+        // iDivisorNMEA posted NAV_LAT/NAV_LONG = 0 and NAV_HEADING/NAV_SPEED
+        // = 0 on every sentence while no RMC/HDT reached it, and
+        // pNodeReporter turned 0,0 into NAV_X/NAV_Y at the equator: own ship
+        // sat 3,300 km south and overwrote Signal K's position. A 0,0 fix is
+        // never a position, so it is dropped; and while that is all MOOS
+        // offers (no non-zero NAV_LAT for kOwnFixMaxAgeS) NAV_HEADING,
+        // NAV_SPEED, NAV_X and NAV_Y are dropped too and own ship comes from
+        // Signal K (WriteTraffic).
+        if ((key == "NAV_LAT" || key == "NAV_LONG") && msg.IsDouble()) {
+            if (msg.GetDouble() == 0.0) {
+                last_zero_fix_ = now;
+                if (!warned_zero_fix_) {
+                    warned_zero_fix_ = true;
+                    Event("traffic", "warning",
+                          "MOOS NAV_LAT/NAV_LONG = 0 (no fix): own-ship NAV_* "
+                          "ignored, using Signal K position/heading/speed. "
+                          "Check the app posting NAV_LAT (iDivisorNMEA needs "
+                          "RMC/HDT on its UDP feed).");
+                }
+                return;
+            }
+            if (key == "NAV_LAT") last_good_fix_ = now;
+        }
+        if ((key == "NAV_HEADING" || key == "NAV_SPEED" || key == "NAV_X" ||
+             key == "NAV_Y") && MoosNavInvalid(now))
+            return;
 
         // 1) Plain numeric passthrough (may fan out to several fields),
         //    rate-limited per field. Derived-quantity inputs are cached
@@ -946,6 +977,15 @@ private:
         usv::OwnShip own;
         own.valid = have_x_ && have_y_;
         own.x = nav_x_; own.y = nav_y_; own.spd_mps = last_speed_mps_; own.hdg = nav_hdg_;
+        // MOOS NAV_* not usable (see HandleMessage): heading and speed from
+        // Signal K, position only from the Signal K fix below.
+        if (MoosNavInvalid(now)) {
+            own.valid = false;
+            const usv::Sample* h = latest_.get("nav", "heading", now, kOwnFixMaxAgeS);
+            const usv::Sample* v = latest_.get("nav", "sog", now, kOwnFixMaxAgeS);
+            if (h && !h->is_str) own.hdg = h->num;
+            own.spd_mps = (v && !v->is_str) ? v->num * KN_TO_MS : 0.0;
+        }
         // Own position in the same frame as LAT/LON contacts: a fresh own
         // fix (NAV_LAT/NAV_LONG, or Signal K's nav.lat/lon via the poller)
         // converted with the mission datum, so own ship and contacts never
@@ -1392,6 +1432,13 @@ private:
     bool warned_report_datum_ = false;
     static constexpr double kImplausibleContactM = 100.0 * 1852.0;
     bool warned_far_contact_ = false;
+    // MOOS own-ship validity: last NAV_LAT/NAV_LONG of 0 and last real fix.
+    double last_zero_fix_ = -1e18, last_good_fix_ = -1e18;
+    bool warned_zero_fix_ = false;
+    bool MoosNavInvalid(double now) const {
+        return now - last_zero_fix_ < kOwnFixMaxAgeS &&
+               now - last_good_fix_ > kOwnFixMaxAgeS;
+    }
     double lat0_ = 0.0, lon0_ = 0.0;
     std::map<std::string, std::string> last_geometry_;
     std::string signalk_token_;   // optional bearer token when SK security is on

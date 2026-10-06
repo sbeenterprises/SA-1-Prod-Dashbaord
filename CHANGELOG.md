@@ -37,6 +37,18 @@ dashboard showed AIS contacts only.
   enables it only when `MAYARA_URL` is set in `/etc/usv/usv.env`.
 - `mayara_logic.hpp` with unit tests (`mayara_logic_test`, ctest).
 
+### Fixed
+- Own ship on the Traffic tab when MOOS has no fix. On usv-722
+  iDivisorNMEA posts `NAV_LAT`/`NAV_LONG` = 0 (and `NAV_HEADING`/`NAV_SPEED`
+  = 0) on every sentence because no RMC/HDT reaches it; pNodeReporter turns
+  that into `NAV_X`/`NAV_Y` at the equator, so own ship sat 3,300 km south
+  and every AIS contact read about 3,300 km. grafana_bridge now drops a 0,0
+  fix, and while no real `NAV_LAT` has arrived for 10 s it also ignores
+  `NAV_HEADING`, `NAV_SPEED`, `NAV_X` and `NAV_Y` and takes own position,
+  heading and SOG from Signal K. One "traffic" warning event per run names
+  the cause. The MOOS-side fix (iDivisorNMEA) is with the mission
+  developer; until then the helm itself still has the wrong own position.
+
 ## [1.2.10] - 2026-10-05 — AIS contacts on the mission datum
 
 On usv-722 every AIS contact on the Traffic dashboard read about
