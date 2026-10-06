@@ -320,6 +320,34 @@ one of the two to avoid duplicate contacts. Check with
 `journalctl -u usv-mayara-bridge -f` and
 `curl -s localhost:3001/signalk/v2/api/vessels/self/radars/<id>/targets`.
 
+## Camera status from Frigate (optional)
+On a vessel whose cameras are served by the Frigate NVR (usv-722: Frigate
+0.16 in Docker, API on port 5000), `frigate_bridge` feeds the Cameras
+dashboard and the Readiness "Cameras" check. Set in `/etc/usv/usv.env` and
+re-run the installer:
+```
+FRIGATE_URL=http://127.0.0.1:5000
+#FRIGATE_POLL_S=5
+```
+Every 5 s it reads `/api/config` and `/api/stats` and writes, per camera
+enabled in Frigate, `camera,cam=<name>` connected (the camera answers on
+its RTSP port, taken from Frigate's go2rtc / ffmpeg URLs), stream_up
+(Frigate receives >= 1 fps), fps and recording, plus a `camera_summary`
+row (frigate_up, enabled, streaming, connected). Readiness reads
+"N / M cameras streaming". A camera that is configured but disabled in
+Frigate (for example not yet powered) is not reported and is not a fault:
+disable or remove it in Frigate (Configuration Editor, Save & Restart)
+until it is cabled. Camera passwords in Frigate's URLs are never logged or
+stored. Check with `journalctl -u usv-frigate-bridge -n 5`.
+
+## Battery instance (Signal K)
+`signalk_bridge` charts one battery: the instance named in
+`SIGNALK_BATTERY` in `/etc/usv/usv.env`, or the first
+`electrical.batteries.<id>` Signal K reports (usv-722: `House`, Victron
+VE.Direct). Its voltage also feeds System Voltage when no
+`electrical.system.voltage` sensor exists, and voltage x -current feeds
+Total Power when no `electrical.loads.total.power` exists.
+
 ## Services
 | Unit | Role |
 |---|---|
@@ -330,6 +358,7 @@ one of the two to avoid duplicate contacts. Check with
 | usv-signalk-bridge@<vessel>.service | one per `VESSELS` entry (simulation fleet) |
 | usv-can-bridge.service | CAN/N2K frames -> Influx (CAP_NET_RAW) |
 | usv-mayara-bridge.service | mayara radar targets -> MOOSDB RADAR_TARGET (only when MAYARA_URL is set) |
+| usv-frigate-bridge.service | camera status from the Frigate NVR -> Influx (only when FRIGATE_URL is set) |
 | usv-simulator.service | bench-test data (installed, NOT enabled) |
 | grafana_bridge (pAntler) | MOOS -> Influx, managed by your mission |
 

@@ -135,7 +135,7 @@ repo to the OBC, re\-run install.sh.
 
 | \# | Check | Command | Expect |
 | --- | --- | --- | --- |
-| 1 | Services up | `systemctl status influxdb grafana-server telegraf usv-signalk-bridge usv-can-bridge` | all `active (running)` |
+| 1 | Services up | `systemctl status influxdb grafana-server telegraf usv-signalk-bridge usv-can-bridge` (plus `usv-mayara-bridge` / `usv-frigate-bridge` where configured) | all `active (running)` |
 | 2 | DB reachable | `influx ping` | `OK` |
 | 3 | Bench data (no vessel) | `sudo systemctl start usv-simulator` | dashboards populate in \~10 s; the scripted Alpha scenario cycles all mission states and fires the geofence/comms alerts once per \~25 min loop (that IS the alert bench test) |
 | 4 | Grafana login | browse `http://<obc>:<GRAFANA_PORT>` | Swiftships login page; lands on the Readiness dashboard; folder "Swift Autonomous Dashboard", 13 dashboards; Swiftships logo and "SA-1 Dashboard" (BRAND_APP_TITLE) in the navigation menu |
@@ -182,9 +182,12 @@ and the grafana\_bridge console output under pAntler.
 3. **Fast\-packet PGNs are not decoded** by can\_bridge (counted in stats
    only). Position/engine data arrive via single\-frame PGNs and Signal K,
    so no dashboard gap; extend `decode_pgn()` if you need 129029 etc.
-4. **Radar (FR\-6) and camera (FR\-7) need feed adapters.** Dashboards and
-   schema exist; something must write the `radar` and `camera`
-   measurements (vendor API / ONVIF probe). Simulator covers them for demo.
+4. **Radar (FR\-6) and camera (FR\-7) feeds.** Radar targets come from
+   mayara-server through `mayara_bridge` (`MAYARA_URL`) or from any MOOS
+   app posting `RADAR_TARGET` / `NODE_REPORT`; camera status comes from the
+   Frigate NVR through `frigate_bridge` (`FRIGATE_URL`). Bitrate,
+   temperature and PTZ position need a camera-API adapter (no source yet).
+   The simulator covers both for demo.
 5. **Comms tiles.** Internet, latency and packet loss are Telegraf ICMP
    probes to 8.8.8.8; Starlink is an ICMP probe to the dish at
    192.168.100.1 (shipped enabled; the dish must be routable from the
