@@ -176,6 +176,50 @@ static void test_prefix_and_lists() {
                          Options{}).empty());
 }
 
+static void test_ids_and_cpa_gate() {
+    std::string spec;
+    const Options o;
+    // usv-722, 2026-10-06: mayara ids are radar_index * 1e8 + n. Hand-acquired
+    // stationary echo with 0.57 kn of jitter: short id, no CPA (it read
+    // cpa 135 m, which would raise a radar CPA alert for a moored boat).
+    CHECK(TargetToSpec(json::parse(R"({"id":100000010,"status":"tracking",
+        "position":{"bearing":5.866015227922268,"distance":956},
+        "motion":{"course":6.176514700124578,"speed":0.29281},
+        "danger":{"cpa":135.46,"tcpa":2996.17,"is_dangerous":false},
+        "acquisition":"manual"})"), o, &spec));
+    CHECK_EQ_STR(spec, "id=M10,range=956.0,bearing=336.1,spd=0.57,cog=353.9");
+
+    // Automatic target, moving 6 kn, CPA 20 min ahead: id R5 with CPA
+    CHECK(TargetToSpec(json::parse(R"({"id":100000005,"status":"tracking",
+        "position":{"bearing":0,"distance":3000},
+        "motion":{"course":3.14159265,"speed":3.0867},
+        "danger":{"cpa":250,"tcpa":1200},"acquisition":"auto"})"), o, &spec));
+    CHECK_EQ_STR(spec, "id=R5,range=3000.0,bearing=0.0,spd=6.00,cog=180.0,cpa=250.0,tcpa=1200");
+
+    // Same target with the CPA beyond the 30 min horizon: CPA dropped
+    CHECK(TargetToSpec(json::parse(R"({"id":100000005,
+        "position":{"bearing":0,"distance":3000},
+        "motion":{"course":0,"speed":3.0867},
+        "danger":{"cpa":250,"tcpa":1801}})"), o, &spec));
+    CHECK_EQ_STR(spec, "id=R5,range=3000.0,bearing=0.0,spd=6.00,cog=0.0");
+
+    // Second radar (index 2) keeps n only; merged-mode ids are already small
+    CHECK(TargetToSpec(json::parse(
+        R"({"id":200000003,"position":{"bearing":0,"distance":10}})"), o, &spec));
+    CHECK_EQ_STR(spec, "id=R3,range=10.0,bearing=0.0");
+
+    // Thresholds are configurable
+    Options loose;
+    loose.cpa_min_speed_kn = 0.0;
+    loose.cpa_max_tcpa_s = 1e9;
+    loose.manual_prefix = "MARPA-";
+    CHECK(TargetToSpec(json::parse(R"({"id":100000010,
+        "position":{"bearing":0,"distance":956},
+        "motion":{"course":0,"speed":0.29281},
+        "danger":{"cpa":135.46,"tcpa":2996.17},"acquisition":"manual"})"), loose, &spec));
+    CHECK_EQ_STR(spec, "id=MARPA-10,range=956.0,bearing=0.0,spd=0.57,cog=0.0,cpa=135.5,tcpa=2996");
+}
+
 int main() {
     test_radar_ids();
     test_power_state();
@@ -183,6 +227,7 @@ int main() {
     test_partial_targets();
     test_rejected_targets();
     test_prefix_and_lists();
+    test_ids_and_cpa_gate();
     std::printf("mayara_logic_test: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
 }

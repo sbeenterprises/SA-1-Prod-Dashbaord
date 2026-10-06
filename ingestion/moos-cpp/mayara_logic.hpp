@@ -41,9 +41,22 @@ using json = nlohmann::json;
 constexpr double kRadToDeg = 57.29577951308232;
 constexpr double kMsToKn = 1.9438444924406046;
 
+// mayara numbers targets per radar as radar_index * 100000000 + n, so the
+// first radar's targets read 100000001, 100000002, ... The contact id keeps
+// only n: "R5" for an automatically acquired target, "M10" for one acquired
+// by hand (MARPA).
+constexpr unsigned long long kRadarIdMultiplier = 100000000ULL;
+
 struct Options {
-    std::string id_prefix = "R";    // contact id = prefix + mayara target id
-    bool include_acquiring = false;  // also post targets still "acquiring"
+    std::string id_prefix = "R";         // automatic targets: R + n
+    std::string manual_prefix = "M";     // targets acquired by hand: M + n
+    bool include_acquiring = false;      // also post targets still "acquiring"
+    // CPA/TCPA are posted only for a target that is really moving and whose
+    // closest approach is near enough to matter. A stationary echo shows
+    // 0.1-1.2 kn of tracker jitter, which gives meaningless CPAs (and
+    // spurious radar CPA alerts in grafana_bridge).
+    double cpa_min_speed_kn = 2.0;
+    double cpa_max_tcpa_s = 1800.0;
 };
 
 // Power control values (mayara / Signal K Radar API).
@@ -167,7 +180,18 @@ inline bool TargetToSpec(const json& t, const Options& opts, std::string* spec,
         !detail::Num(*pos, "distance", &distance_m) || distance_m < 0)
         return false;
 
-    const std::string id = opts.id_prefix + tid;
+    std::string short_id = tid;
+    try {
+        size_t used = 0;
+        const unsigned long long n = std::stoull(tid, &used);
+        if (used == tid.size() && n >= kRadarIdMultiplier)
+            short_id = std::to_string(n % kRadarIdMultiplier);
+    } catch (...) {
+    }
+    bool manual = false;
+    if (auto aq = t.find("acquisition"); aq != t.end() && aq->is_string())
+        manual = detail::Lower(aq->get<std::string>()) == "manual";
+    const std::string id = (manual ? opts.manual_prefix : opts.id_prefix) + short_id;
     char buf[64];
     std::string s = "id=" + id;
     std::snprintf(buf, sizeof(buf), ",range=%.1f", distance_m);
@@ -177,23 +201,27 @@ inline bool TargetToSpec(const json& t, const Options& opts, std::string* spec,
     s += buf;
 
     // Motion is omitted until mayara's filter has an estimate.
+    double speed_kn = -1;
     if (auto mo = t.find("motion"); mo != t.end() && mo->is_object()) {
         double course = 0, speed = 0;
         if (detail::Num(*mo, "course", &course) &&
             detail::Num(*mo, "speed", &speed) && speed >= 0) {
+            speed_kn = speed * kMsToKn;
             std::snprintf(buf, sizeof(buf), ",spd=%.2f,cog=%.1f", speed * kMsToKn,
                           detail::WrapDeg360(course * kRadToDeg));
             s += buf;
         }
     }
 
-    // CPA/TCPA only for an approach still ahead (tcpa >= 0). A passed CPA
-    // (negative TCPA) is history; grafana_bridge would otherwise raise a CPA
-    // alert for a vessel that has already gone by.
-    if (auto dg = t.find("danger"); dg != t.end() && dg->is_object()) {
+    // CPA/TCPA only for an approach still ahead (tcpa >= 0; a passed CPA is
+    // history), within cpa_max_tcpa_s, of a target moving at least
+    // cpa_min_speed_kn. grafana_bridge raises its radar CPA alert on any
+    // posted CPA, so a noisy one must not be posted at all.
+    if (auto dg = t.find("danger"); dg != t.end() && dg->is_object() &&
+        speed_kn >= opts.cpa_min_speed_kn) {
         double cpa = 0, tcpa = 0;
         if (detail::Num(*dg, "cpa", &cpa) && detail::Num(*dg, "tcpa", &tcpa) &&
-            cpa >= 0 && tcpa >= 0) {
+            cpa >= 0 && tcpa >= 0 && tcpa <= opts.cpa_max_tcpa_s) {
             std::snprintf(buf, sizeof(buf), ",cpa=%.1f,tcpa=%.0f", cpa, tcpa);
             s += buf;
         }

@@ -301,11 +301,17 @@ The bridge polls `/signalk/v2/api/vessels/self/radars/<id>/targets` once a
 second and posts each tracked target to the MOOSDB (MOOS_HOST/MOOS_PORT,
 default localhost:9000) as
 `RADAR_TARGET = id=R3,range=1067.0,bearing=133.8,spd=5.70,cog=232.6,cpa=350.1,tcpa=138`
-(metres, degrees true, knots, seconds), plus `RADAR_TTM_RATE` and
+(metres, degrees true, knots, seconds; `R<n>` = acquired automatically,
+`M<n>` = acquired by hand), plus `RADAR_TTM_RATE` and
 `MAYARA_BRIDGE_STATUS` (`radar=..,power=..,targets=..,mayara=ok`).
 grafana_bridge already subscribes to these; nothing is added to the
 mission file. It is **display only**: no NODE_REPORT is posted, so the
 helm and pContactMgrV20 do not react to radar targets.
+
+CPA/TCPA are sent only for targets moving at 2 kn or more with the
+closest approach ahead and within 30 minutes (`MAYARA_CPA_MIN_KN`,
+`MAYARA_CPA_MAX_TCPA_S`): a stationary echo carries about 1 kn of tracker
+jitter, and its CPA would otherwise raise false radar CPA alerts.
 
 Targets exist only while the radar **transmits** and mayara has acquired
 them (guard zone, click-to-acquire, or Doppler auto track). If

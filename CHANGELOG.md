@@ -24,8 +24,14 @@ dashboard showed AIS contacts only.
 - Display only: no NODE_REPORT is posted, so pContactMgrV20 and the helm
   never see radar targets and collision avoidance is unchanged.
 - Posts only while the radar transmits; lost targets are skipped, targets
-  still acquiring are skipped unless `MAYARA_INCLUDE_ACQUIRING=1`, and a
-  passed CPA (negative TCPA) is not reported (no stale CPA alerts).
+  still acquiring are skipped unless `MAYARA_INCLUDE_ACQUIRING=1`.
+- Short contact ids: mayara numbers targets radar_index x 100000000 + n;
+  the dashboard shows `R<n>` for automatic and `M<n>` for hand-acquired
+  (MARPA) targets (`MAYARA_ID_PREFIX`, `MAYARA_MANUAL_PREFIX`).
+- CPA/TCPA are posted only for a target moving at least 2 kn whose CPA is
+  ahead and within 30 min (`MAYARA_CPA_MIN_KN`, `MAYARA_CPA_MAX_TCPA_S`).
+  On usv-722 stationary echoes showed 0.5-1.2 kn of tracker jitter and
+  CPAs down to 135 m, which would raise radar CPA alerts for moored boats.
 - `usv-mayara-bridge.service` (plain MOOS client, reconnects to MOOSDB
   and mayara on its own); install.sh builds it with moos_bridge and
   enables it only when `MAYARA_URL` is set in `/etc/usv/usv.env`.

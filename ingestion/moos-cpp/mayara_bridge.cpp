@@ -23,8 +23,11 @@
 //   MAYARA_URL               http://localhost:3001  (empty = service disabled)
 //   MAYARA_RADAR             radar id, e.g. nav6959 (default: first found)
 //   MAYARA_POLL_MS           1000     (200..10000)
-//   MAYARA_ID_PREFIX         R        contact id = prefix + mayara target id
+//   MAYARA_ID_PREFIX         R        automatic targets: R5, R6, ...
+//   MAYARA_MANUAL_PREFIX     M        targets acquired by hand: M10, ...
 //   MAYARA_INCLUDE_ACQUIRING 0        1 = also post targets still acquiring
+//   MAYARA_CPA_MIN_KN        2.0      post CPA/TCPA only above this speed
+//   MAYARA_CPA_MAX_TCPA_S    1800     ... and only when TCPA is within this
 //   MOOS_HOST / MOOS_PORT    localhost / 9000
 //   MAYARA_MOOS_NAME         mayara_bridge (client name in the MOOSDB)
 
@@ -63,6 +66,15 @@ long EnvLong(const char* k, long def, long lo, long hi) {
     const long n = std::strtol(v, &end, 10);
     if (!end || *end != '\0') return def;
     return n < lo ? lo : (n > hi ? hi : n);
+}
+
+double EnvDouble(const char* k, double def, double lo, double hi) {
+    const char* v = std::getenv(k);
+    if (!v || !*v) return def;
+    char* end = nullptr;
+    const double d = std::strtod(v, &end);
+    if (!end || *end != '\0' || !(d == d)) return def;
+    return d < lo ? lo : (d > hi ? hi : d);
 }
 
 bool EnvBool(const char* k, bool def) {
@@ -115,13 +127,18 @@ int main() {
 
     usv::mayara::Options opts;
     opts.id_prefix = Env("MAYARA_ID_PREFIX", "R");
+    opts.manual_prefix = Env("MAYARA_MANUAL_PREFIX", "M");
     opts.include_acquiring = EnvBool("MAYARA_INCLUDE_ACQUIRING", false);
+    opts.cpa_min_speed_kn = EnvDouble("MAYARA_CPA_MIN_KN", 2.0, 0.0, 50.0);
+    opts.cpa_max_tcpa_s = EnvDouble("MAYARA_CPA_MAX_TCPA_S", 1800.0, 0.0, 86400.0);
 
     std::fprintf(stderr,
-                 "[mayara_bridge] mayara=%s radar=%s poll=%ldms moos=%s:%d prefix=%s acquiring=%d\n",
+                 "[mayara_bridge] mayara=%s radar=%s poll=%ldms moos=%s:%d ids=%s/%s acquiring=%d"
+                 " cpa_gate=%.1fkn/%.0fs\n",
                  base.c_str(), want_radar.empty() ? "(first found)" : want_radar.c_str(),
                  poll_ms, moos_host.c_str(), moos_port, opts.id_prefix.c_str(),
-                 opts.include_acquiring ? 1 : 0);
+                 opts.manual_prefix.c_str(), opts.include_acquiring ? 1 : 0,
+                 opts.cpa_min_speed_kn, opts.cpa_max_tcpa_s);
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
 
