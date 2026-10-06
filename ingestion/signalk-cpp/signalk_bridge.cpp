@@ -6,7 +6,8 @@
 // here so dashboards stay unit-simple.
 //
 // Env: SIGNALK_URL, INFLUX_URL, INFLUX_TOKEN, INFLUX_ORG, INFLUX_BUCKET,
-//      VESSEL_ID
+//      VESSEL_ID, SIGNALK_BATTERY (battery instance to chart, e.g. House;
+//      default: the first electrical.batteries.<id> seen)
 // Reconnection: IXWebSocket automatic backoff + status heartbeat.
 
 #include <ixwebsocket/IXNetSystem.h>
@@ -74,13 +75,9 @@ const std::map<std::string, Mapping> kPaths = {
      {"engine", "fuel_rate", [](double v) { return v * 3.6e6; }}},   // m3/s->L/h
     {"propulsion.0.runTime",
      {"engine", "runtime_h", [](double v) { return v / 3600.0; }}},
-    // Electrical (FR-4)
-    {"electrical.batteries.0.voltage",
-     {"electrical", "battery_voltage", [](double v) { return v; }}},
-    {"electrical.batteries.0.current",
-     {"electrical", "battery_current", [](double v) { return v; }}},
-    {"electrical.batteries.0.capacity.stateOfCharge",
-     {"electrical", "soc", [](double v) { return v * 100.0; }}},
+    // Electrical (FR-4). Battery paths (electrical.batteries.<id>.*) are
+    // handled in handle_battery(): the instance is named by the source
+    // (usv-722's Victron VE.Direct shunt publishes "House", not "0").
     {"electrical.alternators.0.voltage",
      {"electrical", "alternator_voltage", [](double v) { return v; }}},
     // Power (FR-4)
@@ -132,13 +129,62 @@ public:
 private:
     static constexpr double kCogMinSogKn = 0.5;   // COG published above this SOG
     double last_sog_kn_ = 0.0;
+    std::string battery_id_ = usv::env_or("SIGNALK_BATTERY", "");
+    double batt_v_ = 0.0, batt_v_t_ = -1e18;
+    bool have_system_voltage_ = false, have_total_power_ = false;
 
     static double mono_s() {
         using namespace std::chrono;
         return duration<double>(steady_clock::now().time_since_epoch()).count();
     }
 
+    // electrical.batteries.<id>.<field> for one battery instance: the one
+    // named in SIGNALK_BATTERY, else the first instance seen. Returns true
+    // when the path was a battery path (handled or deliberately ignored).
+    bool handle_battery(const std::string& path, const json& value) {
+        static const std::string kPrefix = "electrical.batteries.";
+        if (path.compare(0, kPrefix.size(), kPrefix) != 0) return false;
+        const size_t dot = path.find('.', kPrefix.size());
+        if (dot == std::string::npos) return true;
+        const std::string id = path.substr(kPrefix.size(), dot - kPrefix.size());
+        const std::string field = path.substr(dot + 1);
+        if (battery_id_.empty()) {
+            battery_id_ = id;
+            std::cerr << "signalk_bridge: charting battery '" << id
+                      << "' (set SIGNALK_BATTERY to choose another)\n";
+        }
+        if (id != battery_id_) return true;
+
+        if (field == "chargingMode" && value.is_string()) {
+            writer_.str_field("electrical", "", "charging_status",
+                              value.get<std::string>());
+            return true;
+        }
+        if (!value.is_number()) return true;
+        const double v = value.get<double>();
+        if (field == "voltage") {
+            writer_.field("electrical", "", "battery_voltage", v);
+            // No separate DC bus sensor: the battery is the system voltage.
+            if (!have_system_voltage_)
+                writer_.field("power", "", "system_voltage", v);
+            batt_v_ = v; batt_v_t_ = mono_s();
+        } else if (field == "current") {
+            writer_.field("electrical", "", "battery_current", v);
+            // Signal K current is positive when charging; the power drawn
+            // from the battery (V x -I) stands in for total load power when
+            // no electrical.loads.total.power is published.
+            if (!have_total_power_ && mono_s() - batt_v_t_ < 10.0)
+                writer_.field("power", "", "total_power", batt_v_ * -v);
+        } else if (field == "capacity.stateOfCharge") {
+            writer_.field("electrical", "", "soc", v * 100.0);
+        }
+        return true;
+    }
+
     void handle_value(const std::string& path, const json& value) {
+        if (path == "electrical.system.voltage") have_system_voltage_ = true;
+        if (path == "electrical.loads.total.power") have_total_power_ = true;
+        if (handle_battery(path, value)) return;
         if (path == "navigation.position" && value.is_object()) {
             if (value.contains("latitude"))
                 writer_.field("nav", "", "lat", value["latitude"].get<double>());
@@ -174,10 +220,6 @@ private:
             writer_.field("nav", "", "ins_mode", mode);
             if (mode >= 0 && mode <= 3)
                 writer_.str_field("nav", "", "fix_type", kInsMode[mode]);
-        } else if (path == "electrical.batteries.0.chargingMode"
-                   && value.is_string()) {
-            writer_.str_field("electrical", "", "charging_status",
-                              value.get<std::string>());
         } else {
             auto it = kPaths.find(path);
             if (it == kPaths.end() || !value.is_number()) return;

@@ -5,6 +5,16 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+### Fixed
+- Battery and power panels read "No data" on usv-722: signalk_bridge only
+  knew battery instance `0`, while the Victron VE.Direct shunt publishes
+  `electrical.batteries.House.*`. Any instance is now accepted (the first
+  seen, or `SIGNALK_BATTERY` in usv.env): voltage -> battery_voltage and,
+  without an `electrical.system.voltage` sensor, power.system_voltage;
+  current -> battery_current and, without `electrical.loads.total.power`,
+  power.total_power = V x -I (power drawn from the battery);
+  stateOfCharge -> soc; chargingMode -> charging_status.
+
 ## [1.2.11] - 2026-10-05 — radar targets from mayara-server
 
 usv-722 runs mayara-server 3.x for the Simrad Halo. mayara tracks ARPA /
