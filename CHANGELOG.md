@@ -5,6 +5,8 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.12] - 2026-10-06 — battery, readiness and Frigate cameras
+
 ### Added
 - `frigate_bridge` (ingestion/frigate-cpp, service usv-frigate-bridge):
   camera status from the Frigate NVR API (`/api/config`, `/api/stats`).
