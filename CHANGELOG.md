@@ -5,6 +5,14 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+### Added
+- `frigate_bridge` (ingestion/frigate-cpp, service usv-frigate-bridge):
+  camera status from the Frigate NVR API (`/api/config`, `/api/stats`).
+  Per enabled camera: connected (RTSP port answers), stream_up, fps,
+  recording; plus a camera_summary row. Readiness "Cameras" now reads
+  "N / M cameras streaming"; cameras disabled in Frigate (configured but
+  unpowered) are not counted. Enabled by `FRIGATE_URL` in usv.env.
+
 ### Fixed
 - Battery and power panels read "No data" on usv-722: signalk_bridge only
   knew battery instance `0`, while the Victron VE.Direct shunt publishes
