@@ -353,6 +353,14 @@ protected:
             {"nav", "heading", ""},
             {"nav", "sog", ""},
             {"nav", "fix_type", ""},
+            // Electrical / engine readiness on vessels whose battery shunt
+            // and engine reach Signal K (signalk_bridge) instead of MOOS
+            // (usv-722: Victron VE.Direct "House" battery).
+            {"electrical", "battery_voltage", ""},
+            {"electrical", "soc", ""},
+            {"engine", "coolant_temp", ""},
+            {"engine", "oil_pressure", ""},
+            {"engine", "fuel_level", ""},
             {"nav", "satellites", ""},
             {"nav", "hdop", ""},
             {"ping", "result_code", "r.url == \"8.8.8.8\""},
@@ -360,6 +368,9 @@ protected:
             {"canbus", "interface_up", ""},
             {"canbus", "msg_rate", ""},
             {"camera", "connected", ""},
+            {"camera_summary", "frigate_up", ""},
+            {"camera_summary", "enabled", ""},
+            {"camera_summary", "streaming", ""},
             {"cpu", "usage_user", "r.cpu == \"cpu-total\""},
             {"mem", "used_percent", ""},
             {"disk", "used_percent", "r.path == \"/\""},

@@ -1259,10 +1259,24 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         else { ev += " · RADAR OFFLINE"; st = READY_FAIL; }
         add("ais", "AIS / radar", ev, st);
     }
-    // 13 Cameras
+    // 13 Cameras: frigate_bridge's summary of the cameras ENABLED in the
+    // Frigate NVR (configured-but-unpowered cameras are disabled there and
+    // do not count); a single camera.connected flag as the fallback.
     {
+        const Sample* fup = num("camera_summary", "frigate_up", 60.0);
+        const Sample* en = num("camera_summary", "enabled", 60.0);
+        const Sample* str = num("camera_summary", "streaming", 60.0);
         const Sample* con = num("camera", "connected", 60.0);
-        if (!con) add("cameras", "Cameras", "no camera data", missing);
+        if (fup && fup->num != 1.0)
+            add("cameras", "Cameras", "Frigate NVR not reachable", READY_FAIL);
+        else if (en && str) {
+            if (en->num < 1.0)
+                add("cameras", "Cameras", "no cameras enabled in Frigate", missing);
+            else
+                add("cameras", "Cameras",
+                    fmt0(str->num) + " / " + fmt0(en->num) + " cameras streaming",
+                    str->num >= en->num ? READY_PASS : READY_FAIL);
+        } else if (!con) add("cameras", "Cameras", "no camera data", missing);
         else add("cameras", "Cameras", con->num == 1.0 ? "connected" : "DISCONNECTED",
                  con->num == 1.0 ? READY_PASS : READY_FAIL);
     }

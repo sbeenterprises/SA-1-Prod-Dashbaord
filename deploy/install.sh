@@ -146,6 +146,11 @@ cmake -S "$REPO/ingestion/signalk-cpp" -B "$REPO/ingestion/signalk-cpp/build" \
 cmake --build "$REPO/ingestion/signalk-cpp/build" -j"$(nproc)"
 install -m 755 "$REPO/ingestion/signalk-cpp/build/signalk_bridge" /usr/local/bin/
 
+cmake -S "$REPO/ingestion/frigate-cpp" -B "$REPO/ingestion/frigate-cpp/build" \
+  -DCMAKE_BUILD_TYPE=Release
+cmake --build "$REPO/ingestion/frigate-cpp/build" -j"$(nproc)"
+install -m 755 "$REPO/ingestion/frigate-cpp/build/frigate_bridge" /usr/local/bin/
+
 cmake -S "$REPO/simulator" -B "$REPO/simulator/build" -DCMAKE_BUILD_TYPE=Release
 cmake --build "$REPO/simulator/build" -j"$(nproc)"
 install -m 755 "$REPO/simulator/build/usv_simulator" /usr/local/bin/
@@ -221,6 +226,15 @@ if [[ -n "${VESSELS:-}" ]]; then
   done
 else
   systemctl enable --now usv-signalk-bridge
+fi
+
+# Camera status from the Frigate NVR (FR-7). Enabled when FRIGATE_URL is set.
+if [[ -n "${FRIGATE_URL:-}" ]]; then
+  say "Enabling Frigate camera bridge ($FRIGATE_URL)"
+  systemctl enable --now usv-frigate-bridge
+  systemctl restart usv-frigate-bridge
+else
+  systemctl disable --now usv-frigate-bridge 2>/dev/null || true
 fi
 
 # Radar targets: mayara-server ARPA targets -> MOOSDB RADAR_TARGET for the

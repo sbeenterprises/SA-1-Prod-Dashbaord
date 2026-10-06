@@ -1,0 +1,16 @@
+[Unit]
+Description=USV camera status from Frigate NVR -> InfluxDB (FR-7)
+After=network-online.target influxdb.service docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/usv/usv.env
+ExecStart=/usr/local/bin/frigate_bridge
+Restart=always
+RestartSec=5
+User=usv
+Group=usv
+
+[Install]
+WantedBy=multi-user.target

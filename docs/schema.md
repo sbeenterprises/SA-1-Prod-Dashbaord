@@ -162,9 +162,15 @@ online (0/1: TTM heartbeat or any contact update within 30 s), targets
 (active contacts, 10 s TTL), closest_range_m (own ship vs contacts, see above),
 cpa_m, tcpa_s (RADAR_TARGET only), ttm_rate (/s), detection_rate (0-1)
 
-### camera (FR-7) — source: camera manager (adapter TBD)
-Tag: `cam`. Fields: connected, stream_up, recording (0/1), fps,
-bitrate_kbps, temp_c, ptz_pan, ptz_tilt
+### camera (FR-7) — source: frigate_bridge (Frigate NVR API), every 5 s
+Tag: `cam` (the Frigate camera name). Fields: connected (camera answers on
+its RTSP port), stream_up (Frigate receives >= 1 fps), recording (0/1), fps.
+Written only for cameras enabled in Frigate. Reserved for a camera-API
+adapter: bitrate_kbps, temp_c, ptz_pan, ptz_tilt.
+
+### camera_summary — source: frigate_bridge
+frigate_up (0/1), enabled, streaming, connected (camera counts). Read by the
+Readiness "Cameras" check ("2 / 2 cameras streaming").
 
 ### comms (FR-8) — sources: bridges + Telegraf ping
 internet_up, starlink_up, vpn_up, signalk_ws_up (0/1), latency_ms,

@@ -1624,32 +1624,75 @@ _ct["transformations"] = [{"id": "organize", "options": {
                     "cpa_m": 4, "tcpa_s": 5, "encounter": 6, "risk": 7}}}]
 
 # --------------------------------------------------------------- FR-7 Camera
+# Source: frigate_bridge (Frigate NVR API). One `camera` series per camera
+# (tag cam) plus `camera_summary` counts, so the top row shows the fleet of
+# cameras as counts and the table shows each camera on its own row; a stat
+# tile over several cameras would draw them all on top of each other.
+def camera_table_query():
+    return ('from(bucket: "telemetry")\n'
+            '  |> range(start: -30s)\n'
+            '  |> filter(fn: (r) => r._measurement == "camera")\n'
+            '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+            '  |> filter(fn: (r) => r._field == "connected" or r._field == "stream_up"'
+            ' or r._field == "fps" or r._field == "recording")\n'
+            '  |> last()\n'
+            '  |> drop(columns: ["_start", "_stop", "_measurement", "vessel", "_time"])\n'
+            '  |> group()\n'
+            '  |> pivot(rowKey: ["cam"], columnKey: ["_field"], valueColumn: "_value")\n'
+            '  |> sort(columns: ["cam"])\n')
+
+
+def _cam_col(name, title, mappings, width=130):
+    return {"matcher": {"id": "byName", "options": name},
+            "properties": [{"id": "displayName", "value": title},
+                           {"id": "custom.width", "value": width},
+                           {"id": "custom.align", "value": "center"},
+                           {"id": "mappings", "value": mappings},
+                           {"id": "custom.cellOptions",
+                            "value": {"type": "color-background", "mode": "basic"}}]}
+
+
+_cam = panel("table", "Cameras", [target(camera_table_query())], 0, 4, 12, 7,
+             options={"showHeader": True, "cellHeight": "sm"},
+             no_value="no camera enabled in Frigate",
+             overrides=[
+                 {"matcher": {"id": "byName", "options": "cam"},
+                  "properties": [{"id": "displayName", "value": "Camera"}]},
+                 _cam_col("connected", "Network", updown_map("NO ANSWER", "CONNECTED")),
+                 _cam_col("stream_up", "Stream", updown_map("NO VIDEO", "LIVE")),
+                 _cam_col("recording", "Recording", [{"type": "value", "options": {
+                     "0": {"text": "off", "color": NEUTRAL, "index": 0},
+                     "1": {"text": "RECORDING", "color": TILE_OK, "index": 1}}}]),
+                 {"matcher": {"id": "byName", "options": "fps"},
+                  "properties": [{"id": "displayName", "value": "Frame rate"},
+                                 {"id": "unit", "value": "fps"},
+                                 {"id": "decimals", "value": 1},
+                                 {"id": "custom.width", "value": 110}]}])
+_cam["transformations"] = [{"id": "organize", "options": {"indexByName": {
+    "cam": 0, "connected": 1, "stream_up": 2, "fps": 3, "recording": 4}}}]
+_cam["description"] = ("One row per camera enabled in Frigate. A camera that is "
+                       "configured but disabled there (not yet powered) is not listed.")
+
 DASHBOARDS.append(dashboard("usv-camera", "Cameras", [
-    stat("Connection", flux("camera", "connected", last=True), 0, 0, 4, 4,
-         mappings=updown_map("DISCONNECTED", "CONNECTED"), text_mode="value",
+    stat("Frigate NVR", flux("camera_summary", "frigate_up", last=True), 0, 0, 6, 4,
+         mappings=updown_map("DOWN", "UP"), text_mode="value",
          color_mode="background"),
-    stat("Live Stream", flux("camera", "stream_up", last=True), 4, 0, 4, 4,
-         mappings=updown_map("UNAVAILABLE", "AVAILABLE"), text_mode="value",
-         color_mode="background"),
-    stat("Recording", flux("camera", "recording", last=True), 8, 0, 4, 4,
-         mappings=updown_map("STOPPED", "RECORDING"), text_mode="value",
-         color_mode="background"),
-    stat("Frame Rate", flux("camera", "fps", last=True), 12, 0, 4, 4,
-         unit="fps", decimals=1,
-         thresholds=neutral_base([(None, "red"), (15, "yellow"), (24, OK)])),
-    stat("Bitrate", flux("camera", "bitrate_kbps", last=True), 16, 0, 4, 4,
-         unit="Kbits", decimals=0),
-    stat("Camera Temp", flux("camera", "temp_c", last=True), 20, 0, 4, 4,
-         unit="celsius", decimals=1,
-         thresholds=[(None, OK), (60, "yellow"), (75, "red")]),
-    ts("Frame Rate", [target(flux("camera", "fps"), "fps")], 0, 4, 12, 7),
+    stat("Cameras Enabled", flux("camera_summary", "enabled", last=True), 6, 0, 6, 4,
+         decimals=0, thresholds=[(None, OK)]),
+    stat("Streaming", flux("camera_summary", "streaming", last=True), 12, 0, 6, 4,
+         decimals=0, thresholds=[(None, OK)]),
+    stat("Network Connected", flux("camera_summary", "connected", last=True), 18, 0, 6, 4,
+         decimals=0, thresholds=[(None, OK)]),
+    _cam,
+    ts("Frame Rate", [target(flux("camera", "fps"), "fps")], 12, 4, 12, 7,
+       unit="fps"),
     ts("Bitrate", [target(flux("camera", "bitrate_kbps"), "kbps")],
-       12, 4, 12, 7, unit="Kbits"),
+       0, 11, 8, 6, unit="Kbits"),
     ts("PTZ Position",
-       [target(flux("camera", ["ptz_pan", "ptz_tilt"]))], 0, 11, 12, 6,
+       [target(flux("camera", ["ptz_pan", "ptz_tilt"]))], 8, 11, 8, 6,
        unit="degree"),
     ts("Camera Temperature", [target(flux("camera", "temp_c"), "temp")],
-       12, 11, 12, 6, unit="celsius"),
+       16, 11, 8, 6, unit="celsius"),
 ], ["camera"]))
 
 # ----------------------------------------------------------- FR-8 Communication

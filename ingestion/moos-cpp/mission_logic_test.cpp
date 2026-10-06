@@ -481,6 +481,35 @@ static const ReadinessCheck& find_check(const std::vector<ReadinessCheck>& v, co
     return none;
 }
 
+static void test_camera_readiness() {
+    const double now = 1000.0;
+    ReadinessConfig cfg;
+    // frigate_bridge summary: 2 enabled, both streaming
+    LatestStore s;
+    s.put("camera_summary", "frigate_up", 1, now);
+    s.put("camera_summary", "enabled", 2, now);
+    s.put("camera_summary", "streaming", 2, now);
+    auto v = EvaluateReadiness(s, now, true, cfg);
+    CHECK(find_check(v, "cameras").status == READY_PASS);
+    CHECK_EQ_STR(find_check(v, "cameras").evidence, "2 / 2 cameras streaming");
+    // one camera lost its stream
+    s.put("camera_summary", "streaming", 1, now);
+    v = EvaluateReadiness(s, now, true, cfg);
+    CHECK(find_check(v, "cameras").status == READY_FAIL);
+    CHECK_EQ_STR(find_check(v, "cameras").evidence, "1 / 2 cameras streaming");
+    // Frigate down beats the (stale-but-fresh) counts
+    s.put("camera_summary", "frigate_up", 0, now);
+    v = EvaluateReadiness(s, now, true, cfg);
+    CHECK_EQ_STR(find_check(v, "cameras").evidence, "Frigate NVR not reachable");
+    // nothing enabled: N/A in simulation, FAIL on a vessel
+    LatestStore e;
+    e.put("camera_summary", "frigate_up", 1, now);
+    e.put("camera_summary", "enabled", 0, now);
+    e.put("camera_summary", "streaming", 0, now);
+    CHECK(find_check(EvaluateReadiness(e, now, false, cfg), "cameras").status == READY_NA);
+    CHECK(find_check(EvaluateReadiness(e, now, true, cfg), "cameras").status == READY_FAIL);
+}
+
 static void test_readiness() {
     LatestStore s;
     const double now = 1000.0;
@@ -747,6 +776,7 @@ int main() {
     test_traffic_geometry();
     test_helm_behaviors_fallback();
     test_readiness();
+    test_camera_readiness();
 
     std::printf("mission_logic_test: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;

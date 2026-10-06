@@ -5,6 +5,34 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.12] - 2026-10-06 — battery, readiness and Frigate cameras
+
+### Added
+- `frigate_bridge` (ingestion/frigate-cpp, service usv-frigate-bridge):
+  camera status from the Frigate NVR API (`/api/config`, `/api/stats`).
+  Per enabled camera: connected (RTSP port answers), stream_up, fps,
+  recording; plus a camera_summary row. Readiness "Cameras" now reads
+  "N / M cameras streaming"; cameras disabled in Frigate (configured but
+  unpowered) are not counted. Enabled by `FRIGATE_URL` in usv.env.
+- Cameras dashboard: the top row shows Frigate NVR up/down and counts
+  (enabled, streaming, network connected); a table lists each camera with
+  Network / Stream / Frame rate / Recording. The single-camera stat tiles
+  drew every camera on top of each other once several reported.
+
+### Fixed
+- Battery and power panels read "No data" on usv-722: signalk_bridge only
+  knew battery instance `0`, while the Victron VE.Direct shunt publishes
+  `electrical.batteries.House.*`. Any instance is now accepted (the first
+  seen, or `SIGNALK_BATTERY` in usv.env): voltage -> battery_voltage and,
+  without an `electrical.system.voltage` sensor, power.system_voltage;
+  current -> battery_current and, without `electrical.loads.total.power`,
+  power.total_power = V x -I (power drawn from the battery);
+  stateOfCharge -> soc; chargingMode -> charging_status.
+- Readiness "Electrical" / "Engine pre-start" read "no data" when the
+  battery and engine reach Signal K rather than MOOS: grafana_bridge now
+  also reads battery voltage, SOC, coolant, oil pressure and fuel level
+  written by signalk_bridge.
+
 ## [1.2.11] - 2026-10-05 — radar targets from mayara-server
 
 usv-722 runs mayara-server 3.x for the Simrad Halo. mayara tracks ARPA /
