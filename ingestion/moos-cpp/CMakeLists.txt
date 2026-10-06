@@ -18,6 +18,15 @@ add_executable(mission_logic_test mission_logic_test.cpp)
 target_compile_options(mission_logic_test PRIVATE -Wall -Wextra)
 add_test(NAME mission_logic COMMAND mission_logic_test)
 
+# mayara_bridge conversion tests (need nlohmann-json; skipped without it).
+find_package(nlohmann_json QUIET)
+if(nlohmann_json_FOUND)
+  add_executable(mayara_logic_test mayara_logic_test.cpp)
+  target_link_libraries(mayara_logic_test PRIVATE nlohmann_json::nlohmann_json)
+  target_compile_options(mayara_logic_test PRIVATE -Wall -Wextra)
+  add_test(NAME mayara_logic COMMAND mayara_logic_test)
+endif()
+
 if(NOT MISSION_LOGIC_TESTS_ONLY)
   find_package(MOOS 10 REQUIRED)
   find_package(CURL REQUIRED)
@@ -35,5 +44,14 @@ if(NOT MISSION_LOGIC_TESTS_ONLY)
   target_link_libraries(moos_poke PRIVATE ${MOOS_LIBRARIES})
   target_compile_options(moos_poke PRIVATE -Wall -Wextra)
 
-  install(TARGETS moos_bridge moos_poke RUNTIME DESTINATION bin)
+  # mayara-server radar targets -> RADAR_TARGET (systemd service
+  # usv-mayara-bridge, display only; see mayara_bridge.cpp).
+  find_package(nlohmann_json REQUIRED)
+  add_executable(mayara_bridge mayara_bridge.cpp)
+  target_include_directories(mayara_bridge PRIVATE ${MOOS_INCLUDE_DIRS})
+  target_link_libraries(mayara_bridge PRIVATE ${MOOS_LIBRARIES} CURL::libcurl
+                        nlohmann_json::nlohmann_json Threads::Threads)
+  target_compile_options(mayara_bridge PRIVATE -Wall -Wextra)
+
+  install(TARGETS moos_bridge moos_poke mayara_bridge RUNTIME DESTINATION bin)
 endif()

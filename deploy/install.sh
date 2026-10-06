@@ -4,8 +4,9 @@
 #   sudo deploy/install.sh
 #
 # Installs: InfluxDB 2.x, Grafana OSS, Telegraf (apt), the C++ bridges
-# (moos_bridge for pAntler, can_bridge as systemd service), the Python
-# Signal K bridge, provisioning, buckets and the downsample task.
+# (moos_bridge for pAntler, can_bridge as systemd service, mayara_bridge
+# when MAYARA_URL is set), the Signal K bridge, provisioning, buckets and the
+# downsample task.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -171,6 +172,9 @@ if cmake -S "$REPO/ingestion/moos-cpp" -B "$REPO/ingestion/moos-cpp/build" \
   # Commissioning helper (moos_poke VAR=VAL ...), documented in deployment.md.
   [ -x "$REPO/ingestion/moos-cpp/build/moos_poke" ] && \
     install -m 755 "$REPO/ingestion/moos-cpp/build/moos_poke" /usr/local/bin/
+  # Radar targets from mayara-server -> RADAR_TARGET (usv-mayara-bridge).
+  [ -x "$REPO/ingestion/moos-cpp/build/mayara_bridge" ] && \
+    install -m 755 "$REPO/ingestion/moos-cpp/build/mayara_bridge" /usr/local/bin/
   say "moos_bridge installed (as grafana_bridge) — add 'Run = grafana_bridge' to your mission file"
   # If pAntler runs from a systemd unit with a private PATH (as on usv01:
   # moos-antler.service sets PATH to the two MOOS bin dirs only), pAntler
@@ -217,6 +221,17 @@ if [[ -n "${VESSELS:-}" ]]; then
   done
 else
   systemctl enable --now usv-signalk-bridge
+fi
+
+# Radar targets: mayara-server ARPA targets -> MOOSDB RADAR_TARGET for the
+# Traffic dashboard (display only; the helm does not use them). Enabled
+# when MAYARA_URL is set in usv.env and mayara_bridge was built (needs MOOS).
+if [[ -n "${MAYARA_URL:-}" && -x /usr/local/bin/mayara_bridge ]]; then
+  say "Enabling mayara radar-target bridge ($MAYARA_URL)"
+  systemctl enable --now usv-mayara-bridge
+  systemctl restart usv-mayara-bridge
+else
+  systemctl disable --now usv-mayara-bridge 2>/dev/null || true
 fi
 
 # ---------------------------------------------------------------- grafana

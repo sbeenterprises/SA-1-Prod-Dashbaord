@@ -5,6 +5,50 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.11] - 2026-10-05 — radar targets from mayara-server
+
+usv-722 runs mayara-server 3.x for the Simrad Halo. mayara tracks ARPA /
+MARPA targets itself, but nothing posted them to the MOOSDB, so the Traffic
+dashboard showed AIS contacts only.
+
+### Added
+- `mayara_bridge` (ingestion/moos-cpp): polls the mayara Signal K Radar API
+  (`/radars`, `/{id}/controls/power`, `/{id}/targets`) and posts each
+  tracked target as `RADAR_TARGET`
+  ("id=R3,range=..,bearing=..,spd=..,cog=..,cpa=..,tcpa=..", degrees true,
+  knots), plus `RADAR_TTM_RATE` (radar liveness) and
+  `MAYARA_BRIDGE_STATUS`. grafana_bridge already consumes these, so radar
+  targets appear on the Traffic tab as `source=radar` contacts with
+  CPA/TCPA, risk and the radar CPA alert. No grafana_bridge or mission
+  change is needed.
+- Display only: no NODE_REPORT is posted, so pContactMgrV20 and the helm
+  never see radar targets and collision avoidance is unchanged.
+- Posts only while the radar transmits; lost targets are skipped, targets
+  still acquiring are skipped unless `MAYARA_INCLUDE_ACQUIRING=1`.
+- Short contact ids: mayara numbers targets radar_index x 100000000 + n;
+  the dashboard shows `R<n>` for automatic and `M<n>` for hand-acquired
+  (MARPA) targets (`MAYARA_ID_PREFIX`, `MAYARA_MANUAL_PREFIX`).
+- CPA/TCPA are posted only for a target moving at least 2 kn whose CPA is
+  ahead and within 30 min (`MAYARA_CPA_MIN_KN`, `MAYARA_CPA_MAX_TCPA_S`).
+  On usv-722 stationary echoes showed 0.5-1.2 kn of tracker jitter and
+  CPAs down to 135 m, which would raise radar CPA alerts for moored boats.
+- `usv-mayara-bridge.service` (plain MOOS client, reconnects to MOOSDB
+  and mayara on its own); install.sh builds it with moos_bridge and
+  enables it only when `MAYARA_URL` is set in `/etc/usv/usv.env`.
+- `mayara_logic.hpp` with unit tests (`mayara_logic_test`, ctest).
+
+### Fixed
+- Own ship on the Traffic tab when MOOS has no fix. On usv-722
+  iDivisorNMEA posts `NAV_LAT`/`NAV_LONG` = 0 (and `NAV_HEADING`/`NAV_SPEED`
+  = 0) on every sentence because no RMC/HDT reaches it; pNodeReporter turns
+  that into `NAV_X`/`NAV_Y` at the equator, so own ship sat 3,300 km south
+  and every AIS contact read about 3,300 km. grafana_bridge now drops a 0,0
+  fix, and while no real `NAV_LAT` has arrived for 10 s it also ignores
+  `NAV_HEADING`, `NAV_SPEED`, `NAV_X` and `NAV_Y` and takes own position,
+  heading and SOG from Signal K. One "traffic" warning event per run names
+  the cause. The MOOS-side fix (iDivisorNMEA) is with the mission
+  developer; until then the helm itself still has the wrong own position.
+
 ## [1.2.10] - 2026-10-05 — AIS contacts on the mission datum
 
 On usv-722 every AIS contact on the Traffic dashboard read about
