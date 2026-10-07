@@ -91,7 +91,19 @@ class Bridge {
 public:
     void handle_delta(const json& delta) {
         std::lock_guard<std::mutex> lock(mu_);
+        // Hello message: {"name": ..., "version": ..., "self": "vessels.urn:..."}
+        // names this vessel's context, so deltas for other vessels (AIS
+        // targets, which Signal K sends with subscribe=all) can be told apart.
+        if (delta.contains("self") && delta["self"].is_string()) {
+            self_ = delta["self"].get<std::string>();
+            if (self_.rfind("vessels.", 0) != 0) self_ = "vessels." + self_;
+            std::cerr << "signal k self context: " << self_ << "\n";
+        }
         if (!delta.contains("updates")) return;
+        if (!IsSelf(delta)) {
+            ++other_count_;
+            return;
+        }
         for (const auto& update : delta["updates"]) {
             if (!update.contains("values")) continue;
             for (const auto& item : update["values"]) {
@@ -100,6 +112,17 @@ public:
             }
         }
         ++msg_count_;
+    }
+
+    // Own-ship deltas only. Another vessel's position, speed or heading
+    // written as ours makes the track jump between AIS targets. A delta with
+    // no context, "vessels.self" or the context from the hello is own ship;
+    // anything else (other vessels, aircraft, aton, ...) is skipped.
+    bool IsSelf(const json& delta) const {
+        if (!delta.contains("context") || !delta["context"].is_string()) return true;
+        const std::string ctx = delta["context"].get<std::string>();
+        if (ctx.empty() || ctx == "vessels.self") return true;
+        return !self_.empty() && ctx == self_;
     }
 
     void set_up(bool up) {
@@ -120,6 +143,11 @@ public:
             // dashboard window that starts hours after the last change still
             // sees UP/DOWN instead of "No data".
             writer_.field("comms", "", "signalk_ws_up", up_ ? 1 : 0);
+            if (other_count_ && !other_logged_) {
+                std::cerr << "signal k: skipping deltas for other vessels (AIS); "
+                             "own ship = " << (self_.empty() ? "vessels.self" : self_) << "\n";
+                other_logged_ = true;
+            }
             msg_count_ = 0;
             last_emit_ = now;
         }
@@ -231,6 +259,9 @@ private:
     std::mutex mu_;
     usv::InfluxWriter writer_{"telemetry"};
     uint64_t msg_count_ = 0;
+    std::string self_;            // own vessel context from the hello message
+    uint64_t other_count_ = 0;    // deltas for other vessels, skipped
+    bool other_logged_ = false;
     double last_emit_ = 0.0;
     bool up_ = false;
 };
@@ -243,7 +274,7 @@ int main() {
     ix::initNetSystem();
 
     const std::string url = usv::env_or(
-        "SIGNALK_URL", "ws://localhost:3000/signalk/v1/stream?subscribe=all");
+        "SIGNALK_URL", "ws://localhost:3000/signalk/v1/stream?subscribe=self");
 
     Bridge bridge;
     ix::WebSocket ws;
