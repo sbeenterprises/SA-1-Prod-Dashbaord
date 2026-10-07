@@ -15,6 +15,12 @@ Keep a Changelog; versions are git tags on `main`.
 - Navigation, Replay and Fleet maps: own ship drawn as a red map pin with a
   vessel glyph (`deploy/branding/usv_pin.svg`, installed by `brand.sh`);
   Traffic View uses the same pin at the centre.
+- Smoke test (98 checks): builds the Frigate bridge and runs
+  `mayara_logic_test` and `frigate_logic_test`; runs every ECharts
+  instrument in a mocked Grafana context; type-checks all dashboard and
+  alert Flux queries; checks the vessel pin and speed vector wiring; counts
+  `frigate_bridge` as a producer (fixes a false "camera_summary.connected
+  queried but never written").
 - Navigation and Replay maps: own-ship 6-minute speed vector (lime line
   along COG, heading if COG is missing; hidden below 0.5 kn).
 

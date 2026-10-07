@@ -61,7 +61,7 @@ export INFLUX_URL=http://127.0.0.1:8086 INFLUX_TOKEN=smoke-token \
 seen() { grep -oE '^[a-z_]+,[^ ]* [a-z_]+' "$LINES" | sed 's/,[^ ]* / /' | sort -u; }
 
 hdr "Build"
-for d in ingestion/moos-cpp ingestion/can-cpp ingestion/signalk-cpp simulator; do
+for d in ingestion/moos-cpp ingestion/can-cpp ingestion/signalk-cpp ingestion/frigate-cpp simulator; do
   if cmake -S "$REPO/$d" -B "$REPO/$d/build" -DCMAKE_BUILD_TYPE=Release >/dev/null 2>&1 \
      && cmake --build "$REPO/$d/build" -j"$(nproc)" >/dev/null 2>&1; then
     ok "build $d"
@@ -84,6 +84,15 @@ if [[ -x $MLT ]] && OUT=$("$MLT"); then
 else
   bad "mission_logic_test failed"; echo "$OUT" | tail -5
 fi
+
+hdr "Bridge logic unit tests (radar targets, cameras)"
+for t in ingestion/moos-cpp/build/mayara_logic_test ingestion/moos-cpp/build-tests/mayara_logic_test \
+         ingestion/frigate-cpp/build/frigate_logic_test; do
+  [[ -x "$REPO/$t" ]] || continue
+  if OUT=$("$REPO/$t" 2>&1); then ok "$(basename "$t"): $(echo "$OUT" | tail -1)"
+  else bad "$(basename "$t") failed"; echo "$OUT" | tail -5; fi
+done
+[[ -x "$REPO/ingestion/frigate-cpp/build/frigate_logic_test" ]] || bad "frigate_logic_test not built"
 
 hdr "Simulator -> InfluxDB line protocol"
 start_stub
@@ -127,6 +136,8 @@ have = {tuple(l.split()) for l in open(produced_file) if l.strip()}
 # Fields the MOOS bridge maps from the helm (its FieldMap table) count as
 # produced too; the live bridge run below is skipped when MOOSDB is absent.
 src = open(f"{repo}/ingestion/moos-cpp/moos_bridge.cpp").read()
+# Other C++ writers that the simulator does not exercise (Frigate cameras).
+src += open(f"{repo}/ingestion/frigate-cpp/frigate_bridge.cpp").read()
 moos = set(re.findall(r'\{"(\w+)",\s*"(\w+)"(?:,|\})', src))
 moos |= set(re.findall(r'(?:str_)?field\("(\w+)",\s*[^,]+,\s*"(\w+)"', src))
 external = {"cpu","mem","disk","diskio","net","temp","system","gpu","ping","net_response","systemd_units","canbus_pgn"}
@@ -140,6 +151,65 @@ print("  [PASS] every non-Telegraf field queried by a dashboard is produced")
 PY
 [ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
 
+hdr "ECharts instruments (getOption in a mocked Grafana context)"
+if command -v node >/dev/null; then
+  if OUT=$(node "$REPO/tools/check_echarts_panels.js" "$REPO" 2>&1); then
+    echo "$OUT" | grep -v "echarts panels:"; ok "ECharts instruments run clean"
+  else echo "$OUT"; bad "ECharts instrument check"; fi
+else skip "ECharts instruments (node unavailable)"; fi
+
+hdr "Flux type check (dashboards and alert rules)"
+python3 - "$REPO" "$TMP/alert_queries.json" <<'PY'
+import json, sys, yaml
+d = yaml.safe_load(open(f"{sys.argv[1]}/grafana/provisioning/alerting/alerts.yml"))
+qs = [q["model"]["query"] for g in d["groups"] for r in g["rules"] for q in r["data"]
+      if "query" in q.get("model", {})]
+json.dump(qs, open(sys.argv[2], "w"))
+PY
+NODE_PATH="${NODE_PATH:-$(npm root -g 2>/dev/null)}" node "$REPO/tools/check_flux.js" "$REPO" "$TMP/alert_queries.json"
+case $? in
+  0) ok "every Flux query type-checks" ;;
+  2) skip "Flux type check (npm i -g @influxdata/flux-lsp-node to enable)" ;;
+  *) bad "Flux type check" ;;
+esac
+
+hdr "Map vessel pin and speed vector"
+python3 - "$REPO" <<'PY'
+import json, glob, sys, xml.etree.ElementTree as ET
+repo = sys.argv[1]; bad = 0
+def fail(m):
+    global bad; bad += 1; print("  [FAIL] " + m)
+root = ET.parse(f"{repo}/deploy/branding/usv_pin.svg").getroot()
+if not root.tag.endswith("svg") or root.get("width") != root.get("height") or not root.get("viewBox"):
+    fail("usv_pin.svg must be a square SVG with width/height/viewBox (Grafana sizes icons square)")
+if 'img/icons/marker/usv_pin.svg' not in open(f"{repo}/deploy/brand.sh").read():
+    fail("brand.sh does not install usv_pin.svg into img/icons/marker")
+maps = 0
+for p in sorted(glob.glob(f"{repo}/grafana/dashboards/*.json")):
+    for pan in json.load(open(p))["panels"]:
+        if pan.get("type") != "geomap": continue
+        refs = {t["refId"] for t in pan.get("targets", [])}
+        layers = pan["options"].get("layers", [])
+        for L in layers:
+            ref = (L.get("filterData") or {}).get("options")
+            if ref and ref not in refs:
+                fail(f"{pan['title']}: layer '{L['name']}' filters on missing query {ref}")
+            st = L.get("config", {}).get("style", {})
+            if L.get("name") in ("Vessel", "Vessels"):
+                maps += 1
+                if st.get("symbol", {}).get("fixed") != "img/icons/marker/usv_pin.svg": fail(f"{pan['title']}: vessel symbol is not the pin")
+                if st.get("color", {}).get("fixed") != "#ffffff": fail(f"{pan['title']}: pin colour must be white (icons are tinted)")
+                if st.get("symbolAlign", {}).get("vertical") != "top": fail(f"{pan['title']}: pin tip not on the position")
+        if any(L.get("name") == "Track" for L in layers):
+            q = next((t["query"] for t in pan["targets"] if t["refId"] == "E"), "")
+            for need in ('import "math"', 'r.sog >= 0.5', 'union(tables: [a, b])', '/ 600.0'):
+                if need not in q: fail(f"{pan['title']}: speed vector query lacks {need!r}")
+if maps < 3: fail(f"expected the pin on Navigation, Replay and Fleet, found {maps}")
+print("  [PASS] pin installed and used on every vessel map; speed vector wired on Navigation and Replay" if not bad else f"  {bad} problems")
+sys.exit(1 if bad else 0)
+PY
+[ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
+
 hdr "Alert rule queries vs simulator output"
 python3 - "$REPO" "$TMP/produced.txt" <<'PY'
 import yaml, re, sys
@@ -149,6 +219,8 @@ d = yaml.safe_load(open(f"{repo}/grafana/provisioning/alerting/alerts.yml"))
 have = {tuple(l.split()) for l in open(produced_file) if l.strip()}
 # fields the MOOS bridge writes (its live run below needs MOOSDB)
 src = open(f"{repo}/ingestion/moos-cpp/moos_bridge.cpp").read()
+# Other C++ writers that the simulator does not exercise (Frigate cameras).
+src += open(f"{repo}/ingestion/frigate-cpp/frigate_bridge.cpp").read()
 have |= set(re.findall(r'\{"(\w+)",\s*"(\w+)"(?:,|\})', src))
 have |= set(re.findall(r'(?:str_)?field\("(\w+)",\s*[^,]+,\s*"(\w+)"', src))
 external = {"cpu","mem","disk","diskio","net","temp","net_response","systemd_units"}
