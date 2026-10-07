@@ -5,6 +5,26 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+### Changed
+- Traffic View: contacts drawn in the ECDIS / OpenCPN AIS target style, a
+  hull rotated to the contact's heading (green report / AIS, amber radar,
+  red HIGH risk) with a 6-minute speed vector ahead of the bow; speed added
+  to the contact tooltip.
+
+### Added
+- Traffic View: own ship drawn as a red map pin with a vessel glyph at the
+  centre. The Navigation, Replay and Fleet maps keep the red heading
+  triangle: Grafana 13.2 draws custom SVG map markers as black squares
+  (seen on usv-722), and the smoke test now rejects them.
+- Smoke test (98 checks): builds the Frigate bridge and runs
+  `mayara_logic_test` and `frigate_logic_test`; runs every ECharts
+  instrument in a mocked Grafana context; type-checks all dashboard and
+  alert Flux queries; checks that map markers use built-in shapes and the speed vector wiring; counts
+  `frigate_bridge` as a producer (fixes a false "camera_summary.connected
+  queried but never written").
+- Navigation and Replay maps: own-ship 6-minute speed vector (lime line
+  along COG, heading if COG is missing; hidden below 0.5 kn).
+
 ## [1.2.12] - 2026-10-06 — battery, readiness and Frigate cameras
 
 ### Added

@@ -106,11 +106,15 @@ python3 tools/gen_alerts.py --profile sim
 bash tools/smoke_test.sh                 # must end with FAIL: 0
 ```
 
-The smoke test (89 checks) builds every C++ program, runs the
-273-assertion `mission_logic_test`, drives the simulator, the CAN bridge,
+The smoke test (98 checks) builds every C++ program, runs the
+`mission_logic_test`, `mayara_logic_test` and `frigate_logic_test` unit tests, drives the simulator, the CAN bridge,
 the Signal K bridge and (when MOOSDB is on the PATH) the MOOS bridge
 against an InfluxDB stub, and cross-checks every field the dashboards
-query against what the producers actually write. All vessel-side logic
+query against what the producers actually write. It also runs every
+ECharts instrument in a mocked Grafana context (`tools/check_echarts_panels.js`),
+type-checks every Flux query when `@influxdata/flux-lsp-node` is installed
+(`tools/check_flux.js`), and checks that map markers use Grafana's built-in shapes and the
+speed vector wiring. All vessel-side logic
 (mission state, traffic geometry and risk, pre-departure readiness) is
 C++ in the bridge; Grafana only displays it. Work on feature branches, keep commits
 conventional (`dashboards: ...`, `bridge: ...`, `deploy: ...`) and merge
