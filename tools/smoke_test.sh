@@ -244,14 +244,23 @@ elif command -v node >/dev/null && NODE_PATH="${NODE_PATH:-$(npm root -g 2>/dev/
   cat > "$TMP/sk.js" <<'EOF'
 const { WebSocketServer } = require('ws');
 const wss = new WebSocketServer({ port: 3111 });
-wss.on('connection', ws => setInterval(() => ws.send(JSON.stringify({updates:[{values:[
+const SELF = 'vessels.urn:mrn:imo:mmsi:367000001';
+// An AIS target in the same stream (subscribe=all): must never be written as own ship.
+const ais = {context:'vessels.urn:mrn:imo:mmsi:368274930', updates:[{values:[
+  {path:'navigation.position', value:{latitude:29.95, longitude:-91.55}},
+  {path:'navigation.speedOverGround', value:20.0},
+  {path:'navigation.headingTrue', value:3.0}]}]};
+wss.on('connection', ws => { ws.send(JSON.stringify({name:'signalk-server', version:'2.x', self:SELF, roles:['master']}));
+  setInterval(() => { ws.send(JSON.stringify(ais)); ws.send(JSON.stringify({context:SELF, updates:[{values:[
+  {path:'navigation.headingTrue', value:1.0}]}]})); }, 200);
+  setInterval(() => ws.send(JSON.stringify({updates:[{values:[
   {path:'navigation.speedOverGround', value:2.5},
   {path:'navigation.position', value:{latitude:29.61, longitude:-91.21}},
   {path:'navigation.attitude', value:{roll:0.02, pitch:0.01, yaw:0.9}},
   {path:'propulsion.0.revolutions', value:42.0},
   {path:'propulsion.0.coolantTemperature', value:358.15},
   {path:'electrical.batteries.0.voltage', value:12.9},
-  {path:'navigation.gnss.type', value:'RTK Fixed'}]}]})), 200));
+  {path:'navigation.gnss.type', value:'RTK Fixed'}]}]})), 200); });
 EOF
   start_stub
   NODE_PATH="${NODE_PATH:-$(npm root -g 2>/dev/null)}" nohup node "$TMP/sk.js" >/dev/null 2>&1 & SK=$!
@@ -263,6 +272,12 @@ EOF
   grep -q "nav,.* lat=" "$LINES"           && ok "position decoded"      || bad "position missing"
   grep -q "engine,.* rpm=" "$LINES"        && ok "engine RPM decoded"    || bad "RPM missing"
   grep -q "signalk_ws_up=1" "$LINES"       && ok "link-up heartbeat"     || bad "no heartbeat"
+  # AIS target deltas (other vessel context) must not become own-ship nav
+  if grep -qE "nav,[^ ]* ([^ ]*,)?(lat=29\.95|lon=-91\.55|sog=3[0-9]\.|heading=171\.)" "$LINES"; then
+    bad "AIS target position/speed written as own ship"
+  else ok "AIS target deltas (other vessel context) skipped"; fi
+  grep -qE "nav,[^ ]* ([^ ]*,)?heading=57\.2" "$LINES" && ok "own-ship delta with self context accepted" \
+    || bad "own-ship delta with self context dropped"
   # unit conversions: 2.5 m/s -> ~4.86 kn ; 42 Hz -> 2520 rpm ; 358.15K -> 85 C
   python3 - "$LINES" <<'PY'
 import re,sys

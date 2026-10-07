@@ -5,6 +5,19 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+### Fixed
+- Own-ship track, position, speed and heading jumping between other boats:
+  `signalk_bridge` subscribed with `subscribe=all` and wrote every delta,
+  including AIS targets' `navigation.position`, `speedOverGround` and
+  `headingTrue`, as own-ship `nav` fields. It now reads the own-vessel
+  context from the Signal K hello message and skips deltas for any other
+  context; the default URL and `usv.env.example` use `subscribe=self`. The
+  traffic range / bearing / CPA, computed from the own fix, were affected
+  too. Smoke test: an AIS delta in the mock stream must not be written
+  (fails on the previous bridge).
+
+## [1.2.13] - 2026-10-07 — Traffic symbols, speed vectors, test coverage
+
 ### Changed
 - Traffic View: contacts drawn in the ECDIS / OpenCPN AIS target style, a
   hull rotated to the contact's heading (green report / AIS, amber radar,
@@ -16,7 +29,7 @@ Keep a Changelog; versions are git tags on `main`.
   centre. The Navigation, Replay and Fleet maps keep the red heading
   triangle: Grafana 13.2 draws custom SVG map markers as black squares
   (seen on usv-722), and the smoke test now rejects them.
-- Smoke test (98 checks): builds the Frigate bridge and runs
+- Smoke test: builds the Frigate bridge and runs
   `mayara_logic_test` and `frigate_logic_test`; runs every ECharts
   instrument in a mocked Grafana context; type-checks all dashboard and
   alert Flux queries; checks that map markers use built-in shapes and the speed vector wiring; counts

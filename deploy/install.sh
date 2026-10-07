@@ -218,7 +218,7 @@ if [[ -n "${VESSELS:-}" ]]; then
   systemctl disable --now usv-signalk-bridge 2>/dev/null || true
   for spec in $VESSELS; do
     name=${spec%%:*}; port=${spec##*:}
-    printf 'SIGNALK_URL=ws://localhost:%s/signalk/v1/stream?subscribe=all\nVESSEL_ID=%s\n' \
+    printf 'SIGNALK_URL=ws://localhost:%s/signalk/v1/stream?subscribe=self\nVESSEL_ID=%s\n' \
       "$port" "$name" > "/etc/usv/vessels/$name.env"
     chmod 640 "/etc/usv/vessels/$name.env"; chown root:usv "/etc/usv/vessels/$name.env"
     systemctl enable --now "usv-signalk-bridge@$name"
