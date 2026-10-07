@@ -12,6 +12,9 @@ Keep a Changelog; versions are git tags on `main`.
   to the contact tooltip.
 
 ### Added
+- Navigation, Replay and Fleet maps: own ship drawn as a red map pin with a
+  vessel glyph (`deploy/branding/usv_pin.svg`, installed by `brand.sh`);
+  Traffic View uses the same pin at the centre.
 - Navigation and Replay maps: own-ship 6-minute speed vector (lime line
   along COG, heading if COG is missing; hidden below 0.5 kn).
 
