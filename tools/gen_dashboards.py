@@ -114,6 +114,30 @@ def position_query():
             '  |> keep(columns: ["vessel", "lat", "lon", "heading"])\n')
 
 
+def vector_query():
+    """Own-ship speed vector for the map (ECDIS style): a two-point line from
+    the vessel to where it will be in 6 minutes at the current SOG, along
+    COG (heading when COG is missing). Empty below 0.5 kn so a vessel
+    alongside shows no vector. Flat-earth step, fine over a few nm."""
+    return ('import "math"\n'
+            'p = from(bucket: "telemetry")\n'
+            '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+            '  |> filter(fn: (r) => r._measurement == "nav" and (r._field == "lat" or r._field == "lon" or r._field == "heading" or r._field == "cog" or r._field == "sog"))\n'
+            '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+            '  |> last()\n'
+            '  |> group()\n'
+            '  |> pivot(rowKey: ["vessel"], columnKey: ["_field"], valueColumn: "_value")\n'
+            '  |> filter(fn: (r) => exists r.lat and exists r.lon and exists r.sog and (exists r.cog or exists r.heading))\n'
+            '  |> filter(fn: (r) => r.sog >= 0.5)\n'
+            '  |> map(fn: (r) => ({r with crs: if exists r.cog then r.cog else r.heading}))\n'
+            'a = p |> map(fn: (r) => ({seq: 0, lat: r.lat, lon: r.lon}))\n'
+            'b = p |> map(fn: (r) => ({seq: 1,\n'
+            '      lat: r.lat + r.sog / 600.0 * math.cos(x: r.crs * math.pi / 180.0),\n'
+            '      lon: r.lon + r.sog / 600.0 * math.sin(x: r.crs * math.pi / 180.0) / math.cos(x: r.lat * math.pi / 180.0)}))\n'
+            'union(tables: [a, b])\n'
+            '  |> sort(columns: ["seq"])\n')
+
+
 def geometry_query(kind):
     """Current planned route or operating region (grafana_bridge writes the
     vertex set with one timestamp and deletes the previous set first, so
@@ -134,14 +158,16 @@ def geometry_query(kind):
 
 # Map overlay layers shared by Navigation and Replay: operating region
 # outline (cyan, like the console), planned route (green) with numbered
-# waypoints, the vessel's track (red) and the vessel itself.
+# waypoints, the vessel's track (red), the vessel itself and its 6-minute
+# speed vector (lime line ahead of the bow, ECDIS / OpenCPN style).
 TRACK_RED = "#e53935"
 ROUTE_GREEN = "#2e7d32"
 REGION_CYAN = "#00bcd4"
+VECTOR_LIME = "#9be22d"
 
 
 def overlay_layers(track_ref="A", vessel_ref="B", route_ref="C",
-                   region_ref="D"):
+                   region_ref="D", vector_ref="E"):
     def coords():
         return {"mode": "coords", "latitude": "lat", "longitude": "lon"}
     return [
@@ -171,6 +197,11 @@ def overlay_layers(track_ref="A", vessel_ref="B", route_ref="C",
          "filterData": {"id": "byRefId", "options": track_ref},
          "config": {"style": {"color": {"fixed": TRACK_RED},
                               "lineWidth": 2, "opacity": 0.9}}},
+        {"type": "route", "name": "Speed vector (6 min)",
+         "location": coords(),
+         "filterData": {"id": "byRefId", "options": vector_ref},
+         "config": {"style": {"color": {"fixed": VECTOR_LIME},
+                              "lineWidth": 3, "opacity": 1}}},
         {"type": "markers", "name": "Vessel",
          "location": coords(),
          "filterData": {"id": "byRefId", "options": vessel_ref},
@@ -921,7 +952,8 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
     panel("geomap", "Position & Track",
           [target(track_query("5s")), target(position_query(), ref="B"),
            target(geometry_query("route"), ref="C"),
-           target(geometry_query("region"), ref="D")],
+           target(geometry_query("region"), ref="D"),
+           target(vector_query(), ref="E")],
           0, 0, 14, 13,
           options={
               "view": {"id": "fit", "zoom": 15},
@@ -1416,9 +1448,11 @@ def worst_contact_query(column, string=False):
 
 def traffic_js():
     """Heading-up polar traffic view: own ship at the centre, range rings
-    in nautical miles (auto-scaled 0.5 / 1 / 2 / 5 nm), contacts as
-    heading-rotated triangles coloured by source, HIGH-risk contacts red
-    with a dashed CPA line to the riskiest one."""
+    in nautical miles (auto-scaled 0.5 / 1 / 2 / 5 nm). Contacts use the
+    ECDIS / OpenCPN AIS target style: a hull rotated to the contact's
+    heading, coloured by source (green report / AIS, amber radar, red HIGH
+    risk), with a 6-minute speed vector ahead of the bow. A dashed CPA line
+    runs to the riskiest contact."""
     return ECH_PRELUDE + r"""
 const ownHdg = val('B') || 0;
 const rows = [];
@@ -1431,7 +1465,8 @@ for (const s of context.panel.data.series) {
     rows.push({ id: col.contact ? col.contact[i] : ('#' + i),
       source: col.source ? col.source[i] : 'radar',
       range: col.range_m[i], rb: col.rel_bearing ? col.rel_bearing[i] : null,
-      hdg: col.hdg ? col.hdg[i] : null, risk: col.risk ? col.risk[i] : 0,
+      hdg: col.hdg ? col.hdg[i] : null, spd: col.spd_kn ? col.spd_kn[i] : null,
+      risk: col.risk ? col.risk[i] : 0,
       cpa: col.cpa_m ? col.cpa_m[i] : null, tcpa: col.tcpa_s ? col.tcpa_s[i] : null });
   }
 }
@@ -1441,19 +1476,37 @@ for (const r of rows) { if (r.rb !== null && r.range / NM > maxR * 0.9) { maxR =
 if (maxR > 2 && rows.some(r => r.range / NM > 4.5)) { maxR = 10; }
 const colorOf = (r) => r.risk >= 2 ? '#ff6b6b' : (r.source === 'report' ? '#5ad8a6' : '#f0b429');
 const pts = rows.filter(r => r.rb !== null);
+// Top-view hull, bow up: rotated to the contact's heading (heading-up view).
+const HULL = 'path://M5 0 C8 4 10 9 10 15 L10 26 C10 28 9 29 7 29 L3 29 C1 29 0 28 0 26 L0 15 C0 9 2 4 5 0 Z';
+const wrap = (a) => ((a % 360) + 360) % 360;
 const scatter = pts.map(r => ({
-  value: [r.range / NM, ((r.rb % 360) + 360) % 360],
+  value: [r.range / NM, wrap(r.rb)],
   symbolRotate: r.hdg === null ? 0 : -(r.hdg - ownHdg),
-  itemStyle: { color: colorOf(r) },
+  itemStyle: { color: colorOf(r), borderColor: dark ? '#0b0f14' : '#ffffff', borderWidth: 1 },
   label: { show: r.risk >= 1, formatter: r.id, color: dark ? '#fff' : '#24292e', fontSize: 11, fontWeight: 600, position: 'top' },
-  name: r.id, risk: r.risk, cpa: r.cpa, tcpa: r.tcpa, source: r.source }));
+  name: r.id, risk: r.risk, cpa: r.cpa, tcpa: r.tcpa, source: r.source, spd: r.spd }));
+// Speed vector: where the contact will be in 6 minutes (spd_kn / 10 nm),
+// drawn from the bow along its heading. Kept visible but never longer than
+// 40 % of the display range; none for contacts below 0.5 kn.
+const vectors = [];
+for (const r of pts) {
+  if (r.hdg === null || r.spd === null || r.spd < 0.5) { continue; }
+  const r0 = r.range / NM, a0 = r.rb * Math.PI / 180;
+  const len = Math.min(Math.max(r.spd / 10, maxR * 0.06), maxR * 0.4);
+  const d = (r.hdg - ownHdg) * Math.PI / 180;
+  const x = r0 * Math.sin(a0) + len * Math.sin(d), y = r0 * Math.cos(a0) + len * Math.cos(d);
+  vectors.push({ type: 'line', coordinateSystem: 'polar', silent: true, z: 2, showSymbol: false,
+    lineStyle: { color: colorOf(r), width: 1.5 },
+    data: [[r0, wrap(r.rb)], [Math.hypot(x, y), wrap(Math.atan2(x, y) * 180 / Math.PI)]] });
+}
 const worst = pts.slice().sort((a, b) => (b.risk - a.risk) || ((a.cpa ?? 1e9) - (b.cpa ?? 1e9)))[0];
 const series = [{
-  type: 'scatter', coordinateSystem: 'polar', symbol: 'triangle', symbolSize: 14, data: scatter,
+  type: 'scatter', coordinateSystem: 'polar', symbol: HULL, symbolSize: [9, 24], z: 3, data: scatter,
   tooltip: { formatter: (p) => p.data.name + '<br>' + p.data.source + ' · risk ' + ['clear','MEDIUM','HIGH'][p.data.risk] +
     (p.data.cpa != null ? '<br>CPA ' + Math.round(p.data.cpa) + ' m' : '') +
-    (p.data.tcpa != null && p.data.tcpa >= 0 ? ' · TCPA ' + Math.round(p.data.tcpa) + ' s' : '') }
-}, {
+    (p.data.tcpa != null && p.data.tcpa >= 0 ? ' · TCPA ' + Math.round(p.data.tcpa) + ' s' : '') +
+    (p.data.spd != null ? '<br>' + p.data.spd.toFixed(1) + ' kn' : '') }
+}, ...vectors, {
   type: 'scatter', coordinateSystem: 'polar', symbol: 'triangle', symbolSize: 18,
   data: [{ value: [0, 0], itemStyle: { color: '#ffffff', borderColor: '#00bcd4', borderWidth: 2 } }], silent: true, z: 5
 }];
@@ -1476,7 +1529,8 @@ return {
   tooltip: { trigger: 'item' },
   graphic: [
     { type: 'text', left: 8, top: 4, style: { text: 'HEADING UP · range ' + maxR + ' nm', fill: C.sub, fontSize: 10, fontWeight: 600 } },
-    { type: 'text', left: 8, bottom: 6, style: { text: '▲ report / AIS   ▲ radar   ▲ HIGH risk', fill: C.label, fontSize: 10 } },
+    { type: 'text', left: 8, bottom: 6, style: { text: '{g|●} report / AIS   {a|●} radar   {r|●} HIGH risk   — 6 min vector', fill: C.label, fontSize: 10,
+        rich: { g: { fill: '#5ad8a6', fontSize: 12 }, a: { fill: '#f0b429', fontSize: 12 }, r: { fill: '#ff6b6b', fontSize: 12 } } } },
     { type: 'text', right: 8, bottom: 6, style: { text: worst && worst.risk >= 1 ? worst.id + '  CPA ' + Math.round(worst.cpa) + ' m · TCPA ' + fmtT(worst.tcpa) : 'no risk contacts',
         fill: worst && worst.risk >= 2 ? '#ff6b6b' : C.text, fontSize: 11, fontWeight: 600 } }
   ],
@@ -1894,7 +1948,8 @@ DASHBOARDS.append(dashboard("usv-replay", "Replay", [
     panel("geomap", "GPS Track",
           [target(track_query("10s", archive=True)), target(position_query(), ref="B"),
            target(geometry_query("route"), ref="C"),
-           target(geometry_query("region"), ref="D")],
+           target(geometry_query("region"), ref="D"),
+           target(vector_query(), ref="E")],
           0, 2, 14, 9,
           options={"view": {"id": "fit", "zoom": 15},
                    "basemap": {"type": "osm-standard", "name": "OSM"},

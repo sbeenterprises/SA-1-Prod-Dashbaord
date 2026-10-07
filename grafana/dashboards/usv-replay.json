@@ -279,6 +279,14 @@
           },
           "query": "from(bucket: \"telemetry\")\n  |> range(start: -90d)\n  |> filter(fn: (r) => r._measurement == \"geometry\" and r.kind == \"region\")\n  |> filter(fn: (r) => r._field == \"lat\" or r._field == \"lon\" or r._field == \"seq\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> pivot(rowKey: [\"idx\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.lat and exists r.lon)\n  |> sort(columns: [\"seq\"])\n  |> map(fn: (r) => ({r with wp: string(v: int(v: r.seq) + 1)}))\n  |> keep(columns: [\"seq\", \"wp\", \"lat\", \"lon\"])\n",
           "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "import \"math\"\np = from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"lat\" or r._field == \"lon\" or r._field == \"heading\" or r._field == \"cog\" or r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> pivot(rowKey: [\"vessel\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.lat and exists r.lon and exists r.sog and (exists r.cog or exists r.heading))\n  |> filter(fn: (r) => r.sog >= 0.5)\n  |> map(fn: (r) => ({r with crs: if exists r.cog then r.cog else r.heading}))\na = p |> map(fn: (r) => ({seq: 0, lat: r.lat, lon: r.lon}))\nb = p |> map(fn: (r) => ({seq: 1,\n      lat: r.lat + r.sog / 600.0 * math.cos(x: r.crs * math.pi / 180.0),\n      lon: r.lon + r.sog / 600.0 * math.sin(x: r.crs * math.pi / 180.0) / math.cos(x: r.lat * math.pi / 180.0)}))\nunion(tables: [a, b])\n  |> sort(columns: [\"seq\"])\n",
+          "refId": "E"
         }
       ],
       "fieldConfig": {
@@ -402,6 +410,28 @@
                 },
                 "lineWidth": 2,
                 "opacity": 0.9
+              }
+            }
+          },
+          {
+            "type": "route",
+            "name": "Speed vector (6 min)",
+            "location": {
+              "mode": "coords",
+              "latitude": "lat",
+              "longitude": "lon"
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "E"
+            },
+            "config": {
+              "style": {
+                "color": {
+                  "fixed": "#9be22d"
+                },
+                "lineWidth": 3,
+                "opacity": 1
               }
             }
           },
