@@ -58,10 +58,9 @@ cp "$BR/swiftships_wordmark.png" "$BR/swiftships_wordmark_light.png" \
    "$BR/swiftships_mark.png" "$BR/swiftships_mark_96.png" \
    "$BR/swiftships_wordmark_chip.png" "$BR/swiftships_wordmark_chip_sm.png" \
    "$BR/swiftships_boat.svg" "$GPUB/img/"
-# Own-ship map pin for the geomap Vessel layer (next to Grafana's built-in
-# marker shapes, which the markers layer loads from img/icons/marker).
-mkdir -p "$GPUB/img/icons/marker"
-cp "$BR/usv_pin.svg" "$GPUB/img/icons/marker/usv_pin.svg"
+# Remove the custom map pin an earlier build installed: Grafana 13.2 draws
+# custom SVG map markers as black squares, so the maps use built-in shapes.
+rm -f "$GPUB/img/icons/marker/usv_pin.svg"
 
 # ------------------------------------------------------- login background
 # Navy gradient in place of Grafana's orange/purple artwork (both themes).

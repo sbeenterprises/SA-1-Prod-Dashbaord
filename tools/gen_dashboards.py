@@ -81,27 +81,13 @@ def flux(measurement, fields, bucket="telemetry", every='v.windowPeriod', fn="me
     return q + CLEAN_LABELS
 
 
-# Vessel marker: red map pin with a white vessel glyph (deploy/branding/
-# usv_pin.svg, installed by brand.sh next to Grafana's built-in marker
-# shapes). The pin is full colour, so the marker colour is white (Grafana
-# tints SVG icons by multiplying with it). Aligned "top" so the pin's tip
-# sits on the position. A pin does not rotate; course is shown by the
-# 6-minute speed vector. Fallback if the icon ever fails to draw:
-# VESSEL_MARKER = VESSEL_MARKER_TRIANGLE.
+# Vessel marker: Grafana's WebGL-drawn triangle (a heading arrow) in the
+# Freeboard red, rotated by heading, name label above. Keep the built-in
+# shapes (circle, square, triangle): Grafana 13.2 draws any custom SVG marker
+# through its WebGL icon path as a black square (seen on 13.2.1 with the
+# boat SVG and on 13.2.3 with a map pin, usv-722 2026-10-07). The own-ship
+# pin is used on the Traffic View instead, where ECharts draws it.
 VESSEL_MARKER = {
-    "size": {"fixed": 16},
-    "color": {"fixed": "#ffffff"},
-    "opacity": 1,
-    "symbol": {"fixed": "img/icons/marker/usv_pin.svg", "mode": "fixed"},
-    "symbolAlign": {"horizontal": "center", "vertical": "top"},
-    "text": {"field": "vessel", "mode": "field"},
-    "textConfig": {"fontSize": 13, "offsetX": 0, "offsetY": -40,
-                   "textAlign": "center", "textBaseline": "middle"},
-}
-
-# Previous marker: Grafana's WebGL triangle in Freeboard red, rotated by
-# heading.
-VESSEL_MARKER_TRIANGLE = {
     "size": {"fixed": 14},
     "color": {"fixed": "#d9342b"},
     "opacity": 1,

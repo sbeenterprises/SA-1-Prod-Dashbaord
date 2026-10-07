@@ -450,19 +450,22 @@
             "config": {
               "style": {
                 "size": {
-                  "fixed": 16
+                  "fixed": 14
                 },
                 "color": {
-                  "fixed": "#ffffff"
+                  "fixed": "#d9342b"
                 },
                 "opacity": 1,
                 "symbol": {
-                  "fixed": "img/icons/marker/usv_pin.svg",
+                  "fixed": "img/icons/marker/triangle.svg",
                   "mode": "fixed"
                 },
-                "symbolAlign": {
-                  "horizontal": "center",
-                  "vertical": "top"
+                "rotation": {
+                  "field": "heading",
+                  "mode": "mod",
+                  "min": -360,
+                  "max": 360,
+                  "fixed": 0
                 },
                 "text": {
                   "field": "vessel",
@@ -471,7 +474,7 @@
                 "textConfig": {
                   "fontSize": 13,
                   "offsetX": 0,
-                  "offsetY": -40,
+                  "offsetY": -18,
                   "textAlign": "center",
                   "textBaseline": "middle"
                 }

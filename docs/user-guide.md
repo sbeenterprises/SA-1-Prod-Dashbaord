@@ -27,7 +27,7 @@ Interface theme.
 |---|---|
 | Mission | Status wall (mission state, helm, armed, operator link, geofence, all-stop, arrival, obstacles), readouts (mission, route name, elapsed, ETA, waypoint n of m, remaining, distance to waypoint, distance traveled in nm), progress bar, approach profile, autonomy flags, state timeline, mission events |
 | Readiness | Pre-departure verdict (READY / NOT READY) with pass / fail / N/A / console counts, mission state, route and operator link; the automatic checks table (GPS fix, course planning incl. route inside the region, chart/ENC, autonomy stack, MOOS apps running, steering, operator link and comms, CAN bus, engine incl. DTCs, electrical, endurance against the route, AIS/radar, cameras, onboard computer, safety flags, console checklist) with the evidence behind each verdict; the console checklist mirror (every item with its description, ticked or pending, who ticked, count). Decided onboard every 5 s; the Mission Events list records when the boat became ready and what blocked it |
-| Navigation | Live map (operating region in cyan, planned route with numbered waypoints in green, track in red, vessel as a red map pin with a lime 6-minute speed vector along its course), compass (HDG/COG needles), speed meter, GPS fix and satellites, lat/lon, KPI strip (SOG, COG, heading, XTE, distance to WP, HDOP, depth, roll/pitch), trends |
+| Navigation | Live map (operating region in cyan, planned route with numbered waypoints in green, track in red, vessel as a red heading arrow with a lime 6-minute speed vector along its course), compass (HDG/COG needles), speed meter, GPS fix and satellites, lat/lon, KPI strip (SOG, COG, heading, XTE, distance to WP, HDOP, depth, roll/pitch), trends |
 | Autopilot | Helm state, all-stop, station keeping, entry gate, re-arm hold, remote control, corridor, crash stop; active behaviors, heading/speed error, rudder/throttle commands, speed cap, next turn; rudder/throttle/heading-error instruments; desired vs actual heading; speed governor (desired / cap / commanded / actual) |
 | Vessel Health | Instrument cluster (tachometer, coolant, oil pressure, fuel, battery volts, SOC), engine and electrical tiles, trends |
 | CAN Bus | Utilization, msgs/s, error/dropped frames, PGN table |
@@ -37,7 +37,7 @@ Interface theme.
 | System | CPU, GPU, RAM, disk, CPU temperature, load, Signal K and MOOS reachability, trends, systemd services |
 | Replay | Historical playback: GPS track, mission state, events, heading/speed/actuator history |
 | Alarms | Active alerts, alarm history, at-a-glance status wall |
-| Fleet | Last known positions on one map (red pins) and a status row per vessel, each tile opening that vessel's Mission dashboard |
+| Fleet | Last known positions on one map and a status row per vessel, each tile opening that vessel's Mission dashboard |
 
 ## Instruments
 Navigation, Autopilot and Vessel Health carry analog instruments styled

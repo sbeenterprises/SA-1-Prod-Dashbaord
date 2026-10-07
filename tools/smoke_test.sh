@@ -173,18 +173,15 @@ case $? in
   *) bad "Flux type check" ;;
 esac
 
-hdr "Map vessel pin and speed vector"
+hdr "Map vessel marker and speed vector"
 python3 - "$REPO" <<'PY'
-import json, glob, sys, xml.etree.ElementTree as ET
+import json, glob, sys
 repo = sys.argv[1]; bad = 0
 def fail(m):
     global bad; bad += 1; print("  [FAIL] " + m)
-root = ET.parse(f"{repo}/deploy/branding/usv_pin.svg").getroot()
-if not root.tag.endswith("svg") or root.get("width") != root.get("height") or not root.get("viewBox"):
-    fail("usv_pin.svg must be a square SVG with width/height/viewBox (Grafana sizes icons square)")
-if 'img/icons/marker/usv_pin.svg' not in open(f"{repo}/deploy/brand.sh").read():
-    fail("brand.sh does not install usv_pin.svg into img/icons/marker")
-maps = 0
+# Grafana 13.2 draws custom SVG map markers as black squares: built-in only.
+BUILTIN = {f"img/icons/marker/{n}.svg" for n in ("circle", "square", "triangle")}
+markers = 0
 for p in sorted(glob.glob(f"{repo}/grafana/dashboards/*.json")):
     for pan in json.load(open(p))["panels"]:
         if pan.get("type") != "geomap": continue
@@ -194,18 +191,16 @@ for p in sorted(glob.glob(f"{repo}/grafana/dashboards/*.json")):
             ref = (L.get("filterData") or {}).get("options")
             if ref and ref not in refs:
                 fail(f"{pan['title']}: layer '{L['name']}' filters on missing query {ref}")
-            st = L.get("config", {}).get("style", {})
-            if L.get("name") in ("Vessel", "Vessels"):
-                maps += 1
-                if st.get("symbol", {}).get("fixed") != "img/icons/marker/usv_pin.svg": fail(f"{pan['title']}: vessel symbol is not the pin")
-                if st.get("color", {}).get("fixed") != "#ffffff": fail(f"{pan['title']}: pin colour must be white (icons are tinted)")
-                if st.get("symbolAlign", {}).get("vertical") != "top": fail(f"{pan['title']}: pin tip not on the position")
+            sym = L.get("config", {}).get("style", {}).get("symbol", {}).get("fixed")
+            if L.get("type") == "markers":
+                markers += 1
+                if sym not in BUILTIN:
+                    fail(f"{pan['title']}: layer '{L['name']}' uses {sym} (custom SVG renders black in Grafana 13.2)")
         if any(L.get("name") == "Track" for L in layers):
             q = next((t["query"] for t in pan["targets"] if t["refId"] == "E"), "")
             for need in ('import "math"', 'r.sog >= 0.5', 'union(tables: [a, b])', '/ 600.0'):
                 if need not in q: fail(f"{pan['title']}: speed vector query lacks {need!r}")
-if maps < 3: fail(f"expected the pin on Navigation, Replay and Fleet, found {maps}")
-print("  [PASS] pin installed and used on every vessel map; speed vector wired on Navigation and Replay" if not bad else f"  {bad} problems")
+print(f"  [PASS] {markers} map marker layers use built-in shapes; speed vector wired on Navigation and Replay" if not bad else f"  {bad} problems")
 sys.exit(1 if bad else 0)
 PY
 [ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))

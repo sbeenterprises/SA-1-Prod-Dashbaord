@@ -113,8 +113,8 @@ against an InfluxDB stub, and cross-checks every field the dashboards
 query against what the producers actually write. It also runs every
 ECharts instrument in a mocked Grafana context (`tools/check_echarts_panels.js`),
 type-checks every Flux query when `@influxdata/flux-lsp-node` is installed
-(`tools/check_flux.js`), and checks the map vessel pin and speed vector
-wiring. All vessel-side logic
+(`tools/check_flux.js`), and checks that map markers use Grafana's built-in shapes and the
+speed vector wiring. All vessel-side logic
 (mission state, traffic geometry and risk, pre-departure readiness) is
 C++ in the bridge; Grafana only displays it. Work on feature branches, keep commits
 conventional (`dashboards: ...`, `bridge: ...`, `deploy: ...`) and merge
