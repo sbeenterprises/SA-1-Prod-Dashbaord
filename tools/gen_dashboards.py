@@ -1479,6 +1479,16 @@ const pts = rows.filter(r => r.rb !== null);
 // Top-view hull, bow up: rotated to the contact's heading (heading-up view).
 const HULL = 'path://M5 0 C8 4 10 9 10 15 L10 26 C10 28 9 29 7 29 L3 29 C1 29 0 28 0 26 L0 15 C0 9 2 4 5 0 Z';
 const wrap = (a) => ((a % 360) + 360) % 360;
+const OWN_PIN = 'image://data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 52" width="40" height="52">' +
+  '<path d="M9 33 L20 50 L31 33 Z" fill="#d32f2f" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>' +
+  '<circle cx="20" cy="20" r="18" fill="#d32f2f" stroke="#ffffff" stroke-width="2"/>' +
+  '<circle cx="20" cy="20" r="12.5" fill="#0b2a49"/>' +
+  '<rect x="19.2" y="11" width="1.6" height="5" fill="#ffffff"/>' +
+  '<rect x="15" y="15.5" width="9.5" height="5.5" rx="1" fill="#ffffff"/>' +
+  '<path d="M10.5 22 L29.5 22 L26.5 27.5 L13.5 27.5 Z" fill="#ffffff"/>' +
+  '<path d="M12 30 q2 -1.5 4 0 t4 0 t4 0 t4 0" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/>' +
+  '</svg>');
 const scatter = pts.map(r => ({
   value: [r.range / NM, wrap(r.rb)],
   symbolRotate: r.hdg === null ? 0 : -(r.hdg - ownHdg),
@@ -1507,8 +1517,9 @@ const series = [{
     (p.data.tcpa != null && p.data.tcpa >= 0 ? ' · TCPA ' + Math.round(p.data.tcpa) + ' s' : '') +
     (p.data.spd != null ? '<br>' + p.data.spd.toFixed(1) + ' kn' : '') }
 }, ...vectors, {
-  type: 'scatter', coordinateSystem: 'polar', symbol: 'triangle', symbolSize: 18,
-  data: [{ value: [0, 0], itemStyle: { color: '#ffffff', borderColor: '#00bcd4', borderWidth: 2 } }], silent: true, z: 5
+  // Own ship: red map pin with a white vessel glyph, tip on the centre.
+  type: 'scatter', coordinateSystem: 'polar', symbol: OWN_PIN, symbolSize: [28, 36], symbolOffset: [0, '-50%'],
+  data: [{ value: [0, 0] }], silent: true, z: 5
 }];
 if (worst && worst.risk >= 1) {
   series.push({ type: 'line', coordinateSystem: 'polar', silent: true, z: 4, showSymbol: false,
