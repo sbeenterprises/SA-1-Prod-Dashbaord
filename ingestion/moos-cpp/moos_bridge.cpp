@@ -165,7 +165,7 @@ const std::set<std::string> kFlagVars = {
 const std::set<std::string> kSpecialVars = {
     "COMMS_LOST", "SURVEY_ENTRY_GATE",
     "IVPHELM_STATE", "IVPHELM_ALLSTOP", "IVPHELM_SUMMARY",
-    "OPR_BREACHED", "VIEW_SEGLIST", "OPR_POLY_ACTUAL", "OBSTACLE_ALERT",
+    "OPR_BREACHED", "VIEW_SEGLIST", "OPR_POLY_ACTUAL", "REGION_UPDATES", "OBSTACLE_ALERT",
     "CHECKLIST_STATUS", "DB_CLIENTS",
     "DIST_TO_NEXT_WPT", "WPT_INDEX",
     "ACTIVE_BEHAVIOR", "STATION_KEEP_STATUS",
@@ -618,7 +618,12 @@ private:
             HandleGeofence(msg.GetString(), now);
         } else if (key == "VIEW_SEGLIST" && msg.IsString()) {
             HandleSeglist(msg.GetString());
-        } else if (key == "OPR_POLY_ACTUAL" && msg.IsString()) {
+        } else if ((key == "OPR_POLY_ACTUAL" || key == "REGION_UPDATES") && msg.IsString()) {
+            // OPR_POLY_ACTUAL: polygon posted by the OpRegion behaviour.
+            // REGION_UPDATES: "core_poly=pts={x,y:...}" sent by the operator
+            // console (iWebSocket) to BHV_OpRegionV24 when a region is
+            // selected, already in the local grid. Either one is the
+            // operating region; ParsePts reads the pts={} block of both.
             WriteGeometry("region", msg.GetString(), /*close=*/true);
         } else if (key == "CHECKLIST_STATUS" && msg.IsString()) {
             HandleChecklist(msg.GetString());

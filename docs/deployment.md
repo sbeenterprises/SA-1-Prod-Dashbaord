@@ -98,7 +98,7 @@ preferences for every user).
 The Navigation and Replay maps draw the operating region (cyan outline),
 the planned route with numbered waypoints (green), the vessel's track
 (red) and the vessel itself (red heading arrow). Route
-and region come from the helm (VIEW_SEGLIST, OPR_POLY_ACTUAL) converted
+and region come from the helm (VIEW_SEGLIST, OPR_POLY_ACTUAL or the console's REGION_UPDATES) converted
 with the mission file's `LatOrigin` / `LongOrigin`; without that datum
 the overlays stay empty and nothing else is affected.
 

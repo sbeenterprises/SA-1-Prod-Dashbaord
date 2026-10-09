@@ -6,6 +6,12 @@ Keep a Changelog; versions are git tags on `main`.
 ## [Unreleased]
 
 ### Fixed
+- Course planning check / map region: the operator console sends the
+  selected operating region to MOOS as `REGION_UPDATES`
+  (`core_poly=pts={...}`, for BHV_OpRegionV24), which the bridge did not
+  read, so Readiness reported "no operating region" and the maps drew no
+  outline. The bridge now takes the region from `REGION_UPDATES` as well as
+  `OPR_POLY_ACTUAL`.
 - Alarms page Camera tile: showed one ONLINE/OFFLINE value per camera in a
   single small tile, so the texts overlapped. It now shows one number, the
   enabled Frigate cameras that are not streaming ("ALL ONLINE" or

@@ -378,6 +378,9 @@ EOF
     P 'CHECKLIST_STATUS=done=9,total=11,pending=Weather Conditions|Port Clearance,by=douglas' \
       'ENC_STATUS=selected:US5LA31M'
     sleep 3
+    # Operator console region selection (iWebSocket -> BHV_OpRegionV24).
+    P 'REGION_UPDATES=core_poly=pts={-3000,-3000:3000,-3000:3000,3000:0,3500:-3000,3000}'
+    sleep 2
   fi
   kill $DB 2>/dev/null; pkill -f moos_bridge 2>/dev/null; stop_stub
 
@@ -459,6 +462,8 @@ EOF
     grep -q 'check=endurance evidence="route 1.5 nm needs 0.4 h (x1.5) · no fuel level"' "$LINES" \
       && ok "endurance planned against the route" || bad "endurance evidence wrong"
     grep -q 'mission,vessel=usv-moos region_vertices=4' "$LINES" && ok "OPR_POLY_ACTUAL -> mission.region_vertices" || bad "region_vertices missing"
+    grep -q 'mission,vessel=usv-moos region_vertices=5' "$LINES" && grep -q 'geometry,vessel=usv-moos,kind=region,idx=005 ' "$LINES" \
+      && ok "console REGION_UPDATES -> operating region (closed outline)" || bad "REGION_UPDATES region missing"
     [ "$(grep -c 'readiness,vessel=usv-moos,check=' "$LINES")" -ge 64 ] \
       && ok "readiness rows written per check (seq/status/name/evidence)" || bad "readiness rows missing"
     grep -q 'readiness_summary,vessel=usv-moos ready=' "$LINES" && ok "readiness summary written" || bad "readiness summary missing"

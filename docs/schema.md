@@ -107,7 +107,7 @@ event of type `readiness`.
 Vertex sets for the Navigation / Replay maps, tags `kind` (route |
 region) and `idx` (zero-padded vertex index), fields lat, lon, seq. The
 bridge converts the MOOS local grid (VIEW_SEGLIST of the survey/return
-behavior, OPR_POLY_ACTUAL) to geographic coordinates with the mission
+behavior, OPR_POLY_ACTUAL or the console's REGION_UPDATES) to geographic coordinates with the mission
 file's LatOrigin/LongOrigin, deletes the previous set of the same kind
 and writes all vertices with one timestamp, so `last()` per idx is
 exactly the current geometry. The region outline is closed (first vertex
