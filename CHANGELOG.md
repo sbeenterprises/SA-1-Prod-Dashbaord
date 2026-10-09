@@ -6,6 +6,11 @@ Keep a Changelog; versions are git tags on `main`.
 ## [Unreleased]
 
 ### Fixed
+- Alarms page Camera tile: showed one ONLINE/OFFLINE value per camera in a
+  single small tile, so the texts overlapped. It now shows one number, the
+  enabled Frigate cameras that are not streaming ("ALL ONLINE" or
+  "N offline"), from `camera_summary`; per-camera detail stays on the
+  Cameras page.
 - Own-ship track, position, speed and heading jumping between other boats:
   `signalk_bridge` subscribed with `subscribe=all` and wrote every delta,
   including AIS targets' `navigation.position`, `speedOverGround` and

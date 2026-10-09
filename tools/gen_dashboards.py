@@ -102,6 +102,20 @@ VESSEL_MARKER = {
 }
 
 
+def camera_offline_query():
+    """Enabled Frigate cameras that are not streaming: enabled - streaming
+    from the latest camera_summary row (one number for a status tile)."""
+    return ('from(bucket: "telemetry")\n'
+            '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+            '  |> filter(fn: (r) => r._measurement == "camera_summary" and (r._field == "enabled" or r._field == "streaming"))\n'
+            '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+            '  |> last()\n'
+            '  |> group()\n'
+            '  |> pivot(rowKey: ["vessel"], columnKey: ["_field"], valueColumn: "_value")\n'
+            '  |> filter(fn: (r) => exists r.enabled and exists r.streaming)\n'
+            '  |> map(fn: (r) => ({_value: r.enabled - r.streaming}))\n')
+
+
 def position_query():
     """Latest lat/lon/heading of the selected vessel in one row (markers
     layer: one heading-rotated vessel symbol, not one dot per track point)."""
@@ -2125,8 +2139,15 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms", [
          thresholds=neutral_base([(None, "red"), (15, "yellow"), (30, TILE_OK)]), color_mode="background"),
     stat("Radar", flux("radar", "online", last=True), 20, 10, 4, 4,
          mappings=updown_map(), text_mode="value", color_mode="background"),
-    stat("Camera", flux("camera", "connected", last=True), 0, 14, 4, 4,
-         mappings=updown_map(), text_mode="value", color_mode="background"),
+    # One value for the whole camera set: how many ENABLED cameras are not
+    # streaming (camera_summary from frigate_bridge). A per-camera query
+    # put one ONLINE/OFFLINE value per camera into this small tile and the
+    # texts overlapped; the per-camera detail is on the Cameras page.
+    stat("Camera", camera_offline_query(), 0, 14, 4, 4,
+         unit="suffix: offline", decimals=0, text_mode="value", color_mode="background",
+         mappings=[{"type": "value", "options": {
+             "0": {"text": "ALL ONLINE", "color": TILE_OK, "index": 0}}}],
+         thresholds=neutral_base([(None, TILE_OK), (1, "red")])),
     stat("Signal K", flux("comms", "signalk_ws_up", last=True), 4, 14, 4, 4,
          mappings=updown_map("DISCONNECTED", "CONNECTED"), text_mode="value", color_mode="background"),
     stat("MOOS Rate", flux("comms", "moos_msg_rate", last=True), 8, 14, 4, 4,

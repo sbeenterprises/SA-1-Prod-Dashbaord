@@ -757,7 +757,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"camera\" and (r._field == \"connected\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"camera_summary\" and (r._field == \"enabled\" or r._field == \"streaming\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> pivot(rowKey: [\"vessel\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.enabled and exists r.streaming)\n  |> map(fn: (r) => ({_value: r.enabled - r.streaming}))\n",
           "refId": "A"
         }
       ],
@@ -767,12 +767,22 @@
             "mode": "thresholds"
           },
           "noValue": "N/A",
+          "unit": "suffix: offline",
+          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "#3d434b",
                 "value": null
+              },
+              {
+                "color": "#175d8d",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 1
               }
             ]
           },
@@ -781,14 +791,9 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "OFFLINE",
-                  "color": "red",
-                  "index": 0
-                },
-                "1": {
-                  "text": "ONLINE",
+                  "text": "ALL ONLINE",
                   "color": "#175d8d",
-                  "index": 1
+                  "index": 0
                 }
               }
             }
