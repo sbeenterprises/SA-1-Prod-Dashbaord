@@ -5,6 +5,21 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+### Added
+- usv-722 helm and drive on the CAN bus (`can_bridge`, `usv722_can.hpp`,
+  from USV-722-CAN-ID-Mapping.xlsx): steering actuator feedback (0x210),
+  the command it follows, steering motor drive and helm / autopilot control,
+  helm wheel, thrust and gear at the lever and to the engine, key switch,
+  trim switch and J1939 DM1 faults. Steering calibration via
+  STEER_MAX_DEG / STEER_RAW_PORT / STEER_RAW_CENTER / STEER_RAW_STBD.
+- Readiness: Steering gets real rudder feedback from the actuator; Engine
+  pre-start uses key switch, gear, thrust and DM1 when the engine's own
+  sensors are not on the bus ("key RUN · gear NEUTRAL · thrust 0 % ·
+  fuel 23 % · no DTC"; key OFF fails).
+- Autopilot page: rudder command vs actual trend and a CAN row (Rudder
+  Actual, Helm Wheel, Steering Drive, Steering Control, Gear, Thrust to
+  Engine, Key Switch, Engine Faults).
+
 ### Fixed
 - Course planning check / map region: the operator console sends the
   selected operating region to MOOS as `REGION_UPDATES`

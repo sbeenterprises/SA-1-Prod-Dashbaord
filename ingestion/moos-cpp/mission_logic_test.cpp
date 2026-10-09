@@ -613,6 +613,25 @@ static void test_readiness() {
     CHECK_EQ_STR(find_check(x, "can").evidence, "interface UP · 212 msg/s");
     CHECK_EQ_STR(find_check(x, "engine").evidence, "coolant 41 °C · oil 310 kPa · fuel 82 % · no DTC");
     CHECK(find_check(x, "ais").status == READY_PASS);
+    // usv-722: no engine sensors on its CAN bus, but key switch, gear and
+    // thrust to the engine are (can_bridge, usv722_can.hpp).
+    {
+        LatestStore k;
+        k.put("engine", "key_state", 1, now);
+        k.put("engine", "gear", 0, now);
+        k.put("engine", "throttle_pct", 0, now);
+        k.put("engine", "fuel_level", 23, now);
+        k.put("engine", "active_dtcs", 0, now);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(k, now, true), "engine").evidence,
+                     "key RUN · gear NEUTRAL · thrust 0 % · fuel 23 % · no DTC");
+        CHECK(find_check(EvaluateReadiness(k, now, true), "engine").status == READY_PASS);
+        k.put("engine", "key_state", 0, now);
+        CHECK(find_check(EvaluateReadiness(k, now, true), "engine").status == READY_FAIL);
+        CHECK(find_check(EvaluateReadiness(k, now, true), "engine").evidence.rfind("key OFF", 0) == 0);
+        LatestStore only_key;
+        only_key.put("engine", "key_state", 2, now);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(only_key, now, true), "engine").evidence, "key START");
+    }
 
     // Faults: rudder not following, low fuel, pending checklist, HIGH risk,
     // stale position, a missing app, active DTCs, route leaving the region,

@@ -14,4 +14,7 @@ add_executable(can_bridge main.cpp)
 target_link_libraries(can_bridge PRIVATE CURL::libcurl Threads::Threads)
 target_compile_options(can_bridge PRIVATE -Wall -Wextra)
 
+add_executable(usv722_can_test usv722_can_test.cpp)
+target_compile_options(usv722_can_test PRIVATE -Wall -Wextra)
+
 install(TARGETS can_bridge RUNTIME DESTINATION bin)

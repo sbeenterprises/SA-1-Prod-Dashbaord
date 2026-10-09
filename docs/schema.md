@@ -133,12 +133,24 @@ speed_error (kn, derived), speed_cap, cmd_speed (kn, planchaPID governor),
 next_turn_angle (deg), pid_heading_out, pid_speed_out (legacy pMarinePID
 names; planchaPID does not publish them)
 
+usv-722 CAN (can_bridge, usv722_can.hpp, steering actuator id 0x210 and the
+Glendinning helm 18FF11D0): rudder_actual (deg, actuator feedback),
+rudder_actuator_cmd (deg, command the actuator is following), helm_rudder
+(deg, helm wheel), steer_drive_pct (%, steering motor), steer_pc_control
+(1 = PC / autopilot steering, 0 = helm). Scale 0 / 511 / 1012 raw = full
+port / centre / full starboard, x STEER_MAX_DEG (50).
+
 ### engine (FR-4) — sources: MOOS bridge (iCANRec ENGINE_*, SAE J1939 on
 slcan0), CAN bridge (N2K PGN 127488/127505 if an N2K bus exists), Signal K
 Tag: `instance` (multi-engine; ENGINE_* is instance 0). Fields: rpm,
 coolant_temp, oil_temp (°C), oil_pressure, intake_manifold_pressure (kPa),
 fuel_level (%), fuel_rate (L/h), runtime_h (h), percent_load,
 percent_torque, pedal_position (%), active_dtcs (count).
+usv-722 CAN (can_bridge, usv722_can.hpp; RPM and temperatures are not on
+its bus): key_state (0 off, 1 run, 2 start), gear and gear_helm (-1 reverse,
+0 neutral, 1 forward; to the engine / at the lever), throttle_pct and
+throttle_helm_pct (% thrust, J1939 EEC2), trim_switch (1 up, -1 down,
+0 idle), active_dtcs (0/1 from J1939 DM1, address 210), fault_lamps.
 Not produced in the simulation environment (no engine).
 
 ### electrical (FR-4) — sources: CAN bridge (PGN 127508), Signal K

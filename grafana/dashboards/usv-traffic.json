@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 213,
+      "id": 221,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -206,7 +206,7 @@
       }
     },
     {
-      "id": 104,
+      "id": 112,
       "type": "stat",
       "title": "Collision Risk",
       "datasource": {
@@ -286,7 +286,7 @@
       }
     },
     {
-      "id": 105,
+      "id": 113,
       "type": "stat",
       "title": "Avoidance",
       "datasource": {
@@ -361,7 +361,7 @@
       }
     },
     {
-      "id": 106,
+      "id": 114,
       "type": "stat",
       "title": "Contacts",
       "datasource": {
@@ -419,7 +419,7 @@
       }
     },
     {
-      "id": 107,
+      "id": 115,
       "type": "stat",
       "title": "Reports / AIS",
       "datasource": {
@@ -477,7 +477,7 @@
       }
     },
     {
-      "id": 108,
+      "id": 116,
       "type": "stat",
       "title": "Radar Only",
       "datasource": {
@@ -535,7 +535,7 @@
       }
     },
     {
-      "id": 109,
+      "id": 117,
       "type": "stat",
       "title": "High Risk",
       "datasource": {
@@ -597,7 +597,7 @@
       }
     },
     {
-      "id": 110,
+      "id": 118,
       "type": "stat",
       "title": "Closest Range",
       "datasource": {
@@ -683,7 +683,7 @@
       }
     },
     {
-      "id": 111,
+      "id": 119,
       "type": "stat",
       "title": "Min CPA",
       "datasource": {
@@ -769,7 +769,7 @@
       }
     },
     {
-      "id": 112,
+      "id": 120,
       "type": "volkovlabs-echarts-panel",
       "title": "Traffic View",
       "datasource": {
@@ -813,7 +813,7 @@
       }
     },
     {
-      "id": 113,
+      "id": 121,
       "type": "stat",
       "title": "Highest-Risk Contact",
       "datasource": {
@@ -872,7 +872,7 @@
       }
     },
     {
-      "id": 114,
+      "id": 122,
       "type": "stat",
       "title": "CPA",
       "datasource": {
@@ -944,7 +944,7 @@
       }
     },
     {
-      "id": 115,
+      "id": 123,
       "type": "stat",
       "title": "TCPA",
       "datasource": {
@@ -1028,7 +1028,7 @@
       }
     },
     {
-      "id": 116,
+      "id": 124,
       "type": "stat",
       "title": "Range",
       "datasource": {
@@ -1088,7 +1088,7 @@
       }
     },
     {
-      "id": 117,
+      "id": 125,
       "type": "stat",
       "title": "Bearing",
       "datasource": {
@@ -1148,7 +1148,7 @@
       }
     },
     {
-      "id": 118,
+      "id": 126,
       "type": "stat",
       "title": "Rel. Bearing",
       "datasource": {
@@ -1208,7 +1208,7 @@
       }
     },
     {
-      "id": 119,
+      "id": 127,
       "type": "stat",
       "title": "Rel. Speed",
       "datasource": {
@@ -1268,7 +1268,7 @@
       }
     },
     {
-      "id": 120,
+      "id": 128,
       "type": "stat",
       "title": "Type",
       "datasource": {
@@ -1327,7 +1327,7 @@
       }
     },
     {
-      "id": 121,
+      "id": 129,
       "type": "stat",
       "title": "Encounter",
       "datasource": {
@@ -1413,7 +1413,7 @@
       }
     },
     {
-      "id": 122,
+      "id": 130,
       "type": "stat",
       "title": "Planned Course",
       "datasource": {
@@ -1487,7 +1487,7 @@
       }
     },
     {
-      "id": 123,
+      "id": 131,
       "type": "stat",
       "title": "Commanded Course",
       "datasource": {
@@ -1547,7 +1547,7 @@
       }
     },
     {
-      "id": 124,
+      "id": 132,
       "type": "stat",
       "title": "Actual Heading",
       "datasource": {
@@ -1607,7 +1607,7 @@
       }
     },
     {
-      "id": 125,
+      "id": 133,
       "type": "stat",
       "title": "Deviation",
       "datasource": {
@@ -1689,7 +1689,7 @@
       }
     },
     {
-      "id": 126,
+      "id": 134,
       "type": "stat",
       "title": "Speed Command",
       "datasource": {
@@ -1749,7 +1749,7 @@
       }
     },
     {
-      "id": 127,
+      "id": 135,
       "type": "stat",
       "title": "Actual SOG",
       "datasource": {
@@ -1809,7 +1809,7 @@
       }
     },
     {
-      "id": 128,
+      "id": 136,
       "type": "stat",
       "title": "Avoidance Behavior",
       "datasource": {
@@ -1868,7 +1868,7 @@
       }
     },
     {
-      "id": 129,
+      "id": 137,
       "type": "stat",
       "title": "Reason",
       "datasource": {
@@ -1926,7 +1926,7 @@
       }
     },
     {
-      "id": 130,
+      "id": 138,
       "type": "table",
       "title": "Contacts \u2014 riskiest first",
       "datasource": {
@@ -2188,7 +2188,7 @@
       ]
     },
     {
-      "id": 131,
+      "id": 139,
       "type": "timeseries",
       "title": "Closest CPA / TCPA",
       "datasource": {

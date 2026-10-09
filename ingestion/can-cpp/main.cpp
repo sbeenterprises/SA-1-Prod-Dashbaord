@@ -7,7 +7,12 @@
 // Writes InfluxDB 2.x line protocol over HTTP using libcurl.
 //
 // Build: cmake -B build && cmake --build build
+// Also decodes the usv-722 helm / drive frames (steering actuator 0x210,
+// Glendinning helm, J1939 thrust / gear, key switch, DM1): usv722_can.hpp.
+//
 // Env:   CAN_INTERFACE, INFLUX_URL, INFLUX_TOKEN, INFLUX_ORG, INFLUX_BUCKET, VESSEL_ID
+//        STEER_MAX_DEG (50), STEER_RAW_PORT (0), STEER_RAW_CENTER (511),
+//        STEER_RAW_STBD (1012): steering calibration of the usv-722 drive
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
@@ -26,6 +31,7 @@
 #include <string>
 
 #include "../cpp-common/influx_writer.hpp"
+#include "usv722_can.hpp"
 
 using usv::InfluxWriter;
 using usv::env_or;
@@ -129,6 +135,28 @@ void decode_pgn(InfluxWriter& w, uint32_t pgn, const uint8_t* d, uint8_t len) {
     }
 }
 
+// usv-722 helm / drive values arrive up to ~18 times a second. Each one is
+// written when it changes or at least every 0.5 s, so a steady value still
+// shows as live without flooding InfluxDB.
+class ThrottledWriter {
+public:
+    void put(InfluxWriter& w, const usv::usv722::Value& v, double t) {
+        const std::string key = std::string(v.measurement) + "." + v.field;
+        auto it = last_.find(key);
+        if (it != last_.end() && it->second.value == v.value && t - it->second.t < 0.5) return;
+        if (it != last_.end() && t - it->second.t < 0.1) return;   // at most 10 Hz
+        last_[key] = {v.value, t};
+        w.field(v.measurement, "", v.field, v.value);
+    }
+private:
+    struct Last { double value; double t; };
+    std::map<std::string, Last> last_;
+};
+
+double env_num(const char* name, double def) {
+    try { return std::stod(env_or(name, "")); } catch (...) { return def; }
+}
+
 }  // namespace
 
 int main() {
@@ -137,6 +165,12 @@ int main() {
 
     const std::string ifname = env_or("CAN_INTERFACE", "can0");
     InfluxWriter writer;
+    usv::usv722::SteerCal steer_cal;
+    steer_cal.port = env_num("STEER_RAW_PORT", 0.0);
+    steer_cal.centre = env_num("STEER_RAW_CENTER", 511.0);
+    steer_cal.stbd = env_num("STEER_RAW_STBD", 1012.0);
+    steer_cal.max_deg = env_num("STEER_MAX_DEG", 50.0);
+    ThrottledWriter helm_writer;
 
     // Stats state
     uint64_t frames = 0, error_frames = 0, dropped = 0, bits = 0;
@@ -200,11 +234,16 @@ int main() {
                     ++frames;
                     // 29-bit extended frame ≈ 64 + 8*dlc bits with stuffing avg
                     bits += 64 + 8ULL * frame.can_dlc;
-                    if (frame.can_id & CAN_EFF_FLAG) {
-                        uint32_t pgn = pgn_from_id(frame.can_id & CAN_EFF_MASK);
+                    const bool ext = frame.can_id & CAN_EFF_FLAG;
+                    const uint32_t id = frame.can_id & (ext ? CAN_EFF_MASK : CAN_SFF_MASK);
+                    if (ext) {
+                        uint32_t pgn = pgn_from_id(id);
                         ++pgn_counts[pgn];
                         decode_pgn(writer, pgn, frame.data, frame.can_dlc);
                     }
+                    for (const auto& v : usv::usv722::Decode(id, ext, frame.data,
+                                                             frame.can_dlc, steer_cal))
+                        helm_writer.put(writer, v, t);
                 }
             } else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
                 std::cerr << "read error: " << std::strerror(errno) << "\n";

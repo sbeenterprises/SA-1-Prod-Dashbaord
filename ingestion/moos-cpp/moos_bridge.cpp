@@ -361,6 +361,14 @@ protected:
             {"engine", "coolant_temp", ""},
             {"engine", "oil_pressure", ""},
             {"engine", "fuel_level", ""},
+            // usv-722 helm / drive frames decoded by can_bridge: rudder
+            // feedback from the steering actuator, key switch, gear, thrust
+            // to the engine and J1939 DM1 faults.
+            {"autopilot", "rudder_actual", ""},
+            {"engine", "key_state", ""},
+            {"engine", "gear", ""},
+            {"engine", "throttle_pct", ""},
+            {"engine", "active_dtcs", ""},
             {"nav", "satellites", ""},
             {"nav", "hdop", ""},
             {"ping", "result_code", "r.url == \"8.8.8.8\""},

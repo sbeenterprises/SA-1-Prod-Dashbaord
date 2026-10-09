@@ -1183,13 +1183,26 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         const Sample* oil = num("engine", "oil_pressure", 60.0);
         const Sample* fuel = num("engine", "fuel_level", 120.0);
         const Sample* dtcs = num("engine", "active_dtcs", 120.0);
-        if (!cool && !oil && !fuel) add("engine", "Engine pre-start", "no engine data", missing);
+        // Helm / drive state from the CAN bus (usv-722: key switch, gear and
+        // thrust sent to the engine; RPM and temperatures are not on its bus).
+        const Sample* key = num("engine", "key_state", 60.0);
+        const Sample* gear = num("engine", "gear", 60.0);
+        const Sample* thr = num("engine", "throttle_pct", 60.0);
+        if (!cool && !oil && !fuel && !key) add("engine", "Engine pre-start", "no engine data", missing);
         else {
             bool ok = true;
             std::string ev;
-            if (cool) { ev += "coolant " + fmt0(cool->num) + " °C"; ok = ok && cool->num < 105.0; }
-            if (oil) ev += std::string(ev.empty() ? "" : " · ") + "oil " + fmt0(oil->num) + " kPa";
-            if (fuel) { ev += std::string(ev.empty() ? "" : " · ") + "fuel " + fmt0(fuel->num) + " %"; ok = ok && fuel->num > 15.0; }
+            auto sep = [&ev]() { return std::string(ev.empty() ? "" : " · "); };
+            if (key) {
+                const char* k = key->num >= 2.0 ? "START" : (key->num >= 1.0 ? "RUN" : "OFF");
+                ev += std::string("key ") + k;
+                ok = ok && key->num >= 1.0;
+            }
+            if (gear) ev += sep() + "gear " + (gear->num > 0.5 ? "FORWARD" : (gear->num < -0.5 ? "REVERSE" : "NEUTRAL"));
+            if (thr) ev += sep() + "thrust " + fmt0(thr->num) + " %";
+            if (cool) { ev += sep() + "coolant " + fmt0(cool->num) + " °C"; ok = ok && cool->num < 105.0; }
+            if (oil) ev += sep() + "oil " + fmt0(oil->num) + " kPa";
+            if (fuel) { ev += sep() + "fuel " + fmt0(fuel->num) + " %"; ok = ok && fuel->num > 15.0; }
             if (dtcs && dtcs->num > 0.0) { ev += " · " + fmt0(dtcs->num) + " ACTIVE DTC"; ok = false; }
             else if (dtcs) ev += " · no DTC";
             add("engine", "Engine pre-start", ev, ok ? READY_PASS : READY_FAIL);

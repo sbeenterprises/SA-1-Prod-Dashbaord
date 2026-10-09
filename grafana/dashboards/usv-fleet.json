@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 218,
+      "id": 226,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -206,7 +206,7 @@
       }
     },
     {
-      "id": 176,
+      "id": 184,
       "type": "geomap",
       "title": "Fleet Map \u2014 last known positions",
       "datasource": {
@@ -298,7 +298,7 @@
       }
     },
     {
-      "id": 177,
+      "id": 185,
       "type": "row",
       "title": "Vessel: $fleet_vessel",
       "repeat": "fleet_vessel",
@@ -312,7 +312,7 @@
       "panels": []
     },
     {
-      "id": 178,
+      "id": 186,
       "type": "stat",
       "title": "Mission State",
       "datasource": {
@@ -444,7 +444,7 @@
       }
     },
     {
-      "id": 179,
+      "id": 187,
       "type": "stat",
       "title": "Helm",
       "datasource": {
@@ -541,7 +541,7 @@
       }
     },
     {
-      "id": 180,
+      "id": 188,
       "type": "stat",
       "title": "Armed",
       "datasource": {
@@ -622,7 +622,7 @@
       }
     },
     {
-      "id": 181,
+      "id": 189,
       "type": "stat",
       "title": "Operator Link",
       "datasource": {
@@ -713,7 +713,7 @@
       }
     },
     {
-      "id": 182,
+      "id": 190,
       "type": "stat",
       "title": "Geofence",
       "datasource": {
@@ -799,7 +799,7 @@
       }
     },
     {
-      "id": 183,
+      "id": 191,
       "type": "stat",
       "title": "SOG",
       "datasource": {
@@ -864,7 +864,7 @@
       }
     },
     {
-      "id": 184,
+      "id": 192,
       "type": "stat",
       "title": "Progress",
       "datasource": {
@@ -929,7 +929,7 @@
       }
     },
     {
-      "id": 185,
+      "id": 193,
       "type": "stat",
       "title": "Signal K",
       "datasource": {
@@ -1010,7 +1010,7 @@
       }
     },
     {
-      "id": 186,
+      "id": 194,
       "type": "stat",
       "title": "MOOS",
       "datasource": {

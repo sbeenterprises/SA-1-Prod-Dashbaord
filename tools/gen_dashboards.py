@@ -1121,13 +1121,48 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
                                   "actual_speed"]))],
        12, 12, 12, 5, unit="velocityknot"),
     # E — actuator outputs and errors.
-    ts("Rudder Output", [target(flux("autopilot", "rudder_cmd"), "rudder")],
+    ts("Rudder — command vs actual",
+       [target(flux("autopilot", "rudder_cmd"), "command"),
+        target(flux("autopilot", "rudder_actual"), "actual (actuator)", ref="B")],
        0, 17, 8, 5, unit="degree"),
     ts("Throttle Output", [target(flux("autopilot", "throttle_cmd"), "throttle")],
        8, 17, 8, 5, unit="percent", min_=0, max_=100),
     ts("Heading & Speed Error",
        [target(flux("autopilot", ["heading_error", "speed_error"]))],
        16, 17, 8, 5),
+    # F — helm and drive on the CAN bus (usv-722: steering actuator 0x210,
+    # Glendinning helm, J1939 thrust / gear, key switch, DM1; can_bridge).
+    stat("Rudder Actual", flux("autopilot", "rudder_actual", last=True),
+         0, 22, 3, 3, unit="degree", decimals=1, graph_mode="area"),
+    stat("Helm Wheel", flux("autopilot", "helm_rudder", last=True),
+         3, 22, 3, 3, unit="degree", decimals=1),
+    stat("Steering Drive", flux("autopilot", "steer_drive_pct", last=True),
+         6, 22, 3, 3, unit="percent", decimals=0, graph_mode="area"),
+    stat("Steering Control", flux("autopilot", "steer_pc_control", last=True),
+         9, 22, 3, 3, text_mode="value", color_mode="background",
+         mappings=[{"type": "value", "options": {
+             "0": {"text": "HELM", "color": "orange", "index": 0},
+             "1": {"text": "AUTOPILOT", "color": TILE_OK, "index": 1}}}]),
+    stat("Gear", flux("engine", "gear", last=True), 12, 22, 3, 3,
+         text_mode="value", color_mode="background",
+         mappings=[{"type": "value", "options": {
+             "-1": {"text": "REVERSE", "color": "orange", "index": 0},
+             "0": {"text": "NEUTRAL", "color": NEUTRAL, "index": 1},
+             "1": {"text": "FORWARD", "color": TILE_OK, "index": 2}}}]),
+    stat("Thrust to Engine", flux("engine", "throttle_pct", last=True),
+         15, 22, 3, 3, unit="percent", decimals=0, graph_mode="area"),
+    stat("Key Switch", flux("engine", "key_state", last=True), 18, 22, 3, 3,
+         text_mode="value", color_mode="background",
+         mappings=[{"type": "value", "options": {
+             "0": {"text": "OFF", "color": NEUTRAL, "index": 0},
+             "1": {"text": "RUN", "color": TILE_OK, "index": 1},
+             "2": {"text": "START", "color": "yellow", "index": 2}}}]),
+    stat("Engine Faults", flux("engine", "active_dtcs", last=True),
+         21, 22, 3, 3, text_mode="value", color_mode="background",
+         mappings=[{"type": "value", "options": {
+             "0": {"text": "NONE", "color": TILE_OK, "index": 0}}},
+                   {"type": "range", "options": {"from": 1, "to": 999, "result": {
+                       "text": "ACTIVE", "color": "red", "index": 1}}}]),
 ], ["autopilot"]))
 
 # ---------------------------------------------------------- FR-4 Vessel Health

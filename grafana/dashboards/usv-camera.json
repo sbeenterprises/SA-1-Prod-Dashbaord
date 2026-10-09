@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 214,
+      "id": 222,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -206,7 +206,7 @@
       }
     },
     {
-      "id": 133,
+      "id": 141,
       "type": "stat",
       "title": "Frigate NVR",
       "datasource": {
@@ -281,7 +281,7 @@
       }
     },
     {
-      "id": 134,
+      "id": 142,
       "type": "stat",
       "title": "Cameras Enabled",
       "datasource": {
@@ -339,7 +339,7 @@
       }
     },
     {
-      "id": 135,
+      "id": 143,
       "type": "stat",
       "title": "Streaming",
       "datasource": {
@@ -397,7 +397,7 @@
       }
     },
     {
-      "id": 136,
+      "id": 144,
       "type": "stat",
       "title": "Network Connected",
       "datasource": {
@@ -455,7 +455,7 @@
       }
     },
     {
-      "id": 132,
+      "id": 140,
       "type": "table",
       "title": "Cameras",
       "datasource": {
@@ -686,7 +686,7 @@
       "description": "One row per camera enabled in Frigate. A camera that is configured but disabled there (not yet powered) is not listed."
     },
     {
-      "id": 137,
+      "id": 145,
       "type": "timeseries",
       "title": "Frame Rate",
       "datasource": {
@@ -756,7 +756,7 @@
       }
     },
     {
-      "id": 138,
+      "id": 146,
       "type": "timeseries",
       "title": "Bitrate",
       "datasource": {
@@ -826,7 +826,7 @@
       }
     },
     {
-      "id": 139,
+      "id": 147,
       "type": "timeseries",
       "title": "PTZ Position",
       "datasource": {
@@ -910,7 +910,7 @@
       }
     },
     {
-      "id": 140,
+      "id": 148,
       "type": "timeseries",
       "title": "Camera Temperature",
       "datasource": {
