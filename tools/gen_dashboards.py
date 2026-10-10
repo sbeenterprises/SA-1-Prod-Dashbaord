@@ -844,6 +844,21 @@ events_query = (
 #   C  progress bar              h2
 #   D  approach profile | flags  h7
 #   E  state timeline | events   h5
+# Mission Events tables (Mission and Replay): ISO time, coloured severity,
+# and the remaining width to the event text (hover a cell for the full text).
+EVENTS_TABLE_OVERRIDES = [{"matcher": {"id": "byName", "options": "Time"},
+            "properties": [{"id": "custom.width", "value": 150},
+                           {"id": "unit", "value": "dateTimeAsIso"}]},
+           {"matcher": {"id": "byName", "options": "Severity"},
+            "properties": [{"id": "custom.width", "value": 80},
+                           {"id": "mappings", "value": [{
+                               "type": "value", "options": {
+                                   "info": {"color": TILE_OK, "index": 0},
+                                   "warning": {"color": "yellow", "index": 1},
+                                   "critical": {"color": "red", "index": 2}}}]},
+                           {"id": "custom.cellOptions",
+                            "value": {"type": "color-text"}}]}]
+
 DASHBOARDS.append(dashboard("usv-mission", "Mission", [
     # A — the operational picture: 8 equal status tiles (3 x 3).
     stat("Mission State", last_str("mission_state", "state"), 0, 0, 3, 2,
@@ -952,18 +967,7 @@ DASHBOARDS.append(dashboard("usv-mission", "Mission", [
     panel("table", "Mission Events",
           [target(events_query)],
           12, 11, 12, 6,
-          overrides=[{"matcher": {"id": "byName", "options": "Time"},
-                      "properties": [{"id": "custom.width", "value": 150},
-                                     {"id": "unit", "value": "dateTimeAsIso"}]},
-                     {"matcher": {"id": "byName", "options": "Severity"},
-                      "properties": [{"id": "custom.width", "value": 80},
-                                     {"id": "mappings", "value": [{
-                                         "type": "value", "options": {
-                                             "info": {"color": TILE_OK, "index": 0},
-                                             "warning": {"color": "yellow", "index": 1},
-                                             "critical": {"color": "red", "index": 2}}}]},
-                                     {"id": "custom.cellOptions",
-                                      "value": {"type": "color-text"}}]}],
+          overrides=EVENTS_TABLE_OVERRIDES,
           options={"showHeader": True, "cellHeight": "sm",
                    "sortBy": [{"displayName": "Time", "desc": True}]}),
 ], ["mission"]))
@@ -2111,7 +2115,10 @@ DASHBOARDS.append(dashboard("usv-replay", "Replay", [
           [target(flux("mission_state", "state", every="30s", fn="last"))],
           14, 0, 10, 3, mappings=mission_state_mappings,
           custom={"fillOpacity": 70, "lineWidth": 0},
-          options={"showValue": "auto"}),
+          overrides=[{"matcher": {"id": "byRegexp", "options": ".*"},
+                      "properties": [{"id": "displayName", "value": "state"}]}],
+          # No legend: at 3 rows it pushed the bar out of the panel.
+          options={"showValue": "auto", "legend": {"showLegend": False}}),
     panel("table", "Mission Events",
           [target('from(bucket: "events")\n'
                   '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
@@ -2121,7 +2128,9 @@ DASHBOARDS.append(dashboard("usv-replay", "Replay", [
                   '  |> keep(columns: ["_time", "_value", "type", "severity"])\n'
                   '  |> rename(columns: {_time: "Time", _value: "Event", type: "Type", severity: "Severity"})\n'
                   '  |> sort(columns: ["Time"], desc: true)\n')],
-          12, 13, 12, 4, options={"showHeader": True, "cellHeight": "sm"}),
+          12, 13, 12, 4, overrides=EVENTS_TABLE_OVERRIDES,
+          options={"showHeader": True, "cellHeight": "sm",
+                   "sortBy": [{"displayName": "Time", "desc": True}]}),
     ts("Heading History", [target(flux("nav", "heading", archive=True), "heading")],
        0, 9, 8, 4, unit="degree", min_=0, max_=360),
     ts("Speed History", [target(flux("nav", "sog", archive=True), "SOG")],

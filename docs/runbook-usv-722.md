@@ -10,7 +10,7 @@ on the boat needs.
 |---|---|
 | Onboard computer | OnLogic K800, Ubuntu 22.04.5, hostname `usv-722`, user `douglas` |
 | Repo checkout | `~/Documents/SA-1-Prod-Dashbaord` (GitHub `sbeenterprises/SA-1-Prod-Dashbaord`, install from a tag, never from `main`) |
-| Installed release | v1.2.16 (see `git -C ~/Documents/SA-1-Prod-Dashbaord describe --tags`) |
+| Installed release | v1.2.17 (see `git -C ~/Documents/SA-1-Prod-Dashbaord describe --tags`) |
 | Configuration | `/etc/usv/usv.env` (root only): `VESSEL_ID=usv-722`, `GRAFANA_PORT=3100`, `CAN_INTERFACE=slcan0`, `ECHARTS_PANEL_VERSION=7.2.5`, SMTP not yet set |
 | Grafana | `http://<obc-ip>:3100`, user `admin`, password in `usv.env`; folder "Swift Autonomous Dashboard", home page Readiness |
 | InfluxDB | localhost:8086, org `usv`, buckets `telemetry` (30 d), `events` and `telemetry_1m` (365 d) |
@@ -126,7 +126,7 @@ All are enabled at boot. `usv-simulator` must stay disabled on the vessel
 Tags only. One command, from the repo checkout:
 
 ```bash
-cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.16
+cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.17
 ```
 
 It fetches the tag, re-runs the installer (rebuilds and restarts the
@@ -219,7 +219,7 @@ retention (`du -sh /var/lib/influxdb`).
 | Electrical / Power panels No data | `curl -s localhost:3000/signalk/v1/api/vessels/self/electrical`: battery instance name; set SIGNALK_BATTERY if it is not the first one |
 | AIS contacts thousands of km away, Rel. Bearing wrong | MOOS NAV_LAT/NAV_LONG = 0 (no RMC/HDT reaching iDivisorNMEA); the dashboard falls back to Signal K and logs one "traffic" warning; fix on the mission side |
 
-## Known gaps on this hull (as of v1.2.16)
+## Known gaps on this hull (as of v1.2.17)
 
 - Own-ship navigation in MOOS: iDivisorNMEA posts NAV_LAT/NAV_LONG/
   NAV_HEADING = 0 because its UDP feed (port 10111) carries only AIS; the

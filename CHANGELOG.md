@@ -5,6 +5,26 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.17] - 2026-10-10 (Replay page tidy-up)
+
+Dashboards only. Update with `bash deploy/update.sh v1.2.17`, then Ctrl+F5
+in the browser; no MOOS restart needed.
+
+### Fixed
+- Replay: the Mission State timeline (3 rows) showed its legend, which
+  pushed the bar 11 px out of the panel and gave it a scrollbar. The legend
+  is hidden, as on the Mission page.
+- Replay: Mission Events uses the same table layout as the Mission page
+  (ISO time 150 px, coloured severity 80 px, newest first), so the event
+  text gets the rest of the width. Both pages now share one definition
+  (`EVENTS_TABLE_OVERRIDES`).
+
+### Verified
+- All 13 pages measured live on usv-722 (Grafana 13.2, 1532 x 900, menu
+  closed): no page scroll, lowest panel at 867 px or above, no overlapping
+  panels, no cut titles, no clipped tile values. The only scrolling left
+  is inside the event and contact tables, which scroll by design.
+
 ## [1.2.16] - 2026-10-10 (no cut panel titles)
 
 Dashboards only. Update with `bash deploy/update.sh v1.2.16`, then Ctrl+F5
