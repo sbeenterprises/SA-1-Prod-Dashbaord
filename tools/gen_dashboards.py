@@ -519,7 +519,7 @@ return {{
   series: [{{
     type: 'gauge', min: {min_}, max: {max_},
     startAngle: 210, endAngle: -30,
-    center: ['50%', '58%'], radius: '88%',
+    center: ['50%', '50%'], radius: '80%',
     {axis},
     splitNumber: {split},
     splitLine: {{ length: 12, distance: -12,
@@ -534,10 +534,10 @@ return {{
     anchor: {{ show: !nodata, size: 10, showAbove: true,
               itemStyle: {{ color: C.pivot, borderColor: C.needle,
                            borderWidth: 2 }} }},
-    title: {{ show: true, offsetCenter: [0, '92%'], color: C.sub,
+    title: {{ show: true, offsetCenter: [0, '84%'], color: C.sub,
              fontSize: 10 }},
     detail: {{ valueAnimation: true, color: C.text, fontSize: 17,
-              fontWeight: 600, offsetCenter: [0, '60%'],
+              fontWeight: 600, offsetCenter: [0, '54%'],
               formatter: nodata ? (() => 'N/A') : ({detail_fmt}) }},
     data: [{{ value: v, name: '{sub}' }}],
   }}],
@@ -604,7 +604,7 @@ return {
   series: [{
     type: 'gauge', min: -35, max: 35,
     startAngle: 210, endAngle: -30,
-    center: ['50%', '58%'], radius: '88%',
+    center: ['50%', '50%'], radius: '80%',
     axisLine: { lineStyle: { width: 9, color: [
       [0.5, 'rgba(242,73,92,0.85)'], [1, 'rgba(115,191,105,0.85)'] ] } },
     splitNumber: 7,
@@ -621,10 +621,10 @@ return {
     anchor: { show: true, size: 10, showAbove: true,
               itemStyle: { color: C.pivot, borderColor: C.needle,
                            borderWidth: 2 } },
-    title: { show: true, offsetCenter: [0, '92%'], color: C.sub,
+    title: { show: true, offsetCenter: [0, '84%'], color: C.sub,
              fontSize: 10 },
     detail: { valueAnimation: true, color: C.text, fontSize: 17,
-              fontWeight: 600, offsetCenter: [0, '60%'],
+              fontWeight: 600, offsetCenter: [0, '54%'],
               formatter: (x) => (x < -0.5 ? 'PORT ' :
                                  (x > 0.5 ? 'STBD ' : '')) +
                                 Math.abs(x).toFixed(0) + '\\u00b0' },

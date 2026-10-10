@@ -21,6 +21,8 @@ Keep a Changelog; versions are git tags on `main`.
   Engine, Key Switch, Engine Faults).
 
 ### Fixed
+- Dial sub-labels (PORT / RUDDER / STBD, COMMANDED THRUST, OFF COURSE and
+  the Vessel Health gauges) no longer cut off at the bottom of short panels.
 - Course planning check / map region: the operator console sends the
   selected operating region to MOOS as `REGION_UPDATES`
   (`core_poly=pts={...}`, for BHV_OpRegionV24), which the bridge did not
