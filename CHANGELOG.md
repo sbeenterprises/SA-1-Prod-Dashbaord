@@ -21,6 +21,13 @@ Keep a Changelog; versions are git tags on `main`.
   Engine, Key Switch, Engine Faults).
 
 ### Fixed
+- Autopilot rudder units: the Rudder Angle dial now shows the real rudder
+  angle from the steering actuator (`rudder_actual`, degrees) and falls back
+  to the command, labelled COMMAND without a degree sign, when there is no
+  CAN feedback. The rudder trend plots actuator command vs actual in degrees
+  and the PID output (DESIRED_RUDDER, percent on the vessel) on its own
+  right-hand axis. Replay's Actuator Commands panel labels the rudder
+  command as percent.
 - Dial sub-labels (PORT / RUDDER / STBD, COMMANDED THRUST, OFF COURSE and
   the Vessel Health gauges) no longer cut off at the bottom of short panels.
 - Course planning check / map region: the operator console sends the

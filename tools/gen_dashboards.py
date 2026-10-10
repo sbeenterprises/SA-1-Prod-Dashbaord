@@ -596,9 +596,17 @@ return {
 
 
 def rudder_js():
-    """Rudder angle indicator, center-zero, port red / starboard green."""
+    """Rudder angle indicator, center-zero, port red / starboard green.
+
+    refId A = rudder_actual (deg, steering actuator feedback on CAN).
+    refId B = rudder_cmd (DESIRED_RUDDER: PERCENT of full rudder on the
+    vessel's iCAN, degrees in the simulator), shown only when there is no
+    actuator feedback, without a degree sign and labelled COMMAND.
+    """
     return ECH_PRELUDE + """\
-let v = val(); if (v === null || isNaN(v)) { v = 0; }
+let v = val('A'); let actual = true;
+if (v === null || isNaN(v)) { v = val('B'); actual = false; }
+if (v === null || isNaN(v)) { v = 0; }
 v = Math.max(-35, Math.min(35, v));
 return {
   series: [{
@@ -627,8 +635,10 @@ return {
               fontWeight: 600, offsetCenter: [0, '54%'],
               formatter: (x) => (x < -0.5 ? 'PORT ' :
                                  (x > 0.5 ? 'STBD ' : '')) +
-                                Math.abs(x).toFixed(0) + '\\u00b0' },
-    data: [{ value: v, name: 'PORT \\u2039 RUDDER \\u203a STBD' }],
+                                Math.abs(x).toFixed(0) +
+                                (actual ? '\\u00b0' : '') },
+    data: [{ value: v, name: actual ? 'PORT \\u2039 RUDDER \\u203a STBD'
+                                     : 'PORT \\u2039 COMMAND \\u203a STBD' }],
   }],
 };
 """
@@ -1096,11 +1106,12 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
          21, 3, 3, 3, unit="degree", decimals=0),
     # C — instruments: rudder indicator, throttle, heading error.
     (instrument("Rudder Angle",
-                [target(flux("autopilot", "rudder_cmd", last=True))],
+                [target(flux("autopilot", "rudder_actual", last=True)),
+                 target(flux("autopilot", "rudder_cmd", last=True), ref="B")],
                 0, 6, 8, 6, rudder_js(),
                 {"kind": "rudder", "preview": 3})
      if ANALOG else
-     stat("Rudder Angle", flux("autopilot", "rudder_cmd", last=True),
+     stat("Rudder Angle", flux("autopilot", "rudder_actual", last=True),
           0, 6, 8, 6, unit="degree", decimals=1)),
     meter("Throttle", flux("autopilot", "throttle_cmd", last=True),
           8, 6, 8, 6, 0, 100, "%", zones=None, decimals=0, split=5,
@@ -1121,10 +1132,22 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
                                   "actual_speed"]))],
        12, 12, 12, 5, unit="velocityknot"),
     # E — actuator outputs and errors.
-    ts("Rudder — command vs actual",
-       [target(flux("autopilot", "rudder_cmd"), "command"),
-        target(flux("autopilot", "rudder_actual"), "actual (actuator)", ref="B")],
-       0, 17, 8, 5, unit="degree"),
+    # Actuator command and actual are both degrees (CAN 0x210). The PID
+    # output DESIRED_RUDDER is PERCENT of full rudder on the vessel, so it
+    # goes on its own right-hand axis instead of being read as degrees.
+    ts("Rudder — actuator command / actual (°), PID output (%)",
+       [target(flux("autopilot", "rudder_actuator_cmd"), "actuator command"),
+        target(flux("autopilot", "rudder_actual"), "actual", ref="B"),
+        target(flux("autopilot", "rudder_cmd"), "PID output (DESIRED_RUDDER)",
+               ref="C")],
+       0, 17, 8, 5, unit="degree",
+       overrides=[{"matcher": {"id": "byFrameRefID", "options": "C"},
+                   "properties": [{"id": "unit", "value": "percent"},
+                                  {"id": "custom.axisPlacement",
+                                   "value": "right"},
+                                  {"id": "custom.lineStyle",
+                                   "value": {"fill": "dash",
+                                             "dash": [6, 4]}}]}]),
     ts("Throttle Output", [target(flux("autopilot", "throttle_cmd"), "throttle")],
        8, 17, 8, 5, unit="percent", min_=0, max_=100),
     ts("Heading & Speed Error",
@@ -2036,9 +2059,9 @@ DASHBOARDS.append(dashboard("usv-replay", "Replay", [
     ts("Speed History", [target(flux("nav", "sog", archive=True), "SOG")],
        8, 11, 8, 5, unit="velocityknot"),
     ts("Actuator Commands",
-       [target(flux("autopilot", "rudder_cmd", archive=True), "rudder °"),
+       [target(flux("autopilot", "rudder_cmd", archive=True), "rudder cmd %"),
         target(flux("autopilot", "throttle_cmd", archive=True), "throttle %", ref="B")],
-       16, 11, 8, 5, unit="degree",
+       16, 11, 8, 5, unit="percent",
        overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
                    "properties": [{"id": "unit", "value": "percent"},
                                   {"id": "custom.axisPlacement",
