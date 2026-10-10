@@ -5,9 +5,9 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
-## [1.2.14] - 2026-10-10 — usv-722 CAN helm and drive, one-screen pages, Traffic zoom
+## [1.2.15] - 2026-10-10 — usv-722 CAN helm and drive, one-screen pages, Traffic zoom
 
-Update an installed vessel with `bash deploy/update.sh v1.2.14` (see
+Update an installed vessel with `bash deploy/update.sh v1.2.15` (see
 `docs/runbook-usv-722.md`). Restart the MOOS mission afterwards to pick up
 the rebuilt `grafana_bridge`.
 
@@ -97,6 +97,10 @@ the rebuilt `grafana_bridge`.
   enabled Frigate cameras that are not streaming ("ALL ONLINE" or
   "N offline"), from `camera_summary`; per-camera detail stays on the
   Cameras page.
+
+## [1.2.14] - 2026-10-08 — Signal K own-ship fix
+
+### Fixed
 - Own-ship track, position, speed and heading jumping between other boats:
   `signalk_bridge` subscribed with `subscribe=all` and wrote every delta,
   including AIS targets' `navigation.position`, `speedOverGround` and

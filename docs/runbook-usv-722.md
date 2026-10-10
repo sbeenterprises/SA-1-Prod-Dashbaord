@@ -10,7 +10,7 @@ on the boat needs.
 |---|---|
 | Onboard computer | OnLogic K800, Ubuntu 22.04.5, hostname `usv-722`, user `douglas` |
 | Repo checkout | `~/Documents/SA-1-Prod-Dashbaord` (GitHub `sbeenterprises/SA-1-Prod-Dashbaord`, install from a tag, never from `main`) |
-| Installed release | v1.2.14 (see `git -C ~/Documents/SA-1-Prod-Dashbaord describe --tags`) |
+| Installed release | v1.2.15 (see `git -C ~/Documents/SA-1-Prod-Dashbaord describe --tags`) |
 | Configuration | `/etc/usv/usv.env` (root only): `VESSEL_ID=usv-722`, `GRAFANA_PORT=3100`, `CAN_INTERFACE=slcan0`, `ECHARTS_PANEL_VERSION=7.2.5`, SMTP not yet set |
 | Grafana | `http://<obc-ip>:3100`, user `admin`, password in `usv.env`; folder "Swift Autonomous Dashboard", home page Readiness |
 | InfluxDB | localhost:8086, org `usv`, buckets `telemetry` (30 d), `events` and `telemetry_1m` (365 d) |
@@ -126,7 +126,7 @@ All are enabled at boot. `usv-simulator` must stay disabled on the vessel
 Tags only. One command, from the repo checkout:
 
 ```bash
-cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.14
+cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.15
 ```
 
 It fetches the tag, re-runs the installer (rebuilds and restarts the
@@ -205,7 +205,7 @@ retention (`du -sh /var/lib/influxdb`).
 | GPS row FAIL "no position" while Signal K shows one | `sudo systemctl restart usv-signalk-bridge`; `curl -s localhost:3000/signalk/v1/api/vessels/self/navigation/vectornav/insMode` should be 2 |
 | GPS row "INS aligning" / "GNSS lost"; SOG / COG No data | VectorNav state, not the dashboard (the plugin publishes SOG/COG only when tracking). Read the status: `sudo timeout 2 cat /dev/serial/by-id/usb-FTDI_USB-RS232_Cable_AU04Q2FP-if00-port0 \| grep -m3 VNINS`, 3rd field last digit: 1 aligning without GNSS fix (antenna / sky view), 5 aligning with fix (needs motion), 6 tracking. Reset the INS only if stuck: `printf '$VNRST*4D\r\n' \| sudo tee <same device> >/dev/null` |
 | VPN tile N/A | `systemctl is-active twingate-connector`; Telegraf watches `twingate*`, `tailscaled`, `openvpn*`, `wg-quick@*` units |
-| Bridge change not visible after an update | `systemctl status usv-can-bridge usv-signalk-bridge` start time; releases before v1.2.14 did not restart them: `sudo systemctl restart usv-can-bridge usv-signalk-bridge` |
+| Bridge change not visible after an update | `systemctl status usv-can-bridge usv-signalk-bridge` start time; releases before v1.2.15 did not restart them: `sudo systemctl restart usv-can-bridge usv-signalk-bridge` |
 | CAN bus 0 msg/s with interface UP | `candump slcan0`; N2K backbone powered? wiring/termination (~60 ohm CAN-H to CAN-L unpowered); `ps -ef | grep slcand` shows `-s5` |
 | GPU tile No data | `sudo -u telegraf sudo -n /usr/local/bin/usv_gpu_probe` must print one `gpu,vendor=intel` line in ~3 s |
 | Starlink tile N/A | `ping 192.168.100.1` from the OBC; dish must be routable |
@@ -219,7 +219,7 @@ retention (`du -sh /var/lib/influxdb`).
 | Electrical / Power panels No data | `curl -s localhost:3000/signalk/v1/api/vessels/self/electrical`: battery instance name; set SIGNALK_BATTERY if it is not the first one |
 | AIS contacts thousands of km away, Rel. Bearing wrong | MOOS NAV_LAT/NAV_LONG = 0 (no RMC/HDT reaching iDivisorNMEA); the dashboard falls back to Signal K and logs one "traffic" warning; fix on the mission side |
 
-## Known gaps on this hull (as of v1.2.14)
+## Known gaps on this hull (as of v1.2.15)
 
 - Own-ship navigation in MOOS: iDivisorNMEA posts NAV_LAT/NAV_LONG/
   NAV_HEADING = 0 because its UDP feed (port 10111) carries only AIS; the
@@ -229,7 +229,7 @@ retention (`du -sh /var/lib/influxdb`).
   `uXMS --server_port=9000 NAV_LAT` reads about 29.73. The dashboard uses
   Signal K meanwhile.
 - Rudder feedback: read from the steering actuator on CAN (0x210) since
-  v1.2.14; Steering passes when the actuator reports. MOOS itself still has
+  v1.2.15; Steering passes when the actuator reports. MOOS itself still has
   no rudder feedback (`$AGRSA` absent).
 - Cameras: cameras 3 to 6 and the FLIR are not powered / networked yet;
   keep them disabled in Frigate until they are, so Readiness counts only

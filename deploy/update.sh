@@ -2,7 +2,7 @@
 # Update an installed dashboard stack to a release in one step.
 #
 #   bash deploy/update.sh            # latest release tag
-#   bash deploy/update.sh v1.2.14    # a given tag (or a commit, for rollback)
+#   bash deploy/update.sh v1.2.15    # a given tag (or a commit, for rollback)
 #   bash deploy/update.sh main       # tip of main (testing only)
 #
 # Run as the normal user from the repo checkout; asks for sudo once for the
