@@ -1520,6 +1520,23 @@ def worst_contact_query(column, string=False):
     return q
 
 
+# The selected display range reaches the panel as data (refId R), so it
+# works whatever the ECharts plugin version exposes to panel code.
+TRAFFIC_RANGE_QUERY = ('import "array"\n'
+                       'array.from(rows: [{_value: float(v: "${traffic_range}")}])\n')
+TRAFFIC_RANGE_VAR = {
+    "name": "traffic_range", "label": "Traffic range", "type": "custom",
+    "query": "Auto : 0,0.25 nm : 0.25,0.5 nm : 0.5,1 nm : 1,2 nm : 2,"
+             "3 nm : 3,6 nm : 6,12 nm : 12,24 nm : 24",
+    "current": {"text": "Auto", "value": "0"},
+    "options": [{"text": t, "value": v, "selected": v == "0"} for t, v in [
+        ("Auto", "0"), ("0.25 nm", "0.25"), ("0.5 nm", "0.5"), ("1 nm", "1"),
+        ("2 nm", "2"), ("3 nm", "3"), ("6 nm", "6"), ("12 nm", "12"),
+        ("24 nm", "24")]],
+    "hide": 0, "includeAll": False, "multi": False,
+}
+
+
 def traffic_js():
     """Heading-up polar traffic view: own ship at the centre, range rings
     in nautical miles (auto-scaled 0.5 / 1 / 2 / 5 nm). Contacts use the
@@ -1531,7 +1548,7 @@ def traffic_js():
 const ownHdg = val('B') || 0;
 const rows = [];
 for (const s of context.panel.data.series) {
-  if (s.refId === 'B') { continue; }
+  if (s.refId === 'B' || s.refId === 'R') { continue; }
   const col = {};
   for (const f of s.fields) { col[f.name] = f.values && f.values.toArray ? f.values.toArray() : f.values; }
   const n = (col.range_m || []).length;
@@ -1545,11 +1562,27 @@ for (const s of context.panel.data.series) {
   }
 }
 const NM = 1852;
-let maxR = 0.5;
-for (const r of rows) { if (r.rb !== null && r.range / NM > maxR * 0.9) { maxR = r.range / NM > 2 ? 5 : (r.range / NM > 1 ? 2 : 1); } }
-if (maxR > 2 && rows.some(r => r.range / NM > 4.5)) { maxR = 10; }
+// Display range: the traffic_range variable (refId R, 0 = auto) or, on
+// auto, the smallest step that holds every contact. The + / - buttons step
+// through RANGES; contacts outside a zoomed-in range are counted, not drawn.
+const RANGES = [0.25, 0.5, 1, 2, 3, 6, 12, 24];
+const sel = val('R') || 0;
+const all = rows.filter(r => r.rb !== null);
+const far = all.reduce((m, r) => Math.max(m, r.range / NM), 0);
+let maxR = sel > 0 ? sel : (RANGES.find(s => far <= s * 0.95) || RANGES[RANGES.length - 1]);
+if (sel <= 0 && maxR < 0.5) { maxR = 0.5; }
 const colorOf = (r) => r.risk >= 2 ? '#ff6b6b' : (r.source === 'report' ? '#5ad8a6' : '#f0b429');
-const pts = rows.filter(r => r.rb !== null);
+const pts = all.filter(r => r.range / NM <= maxR * 1.02);
+const beyond = all.length - pts.length;
+const loc = context.grafana && context.grafana.locationService;
+const setRange = (v) => { if (loc && loc.partial) { loc.partial({ 'var-traffic_range': String(v) }, true); } };
+const idx = RANGES.indexOf(maxR) >= 0 ? RANGES.indexOf(maxR) : RANGES.findIndex(s => s >= maxR);
+const btn = (id, label, right, top, onclick, active) => ({ type: 'group', id: id, right: right, top: top, onclick: onclick,
+  cursor: loc ? 'pointer' : 'default', children: [
+    { type: 'rect', shape: { width: 26, height: 22, r: 4 },
+      style: { fill: active ? (dark ? '#1f6f8b' : '#cfe8f3') : (dark ? '#22252b' : '#eef0f2'), stroke: dark ? '#3a3f47' : '#c9ced4' } },
+    { type: 'text', x: 13, y: 11, style: { text: label, fill: C.text, fontSize: label.length > 1 ? 9 : 15, fontWeight: 700,
+        align: 'center', verticalAlign: 'middle', textAlign: 'center', textVerticalAlign: 'middle' } }] });
 // Top-view hull, bow up: rotated to the contact's heading (heading-up view).
 const HULL = 'path://M5 0 C8 4 10 9 10 15 L10 26 C10 28 9 29 7 29 L3 29 C1 29 0 28 0 26 L0 15 C0 9 2 4 5 0 Z';
 const wrap = (a) => ((a % 360) + 360) % 360;
@@ -1583,7 +1616,7 @@ for (const r of pts) {
     lineStyle: { color: colorOf(r), width: 1.5 },
     data: [[r0, wrap(r.rb)], [Math.hypot(x, y), wrap(Math.atan2(x, y) * 180 / Math.PI)]] });
 }
-const worst = pts.slice().sort((a, b) => (b.risk - a.risk) || ((a.cpa ?? 1e9) - (b.cpa ?? 1e9)))[0];
+const worst = all.slice().sort((a, b) => (b.risk - a.risk) || ((a.cpa ?? 1e9) - (b.cpa ?? 1e9)))[0];
 const series = [{
   type: 'scatter', coordinateSystem: 'polar', symbol: HULL, symbolSize: [9, 24], z: 3, data: scatter,
   tooltip: { formatter: (p) => p.data.name + '<br>' + p.data.source + ' · risk ' + ['clear','MEDIUM','HIGH'][p.data.risk] +
@@ -1595,7 +1628,7 @@ const series = [{
   type: 'scatter', coordinateSystem: 'polar', symbol: OWN_PIN, symbolSize: [28, 36], symbolOffset: [0, '-50%'],
   data: [{ value: [0, 0] }], silent: true, z: 5
 }];
-if (worst && worst.risk >= 1) {
+if (worst && worst.risk >= 1 && worst.range / NM <= maxR * 1.02) {
   series.push({ type: 'line', coordinateSystem: 'polar', silent: true, z: 4, showSymbol: false,
     lineStyle: { color: '#ff6b6b', type: 'dashed', width: 1.5 },
     data: [[0, 0], [worst.range / NM, ((worst.rb % 360) + 360) % 360]] });
@@ -1613,7 +1646,11 @@ return {
     splitLine: { lineStyle: { color: dark ? 'rgba(124,156,176,0.35)' : 'rgba(36,41,46,0.3)', type: 'dashed' } } },
   tooltip: { trigger: 'item' },
   graphic: [
-    { type: 'text', left: 8, top: 4, style: { text: 'HEADING UP · range ' + maxR + ' nm', fill: C.sub, fontSize: 10, fontWeight: 600 } },
+    { type: 'text', left: 8, top: 4, style: { text: 'HEADING UP · range ' + maxR + ' nm' + (sel > 0 ? '' : ' (auto)') +
+        (beyond > 0 ? '   +' + beyond + ' beyond' : ''), fill: C.sub, fontSize: 10, fontWeight: 600 } },
+    btn('zoom-in', '+', 8, 4, () => setRange(RANGES[Math.max(0, idx - 1)]), false),
+    btn('zoom-out', '\u2212', 8, 30, () => setRange(RANGES[Math.min(RANGES.length - 1, idx + 1)]), false),
+    btn('zoom-auto', 'A', 8, 56, () => setRange(0), sel <= 0),
     { type: 'text', left: 8, bottom: 6, style: { text: '{g|●} report / AIS   {a|●} radar   {r|●} HIGH risk   — 6 min vector', fill: C.label, fontSize: 10,
         rich: { g: { fill: '#5ad8a6', fontSize: 12 }, a: { fill: '#f0b429', fontSize: 12 }, r: { fill: '#ff6b6b', fontSize: 12 } } } },
     { type: 'text', right: 8, bottom: 6, style: { text: worst && worst.risk >= 1 ? worst.id + '  CPA ' + Math.round(worst.cpa) + ' m · TCPA ' + fmtT(worst.tcpa) : 'no risk contacts',
@@ -1666,7 +1703,8 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
     # B — traffic view | highest-risk contact | MOOS action
     (instrument("Traffic View",
                 [target(contacts_query()),
-                 target(flux("nav", "heading", last=True), ref="B")],
+                 target(flux("nav", "heading", last=True), ref="B"),
+                 target(TRAFFIC_RANGE_QUERY, ref="R")],
                 0, 3, 10, 13,
                 traffic_js(), {"kind": "traffic"})
      if ANALOG else
@@ -1848,7 +1886,7 @@ TELE_SELECT = {
     "diskio": '  |> filter(fn: (r) => r.name !~ /^(loop|dm-|sr)/)\n',
     # Physical links only: docker/bridge/veth/tunnel interfaces would
     # otherwise fill the legend (12+ series on the OBC).
-    "net": '  |> filter(fn: (r) => r.interface !~ /^(lo|docker|br-|veth|virbr|tun|tap|wg|tailscale|slcan|can|vcan)/)\n',
+    "net": '  |> filter(fn: (r) => r.interface !~ /^(lo|docker|br-|veth|virbr|tun|tap|wg|tailscale|sdwan|twingate|slcan|can|vcan)/)\n',
 }
 
 
@@ -1901,10 +1939,11 @@ def tele_last(measurement, field, extra="", reduce="latest"):
 # tile reads N/A where it is not fitted).
 PING_INTERNET = '  |> filter(fn: (r) => r.url == "8.8.8.8")\n'
 PING_STARLINK = '  |> filter(fn: (r) => r.url == "192.168.100.1")\n'
-# Any VPN daemon counts: Tailscale (used on usv-722), OpenVPN or WireGuard.
+# Any VPN daemon counts: Twingate (used on usv-722: client or connector),
+# Tailscale, OpenVPN or WireGuard.
 # Each unit's latest active_code, then the lowest: 0 (active) if any is up.
 UNIT_SERVICE = ('  |> filter(fn: (r) => r.name =~ '
-                '/^(tailscaled|openvpn.*|wg-quick@.*)\\.service$/)\n')
+                '/^(twingate.*|tailscaled|openvpn.*|wg-quick@.*)\\.service$/)\n')
 BYTES_TO_BITS = '  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n'
 
 
@@ -1932,7 +1971,7 @@ DASHBOARDS.append(dashboard("usv-comms", "Comms", [
     probe_tile("Internet", tele_last("ping", "result_code", extra=PING_INTERNET), 0),
     probe_tile("Starlink", tele_last("ping", "result_code", extra=PING_STARLINK), 4,
                no_value="N/A"),
-    probe_tile("VPN (Tailscale)",
+    probe_tile("VPN (Twingate)",
                tele_last("systemd_units", "active_code", extra=UNIT_SERVICE,
                          reduce="min"), 8),
     stat("Signal K WebSocket", flux("comms", "signalk_ws_up", last=True),
@@ -2383,6 +2422,8 @@ def main():
     for d in DASHBOARDS:
         add_header_band(d)
         fit_to_screen(d)
+        if d["uid"] == "usv-traffic":
+            d["templating"]["list"].append(TRAFFIC_RANGE_VAR)
         if d["uid"] == "usv-fleet":
             use_fleet_variable(d)
         path = os.path.join(OUT, f"{d['uid']}.json")

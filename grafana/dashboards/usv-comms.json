@@ -372,7 +372,7 @@
     {
       "id": 151,
       "type": "stat",
-      "title": "VPN (Tailscale)",
+      "title": "VPN (Twingate)",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -389,7 +389,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"systemd_units\" and r._field == \"active_code\")\n  |> filter(fn: (r) => r.name =~ /^(tailscaled|openvpn.*|wg-quick@.*)\\.service$/)\n\n  |> last()\n  |> group()\n  |> min()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"systemd_units\" and r._field == \"active_code\")\n  |> filter(fn: (r) => r.name =~ /^(twingate.*|tailscaled|openvpn.*|wg-quick@.*)\\.service$/)\n\n  |> last()\n  |> group()\n  |> min()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -821,7 +821,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "data = from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"net\" and r._field == \"bytes_recv\")\n  |> filter(fn: (r) => r.interface !~ /^(lo|docker|br-|veth|virbr|tun|tap|wg|tailscale|slcan|can|vcan)/)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\nbusiest = data\n  |> mean()\n  |> group()\n  |> top(n: 3)\n  |> findColumn(fn: (key) => true, column: \"interface\")\ndata\n  |> filter(fn: (r) => contains(value: r.interface, set: busiest))\n",
+          "query": "data = from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"net\" and r._field == \"bytes_recv\")\n  |> filter(fn: (r) => r.interface !~ /^(lo|docker|br-|veth|virbr|tun|tap|wg|tailscale|sdwan|twingate|slcan|can|vcan)/)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\nbusiest = data\n  |> mean()\n  |> group()\n  |> top(n: 3)\n  |> findColumn(fn: (key) => true, column: \"interface\")\ndata\n  |> filter(fn: (r) => contains(value: r.interface, set: busiest))\n",
           "refId": "A",
           "alias": "down"
         },
@@ -830,7 +830,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "data = from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"net\" and r._field == \"bytes_sent\")\n  |> filter(fn: (r) => r.interface !~ /^(lo|docker|br-|veth|virbr|tun|tap|wg|tailscale|slcan|can|vcan)/)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\nbusiest = data\n  |> mean()\n  |> group()\n  |> top(n: 3)\n  |> findColumn(fn: (key) => true, column: \"interface\")\ndata\n  |> filter(fn: (r) => contains(value: r.interface, set: busiest))\n",
+          "query": "data = from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"net\" and r._field == \"bytes_sent\")\n  |> filter(fn: (r) => r.interface !~ /^(lo|docker|br-|veth|virbr|tun|tap|wg|tailscale|sdwan|twingate|slcan|can|vcan)/)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\nbusiest = data\n  |> mean()\n  |> group()\n  |> top(n: 3)\n  |> findColumn(fn: (key) => true, column: \"interface\")\ndata\n  |> filter(fn: (r) => contains(value: r.interface, set: busiest))\n",
           "refId": "B",
           "alias": "up"
         }
