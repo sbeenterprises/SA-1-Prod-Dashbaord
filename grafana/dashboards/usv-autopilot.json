@@ -391,7 +391,7 @@
     {
       "id": 43,
       "type": "stat",
-      "title": "Station Keeping",
+      "title": "Station Keep",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -1961,7 +1961,7 @@
     {
       "id": 65,
       "type": "stat",
-      "title": "Steering Control",
+      "title": "Steering Mode",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -2116,7 +2116,7 @@
     {
       "id": 67,
       "type": "stat",
-      "title": "Thrust to Engine",
+      "title": "Engine Thrust",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"

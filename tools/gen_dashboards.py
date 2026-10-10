@@ -1070,7 +1070,7 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
     stat("All-Stop", last_str("mission_state", "allstop_reason"),
          3, 0, 3, 2, mappings=allstop_mappings, text_mode="value",
          color_mode="background"),
-    stat("Station Keeping", flux("autonomy", "stationing", last=True),
+    stat("Station Keep", flux("autonomy", "stationing", last=True),
          6, 0, 3, 2, mappings=onoff_map("OFF", "ACTIVE"),
          text_mode="value", color_mode="background"),
     stat("Entry Gate", flux("autonomy", "entry_gate_open", last=True),
@@ -1162,7 +1162,7 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
          3, 15, 3, 2, unit="degree", decimals=1),
     stat("Steering Drive", flux("autopilot", "steer_drive_pct", last=True),
          6, 15, 3, 2, unit="percent", decimals=0, graph_mode="area"),
-    stat("Steering Control", flux("autopilot", "steer_pc_control", last=True),
+    stat("Steering Mode", flux("autopilot", "steer_pc_control", last=True),
          9, 15, 3, 2, text_mode="value", color_mode="background",
          mappings=[{"type": "value", "options": {
              "0": {"text": "HELM", "color": "orange", "index": 0},
@@ -1173,7 +1173,7 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
              "-1": {"text": "REVERSE", "color": "orange", "index": 0},
              "0": {"text": "NEUTRAL", "color": NEUTRAL, "index": 1},
              "1": {"text": "FORWARD", "color": TILE_OK, "index": 2}}}]),
-    stat("Thrust to Engine", flux("engine", "throttle_pct", last=True),
+    stat("Engine Thrust", flux("engine", "throttle_pct", last=True),
          15, 15, 3, 2, unit="percent", decimals=0, graph_mode="area"),
     stat("Key Switch", flux("engine", "key_state", last=True), 18, 15, 3, 2,
          text_mode="value", color_mode="background",
@@ -1439,18 +1439,20 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
     stat("Readiness", flux("readiness_summary", "ready", last=True), 16, 0, 8, 3,
          mappings=ready_mappings, text_mode="value", color_mode="background",
          no_value="NO BRIDGE"),
-    stat("Passed", flux("readiness_summary", "passed", last=True), 16, 3, 2, 3, decimals=0),
-    stat("Failed", flux("readiness_summary", "failed", last=True), 18, 3, 2, 3, decimals=0,
+    # Counts two per row: a 2-column tile has no room for "Passed" or
+    # "Console" in the panel header (measured on usv-722, 1532 px).
+    stat("Passed", flux("readiness_summary", "passed", last=True), 16, 3, 4, 2, decimals=0),
+    stat("Failed", flux("readiness_summary", "failed", last=True), 20, 3, 4, 2, decimals=0,
          thresholds=[(None, OK), (1, "red")]),
-    stat("N/A", flux("readiness_summary", "na", last=True), 20, 3, 2, 3, decimals=0,
+    stat("N/A", flux("readiness_summary", "na", last=True), 16, 5, 4, 2, decimals=0,
          thresholds=[(None, "#8e9299")]),
-    stat("Console", flux("readiness_summary", "console", last=True), 22, 3, 2, 3, decimals=0,
+    stat("Console", flux("readiness_summary", "console", last=True), 20, 5, 4, 2, decimals=0,
          thresholds=[(None, "#8e9299"), (1, "orange")]),
-    stat("Mission State", last_str("mission_state", "state"), 16, 6, 4, 3,
+    stat("Mission State", last_str("mission_state", "state"), 16, 7, 4, 3,
          mappings=mission_state_mappings, text_mode="value", color_mode="background"),
-    stat("Operator Link", flux("autonomy", "comms_phase", last=True), 20, 6, 4, 3,
+    stat("Operator Link", flux("autonomy", "comms_phase", last=True), 20, 7, 4, 3,
          mappings=comms_phase_mappings, text_mode="value", color_mode="background"),
-    stat("Route", last_str("mission_state", "route_name"), 16, 9, 8, 3, text_mode="value",
+    stat("Route", last_str("mission_state", "route_name"), 16, 10, 8, 2, text_mode="value",
          no_value="no route"),
     # B — the two lists
     status_table("Automatic checks — verified onboard from live telemetry",
@@ -2467,12 +2469,46 @@ def size_compact_tiles(d):
             text["valueSize"] = max(12, min(text.get("valueSize", 26), fit))
 
 
+# Panel-header title room measured in Grafana 13.2 on usv-722 at 1532 px
+# (navigation menu closed): the grid is 59.7 px per column and a panel
+# shows w x 59.7 - 73 px of title (the rest is padding and the hover menu);
+# a 3-column tile shows 106 px of a 14 px Inter Medium title.
+TITLE_PX_PER_COL, TITLE_PX_FIXED, TITLE_SLACK = 59.7, 73, 2
+_INTER = "/usr/share/fonts/opentype/inter/Inter-Medium.otf"
+
+
+def _title_px(text):
+    """Rendered width of a panel title: Inter Medium 14 px when the font is
+    installed (matches Grafana to 1 px), else a conservative estimate."""
+    try:
+        from PIL import ImageFont
+        return ImageFont.truetype(_INTER, 14).getlength(text)
+    except (ImportError, OSError):
+        return len(text) * 14 * 0.52
+
+
+def check_titles(d):
+    """Fail the build when a panel title would be cut with an ellipsis."""
+    cut = []
+    for p in d["panels"]:
+        t = p.get("title") or ""
+        if not t or p.get("type") in ("row", "text"):
+            continue
+        room = p["gridPos"]["w"] * TITLE_PX_PER_COL - TITLE_PX_FIXED
+        if _title_px(t) > room - TITLE_SLACK:
+            cut.append(f'{d["title"]}: "{t}" (w{p["gridPos"]["w"]}, '
+                       f'{_title_px(t):.0f} px > {room - TITLE_SLACK:.0f} px)')
+    if cut:
+        raise SystemExit("panel titles cut at 1532 px:\n  " + "\n  ".join(cut))
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     for d in DASHBOARDS:
         add_header_band(d)
         fit_to_screen(d)
         size_compact_tiles(d)
+        check_titles(d)
         if d["uid"] == "usv-traffic":
             d["templating"]["list"].append(TRAFFIC_RANGE_VAR)
         if d["uid"] == "usv-fleet":

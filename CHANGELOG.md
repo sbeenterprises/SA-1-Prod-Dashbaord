@@ -5,6 +5,19 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.16] - 2026-10-10 (no cut panel titles)
+
+Dashboards only. Update with `bash deploy/update.sh v1.2.16`, then Ctrl+F5
+in the browser; no MOOS restart needed.
+
+### Fixed
+- Panel titles: measured on usv-722 (Grafana 13.2, 1532 px), a 3-column
+  tile shows 106 px of title. "Station Keeping", "Steering Control" and
+  "Thrust to Engine" were cut; they are now "Station Keep", "Steering
+  Mode" and "Engine Thrust", and Readiness shows its counts two per row.
+  The generator fails the build when any title would be cut
+  (`check_titles`, Inter Medium 14 px widths).
+
 ## [1.2.15] - 2026-10-10 — usv-722 CAN helm and drive, one-screen pages, Traffic zoom
 
 Update an installed vessel with `bash deploy/update.sh v1.2.15` (see

@@ -291,8 +291,8 @@
       "gridPos": {
         "x": 16,
         "y": 5,
-        "w": 2,
-        "h": 3
+        "w": 4,
+        "h": 2
       },
       "targets": [
         {
@@ -333,7 +333,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -347,10 +347,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 18,
+        "x": 20,
         "y": 5,
-        "w": 2,
-        "h": 3
+        "w": 4,
+        "h": 2
       },
       "targets": [
         {
@@ -395,7 +395,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -409,10 +409,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 20,
-        "y": 5,
-        "w": 2,
-        "h": 3
+        "x": 16,
+        "y": 7,
+        "w": 4,
+        "h": 2
       },
       "targets": [
         {
@@ -453,7 +453,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -467,10 +467,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 22,
-        "y": 5,
-        "w": 2,
-        "h": 3
+        "x": 20,
+        "y": 7,
+        "w": 4,
+        "h": 2
       },
       "targets": [
         {
@@ -515,7 +515,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -530,7 +530,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 8,
+        "y": 9,
         "w": 4,
         "h": 3
       },
@@ -656,7 +656,7 @@
       },
       "gridPos": {
         "x": 20,
-        "y": 8,
+        "y": 9,
         "w": 4,
         "h": 3
       },
@@ -741,9 +741,9 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 11,
+        "y": 12,
         "w": 8,
-        "h": 3
+        "h": 2
       },
       "targets": [
         {
@@ -785,7 +785,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }

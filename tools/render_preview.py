@@ -165,7 +165,7 @@ STATS = {
     "Helm All-Stop": ("CLEAR", "OK"), "All-Stop Reason": ("CLEAR", "OK"),
     "Survey Entry Gate": ("OPEN", "OK"), "Re-Arm Hold": ("—", "#3d434b"),
     "Active Behaviors": ("waypt_survey, opr24", "TEXT"),
-    "Station Keeping": ("OFF", "#3d434b"),
+    "Station Keep": ("OFF", "#3d434b"),
     "Latitude": ("29.618452", "CYAN"), "Longitude": ("-91.207310", "CYAN"),
     "SOG": ("4.5 kn", "CYAN"), "COG": ("57°", "CYAN"), "Heading": ("55°", "CYAN"),
     "GPS Fix": ("RTK Fixed", "OK"), "Satellites": ("12", "OK"),
