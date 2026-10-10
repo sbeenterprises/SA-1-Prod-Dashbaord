@@ -3,7 +3,7 @@
 Field reference for installing the **Swift Autonomous Dashboard** (Grafana \+
 InfluxDB monitoring stack) on the USV onboard computer. Native deployment,
 no Docker. All vessel\-side code is C\+\+. The Grafana workspace presents as
-"Swift Autonomous Dashboard" with the Swiftships logo top\-left and 12
+"Swift Autonomous Dashboard" with the Swiftships logo top\-left and 13
 tab\-navigable single\-screen dashboards. Companion docs: `deployment.md` (full guide),
 `schema.md`, `traceability.md`, `alpha-mission-integration.md` (the Alpha
 mission variable map, derived state machine and design rationale).
@@ -191,10 +191,9 @@ and the grafana\_bridge console output under pAntler.
 5. **Comms tiles.** Internet, latency and packet loss are Telegraf ICMP
    probes to 8.8.8.8; Starlink is an ICMP probe to the dish at
    192.168.100.1 (shipped enabled; the dish must be routable from the
-   OBC). The VPN tile watches `tailscaled.service` and reads N/A on a
-   vessel whose VPN terminates on the router rather than the OBC
-   (usv-722: OpenVPN on the boat router); point it at a ping across the
-   tunnel once the tunnel address is known.
+   OBC). The VPN tile is UP when a Twingate, Tailscale, OpenVPN or
+   WireGuard unit is active on the OBC (usv-722: `twingate-connector`), and
+   reads N/A when the VPN terminates on the router.
 6. **Alert rule provisioning is Grafana\-version\-sensitive.** Validated as
    YAML; confirm the 20 rules appear in the UI on your installed Grafana
    version during commissioning step 8 (verified on Grafana 13.2.1).

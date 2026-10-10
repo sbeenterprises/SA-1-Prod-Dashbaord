@@ -10,7 +10,7 @@ on the boat needs.
 |---|---|
 | Onboard computer | OnLogic K800, Ubuntu 22.04.5, hostname `usv-722`, user `douglas` |
 | Repo checkout | `~/Documents/SA-1-Prod-Dashbaord` (GitHub `sbeenterprises/SA-1-Prod-Dashbaord`, install from a tag, never from `main`) |
-| Installed release | v1.2.8 (see `git -C ~/Documents/SA-1-Prod-Dashbaord describe --tags`) |
+| Installed release | v1.2.14 (see `git -C ~/Documents/SA-1-Prod-Dashbaord describe --tags`) |
 | Configuration | `/etc/usv/usv.env` (root only): `VESSEL_ID=usv-722`, `GRAFANA_PORT=3100`, `CAN_INTERFACE=slcan0`, `ECHARTS_PANEL_VERSION=7.2.5`, SMTP not yet set |
 | Grafana | `http://<obc-ip>:3100`, user `admin`, password in `usv.env`; folder "Swift Autonomous Dashboard", home page Readiness |
 | InfluxDB | localhost:8086, org `usv`, buckets `telemetry` (30 d), `events` and `telemetry_1m` (365 d) |
@@ -18,7 +18,8 @@ on the boat needs.
 | CAN | `slcan0` on the K800 eMCU, `slcand -s5` (250 kbit/s) at boot |
 | GPU | Intel Arc Pro A60 (`intel_gpu_top` probe, sudoers rule `usv-telegraf-gpu`) |
 | Starlink | dish at 192.168.100.1, probed by Telegraf |
-| VPN | OpenVPN terminates on the boat router; Comms VPN tile reads N/A |
+| VPN | Twingate connector on the OBC (`twingate-connector.service`); Comms tile "VPN (Twingate)" |
+| Chart UI | Swiftships UI (Freeboard fork) on port 4200, `radar-ui.service` serving `~/Documents/Swiftships-UI-navy/public`; Signal K on 3000 |
 | MOOS mission | `~/Documents/automation/moos-ivp-morgan-stern-drive-mercury/missions/s1_morgan_city_signalk/real.moos`, community `alpha`, MOOSDB on 9000, launched by hand with `pAntler real.moos` (no systemd unit yet) |
 
 ## What was added to real.moos
@@ -122,8 +123,21 @@ All are enabled at boot. `usv-simulator` must stay disabled on the vessel
 
 ## Upgrading to a new release
 
-Tags only. A bridge change needs the mission stopped (pAntler holds the
-binary open); dashboard-only changes do not.
+Tags only. One command, from the repo checkout:
+
+```bash
+cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.14
+```
+
+It fetches the tag, re-runs the installer (rebuilds and restarts the
+bridges, re-provisions dashboards and alerts, reloads Telegraf), lists the
+services and prints the rollback command (`bash deploy/update.sh <old>`).
+Then Ctrl+F5 in the browser. If `grafana_bridge` changed (see the
+CHANGELOG), restart the mission afterwards; the script reminds you when
+MOOS is running. Set `MOOS_DIR=...` in front of the command if the
+installer cannot find MOOS.
+
+Manual equivalent (when the mission must be stopped first):
 
 ```bash
 pkill -f "pAntler real.moos"; sleep 8; pgrep -a MOOSDB     # empty
@@ -152,7 +166,8 @@ Rollback: `git checkout <previous tag>` and the same install command.
 | Alert recipients | `grafana/provisioning/alerting/contact-points.yml` in the repo | commit, tag, install |
 | Alert thresholds | `tools/gen_alerts.py --profile vessel` on a workstation | commit, tag, install |
 | Dashboards | `tools/gen_dashboards.py` on a workstation (never edit the JSON) | commit, tag, install |
-| Telegraf probes (Starlink, GPU) | `telegraf/telegraf.conf` in the repo | commit, tag, install |
+| Telegraf probes (Starlink, GPU, VPN units) | `telegraf/telegraf.conf` in the repo | commit, tag, install |
+| Screen height all pages fit | `SCREEN_ROWS` in `tools/gen_dashboards.py` (19 rows = 1080p) | regenerate, commit, tag, install |
 
 ## Alert email
 
@@ -188,7 +203,9 @@ retention (`du -sh /var/lib/influxdb`).
 |---|---|
 | Readiness rows stuck / contradictory | `ps -o pid=,lstart=,cmd= -C pAntler -C MOOSDB -C grafana_bridge`: exactly one of each |
 | GPS row FAIL "no position" while Signal K shows one | `sudo systemctl restart usv-signalk-bridge`; `curl -s localhost:3000/signalk/v1/api/vessels/self/navigation/vectornav/insMode` should be 2 |
-| GPS row "INS aligning" / "GNSS lost" | VectorNav state, not the dashboard: wait for alignment / check antenna |
+| GPS row "INS aligning" / "GNSS lost"; SOG / COG No data | VectorNav state, not the dashboard (the plugin publishes SOG/COG only when tracking). Read the status: `sudo timeout 2 cat /dev/serial/by-id/usb-FTDI_USB-RS232_Cable_AU04Q2FP-if00-port0 \| grep -m3 VNINS`, 3rd field last digit: 1 aligning without GNSS fix (antenna / sky view), 5 aligning with fix (needs motion), 6 tracking. Reset the INS only if stuck: `printf '$VNRST*4D\r\n' \| sudo tee <same device> >/dev/null` |
+| VPN tile N/A | `systemctl is-active twingate-connector`; Telegraf watches `twingate*`, `tailscaled`, `openvpn*`, `wg-quick@*` units |
+| Bridge change not visible after an update | `systemctl status usv-can-bridge usv-signalk-bridge` start time; releases before v1.2.14 did not restart them: `sudo systemctl restart usv-can-bridge usv-signalk-bridge` |
 | CAN bus 0 msg/s with interface UP | `candump slcan0`; N2K backbone powered? wiring/termination (~60 ohm CAN-H to CAN-L unpowered); `ps -ef | grep slcand` shows `-s5` |
 | GPU tile No data | `sudo -u telegraf sudo -n /usr/local/bin/usv_gpu_probe` must print one `gpu,vendor=intel` line in ~3 s |
 | Starlink tile N/A | `ping 192.168.100.1` from the OBC; dish must be routable |
@@ -202,7 +219,7 @@ retention (`du -sh /var/lib/influxdb`).
 | Electrical / Power panels No data | `curl -s localhost:3000/signalk/v1/api/vessels/self/electrical`: battery instance name; set SIGNALK_BATTERY if it is not the first one |
 | AIS contacts thousands of km away, Rel. Bearing wrong | MOOS NAV_LAT/NAV_LONG = 0 (no RMC/HDT reaching iDivisorNMEA); the dashboard falls back to Signal K and logs one "traffic" warning; fix on the mission side |
 
-## Known gaps on this hull (as of v1.2.12)
+## Known gaps on this hull (as of v1.2.14)
 
 - Own-ship navigation in MOOS: iDivisorNMEA posts NAV_LAT/NAV_LONG/
   NAV_HEADING = 0 because its UDP feed (port 10111) carries only AIS; the
@@ -211,7 +228,9 @@ retention (`du -sh /var/lib/influxdb`).
   HDT enabled in Signal K's NMEA0183 output. No autonomous missions until
   `uXMS --server_port=9000 NAV_LAT` reads about 29.73. The dashboard uses
   Signal K meanwhile.
-- Rudder feedback: no `$AGRSA` on the same feed, so Steering reads FAIL.
+- Rudder feedback: read from the steering actuator on CAN (0x210) since
+  v1.2.14; Steering passes when the actuator reports. MOOS itself still has
+  no rudder feedback (`$AGRSA` absent).
 - Cameras: cameras 3 to 6 and the FLIR are not powered / networked yet;
   keep them disabled in Frigate until they are, so Readiness counts only
   live cameras. Bitrate, temperature and PTZ have no source.
@@ -219,7 +238,10 @@ retention (`du -sh /var/lib/influxdb`).
   voltage and current only.
 - ENC: none fitted; `enc_fitted = false`.
 - Console checklist: not published by the UI; `console_checklist = false`.
-- VPN tile: N/A (tunnel on the router).
+- VPN: Twingate connector on the OBC; the tile shows its service state,
+  not whether an operator is connected.
+- Engine RPM, temperatures: not on this CAN bus (behind the Mercury
+  SmartCraft network); needs a SmartCraft to NMEA 2000 gateway.
 - Helm position: `uQueryDB real.moos --condition="NAV_X > -999999"` to
   confirm pHelmIvP receives NAV_X/NAV_Y on this hull (autonomy stack, not
   the dashboard).

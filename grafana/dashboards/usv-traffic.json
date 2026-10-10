@@ -250,7 +250,7 @@
   },
   "panels": [
     {
-      "id": 221,
+      "id": 218,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -266,7 +266,7 @@
       }
     },
     {
-      "id": 112,
+      "id": 110,
       "type": "stat",
       "title": "Collision Risk",
       "datasource": {
@@ -340,13 +340,13 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 113,
+      "id": 111,
       "type": "stat",
       "title": "Avoidance",
       "datasource": {
@@ -415,13 +415,13 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 114,
+      "id": 112,
       "type": "stat",
       "title": "Contacts",
       "datasource": {
@@ -473,13 +473,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 115,
+      "id": 113,
       "type": "stat",
       "title": "Reports / AIS",
       "datasource": {
@@ -531,13 +531,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 116,
+      "id": 114,
       "type": "stat",
       "title": "Radar Only",
       "datasource": {
@@ -589,13 +589,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 117,
+      "id": 115,
       "type": "stat",
       "title": "High Risk",
       "datasource": {
@@ -651,13 +651,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 118,
+      "id": 116,
       "type": "stat",
       "title": "Closest Range",
       "datasource": {
@@ -737,13 +737,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 119,
+      "id": 117,
       "type": "stat",
       "title": "Min CPA",
       "datasource": {
@@ -823,13 +823,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 120,
+      "id": 118,
       "type": "volkovlabs-echarts-panel",
       "title": "Traffic View",
       "datasource": {
@@ -840,7 +840,7 @@
         "x": 0,
         "y": 4,
         "w": 10,
-        "h": 11
+        "h": 10
       },
       "targets": [
         {
@@ -881,7 +881,7 @@
       }
     },
     {
-      "id": 121,
+      "id": 119,
       "type": "stat",
       "title": "Highest-Risk Contact",
       "datasource": {
@@ -934,13 +934,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 122,
+      "id": 120,
       "type": "stat",
       "title": "CPA",
       "datasource": {
@@ -1006,13 +1006,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 123,
+      "id": 121,
       "type": "stat",
       "title": "TCPA",
       "datasource": {
@@ -1090,13 +1090,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 124,
+      "id": 122,
       "type": "stat",
       "title": "Range",
       "datasource": {
@@ -1150,13 +1150,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 125,
+      "id": 123,
       "type": "stat",
       "title": "Bearing",
       "datasource": {
@@ -1210,13 +1210,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 126,
+      "id": 124,
       "type": "stat",
       "title": "Rel. Bearing",
       "datasource": {
@@ -1270,13 +1270,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 127,
+      "id": 125,
       "type": "stat",
       "title": "Rel. Speed",
       "datasource": {
@@ -1330,13 +1330,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 128,
+      "id": 126,
       "type": "stat",
       "title": "Type",
       "datasource": {
@@ -1347,7 +1347,7 @@
         "x": 10,
         "y": 12,
         "w": 4,
-        "h": 3
+        "h": 2
       },
       "targets": [
         {
@@ -1389,13 +1389,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 129,
+      "id": 127,
       "type": "stat",
       "title": "Encounter",
       "datasource": {
@@ -1406,7 +1406,7 @@
         "x": 14,
         "y": 12,
         "w": 3,
-        "h": 3
+        "h": 2
       },
       "targets": [
         {
@@ -1475,13 +1475,13 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 130,
+      "id": 128,
       "type": "stat",
       "title": "Planned Course",
       "datasource": {
@@ -1549,15 +1549,15 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 131,
+      "id": 129,
       "type": "stat",
-      "title": "Commanded Course",
+      "title": "Cmd Course",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -1609,13 +1609,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 132,
+      "id": 130,
       "type": "stat",
       "title": "Actual Heading",
       "datasource": {
@@ -1669,13 +1669,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 133,
+      "id": 131,
       "type": "stat",
       "title": "Deviation",
       "datasource": {
@@ -1751,13 +1751,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 134,
+      "id": 132,
       "type": "stat",
       "title": "Speed Command",
       "datasource": {
@@ -1811,13 +1811,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 135,
+      "id": 133,
       "type": "stat",
       "title": "Actual SOG",
       "datasource": {
@@ -1871,13 +1871,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 136,
+      "id": 134,
       "type": "stat",
       "title": "Avoidance Behavior",
       "datasource": {
@@ -1930,13 +1930,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 137,
+      "id": 135,
       "type": "stat",
       "title": "Reason",
       "datasource": {
@@ -1947,7 +1947,7 @@
         "x": 17,
         "y": 12,
         "w": 7,
-        "h": 3
+        "h": 2
       },
       "targets": [
         {
@@ -1988,13 +1988,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 138,
+      "id": 136,
       "type": "table",
       "title": "Contacts \u2014 riskiest first",
       "datasource": {
@@ -2003,9 +2003,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 15,
-        "w": 12,
-        "h": 4
+        "y": 14,
+        "w": 16,
+        "h": 5
       },
       "targets": [
         {
@@ -2256,7 +2256,7 @@
       ]
     },
     {
-      "id": 139,
+      "id": 137,
       "type": "timeseries",
       "title": "Closest CPA / TCPA",
       "datasource": {
@@ -2264,10 +2264,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 12,
-        "y": 15,
-        "w": 12,
-        "h": 4
+        "x": 16,
+        "y": 14,
+        "w": 8,
+        "h": 5
       },
       "targets": [
         {

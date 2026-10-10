@@ -35,7 +35,9 @@ operational mission state onboard (`docs/alpha-mission-integration.md`).
 - Nautical units only: speeds in knots, long distances in nautical miles,
   short ranges in fixed metres. Nothing on any dashboard ever scales to km.
 - One screen per dashboard on a 1080p display: rows of equal 3x3 status
-  tiles above instruments and trends, no scrolling during operations.
+  tiles above instruments and trends, no scrolling during operations. The
+  generator enforces it (`fit_to_screen`, `SCREEN_ROWS = 19` in
+  `tools/gen_dashboards.py`).
 - Every dashboard carries the Swiftships header band with the dashboard
   name and the selected vessel, and works in both Grafana themes.
 - Fleet-ready: every measurement is tagged `vessel`; the Fleet dashboard
@@ -56,6 +58,7 @@ vessel sensors when configured in `/etc/usv/usv.env`: `mayara_bridge`
 ```
 deploy/
   install.sh                 # one-shot native installer (Debian/Ubuntu), idempotent
+  update.sh                  # update an installed vessel to a release tag (one command)
   brand.sh                   # Swiftships branding for Grafana OSS (called by install.sh)
   branding/                  # logos, favicon, wordmark chips
   usv.env.example            # -> /etc/usv/usv.env (secrets, vessel id, fleet, branding)
@@ -69,6 +72,8 @@ ingestion/                   # all C++
                              #     geometry, pre-departure readiness; unit-tested)
                              #   + moos_poke utility
   can-cpp/                   #   SocketCAN / NMEA 2000 bridge
+                             #   + usv722_can.hpp (usv-722 helm, steering, thrust,
+                             #     gear, key, DM1 frames; unit-tested)
   signalk-cpp/               #   Signal K WebSocket delta bridge
 simulator/                   # C++ bench generator (scripted Alpha mission)
 grafana/
@@ -92,7 +97,24 @@ sudo nano /etc/usv/usv.env      # secrets, GRAFANA_PORT, VESSELS, branding text
 sudo bash deploy/install.sh     # installs, provisions and starts everything
 ```
 
-Then merge `ingestion/moos-cpp/example.moos` into the mission file
+## Update an installed vessel
+
+From the repo checkout on the onboard computer, as the normal user:
+
+```bash
+bash deploy/update.sh            # latest release tag
+bash deploy/update.sh v1.2.14    # or a given tag; prints the rollback command
+```
+
+It refuses to run over local edits, re-runs the installer (rebuilds and
+restarts the bridges, re-provisions dashboards and alerts, reloads
+Telegraf) and lists service status. Then Ctrl+F5 in the browser, and
+restart the MOOS mission if `grafana_bridge` changed. Production vessels
+install tags only (`docs/runbook-usv-722.md`).
+
+## First install: MOOS
+
+Merge `ingestion/moos-cpp/example.moos` into the mission file
 (`Run = grafana_bridge` plus its ProcessConfig). Grafana listens on
 `GRAFANA_PORT` (3001 by default; the simulation host uses 3300), folder
 "Swift Autonomous Dashboard". Bench test without the vessel:
@@ -106,8 +128,13 @@ python3 tools/gen_alerts.py --profile sim
 bash tools/smoke_test.sh                 # must end with FAIL: 0
 ```
 
-The smoke test (100 checks) builds every C++ program, runs the
-`mission_logic_test`, `mayara_logic_test` and `frigate_logic_test` unit tests, drives the simulator, the CAN bridge,
+Release: add the changes under a new version in `CHANGELOG.md`, commit,
+then tag on `main` (`git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`)
+so vessels can `deploy/update.sh` to it.
+
+The smoke test (102 checks) builds every C++ program, runs the
+`mission_logic_test`, `mayara_logic_test`, `frigate_logic_test` and
+`usv722_can_test` unit tests, drives the simulator, the CAN bridge,
 the Signal K bridge and (when MOOSDB is on the PATH) the MOOS bridge
 against an InfluxDB stub, and cross-checks every field the dashboards
 query against what the producers actually write. It also runs every
@@ -124,7 +151,7 @@ See `docs/deployment.md` for operations, `docs/user-guide.md` for
 operators, `docs/schema.md` for the InfluxDB schema,
 `docs/traceability.md` for requirement coverage,
 `docs/validation-report.md` for what was verified and how, and
-`CHANGELOG.md` for release history (current release: v1.2.10, production on
+`CHANGELOG.md` for release history (current release: v1.2.14, production on
 usv-722; simulation baseline v1.0.0), `docs/commissioning-usv-722.md` for
 the commissioning record and `docs/runbook-usv-722.md` for day-to-day
 operation of the production vessel.

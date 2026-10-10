@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 216,
+      "id": 213,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -472,7 +472,7 @@
         "x": 14,
         "y": 2,
         "w": 5,
-        "h": 5
+        "h": 6
       },
       "targets": [
         {
@@ -495,7 +495,7 @@
         }
       ],
       "options": {
-        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? '#1c2a3d' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(124,156,176,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#7c9cb0' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#00bcd4',\n  text: dark ? '#ffffff' : '#24292e',\n  sub: dark ? '#00bcd4' : '#1e6692',\n  accent: '#00bcd4',\n  accent2: '#42a5f5',\n};\nlet hdg = val('A'); if (hdg === null || isNaN(hdg)) { hdg = 0; }\nlet cog = val('B'); if (cog === null || isNaN(cog)) { cog = hdg; }\nhdg = ((hdg % 360) + 360) % 360;\ncog = ((cog % 360) + 360) % 360;\nconst card = {0: 'N', 90: 'E', 180: 'S', 270: 'W', 360: ''};\nconst base = {\n  type: 'gauge', min: 0, max: 360, startAngle: 90, endAngle: -270,\n  clockwise: true, center: ['50%', '54%'], radius: '86%',\n};\nreturn {\n  series: [Object.assign({}, base, {\n    axisLine: { lineStyle: { width: 4, color: [[1, C.rail]] } },\n    splitNumber: 12,\n    splitLine: { length: 10, distance: -10,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { splitNumber: 3, length: 5, distance: -5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 13, fontSize: 11, fontWeight: 600,\n                 color: C.label,\n                 formatter: (x) => (card[x] !== undefined ? card[x] : x) },\n    pointer: { width: 5, length: '66%',\n               itemStyle: { color: C.accent,\n                            shadowColor: 'rgba(0,0,0,0.45)',\n                            shadowBlur: 6, shadowOffsetY: 2 } },\n    anchor: { show: true, size: 11, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '44%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 18,\n              fontWeight: 600, offsetCenter: [0, '26%'],\n              formatter: (x) => x.toFixed(0) + '\\u00b0' },\n    data: [{ value: hdg, name: 'HDG \\u2014 COG ' + cog.toFixed(0) +\n             '\\u00b0' }],\n  }), Object.assign({}, base, {\n    axisLine: { show: false }, splitLine: { show: false },\n    axisTick: { show: false }, axisLabel: { show: false },\n    pointer: { width: 3, length: '52%',\n               itemStyle: { color: C.accent2, opacity: 0.9 } },\n    anchor: { show: false }, title: { show: false },\n    detail: { show: false },\n    data: [{ value: cog }],\n  })],\n};\n",
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? '#1c2a3d' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(124,156,176,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#7c9cb0' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#00bcd4',\n  text: dark ? '#ffffff' : '#24292e',\n  sub: dark ? '#00bcd4' : '#1e6692',\n  accent: '#00bcd4',\n  accent2: '#42a5f5',\n};\nlet hdg = val('A'); if (hdg === null || isNaN(hdg)) { hdg = 0; }\nlet cog = val('B'); if (cog === null || isNaN(cog)) { cog = hdg; }\nhdg = ((hdg % 360) + 360) % 360;\ncog = ((cog % 360) + 360) % 360;\nconst card = {0: 'N', 90: 'E', 180: 'S', 270: 'W', 360: ''};\nconst base = {\n  type: 'gauge', min: 0, max: 360, startAngle: 90, endAngle: -270,\n  clockwise: true, center: ['50%', '54%'], radius: '86%',\n};\nreturn {\n  series: [Object.assign({}, base, {\n    axisLine: { lineStyle: { width: 4, color: [[1, C.rail]] } },\n    splitNumber: 12,\n    splitLine: { length: 10, distance: -10,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { splitNumber: 3, length: 5, distance: -5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 13, fontSize: 11, fontWeight: 600,\n                 color: C.label,\n                 formatter: (x) => (card[x] !== undefined ? card[x] : x) },\n    pointer: { width: 5, length: '66%',\n               itemStyle: { color: C.accent,\n                            shadowColor: 'rgba(0,0,0,0.45)',\n                            shadowBlur: 6, shadowOffsetY: 2 } },\n    anchor: { show: true, size: 11, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    // Readouts sit outside the dial (graphic below): inside it they ran\n    // into the 120 / 240 labels on a 5-column panel.\n    title: { show: false }, detail: { show: false },\n    data: [{ value: hdg }],\n  }), Object.assign({}, base, {\n    axisLine: { show: false }, splitLine: { show: false },\n    axisTick: { show: false }, axisLabel: { show: false },\n    pointer: { width: 3, length: '52%',\n               itemStyle: { color: C.accent2, opacity: 0.9 } },\n    anchor: { show: false }, title: { show: false },\n    detail: { show: false },\n    data: [{ value: cog }],\n  })],\n  graphic: [\n    { type: 'text', left: 8, top: 4, style: { text: 'HDG', fill: C.label, fontSize: 10, fontWeight: 600 } },\n    { type: 'text', left: 8, top: 17, style: { text: hdg.toFixed(0) + '\\u00b0', fill: C.accent, fontSize: 18, fontWeight: 700 } },\n    { type: 'text', right: 8, top: 4, style: { text: 'COG', fill: C.label, fontSize: 10, fontWeight: 600, align: 'right' } },\n    { type: 'text', right: 8, top: 17, style: { text: cog.toFixed(0) + '\\u00b0', fill: C.accent2, fontSize: 18, fontWeight: 700, align: 'right' } },\n  ],\n};\n",
         "renderer": "svg"
       },
       "fieldConfig": {
@@ -520,7 +520,7 @@
         "x": 19,
         "y": 2,
         "w": 5,
-        "h": 5
+        "h": 6
       },
       "targets": [
         {
@@ -562,7 +562,7 @@
       },
       "gridPos": {
         "x": 14,
-        "y": 7,
+        "y": 8,
         "w": 5,
         "h": 2
       },
@@ -638,7 +638,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -653,7 +653,7 @@
       },
       "gridPos": {
         "x": 19,
-        "y": 7,
+        "y": 8,
         "w": 5,
         "h": 2
       },
@@ -709,7 +709,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -724,9 +724,9 @@
       },
       "gridPos": {
         "x": 14,
-        "y": 9,
+        "y": 10,
         "w": 5,
-        "h": 3
+        "h": 2
       },
       "targets": [
         {
@@ -767,7 +767,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -782,9 +782,9 @@
       },
       "gridPos": {
         "x": 19,
-        "y": 9,
+        "y": 10,
         "w": 5,
-        "h": 3
+        "h": 2
       },
       "targets": [
         {
@@ -825,7 +825,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -884,7 +884,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -943,7 +943,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1017,7 +1017,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1076,7 +1076,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1148,7 +1148,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1219,7 +1219,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1278,7 +1278,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1337,7 +1337,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }

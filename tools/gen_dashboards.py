@@ -575,13 +575,10 @@ return {
     anchor: { show: true, size: 11, showAbove: true,
               itemStyle: { color: C.pivot, borderColor: C.needle,
                            borderWidth: 2 } },
-    title: { show: true, offsetCenter: [0, '44%'], color: C.sub,
-             fontSize: 10 },
-    detail: { valueAnimation: true, color: C.text, fontSize: 18,
-              fontWeight: 600, offsetCenter: [0, '26%'],
-              formatter: (x) => x.toFixed(0) + '\\u00b0' },
-    data: [{ value: hdg, name: 'HDG \\u2014 COG ' + cog.toFixed(0) +
-             '\\u00b0' }],
+    // Readouts sit outside the dial (graphic below): inside it they ran
+    // into the 120 / 240 labels on a 5-column panel.
+    title: { show: false }, detail: { show: false },
+    data: [{ value: hdg }],
   }), Object.assign({}, base, {
     axisLine: { show: false }, splitLine: { show: false },
     axisTick: { show: false }, axisLabel: { show: false },
@@ -591,6 +588,12 @@ return {
     detail: { show: false },
     data: [{ value: cog }],
   })],
+  graphic: [
+    { type: 'text', left: 8, top: 4, style: { text: 'HDG', fill: C.label, fontSize: 10, fontWeight: 600 } },
+    { type: 'text', left: 8, top: 17, style: { text: hdg.toFixed(0) + '\\u00b0', fill: C.accent, fontSize: 18, fontWeight: 700 } },
+    { type: 'text', right: 8, top: 4, style: { text: 'COG', fill: C.label, fontSize: 10, fontWeight: 600, align: 'right' } },
+    { type: 'text', right: 8, top: 17, style: { text: cog.toFixed(0) + '\\u00b0', fill: C.accent2, fontSize: 18, fontWeight: 700, align: 'right' } },
+  ],
 };
 """
 
@@ -621,7 +624,8 @@ return {
     axisTick: { length: 6, distance: -6, splitNumber: 5,
                 lineStyle: { color: C.tick, width: 1 } },
     axisLabel: { distance: 15, color: C.label, fontSize: 10,
-                 formatter: (x) => Math.abs(x) },
+                 // The \u00b135 end labels sat under the PORT / STBD readout.
+                 formatter: (x) => (Math.abs(x) >= 35 ? '' : Math.abs(x)) },
     pointer: { width: 4, length: '62%',
                itemStyle: { color: C.needle,
                             shadowColor: 'rgba(0,0,0,0.45)',
@@ -842,55 +846,55 @@ events_query = (
 #   E  state timeline | events   h5
 DASHBOARDS.append(dashboard("usv-mission", "Mission", [
     # A — the operational picture: 8 equal status tiles (3 x 3).
-    stat("Mission State", last_str("mission_state", "state"), 0, 0, 3, 3,
+    stat("Mission State", last_str("mission_state", "state"), 0, 0, 3, 2,
          mappings=mission_state_mappings, text_mode="value",
          color_mode="background"),
-    stat("Helm", last_str("mission_state", "helm_state"), 3, 0, 3, 3,
+    stat("Helm", last_str("mission_state", "helm_state"), 3, 0, 3, 2,
          mappings=helm_state_mappings, text_mode="value",
          color_mode="background"),
-    stat("Armed", flux("autonomy", "armed", last=True), 6, 0, 3, 3,
+    stat("Armed", flux("autonomy", "armed", last=True), 6, 0, 3, 2,
          mappings=[{"type": "value", "options": {
              "0": {"text": "DISARMED", "color": "orange", "index": 0},
              "1": {"text": "ARMED", "color": TILE_OK, "index": 1}}}],
          text_mode="value", color_mode="background"),
     stat("Operator Link", flux("autonomy", "comms_phase", last=True),
-         9, 0, 3, 3, mappings=comms_phase_mappings,
+         9, 0, 3, 2, mappings=comms_phase_mappings,
          text_mode="value", color_mode="background"),
     stat("Geofence", flux("autonomy", "geofence_breached", last=True),
-         12, 0, 3, 3, mappings=geofence_mappings, text_mode="value",
+         12, 0, 3, 2, mappings=geofence_mappings, text_mode="value",
          color_mode="background"),
     stat("All-Stop", last_str("mission_state", "allstop_reason"),
-         15, 0, 3, 3, mappings=allstop_mappings, text_mode="value",
+         15, 0, 3, 2, mappings=allstop_mappings, text_mode="value",
          color_mode="background"),
     stat("Arrival", last_str("mission_state", "arrival_state"),
-         18, 0, 3, 3, mappings=arrival_mappings, text_mode="value",
+         18, 0, 3, 2, mappings=arrival_mappings, text_mode="value",
          color_mode="background"),
     stat("Obstacles", flux("autonomy", "obstacle_alerts", last=True),
-         21, 0, 3, 3, decimals=0,
+         21, 0, 3, 2, decimals=0,
          thresholds=[(None, TILE_OK), (1, "yellow"), (3, "orange")],
          color_mode="background"),
     # B — identity, timers, route position: 8 equal readouts (3 x 3).
-    stat("Mission", last_str("mission_state", "mission_name"), 0, 3, 3, 3,
+    stat("Mission", last_str("mission_state", "mission_name"), 0, 2, 3, 2,
          text_mode="value"),
-    stat("Route", last_str("mission_state", "route_name"), 3, 3, 3, 3,
+    stat("Route", last_str("mission_state", "route_name"), 3, 2, 3, 2,
          text_mode="value"),
-    stat("Elapsed", flux("mission", "elapsed_s", last=True), 6, 3, 3, 3,
+    stat("Elapsed", flux("mission", "elapsed_s", last=True), 6, 2, 3, 2,
          unit="dthms", decimals=0),
-    stat("ETA to WP", flux("mission", "eta_s", last=True), 9, 3, 3, 3,
+    stat("ETA to WP", flux("mission", "eta_s", last=True), 9, 2, 3, 2,
          unit="dthms", decimals=0),
-    stat("Waypoint", waypoint_of_total_query, 12, 3, 3, 3, text_mode="value",
+    stat("Waypoint", waypoint_of_total_query, 12, 2, 3, 2, text_mode="value",
          string_value=True),
     stat("Remaining", flux("mission", "waypoints_remaining", last=True),
-         15, 3, 3, 3, decimals=0),
+         15, 2, 3, 2, decimals=0),
     stat("Dist to WP", flux("mission", "dist_to_waypoint", last=True),
-         18, 3, 3, 3, unit=UNIT_M, decimals=0,
+         18, 2, 3, 2, unit=UNIT_M, decimals=0,
          thresholds=approach_thresholds),
     stat("Traveled", flux("mission", "distance_traveled", last=True, nm=True),
-         21, 3, 3, 3, unit=UNIT_NM, decimals=2),
+         21, 2, 3, 2, unit=UNIT_NM, decimals=2),
     # C — progress bar across the width.
     panel("bargauge", "Mission Progress",
           [target(flux("mission", "progress_pct", last=True))],
-          0, 6, 24, 2, unit="percent", min_=0, max_=100, decimals=0,
+          0, 4, 24, 2, unit="percent", min_=0, max_=100, decimals=0,
           thresholds=[(None, ACCENT)],
           options={"reduceOptions": {"calcs": ["lastNotNull"]},
                    "orientation": "horizontal", "displayMode": "lcd",
@@ -900,7 +904,7 @@ DASHBOARDS.append(dashboard("usv-mission", "Mission", [
     panel("timeseries", "Approach Profile — Distance to Next Waypoint vs SOG",
           [target(flux("mission", "dist_to_waypoint"), "distance m"),
            target(flux("nav", "sog"), "SOG kn", ref="B")],
-          0, 8, 12, 7, unit=UNIT_M,
+          0, 6, 12, 5, unit=UNIT_M,
           thresholds=[(None, "transparent"), (20, "red"), (100, "orange"),
                       (500, OK)],
           custom={"drawStyle": "line", "lineWidth": 2, "fillOpacity": 14,
@@ -929,7 +933,7 @@ DASHBOARDS.append(dashboard("usv-mission", "Mission", [
                         "remote_control", "crash_stop"],
                        every="5s", fn="last",
                        extra='  |> map(fn: (r) => ({ r with _field: r._field }))'))],
-          12, 8, 12, 7, mappings=flag_timeline_mappings,
+          12, 6, 12, 5, mappings=flag_timeline_mappings,
           custom={"fillOpacity": 70, "lineWidth": 0},
           overrides=[{"matcher": {"id": "byRegexp", "options": ".*"},
                       "properties": [{"id": "displayName",
@@ -940,14 +944,14 @@ DASHBOARDS.append(dashboard("usv-mission", "Mission", [
     # E — history.
     panel("state-timeline", "Mission State",
           [target(flux("mission_state", "state", every="10s", fn="last"))],
-          0, 15, 13, 5, mappings=mission_state_mappings,
+          0, 11, 12, 6, mappings=mission_state_mappings,
           custom={"fillOpacity": 70, "lineWidth": 0},
           overrides=[{"matcher": {"id": "byRegexp", "options": ".*"},
                       "properties": [{"id": "displayName", "value": "state"}]}],
           options={"showValue": "auto", "legend": {"showLegend": False}}),
     panel("table", "Mission Events",
           [target(events_query)],
-          13, 15, 11, 5,
+          12, 11, 12, 6,
           overrides=[{"matcher": {"id": "byName", "options": "Time"},
                       "properties": [{"id": "custom.width", "value": 150},
                                      {"id": "unit", "value": "dateTimeAsIso"}]},
@@ -980,7 +984,7 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
            target(geometry_query("route"), ref="C"),
            target(geometry_query("region"), ref="D"),
            target(vector_query(), ref="E")],
-          0, 0, 14, 13,
+          0, 0, 14, 10,
           options={
               "view": {"id": "fit", "zoom": 15},
               "basemap": {"type": "osm-standard", "name": "OSM"},
@@ -1000,46 +1004,46 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
           0, 40, "kn", zones=None, decimals=1, split=8, sub="KNOTS",
           preview=12.8, fallback_thresholds=[(None, ACCENT)]),
     # GPS quality and position.
-    stat("GPS Fix", last_str("nav", "fix_type"), 14, 6, 5, 3,
+    stat("GPS Fix", last_str("nav", "fix_type"), 14, 6, 5, 2,
          text_mode="value", color_mode="background",
          mappings=gps_fix_mappings),
     # Satellites / HDOP are N/A on an INS feed (VectorNav publishes neither).
-    stat("Satellites", flux("nav", "satellites", last=True), 19, 6, 5, 3,
+    stat("Satellites", flux("nav", "satellites", last=True), 19, 6, 5, 2,
          decimals=0, thresholds=neutral_base([(None, "red"), (5, "yellow"), (8, TILE_OK)]),
          color_mode="background", no_value="N/A"),
-    stat("Latitude", flux("nav", "lat", last=True), 14, 9, 5, 4, decimals=6),
-    stat("Longitude", flux("nav", "lon", last=True), 19, 9, 5, 4, decimals=6),
+    stat("Latitude", flux("nav", "lat", last=True), 14, 8, 5, 2, decimals=6),
+    stat("Longitude", flux("nav", "lon", last=True), 19, 8, 5, 2, decimals=6),
     # KPI strip: 8 equal tiles.
-    stat("Speed Cap", flux("autopilot", "speed_cap", last=True), 0, 13, 3, 3,
+    stat("Speed Cap", flux("autopilot", "speed_cap", last=True), 0, 10, 3, 2,
          unit="velocityknot", decimals=1),
-    stat("COG", flux("nav", "cog", last=True), 3, 13, 3, 3,
+    stat("COG", flux("nav", "cog", last=True), 3, 10, 3, 2,
          unit="degree", decimals=0),
-    stat("WP Bearing", flux("traffic", "planned_course", last=True), 6, 13, 3, 3,
+    stat("WP Bearing", flux("traffic", "planned_course", last=True), 6, 10, 3, 2,
          unit="degree", decimals=0, no_value="no route",
          mappings=[{"type": "range", "options": {"from": -1.5, "to": -0.5,
                     "result": {"text": "no route", "color": NEUTRAL, "index": 0}}}],
          thresholds=[(None, OK)]),
-    stat("XTE", flux("nav", "cross_track_error", last=True), 9, 13, 3, 3,
+    stat("XTE", flux("nav", "cross_track_error", last=True), 9, 10, 3, 2,
          unit=UNIT_M, decimals=1, graph_mode="area"),
     stat("Dist to WP", flux("mission", "dist_to_waypoint", last=True),
-         12, 13, 3, 3, unit=UNIT_M, decimals=0,
+         12, 10, 3, 2, unit=UNIT_M, decimals=0,
          thresholds=neutral_base(approach_thresholds), no_value="no route"),
-    stat("HDOP", flux("nav", "hdop", last=True), 15, 13, 3, 3, decimals=1,
+    stat("HDOP", flux("nav", "hdop", last=True), 15, 10, 3, 2, decimals=1,
          thresholds=neutral_base([(None, TILE_OK), (2, "yellow"), (5, "red")]),
          no_value="N/A"),
-    stat("Depth", flux("nav", "depth", last=True), 18, 13, 3, 3,
+    stat("Depth", flux("nav", "depth", last=True), 18, 10, 3, 2,
          unit=UNIT_M, decimals=1),
-    stat("Roll / Pitch", flux("nav", "roll", last=True), 21, 13, 3, 3,
+    stat("Roll / Pitch", flux("nav", "roll", last=True), 21, 10, 3, 2,
          unit="degree", decimals=1),
     # Trends.
     ts("Heading / COG", [target(flux("nav", ["heading", "cog"]))],
-       0, 16, 6, 6, unit="degree", min_=0, max_=360),
+       0, 12, 6, 5, unit="degree", min_=0, max_=360),
     ts("Speed Over Ground", [target(flux("nav", "sog"), "SOG")],
-       6, 16, 6, 6, unit="velocityknot"),
+       6, 12, 6, 5, unit="velocityknot"),
     ts("Cross-Track Error", [target(flux("nav", "cross_track_error"), "XTE")],
-       12, 16, 6, 6, unit=UNIT_M),
+       12, 12, 6, 5, unit=UNIT_M),
     ts("Attitude — Roll / Pitch", [target(flux("nav", ["roll", "pitch"]))],
-       18, 16, 6, 6, unit="degree"),
+       18, 12, 6, 5, unit="degree"),
 ], ["navigation"]))
 
 # -------------------------------------------------------------- FR-3 Autopilot
@@ -1057,90 +1061,88 @@ crash_mappings = state_map([
 ])
 
 DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
-    # A — helm state and the Alpha mission's safety latches (8 x 3x3).
-    stat("Helm State", last_str("mission_state", "helm_state"), 0, 0, 3, 3,
+    # One screen (17 content rows): two tile rows (h2), dials (h5), three
+    # trends (h6), CAN row (h2).
+    # A — helm state and the Alpha mission's safety latches.
+    stat("Helm State", last_str("mission_state", "helm_state"), 0, 0, 3, 2,
          mappings=helm_state_mappings, text_mode="value",
          color_mode="background"),
     stat("All-Stop", last_str("mission_state", "allstop_reason"),
-         3, 0, 3, 3, mappings=allstop_mappings, text_mode="value",
+         3, 0, 3, 2, mappings=allstop_mappings, text_mode="value",
          color_mode="background"),
     stat("Station Keeping", flux("autonomy", "stationing", last=True),
-         6, 0, 3, 3, mappings=onoff_map("OFF", "ACTIVE"),
+         6, 0, 3, 2, mappings=onoff_map("OFF", "ACTIVE"),
          text_mode="value", color_mode="background"),
     stat("Entry Gate", flux("autonomy", "entry_gate_open", last=True),
-         9, 0, 3, 3,
+         9, 0, 3, 2,
          mappings=[{"type": "value", "options": {
              "0": {"text": "CLOSED", "color": "yellow", "index": 0},
              "1": {"text": "OPEN", "color": TILE_OK, "index": 1}}}],
          text_mode="value", color_mode="background"),
     stat("Re-Arm Hold", flux("autonomy", "awaiting_rearm", last=True),
-         12, 0, 3, 3, mappings=onoff_map("CLEAR", "AWAITING", "orange"),
+         12, 0, 3, 2, mappings=onoff_map("CLEAR", "AWAITING", "orange"),
          text_mode="value", color_mode="background"),
     stat("Remote Control", flux("autonomy", "remote_control", last=True),
-         15, 0, 3, 3, mappings=onoff_map("OFF", "MANUAL", "orange"),
+         15, 0, 3, 2, mappings=onoff_map("OFF", "MANUAL", "orange"),
          text_mode="value", color_mode="background"),
     stat("Corridor", last_str("mission_state", "corridor_status"),
-         18, 0, 3, 3, mappings=corridor_mappings, text_mode="value",
+         18, 0, 3, 2, mappings=corridor_mappings, text_mode="value",
          color_mode="background"),
     stat("Crash Stop", last_str("mission_state", "crash_stop_status"),
-         21, 0, 3, 3, mappings=crash_mappings, text_mode="value",
+         21, 0, 3, 2, mappings=crash_mappings, text_mode="value",
          color_mode="background"),
     # B — commands and errors.
     stat("Active Behaviors", last_str("mission_state", "active_behavior"),
-         0, 3, 6, 3, text_mode="value"),
+         0, 2, 6, 2, text_mode="value"),
     stat("Heading Error", flux("autopilot", "heading_error", last=True),
-         6, 3, 3, 3, unit="degree", decimals=1,
+         6, 2, 3, 2, unit="degree", decimals=1,
          thresholds=[(None, OK), (10, "yellow"), (25, "red")],
          graph_mode="area"),
-    stat("Speed Error", flux("autopilot", "speed_error", last=True), 9, 3, 3, 3,
+    stat("Speed Error", flux("autopilot", "speed_error", last=True), 9, 2, 3, 2,
          unit="velocityknot", decimals=2,
          thresholds=[(None, OK), (1, "yellow"), (2, "red")],
          graph_mode="area"),
-    stat("XTE", flux("nav", "cross_track_error", last=True), 12, 3, 3, 3,
+    stat("XTE", flux("nav", "cross_track_error", last=True), 12, 2, 3, 2,
          unit=UNIT_M, decimals=1, graph_mode="area"),
     stat("Dist to Station", flux("mission", "dist_to_station", last=True),
-         15, 3, 3, 3, unit=UNIT_M, decimals=0),
-    stat("Speed Cap", flux("autopilot", "speed_cap", last=True), 18, 3, 3, 3,
+         15, 2, 3, 2, unit=UNIT_M, decimals=0),
+    stat("Speed Cap", flux("autopilot", "speed_cap", last=True), 18, 2, 3, 2,
          unit="velocityknot", decimals=1),
     stat("Next Turn", flux("autopilot", "next_turn_angle", last=True),
-         21, 3, 3, 3, unit="degree", decimals=0),
+         21, 2, 3, 2, unit="degree", decimals=0),
     # C — instruments: rudder indicator, throttle, heading error.
     (instrument("Rudder Angle",
                 [target(flux("autopilot", "rudder_actual", last=True)),
                  target(flux("autopilot", "rudder_cmd", last=True), ref="B")],
-                0, 6, 8, 6, rudder_js(),
+                0, 4, 8, 5, rudder_js(),
                 {"kind": "rudder", "preview": 3})
      if ANALOG else
      stat("Rudder Angle", flux("autopilot", "rudder_actual", last=True),
-          0, 6, 8, 6, unit="degree", decimals=1)),
+          0, 4, 8, 5, unit="degree", decimals=1)),
     meter("Throttle", flux("autopilot", "throttle_cmd", last=True),
-          8, 6, 8, 6, 0, 100, "%", zones=None, decimals=0, split=5,
+          8, 4, 8, 5, 0, 100, "%", zones=None, decimals=0, split=5,
           sub="COMMANDED THRUST", preview=64,
           fallback_thresholds=[(None, ACCENT)]),
     meter("Heading Error", flux("autopilot", "heading_error", last=True),
-          16, 6, 8, 6, -45, 45, "°",
+          16, 4, 8, 5, -45, 45, "°",
           zones=[(-25, ZRED), (-8, ZYELLOW), (8, ZGREEN), (25, ZYELLOW),
                  (45, ZRED)],
           decimals=1, split=6, sub="OFF COURSE", preview=1.8,
           fallback_thresholds=[(None, OK)]),
-    # D — desired vs actual.
-    ts("Desired vs Actual Heading",
+    # D — trends: heading, rudder, speed (the throttle and error trends
+    # repeat the throttle dial and the error tiles, so they are not drawn).
+    ts("Heading — desired vs actual",
        [target(flux("autopilot", ["desired_heading", "actual_heading"]))],
-       0, 12, 12, 5, unit="degree", min_=0, max_=360),
-    ts("Speed Governor — desired / cap / commanded / actual",
-       [target(flux("autopilot", ["desired_speed", "speed_cap", "cmd_speed",
-                                  "actual_speed"]))],
-       12, 12, 12, 5, unit="velocityknot"),
-    # E — actuator outputs and errors.
+       0, 9, 8, 6, unit="degree", min_=0, max_=360),
     # Actuator command and actual are both degrees (CAN 0x210). The PID
     # output DESIRED_RUDDER is PERCENT of full rudder on the vessel, so it
     # goes on its own right-hand axis instead of being read as degrees.
-    ts("Rudder — actuator command / actual (°), PID output (%)",
+    ts("Rudder — actuator cmd / actual (°), PID (%)",
        [target(flux("autopilot", "rudder_actuator_cmd"), "actuator command"),
         target(flux("autopilot", "rudder_actual"), "actual", ref="B"),
-        target(flux("autopilot", "rudder_cmd"), "PID output (DESIRED_RUDDER)",
+        target(flux("autopilot", "rudder_cmd"), "PID output",
                ref="C")],
-       0, 17, 8, 5, unit="degree",
+       8, 9, 8, 6, unit="degree",
        overrides=[{"matcher": {"id": "byFrameRefID", "options": "C"},
                    "properties": [{"id": "unit", "value": "percent"},
                                   {"id": "custom.axisPlacement",
@@ -1148,40 +1150,39 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
                                   {"id": "custom.lineStyle",
                                    "value": {"fill": "dash",
                                              "dash": [6, 4]}}]}]),
-    ts("Throttle Output", [target(flux("autopilot", "throttle_cmd"), "throttle")],
-       8, 17, 8, 5, unit="percent", min_=0, max_=100),
-    ts("Heading & Speed Error",
-       [target(flux("autopilot", ["heading_error", "speed_error"]))],
-       16, 17, 8, 5),
+    ts("Speed — desired / cap / commanded / actual",
+       [target(flux("autopilot", ["desired_speed", "speed_cap", "cmd_speed",
+                                  "actual_speed"]))],
+       16, 9, 8, 6, unit="velocityknot"),
     # F — helm and drive on the CAN bus (usv-722: steering actuator 0x210,
     # Glendinning helm, J1939 thrust / gear, key switch, DM1; can_bridge).
     stat("Rudder Actual", flux("autopilot", "rudder_actual", last=True),
-         0, 22, 3, 3, unit="degree", decimals=1, graph_mode="area"),
+         0, 15, 3, 2, unit="degree", decimals=1, graph_mode="area"),
     stat("Helm Wheel", flux("autopilot", "helm_rudder", last=True),
-         3, 22, 3, 3, unit="degree", decimals=1),
+         3, 15, 3, 2, unit="degree", decimals=1),
     stat("Steering Drive", flux("autopilot", "steer_drive_pct", last=True),
-         6, 22, 3, 3, unit="percent", decimals=0, graph_mode="area"),
+         6, 15, 3, 2, unit="percent", decimals=0, graph_mode="area"),
     stat("Steering Control", flux("autopilot", "steer_pc_control", last=True),
-         9, 22, 3, 3, text_mode="value", color_mode="background",
+         9, 15, 3, 2, text_mode="value", color_mode="background",
          mappings=[{"type": "value", "options": {
              "0": {"text": "HELM", "color": "orange", "index": 0},
              "1": {"text": "AUTOPILOT", "color": TILE_OK, "index": 1}}}]),
-    stat("Gear", flux("engine", "gear", last=True), 12, 22, 3, 3,
+    stat("Gear", flux("engine", "gear", last=True), 12, 15, 3, 2,
          text_mode="value", color_mode="background",
          mappings=[{"type": "value", "options": {
              "-1": {"text": "REVERSE", "color": "orange", "index": 0},
              "0": {"text": "NEUTRAL", "color": NEUTRAL, "index": 1},
              "1": {"text": "FORWARD", "color": TILE_OK, "index": 2}}}]),
     stat("Thrust to Engine", flux("engine", "throttle_pct", last=True),
-         15, 22, 3, 3, unit="percent", decimals=0, graph_mode="area"),
-    stat("Key Switch", flux("engine", "key_state", last=True), 18, 22, 3, 3,
+         15, 15, 3, 2, unit="percent", decimals=0, graph_mode="area"),
+    stat("Key Switch", flux("engine", "key_state", last=True), 18, 15, 3, 2,
          text_mode="value", color_mode="background",
          mappings=[{"type": "value", "options": {
              "0": {"text": "OFF", "color": NEUTRAL, "index": 0},
              "1": {"text": "RUN", "color": TILE_OK, "index": 1},
              "2": {"text": "START", "color": "yellow", "index": 2}}}]),
     stat("Engine Faults", flux("engine", "active_dtcs", last=True),
-         21, 22, 3, 3, text_mode="value", color_mode="background",
+         21, 15, 3, 2, text_mode="value", color_mode="background",
          mappings=[{"type": "value", "options": {
              "0": {"text": "NONE", "color": TILE_OK, "index": 0}}},
                    {"type": "range", "options": {"from": 1, "to": 999, "result": {
@@ -1296,37 +1297,39 @@ DASHBOARDS.append(dashboard("usv-health", "Vessel Health", [
 
 # ------------------------------------------------------------- FR-5 CAN Bus
 DASHBOARDS.append(dashboard("usv-canbus", "CAN Bus", [
-    stat("Interface", flux("canbus", "interface_up", last=True), 0, 0, 4, 4,
+    stat("Interface", flux("canbus", "interface_up", last=True), 0, 0, 4, 3,
          mappings=updown_map("DOWN", "UP"), text_mode="value",
          color_mode="background"),
     gauge("Bus Utilization", flux("canbus", "utilization_pct", last=True),
-          4, 0, 4, 4, thresholds=[(None, OK), (50, "yellow"), (75, "red")]),
-    stat("Messages / s", flux("canbus", "msg_rate", last=True), 8, 0, 4, 4,
+          4, 0, 4, 3, thresholds=[(None, OK), (50, "yellow"), (75, "red")]),
+    stat("Messages / s", flux("canbus", "msg_rate", last=True), 8, 0, 4, 3,
          decimals=0, graph_mode="area"),
     stat("Error Frames (5s)", flux("canbus", "error_frames", last=True),
-         12, 0, 4, 4, decimals=0,
+         12, 0, 4, 3, decimals=0,
          thresholds=[(None, OK), (1, "yellow"), (10, "red")]),
     stat("Dropped Frames", flux("canbus", "dropped_frames", last=True),
-         16, 0, 4, 4, decimals=0,
+         16, 0, 4, 3, decimals=0,
          thresholds=[(None, TILE_OK), (1, "red")], color_mode="background"),
-    stat("Active PGNs", flux("canbus", "active_pgns", last=True), 20, 0, 4, 4,
+    stat("Active PGNs", flux("canbus", "active_pgns", last=True), 20, 0, 4, 3,
          decimals=0),
     ts("Message Rate", [target(flux("canbus", "msg_rate"), "msgs/s")],
-       0, 4, 12, 7),
+       0, 3, 12, 7),
     ts("Bus Utilization", [target(flux("canbus", "utilization_pct"), "util %")],
-       12, 4, 12, 7, unit="percent", min_=0, max_=100),
+       12, 3, 12, 7, unit="percent", min_=0, max_=100),
     ts("Error / Dropped Frames",
        [target(flux("canbus", ["error_frames", "dropped_frames"]))],
-       0, 11, 12, 7),
+       0, 10, 12, 7),
     panel("table", "PGN Frequency (msgs/s)",
           [target('from(bucket: "telemetry")\n'
                   '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
                   '  |> filter(fn: (r) => r._measurement == "canbus_pgn" and r._field == "rate")\n'
                   '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
                   '  |> last()\n'
+                  '  |> group()\n'
                   '  |> keep(columns: ["pgn", "_value"])\n'
-                  '  |> sort(columns: ["_value"], desc: true)\n')],
-          12, 11, 12, 7,
+                  '  |> sort(columns: ["_value"], desc: true)\n'
+                  '  |> rename(columns: {pgn: "PGN / CAN id", _value: "msgs/s"})\n')],
+          12, 10, 12, 7,
           options={"showHeader": True}),
 ], ["canbus"]))
 
@@ -1390,11 +1393,12 @@ ready_mappings = value_color_map([(0, "NOT READY", "red"), (1, "READY", TILE_OK)
 
 
 def status_table(title, query, x, y, w, h, status_col, mappings, name_col,
-                 columns, description=None, no_value=None):
+                 columns, description=None, no_value=None, show_header=True):
     """Table with a coloured status column (mappings on that column only)
-    and a fixed column order."""
+    and a fixed column order. show_header=False saves one row height where
+    every row must fit without scrolling."""
     p = panel("table", title, [target(query)], x, y, w, h,
-              options={"showHeader": True, "cellHeight": "sm"},
+              options={"showHeader": show_header, "cellHeight": "sm"},
               no_value=no_value,
               overrides=[{"matcher": {"id": "byName", "options": status_col},
                           "properties": [{"id": "displayName", "value": "Status"},
@@ -1427,28 +1431,31 @@ def status_table(title, query, x, y, w, h, status_col, mappings, name_col,
     return p
 
 
+# One screen, no scrolling: the 16 automatic checks need the full page
+# height (36 px rows, no column header), so the verdict and counts stack in
+# a column on the right, above the console checklist.
 DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
-    # A — verdict and counts (8 tiles, 3 rows)
-    stat("Readiness", flux("readiness_summary", "ready", last=True), 0, 0, 4, 3,
+    # A — verdict and counts (right column, x 16..24)
+    stat("Readiness", flux("readiness_summary", "ready", last=True), 16, 0, 8, 3,
          mappings=ready_mappings, text_mode="value", color_mode="background",
          no_value="NO BRIDGE"),
-    stat("Passed", flux("readiness_summary", "passed", last=True), 4, 0, 3, 3, decimals=0),
-    stat("Failed", flux("readiness_summary", "failed", last=True), 7, 0, 3, 3, decimals=0,
+    stat("Passed", flux("readiness_summary", "passed", last=True), 16, 3, 2, 3, decimals=0),
+    stat("Failed", flux("readiness_summary", "failed", last=True), 18, 3, 2, 3, decimals=0,
          thresholds=[(None, OK), (1, "red")]),
-    stat("N/A", flux("readiness_summary", "na", last=True), 10, 0, 3, 3, decimals=0,
+    stat("N/A", flux("readiness_summary", "na", last=True), 20, 3, 2, 3, decimals=0,
          thresholds=[(None, "#8e9299")]),
-    stat("Console", flux("readiness_summary", "console", last=True), 13, 0, 3, 3, decimals=0,
+    stat("Console", flux("readiness_summary", "console", last=True), 22, 3, 2, 3, decimals=0,
          thresholds=[(None, "#8e9299"), (1, "orange")]),
-    stat("Mission State", last_str("mission_state", "state"), 16, 0, 3, 3,
+    stat("Mission State", last_str("mission_state", "state"), 16, 6, 4, 3,
          mappings=mission_state_mappings, text_mode="value", color_mode="background"),
-    stat("Route", last_str("mission_state", "route_name"), 19, 0, 3, 3, text_mode="value",
-         no_value="no route"),
-    stat("Operator Link", flux("autonomy", "comms_phase", last=True), 22, 0, 2, 3,
+    stat("Operator Link", flux("autonomy", "comms_phase", last=True), 20, 6, 4, 3,
          mappings=comms_phase_mappings, text_mode="value", color_mode="background"),
+    stat("Route", last_str("mission_state", "route_name"), 16, 9, 8, 3, text_mode="value",
+         no_value="no route"),
     # B — the two lists
     status_table("Automatic checks — verified onboard from live telemetry",
-                 readiness_query(), 0, 3, 12, 18, "status", status_mappings, "name",
-                 ["seq", "name", "evidence", "status"],
+                 readiness_query(), 0, 0, 16, 17, "status", status_mappings, "name",
+                 ["seq", "name", "evidence", "status"], show_header=False,
                  no_value="grafana_bridge not writing readiness (bridge older than v1.1 or not restarted)",
                  description=(
                      "Decided by grafana_bridge every 5 s from the latest telemetry "
@@ -1461,7 +1468,7 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
                      "operator console has not published it (ENC selection, checklist). "
                      "READY needs no FAIL and no CONSOLE item.")),
     status_table("Console checklist — manual items ticked in Freeboard",
-                 checklist_query(), 12, 3, 12, 18, "state", checklist_state_mappings, "item",
+                 checklist_query(), 16, 12, 8, 5, "state", checklist_state_mappings, "item",
                  ["item", "description", "state"],
                  no_value="console not publishing CHECKLIST_STATUS (docs/deployment.md, Console checklist)",
                  description=(
@@ -1678,24 +1685,24 @@ def kv_tile(title, query, x, y, w, h, **kw):
 
 DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
     # A — risk and counts (8 x 3x3)
-    stat("Collision Risk", flux("traffic", "risk_level", last=True), 0, 0, 3, 3,
+    stat("Collision Risk", flux("traffic", "risk_level", last=True), 0, 0, 3, 2,
          mappings=risk_mappings, text_mode="value", color_mode="background"),
-    stat("Avoidance", flux("traffic", "avoidance_active", last=True), 3, 0, 3, 3,
+    stat("Avoidance", flux("traffic", "avoidance_active", last=True), 3, 0, 3, 2,
          mappings=[{"type": "value", "options": {
              "0": {"text": "IDLE", "color": "#3d434b", "index": 0},
              "1": {"text": "ACTIVE", "color": "orange", "index": 1}}}],
          text_mode="value", color_mode="background"),
-    stat("Contacts", flux("traffic", "contacts", last=True), 6, 0, 3, 3, decimals=0),
-    stat("Reports / AIS", flux("traffic", "reports", last=True), 9, 0, 3, 3, decimals=0),
-    stat("Radar Only", flux("traffic", "radar_only", last=True), 12, 0, 3, 3, decimals=0),
-    stat("High Risk", flux("traffic", "high_risk", last=True), 15, 0, 3, 3, decimals=0,
+    stat("Contacts", flux("traffic", "contacts", last=True), 6, 0, 3, 2, decimals=0),
+    stat("Reports / AIS", flux("traffic", "reports", last=True), 9, 0, 3, 2, decimals=0),
+    stat("Radar Only", flux("traffic", "radar_only", last=True), 12, 0, 3, 2, decimals=0),
+    stat("High Risk", flux("traffic", "high_risk", last=True), 15, 0, 3, 2, decimals=0,
          thresholds=[(None, OK), (1, "red")]),
     stat("Closest Range", flux("traffic", "closest_range_m", last=True, nm=True),
-         18, 0, 3, 3, unit=UNIT_NM, decimals=2, no_value="none",
+         18, 0, 3, 2, unit=UNIT_NM, decimals=2, no_value="none",
          mappings=[{"type": "range", "options": {"from": -1, "to": 0,
                     "result": {"text": "none", "color": "#3d434b", "index": 0}}}],
          thresholds=neutral_base([(None, "red"), (0.11, "yellow"), (0.27, OK)])),
-    stat("Min CPA", flux("traffic", "min_cpa_m", last=True), 21, 0, 3, 3,
+    stat("Min CPA", flux("traffic", "min_cpa_m", last=True), 21, 0, 3, 2,
          unit=UNIT_M, decimals=0, no_value="none",
          mappings=[{"type": "range", "options": {"from": -1, "to": -0.5,
                     "result": {"text": "none", "color": "#3d434b", "index": 0}}}],
@@ -1705,54 +1712,54 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
                 [target(contacts_query()),
                  target(flux("nav", "heading", last=True), ref="B"),
                  target(TRAFFIC_RANGE_QUERY, ref="R")],
-                0, 3, 10, 13,
+                0, 2, 10, 10,
                 traffic_js(), {"kind": "traffic"})
      if ANALOG else
-     panel("table", "Contacts", [target(contacts_query())], 0, 3, 10, 13,
+     panel("table", "Contacts", [target(contacts_query())], 0, 2, 10, 10,
            options={"showHeader": True})),
-    stat("Highest-Risk Contact", worst_contact_query("contact"), 10, 3, 7, 2,
+    stat("Highest-Risk Contact", worst_contact_query("contact"), 10, 2, 7, 2,
          string_value=True, text_mode="value", no_value="no contacts"),
-    kv_tile("CPA", worst_contact_query("cpa_m"), 10, 5, 4, 3, unit=UNIT_M, decimals=0,
+    kv_tile("CPA", worst_contact_query("cpa_m"), 10, 4, 4, 2, unit=UNIT_M, decimals=0,
             thresholds=neutral_base([(None, "red"), (500, "yellow"), (1000, OK)])),
-    kv_tile("TCPA", worst_contact_query("tcpa_s"), 14, 5, 3, 3, unit="dtdurations",
+    kv_tile("TCPA", worst_contact_query("tcpa_s"), 14, 4, 3, 2, unit="dtdurations",
             decimals=0, thresholds=neutral_base([(None, "red"), (120, "yellow"), (300, OK)]),
             mappings=[{"type": "value", "options": {
                 "-1": {"text": "OPENING", "color": TILE_OK, "index": 0}}}]),
-    kv_tile("Range", worst_contact_query("range_m"), 10, 8, 4, 3, unit=UNIT_M, decimals=0),
-    kv_tile("Bearing", worst_contact_query("bearing"), 14, 8, 3, 3, unit="degree", decimals=0),
-    kv_tile("Rel. Bearing", worst_contact_query("rel_bearing"), 10, 11, 4, 3,
+    kv_tile("Range", worst_contact_query("range_m"), 10, 6, 4, 2, unit=UNIT_M, decimals=0),
+    kv_tile("Bearing", worst_contact_query("bearing"), 14, 6, 3, 2, unit="degree", decimals=0),
+    kv_tile("Rel. Bearing", worst_contact_query("rel_bearing"), 10, 8, 4, 2,
             unit="degree", decimals=0),
-    kv_tile("Rel. Speed", worst_contact_query("rel_speed_kn"), 14, 11, 3, 3,
+    kv_tile("Rel. Speed", worst_contact_query("rel_speed_kn"), 14, 8, 3, 2,
             unit="velocityknot", decimals=1),
-    stat("Type", worst_contact_query("type"), 10, 14, 4, 2, string_value=True,
+    stat("Type", worst_contact_query("type"), 10, 10, 4, 2, string_value=True,
          text_mode="value", no_value="none"),
-    stat("Encounter", worst_contact_query("encounter"), 14, 14, 3, 2, string_value=True,
+    stat("Encounter", worst_contact_query("encounter"), 14, 10, 3, 2, string_value=True,
          text_mode="value", mappings=encounter_mappings, color_mode="background",
          no_value="none", thresholds=[(None, "#3d434b")]),
-    kv_tile("Planned Course", flux("traffic", "planned_course", last=True), 17, 3, 4, 3,
+    kv_tile("Planned Course", flux("traffic", "planned_course", last=True), 17, 2, 4, 2,
             unit="degree", decimals=0, no_value="no route",
             mappings=[{"type": "range", "options": {"from": -1, "to": -0.5,
                        "result": {"text": "no route", "color": "#3d434b", "index": 0}}}]),
-    kv_tile("Commanded Course", flux("autopilot", "desired_heading", last=True), 21, 3, 3, 3,
+    kv_tile("Cmd Course", flux("autopilot", "desired_heading", last=True), 21, 2, 3, 2,
             unit="degree", decimals=0),
-    kv_tile("Actual Heading", flux("nav", "heading", last=True), 17, 6, 4, 3,
+    kv_tile("Actual Heading", flux("nav", "heading", last=True), 17, 4, 4, 2,
             unit="degree", decimals=0),
-    kv_tile("Deviation", flux("traffic", "course_deviation", last=True), 21, 6, 3, 3,
+    kv_tile("Deviation", flux("traffic", "course_deviation", last=True), 21, 4, 3, 2,
             unit="degree", decimals=0, no_value="no route",
             mappings=[{"type": "range", "options": {"from": -1000, "to": -500,
                        "result": {"text": "no route", "color": "#3d434b", "index": 0}}}],
             thresholds=[(None, OK), (10, "yellow"), (30, "orange")]),
-    kv_tile("Speed Command", flux("autopilot", "desired_speed", last=True), 17, 9, 4, 3,
+    kv_tile("Speed Command", flux("autopilot", "desired_speed", last=True), 17, 6, 4, 2,
             unit="velocityknot", decimals=1),
-    kv_tile("Actual SOG", flux("nav", "sog", last=True), 21, 9, 3, 3,
+    kv_tile("Actual SOG", flux("nav", "sog", last=True), 21, 6, 3, 2,
             unit="velocityknot", decimals=1),
-    stat("Avoidance Behavior", last_str("mission_state", "active_behavior"), 17, 12, 7, 2,
+    stat("Avoidance Behavior", last_str("mission_state", "active_behavior"), 17, 8, 7, 2,
          text_mode="value", no_value="none"),
-    stat("Reason", last_str("traffic", "reason"), 17, 14, 7, 2, text_mode="value",
+    stat("Reason", last_str("traffic", "reason"), 17, 10, 7, 2, text_mode="value",
          string_value=True),
     # C — contact table and CPA / TCPA trend
     panel("table", "Contacts — riskiest first", [target(contacts_query(limit=12))],
-          0, 16, 12, 5, options={"showHeader": True}, no_value="no contacts",
+          0, 12, 16, 5, options={"showHeader": True}, no_value="no contacts",
           mappings=risk_mappings,
           overrides=[{"matcher": {"id": "byName", "options": "range_m"},
                       "properties": [{"id": "unit", "value": UNIT_M}, {"id": "decimals", "value": 0},
@@ -1785,7 +1792,7 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
     ts("Closest CPA / TCPA",
        [target(flux("traffic", "min_cpa_m", extra=NO_SENTINEL), "CPA m"),
         target(flux("traffic", "min_tcpa_s", extra=NO_SENTINEL), "TCPA s", ref="B")],
-       12, 16, 12, 5, unit=UNIT_M,
+       16, 12, 8, 5, unit=UNIT_M,
        overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
                    "properties": [{"id": "unit", "value": "s"},
                                   {"id": "custom.axisPlacement", "value": "right"}]}]),
@@ -1829,7 +1836,7 @@ def _cam_col(name, title, mappings, width=130):
                             "value": {"type": "color-background", "mode": "basic"}}]}
 
 
-_cam = panel("table", "Cameras", [target(camera_table_query())], 0, 4, 12, 7,
+_cam = panel("table", "Cameras", [target(camera_table_query())], 0, 3, 12, 9,
              options={"showHeader": True, "cellHeight": "sm"},
              no_value="no camera enabled in Frigate",
              overrides=[
@@ -1851,25 +1858,25 @@ _cam["description"] = ("One row per camera enabled in Frigate. A camera that is 
                        "configured but disabled there (not yet powered) is not listed.")
 
 DASHBOARDS.append(dashboard("usv-camera", "Cameras", [
-    stat("Frigate NVR", flux("camera_summary", "frigate_up", last=True), 0, 0, 6, 4,
+    stat("Frigate NVR", flux("camera_summary", "frigate_up", last=True), 0, 0, 6, 3,
          mappings=updown_map("DOWN", "UP"), text_mode="value",
          color_mode="background"),
-    stat("Cameras Enabled", flux("camera_summary", "enabled", last=True), 6, 0, 6, 4,
+    stat("Cameras Enabled", flux("camera_summary", "enabled", last=True), 6, 0, 6, 3,
          decimals=0, thresholds=[(None, OK)]),
-    stat("Streaming", flux("camera_summary", "streaming", last=True), 12, 0, 6, 4,
+    stat("Streaming", flux("camera_summary", "streaming", last=True), 12, 0, 6, 3,
          decimals=0, thresholds=[(None, OK)]),
-    stat("Network Connected", flux("camera_summary", "connected", last=True), 18, 0, 6, 4,
+    stat("Network Connected", flux("camera_summary", "connected", last=True), 18, 0, 6, 3,
          decimals=0, thresholds=[(None, OK)]),
     _cam,
-    ts("Frame Rate", [target(flux("camera", "fps"), "fps")], 12, 4, 12, 7,
+    ts("Frame Rate", [target(flux("camera", "fps"), "fps")], 12, 3, 12, 9,
        unit="fps"),
     ts("Bitrate", [target(flux("camera", "bitrate_kbps"), "kbps")],
-       0, 11, 8, 6, unit="Kbits"),
+       0, 12, 8, 5, unit="Kbits"),
     ts("PTZ Position",
-       [target(flux("camera", ["ptz_pan", "ptz_tilt"]))], 8, 11, 8, 6,
+       [target(flux("camera", ["ptz_pan", "ptz_tilt"]))], 8, 12, 8, 5,
        unit="degree"),
     ts("Camera Temperature", [target(flux("camera", "temp_c"), "temp")],
-       16, 11, 8, 6, unit="celsius"),
+       16, 12, 8, 5, unit="celsius"),
 ], ["camera"]))
 
 # ----------------------------------------------------------- FR-8 Communication
@@ -2006,7 +2013,7 @@ DASHBOARDS.append(dashboard("usv-comms", "Comms", [
 def service_tile(title, service, x):
     return stat(title, tele_last("net_response", "result_code",
                                  extra=f'  |> filter(fn: (r) => r.service == "{service}")'),
-                x, 0, 3, 4, text_mode="value", color_mode="background",
+                x, 0, 3, 3, text_mode="value", color_mode="background",
                 mappings=[{"type": "value", "options": {
                     "0": {"text": "UP", "color": TILE_OK, "index": 0}}},
                     {"type": "range", "options": {
@@ -2019,83 +2026,88 @@ def service_tile(title, service, x):
 # from Telegraf's "gpu" measurement (telegraf.conf: intel_gpu_top probe for
 # Intel Arc/Xe, nvidia_smi with name_override for NVIDIA); the tile reads
 # "No data" on hosts without a supported GPU.
+DISK_LABEL = ('  |> map(fn: (r) => ({r with _field: r.name}))\n'
+              '  |> keep(columns: ["_time", "_value", "_field"])\n')
+HOTTEST = ('  |> group()\n'
+           '  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n')
+SERVICES_QUERY = ('import "strings"\n'
+                  'from(bucket: "telemetry")\n'
+                  '  |> range(start: -2m)\n'
+                  '  |> filter(fn: (r) => r._measurement == "systemd_units" '
+                  'and r._field == "active_code")\n'
+                  '  |> last()\n'
+                  '  |> map(fn: (r) => ({r with name: strings.trimSuffix(v: r.name, suffix: ".service")}))\n'
+                  '  |> group(columns: ["name"])\n'
+                  '  |> keep(columns: ["name", "_value", "_time"])\n')
+
+
 DASHBOARDS.append(dashboard("usv-system", "System", [
-    gauge("CPU", tele_last("cpu", "usage_user"), 0, 0, 3, 4,
+    gauge("CPU", tele_last("cpu", "usage_user"), 0, 0, 3, 3,
           thresholds=[(None, OK), (70, "yellow"), (90, "red")]),
-    gauge("GPU", tele_last("gpu", "utilization_gpu"), 3, 0, 3, 4,
+    gauge("GPU", tele_last("gpu", "utilization_gpu"), 3, 0, 3, 3,
           thresholds=[(None, OK), (70, "yellow"), (90, "red")]),
-    gauge("RAM", tele_last("mem", "used_percent"), 6, 0, 3, 4,
+    gauge("RAM", tele_last("mem", "used_percent"), 6, 0, 3, 3,
           thresholds=[(None, OK), (75, "yellow"), (90, "red")]),
-    gauge("Disk", tele_last("disk", "used_percent"), 9, 0, 3, 4,
+    gauge("Disk", tele_last("disk", "used_percent"), 9, 0, 3, 3,
           thresholds=[(None, OK), (75, "yellow"), (90, "red")]),
-    stat("CPU Temp", tele_last("temp", "temp", reduce="max"), 12, 0, 3, 4, unit="celsius",
+    stat("CPU Temp", tele_last("temp", "temp", reduce="max"), 12, 0, 3, 3, unit="celsius",
          decimals=0, thresholds=[(None, OK), (70, "yellow"), (85, "red")]),
     service_tile("InfluxDB", "influxdb", 15),
     service_tile("Signal K", "signalk", 18),
     service_tile("MOOS", "moos", 21),
     ts("CPU", [target(tele("cpu", "usage_user"), "user"),
                target(tele("cpu", "usage_system"), "system", ref="B")],
-       0, 4, 8, 6, unit="percent", min_=0, max_=100),
+       0, 3, 8, 5, unit="percent", min_=0, max_=100),
     ts("GPU", [target(tele("gpu", "utilization_gpu"), "util %"),
                target(tele("gpu", "temperature_gpu"), "temp °C", ref="B")],
-       8, 4, 8, 6, unit="percent", min_=0, max_=100,
+       8, 3, 8, 5, unit="percent", min_=0, max_=100,
        overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
                    "properties": [{"id": "unit", "value": "celsius"},
                                   {"id": "custom.axisPlacement",
                                    "value": "right"}]}]),
     ts("Memory", [target(tele("mem", "used_percent"), "used %")],
-       16, 4, 8, 6, unit="percent", min_=0, max_=100),
-    ts("Disk I/O", [target(tele("diskio", "read_bytes", rate=True), "read"),
-                    target(tele("diskio", "write_bytes", rate=True),
-                           "write", ref="B")],
-       0, 10, 8, 6, unit="Bps"),
+       16, 3, 8, 5, unit="percent", min_=0, max_=100),
+    ts("Disk I/O", [target(tele("diskio", "read_bytes", rate=True)
+                           + DISK_LABEL, "read"),
+                    target(tele("diskio", "write_bytes", rate=True)
+                           + DISK_LABEL, "write", ref="B")],
+       0, 8, 8, 6, unit="Bps"),
     ts("Load Average", [target(tele("system", "load1"), "1 min"),
                         target(tele("system", "load5"), "5 min", ref="B"),
                         target(tele("system", "load15"), "15 min", ref="C")],
-       8, 10, 8, 6),
-    ts("CPU Temp", [target(tele("temp", "temp"), "°C")],
-       16, 10, 8, 6, unit="celsius"),
-    panel("table", "Services (systemd)",
-          [target('from(bucket: "telemetry")\n'
-                  '  |> range(start: -1m)\n'
-                  '  |> filter(fn: (r) => r._measurement == "systemd_units" '
-                  'and r._field == "active_code")\n'
-                  '  |> last()\n'
-                  '  |> group()\n'
-                  '  |> keep(columns: ["name", "active", "sub", "_value"])\n'
-                  '  |> rename(columns: {name: "unit", active: "state", sub: "detail", _value: "code"})\n'
-                  '  |> sort(columns: ["unit"])\n')],
-          0, 16, 24, 5, options={"showHeader": True},
-          mappings=[{"type": "value", "options": {
-              "0": {"text": "active", "color": OK, "index": 0}}},
-              {"type": "range", "options": {
-                  "from": 1, "to": 99,
-                  "result": {"text": "not active", "color": "red",
-                             "index": 1}}}]),
+       8, 8, 8, 6),
+    # One line: the hottest CPU sensor (24 per-core series filled the legend).
+    ts("CPU Temp", [target(tele("temp", "temp", fn="max") + HOTTEST, "hottest core")],
+       16, 8, 8, 6, unit="celsius"),
+    # One tile per watched systemd unit (Telegraf systemd_units): the table
+    # showed two rows at this height.
+    stat("Services (systemd)", SERVICES_QUERY, 0, 14, 24, 3,
+         text_mode="value_and_name", color_mode="background",
+         mappings=[{"type": "value", "options": {
+             "0": {"text": "UP", "color": TILE_OK, "index": 0}}},
+             {"type": "range", "options": {
+                 "from": 1, "to": 99,
+                 "result": {"text": "DOWN", "color": "red", "index": 1}}}]),
 ], ["system"]))
 
 # -------------------------------------------------------- FR-10 Mission Replay
 DASHBOARDS.append(dashboard("usv-replay", "Replay", [
-    panel("text", "How to replay",
-          [], 0, 0, 24, 2,
-          options={"mode": "markdown", "content": (
-              "Set the **time range** (top right) to the mission window, then "
-              "scrub with the shared crosshair. Data older than the raw "
-              "retention (30 d) is served from the 1-minute downsampled "
-              "bucket. Use the **Mission events** annotations to locate "
-              "waypoint hits and state changes.")}),
+    # How to replay: set the time range (top right) to the mission window
+    # and scrub with the shared crosshair; data older than the raw retention
+    # (30 d) comes from the 1-minute bucket; the Mission events annotations
+    # mark waypoint hits and state changes (also in docs/user-guide.md).
     panel("geomap", "GPS Track",
           [target(track_query("10s", archive=True)), target(position_query(), ref="B"),
            target(geometry_query("route"), ref="C"),
            target(geometry_query("region"), ref="D"),
            target(vector_query(), ref="E")],
-          0, 2, 14, 9,
+          0, 0, 14, 9,
           options={"view": {"id": "fit", "zoom": 15},
                    "basemap": {"type": "osm-standard", "name": "OSM"},
                    "layers": overlay_layers()}),
     panel("state-timeline", "Mission State",
           [target(flux("mission_state", "state", every="30s", fn="last"))],
-          14, 2, 10, 4, mappings=mission_state_mappings,
+          14, 0, 10, 3, mappings=mission_state_mappings,
           custom={"fillOpacity": 70, "lineWidth": 0},
           options={"showValue": "auto"}),
     panel("table", "Mission Events",
@@ -2107,33 +2119,33 @@ DASHBOARDS.append(dashboard("usv-replay", "Replay", [
                   '  |> keep(columns: ["_time", "_value", "type", "severity"])\n'
                   '  |> rename(columns: {_time: "Time", _value: "Event", type: "Type", severity: "Severity"})\n'
                   '  |> sort(columns: ["Time"], desc: true)\n')],
-          14, 6, 10, 5, options={"showHeader": True}),
+          12, 13, 12, 4, options={"showHeader": True, "cellHeight": "sm"}),
     ts("Heading History", [target(flux("nav", "heading", archive=True), "heading")],
-       0, 11, 8, 5, unit="degree", min_=0, max_=360),
+       0, 9, 8, 4, unit="degree", min_=0, max_=360),
     ts("Speed History", [target(flux("nav", "sog", archive=True), "SOG")],
-       8, 11, 8, 5, unit="velocityknot"),
+       8, 9, 8, 4, unit="velocityknot"),
     ts("Actuator Commands",
        [target(flux("autopilot", "rudder_cmd", archive=True), "rudder cmd %"),
         target(flux("autopilot", "throttle_cmd", archive=True), "throttle %", ref="B")],
-       16, 11, 8, 5, unit="percent",
+       16, 9, 8, 4, unit="percent",
        overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
                    "properties": [{"id": "unit", "value": "percent"},
                                   {"id": "custom.axisPlacement",
                                    "value": "right"}]}]),
     ts("Cross-Track Error", [target(flux("nav", "cross_track_error", archive=True), "XTE")],
-       0, 16, 8, 5, unit=UNIT_M),
+       0, 13, 6, 4, unit=UNIT_M),
     panel("state-timeline", "Autonomy Flags",
           [target(flux("autonomy",
                        ["waypoint", "pause", "stationing", "returning",
                         "armed", "comms_lost", "manual_override"],
                        every="30s", fn="last"))],
-          8, 16, 8, 5, mappings=flag_timeline_mappings,
+          14, 3, 10, 6, mappings=flag_timeline_mappings,
           custom={"fillOpacity": 70, "lineWidth": 0},
           options={"showValue": "never", "legend": {"showLegend": False},
                    "tooltip": {"mode": "single"}}),
     ts("Distance to Next Waypoint",
        [target(flux("mission", "dist_to_waypoint", archive=True), "distance m")],
-       16, 16, 8, 5, unit=UNIT_M),
+       6, 13, 6, 4, unit=UNIT_M),
 ], ["replay"], refresh="", time_from="now-6h"))
 
 # ------------------------------------------------------------ Fleet Overview
@@ -2417,11 +2429,50 @@ def fit_to_screen(d, rows=SCREEN_ROWS):
         g["y"], g["h"] = y0, y1 - y0
 
 
+SCREEN_PX = 1532      # operator browser width the layout is checked at
+CHAR_EM = 0.6         # average glyph width / font size (Inter, bold caps)
+
+
+def size_compact_tiles(d):
+    """Fixed value sizes that never clip. A 2-row stat tile is 68 px:
+    Grafana's panel header takes 32 px, so the value gets ~36 px; 26 px
+    text clipped its descenders on usv-722, 18 px (text) / 20 px (numbers)
+    sits inside the band. A fixed size is not shrunk by Grafana, so a
+    tile's longest mapped state (e.g. "LOST — FAILSAFE") also has to fit
+    its width; the size is lowered until it does."""
+    col = SCREEN_PX / 24.0
+    panels = list(d["panels"])
+    for p in d["panels"]:
+        if p.get("type") == "row":
+            panels.extend(p.get("panels", []))
+    for p in panels:
+        if p.get("type") != "stat":
+            continue
+        text = p["options"].setdefault("text", {})
+        is_str = p["options"]["reduceOptions"].get("fields") == "/.*/"
+        if p["gridPos"]["h"] <= 2:
+            text["valueSize"] = 18 if is_str else 20
+            text["titleSize"] = 12
+        words = []
+        for m in p["fieldConfig"]["defaults"].get("mappings", []):
+            opts = m.get("options", {})
+            res = [opts["result"]] if "result" in opts else \
+                [v for v in opts.values() if isinstance(v, dict)]
+            words += [r.get("text", "") for r in res]
+        words.append(p["fieldConfig"]["defaults"].get("noValue", ""))
+        longest = max((len(w) for w in words), default=0)
+        if longest:
+            room = p["gridPos"]["w"] * col - 24
+            fit = int(room / (longest * CHAR_EM))
+            text["valueSize"] = max(12, min(text.get("valueSize", 26), fit))
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     for d in DASHBOARDS:
         add_header_band(d)
         fit_to_screen(d)
+        size_compact_tiles(d)
         if d["uid"] == "usv-traffic":
             d["templating"]["list"].append(TRAFFIC_RANGE_VAR)
         if d["uid"] == "usv-fleet":

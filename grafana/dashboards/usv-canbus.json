@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 219,
+      "id": 216,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -206,7 +206,7 @@
       }
     },
     {
-      "id": 92,
+      "id": 90,
       "type": "stat",
       "title": "Interface",
       "datasource": {
@@ -217,7 +217,7 @@
         "x": 0,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -275,13 +275,13 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 26,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 93,
+      "id": 91,
       "type": "gauge",
       "title": "Bus Utilization",
       "datasource": {
@@ -292,7 +292,7 @@
         "x": 4,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -341,7 +341,7 @@
       }
     },
     {
-      "id": 94,
+      "id": 92,
       "type": "stat",
       "title": "Messages / s",
       "datasource": {
@@ -352,7 +352,7 @@
         "x": 8,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -393,13 +393,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 26,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 95,
+      "id": 93,
       "type": "stat",
       "title": "Error Frames (5s)",
       "datasource": {
@@ -410,7 +410,7 @@
         "x": 12,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -459,13 +459,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 26,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 96,
+      "id": 94,
       "type": "stat",
       "title": "Dropped Frames",
       "datasource": {
@@ -476,7 +476,7 @@
         "x": 16,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -522,13 +522,13 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 26,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 97,
+      "id": 95,
       "type": "stat",
       "title": "Active PGNs",
       "datasource": {
@@ -539,7 +539,7 @@
         "x": 20,
         "y": 2,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -580,13 +580,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 26,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 98,
+      "id": 96,
       "type": "timeseries",
       "title": "Message Rate",
       "datasource": {
@@ -595,9 +595,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 6,
+        "y": 5,
         "w": 12,
-        "h": 6
+        "h": 7
       },
       "targets": [
         {
@@ -655,7 +655,7 @@
       }
     },
     {
-      "id": 99,
+      "id": 97,
       "type": "timeseries",
       "title": "Bus Utilization",
       "datasource": {
@@ -664,9 +664,9 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 6,
+        "y": 5,
         "w": 12,
-        "h": 6
+        "h": 7
       },
       "targets": [
         {
@@ -727,7 +727,7 @@
       }
     },
     {
-      "id": 100,
+      "id": 98,
       "type": "timeseries",
       "title": "Error / Dropped Frames",
       "datasource": {
@@ -738,7 +738,7 @@
         "x": 0,
         "y": 12,
         "w": 12,
-        "h": 6
+        "h": 7
       },
       "targets": [
         {
@@ -810,7 +810,7 @@
       }
     },
     {
-      "id": 101,
+      "id": 99,
       "type": "table",
       "title": "PGN Frequency (msgs/s)",
       "datasource": {
@@ -821,7 +821,7 @@
         "x": 12,
         "y": 12,
         "w": 12,
-        "h": 6
+        "h": 7
       },
       "targets": [
         {
@@ -829,7 +829,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"canbus_pgn\" and r._field == \"rate\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> keep(columns: [\"pgn\", \"_value\"])\n  |> sort(columns: [\"_value\"], desc: true)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"canbus_pgn\" and r._field == \"rate\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> keep(columns: [\"pgn\", \"_value\"])\n  |> sort(columns: [\"_value\"], desc: true)\n  |> rename(columns: {pgn: \"PGN / CAN id\", _value: \"msgs/s\"})\n",
           "refId": "A"
         }
       ],

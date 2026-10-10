@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 220,
+      "id": 217,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -206,7 +206,7 @@
       }
     },
     {
-      "id": 102,
+      "id": 100,
       "type": "stat",
       "title": "Readiness",
       "datasource": {
@@ -214,10 +214,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 0,
+        "x": 16,
         "y": 2,
-        "w": 4,
-        "h": 2
+        "w": 8,
+        "h": 3
       },
       "targets": [
         {
@@ -281,7 +281,7 @@
       }
     },
     {
-      "id": 103,
+      "id": 101,
       "type": "stat",
       "title": "Passed",
       "datasource": {
@@ -289,10 +289,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 4,
-        "y": 2,
-        "w": 3,
-        "h": 2
+        "x": 16,
+        "y": 5,
+        "w": 2,
+        "h": 3
       },
       "targets": [
         {
@@ -339,7 +339,7 @@
       }
     },
     {
-      "id": 104,
+      "id": 102,
       "type": "stat",
       "title": "Failed",
       "datasource": {
@@ -347,10 +347,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 7,
-        "y": 2,
-        "w": 3,
-        "h": 2
+        "x": 18,
+        "y": 5,
+        "w": 2,
+        "h": 3
       },
       "targets": [
         {
@@ -401,7 +401,7 @@
       }
     },
     {
-      "id": 105,
+      "id": 103,
       "type": "stat",
       "title": "N/A",
       "datasource": {
@@ -409,10 +409,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 10,
-        "y": 2,
-        "w": 3,
-        "h": 2
+        "x": 20,
+        "y": 5,
+        "w": 2,
+        "h": 3
       },
       "targets": [
         {
@@ -459,7 +459,7 @@
       }
     },
     {
-      "id": 106,
+      "id": 104,
       "type": "stat",
       "title": "Console",
       "datasource": {
@@ -467,10 +467,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 13,
-        "y": 2,
-        "w": 3,
-        "h": 2
+        "x": 22,
+        "y": 5,
+        "w": 2,
+        "h": 3
       },
       "targets": [
         {
@@ -521,7 +521,7 @@
       }
     },
     {
-      "id": 107,
+      "id": 105,
       "type": "stat",
       "title": "Mission State",
       "datasource": {
@@ -530,9 +530,9 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 2,
-        "w": 3,
-        "h": 2
+        "y": 8,
+        "w": 4,
+        "h": 3
       },
       "targets": [
         {
@@ -647,66 +647,7 @@
       }
     },
     {
-      "id": 108,
-      "type": "stat",
-      "title": "Route",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 19,
-        "y": 2,
-        "w": 3,
-        "h": 2
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"route_name\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "no route",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#00bcd4",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "/.*/"
-        },
-        "textMode": "value",
-        "graphMode": "none",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 22,
-          "titleSize": 12
-        }
-      }
-    },
-    {
-      "id": 109,
+      "id": 106,
       "type": "stat",
       "title": "Operator Link",
       "datasource": {
@@ -714,10 +655,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 22,
-        "y": 2,
-        "w": 2,
-        "h": 2
+        "x": 20,
+        "y": 8,
+        "w": 4,
+        "h": 3
       },
       "targets": [
         {
@@ -785,13 +726,72 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 25,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 110,
+      "id": 107,
+      "type": "stat",
+      "title": "Route",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 11,
+        "w": 8,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"route_name\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "no route",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 22,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 108,
       "type": "table",
       "title": "Automatic checks \u2014 verified onboard from live telemetry",
       "datasource": {
@@ -800,9 +800,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 4,
-        "w": 12,
-        "h": 15
+        "y": 2,
+        "w": 16,
+        "h": 17
       },
       "targets": [
         {
@@ -975,7 +975,7 @@
         ]
       },
       "options": {
-        "showHeader": true,
+        "showHeader": false,
         "cellHeight": "sm"
       },
       "transformations": [
@@ -994,7 +994,7 @@
       "description": "Decided by grafana_bridge every 5 s from the latest telemetry (GPS \u2265 6 satellites and HDOP \u2264 2.5, route inside the region, every Antler app connected, rudder within \u00b135\u00b0 and following the command, coolant < 105 \u00b0C, fuel > 15 %, no active DTC, SOC \u2265 30 %, fuel and battery hours \u2265 route time x margin, host load < 90 %). N/A = sensor not fitted or no data; under readiness_profile = vessel it counts as FAIL. CONSOLE = the operator console has not published it (ENC selection, checklist). READY needs no FAIL and no CONSOLE item."
     },
     {
-      "id": 111,
+      "id": 109,
       "type": "table",
       "title": "Console checklist \u2014 manual items ticked in Freeboard",
       "datasource": {
@@ -1002,10 +1002,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 12,
-        "y": 4,
-        "w": 12,
-        "h": 15
+        "x": 16,
+        "y": 14,
+        "w": 8,
+        "h": 5
       },
       "targets": [
         {

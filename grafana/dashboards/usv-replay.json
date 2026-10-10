@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 225,
+      "id": 222,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -206,35 +206,7 @@
       }
     },
     {
-      "id": 174,
-      "type": "text",
-      "title": "How to replay",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 2,
-        "w": 24,
-        "h": 2
-      },
-      "targets": [],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "Set the **time range** (top right) to the mission window, then scrub with the shared crosshair. Data older than the raw retention (30 d) is served from the 1-minute downsampled bucket. Use the **Mission events** annotations to locate waypoint hits and state changes."
-      }
-    },
-    {
-      "id": 175,
+      "id": 172,
       "type": "geomap",
       "title": "GPS Track",
       "datasource": {
@@ -243,9 +215,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 4,
+        "y": 2,
         "w": 14,
-        "h": 7
+        "h": 9
       },
       "targets": [
         {
@@ -486,7 +458,7 @@
       }
     },
     {
-      "id": 176,
+      "id": 173,
       "type": "state-timeline",
       "title": "Mission State",
       "datasource": {
@@ -495,7 +467,7 @@
       },
       "gridPos": {
         "x": 14,
-        "y": 4,
+        "y": 2,
         "w": 10,
         "h": 3
       },
@@ -593,7 +565,7 @@
       }
     },
     {
-      "id": 177,
+      "id": 174,
       "type": "table",
       "title": "Mission Events",
       "datasource": {
@@ -601,9 +573,9 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 14,
-        "y": 7,
-        "w": 10,
+        "x": 12,
+        "y": 15,
+        "w": 12,
         "h": 4
       },
       "targets": [
@@ -625,11 +597,12 @@
         "overrides": []
       },
       "options": {
-        "showHeader": true
+        "showHeader": true,
+        "cellHeight": "sm"
       }
     },
     {
-      "id": 178,
+      "id": 175,
       "type": "timeseries",
       "title": "Heading History",
       "datasource": {
@@ -701,7 +674,7 @@
       }
     },
     {
-      "id": 179,
+      "id": 176,
       "type": "timeseries",
       "title": "Speed History",
       "datasource": {
@@ -771,7 +744,7 @@
       }
     },
     {
-      "id": 180,
+      "id": 177,
       "type": "timeseries",
       "title": "Actuator Commands",
       "datasource": {
@@ -881,7 +854,7 @@
       }
     },
     {
-      "id": 181,
+      "id": 178,
       "type": "timeseries",
       "title": "Cross-Track Error",
       "datasource": {
@@ -891,7 +864,7 @@
       "gridPos": {
         "x": 0,
         "y": 15,
-        "w": 8,
+        "w": 6,
         "h": 4
       },
       "targets": [
@@ -951,7 +924,7 @@
       }
     },
     {
-      "id": 182,
+      "id": 179,
       "type": "state-timeline",
       "title": "Autonomy Flags",
       "datasource": {
@@ -959,10 +932,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 8,
-        "y": 15,
-        "w": 8,
-        "h": 4
+        "x": 14,
+        "y": 5,
+        "w": 10,
+        "h": 6
       },
       "targets": [
         {
@@ -1014,7 +987,7 @@
       }
     },
     {
-      "id": 183,
+      "id": 180,
       "type": "timeseries",
       "title": "Distance to Next Waypoint",
       "datasource": {
@@ -1022,9 +995,9 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 16,
+        "x": 6,
         "y": 15,
-        "w": 8,
+        "w": 6,
         "h": 4
       },
       "targets": [

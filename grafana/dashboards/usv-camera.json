@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 222,
+      "id": 219,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -206,7 +206,7 @@
       }
     },
     {
-      "id": 141,
+      "id": 139,
       "type": "stat",
       "title": "Frigate NVR",
       "datasource": {
@@ -275,13 +275,13 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 26,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 142,
+      "id": 140,
       "type": "stat",
       "title": "Cameras Enabled",
       "datasource": {
@@ -333,13 +333,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 26,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 143,
+      "id": 141,
       "type": "stat",
       "title": "Streaming",
       "datasource": {
@@ -391,13 +391,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 26,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 144,
+      "id": 142,
       "type": "stat",
       "title": "Network Connected",
       "datasource": {
@@ -449,13 +449,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 26,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 140,
+      "id": 138,
       "type": "table",
       "title": "Cameras",
       "datasource": {
@@ -466,7 +466,7 @@
         "x": 0,
         "y": 5,
         "w": 12,
-        "h": 7
+        "h": 9
       },
       "targets": [
         {
@@ -686,7 +686,7 @@
       "description": "One row per camera enabled in Frigate. A camera that is configured but disabled there (not yet powered) is not listed."
     },
     {
-      "id": 145,
+      "id": 143,
       "type": "timeseries",
       "title": "Frame Rate",
       "datasource": {
@@ -697,7 +697,7 @@
         "x": 12,
         "y": 5,
         "w": 12,
-        "h": 7
+        "h": 9
       },
       "targets": [
         {
@@ -756,7 +756,7 @@
       }
     },
     {
-      "id": 146,
+      "id": 144,
       "type": "timeseries",
       "title": "Bitrate",
       "datasource": {
@@ -765,9 +765,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 14,
         "w": 8,
-        "h": 6
+        "h": 5
       },
       "targets": [
         {
@@ -826,7 +826,7 @@
       }
     },
     {
-      "id": 147,
+      "id": 145,
       "type": "timeseries",
       "title": "PTZ Position",
       "datasource": {
@@ -835,9 +835,9 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 12,
+        "y": 14,
         "w": 8,
-        "h": 6
+        "h": 5
       },
       "targets": [
         {
@@ -910,7 +910,7 @@
       }
     },
     {
-      "id": 148,
+      "id": 146,
       "type": "timeseries",
       "title": "Camera Temperature",
       "datasource": {
@@ -919,9 +919,9 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 12,
+        "y": 14,
         "w": 8,
-        "h": 6
+        "h": 5
       },
       "targets": [
         {

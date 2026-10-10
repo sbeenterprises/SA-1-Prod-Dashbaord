@@ -38,9 +38,13 @@ Dashboard" folder; the old, now empty "USV Alerts" folder can be deleted
 once in Grafana (Dashboards > USV Alerts > Folder actions > Delete).
 
 ```bash
-cd ~/Swift-Autonmous_Dashbaord && git pull
-sudo bash deploy/install.sh                 # rebuilds bridges, re-provisions, re-brands
+bash deploy/update.sh vX.Y.Z      # from the repo checkout: fetch, checkout, install, status
 ```
+`deploy/update.sh` with no argument takes the latest release tag, refuses to
+run over local edits and prints the rollback command. It calls
+`sudo bash deploy/install.sh`, which rebuilds the bridges and restarts their
+services, re-provisions dashboards and alerts, reloads Telegraf and
+re-applies branding.
 For dashboard-only changes the short path is copying the JSON into the
 provisioning folder (Grafana reloads it within ~10 s):
 `sudo cp grafana/dashboards/*.json /var/lib/grafana/dashboards/ && sudo chown grafana:grafana /var/lib/grafana/dashboards/*.json`.
@@ -104,14 +108,15 @@ the overlays stay empty and nothing else is affected.
 
 ## Communications probes
 The Comms dashboard's Internet, latency and packet-loss values come from
-Telegraf's ICMP probe to 8.8.8.8, the VPN tile from `tailscaled.service`
-(Telegraf `systemd_units`), and the Starlink tile from a second ICMP
-probe to the dish at 192.168.100.1, shipped enabled in
-`telegraf/telegraf.conf` (the production vessel has a Starlink; the dish
-must be routable from the OBC, otherwise comment the probe out and the
-tile reads N/A). A VPN that terminates on the boat router rather than
-the OBC (OpenVPN on usv-722) has no local unit to watch; the tile reads
-N/A until it is pointed at a ping across the tunnel.
+Telegraf's ICMP probe to 8.8.8.8, the VPN tile from Telegraf
+`systemd_units` (UP when any `twingate*`, `tailscaled`, `openvpn*` or
+`wg-quick@*` unit is active; usv-722 runs `twingate-connector.service`),
+and the Starlink tile from a second ICMP probe to the dish at
+192.168.100.1, shipped enabled in `telegraf/telegraf.conf` (the dish must
+be routable from the OBC, otherwise comment the probe out and the tile
+reads N/A). A VPN that terminates on the boat router has no local unit
+and reads N/A. The bandwidth chart plots the three busiest physical links
+(CAN, VPN, docker and bridge interfaces are excluded).
 
 ## Pre-departure readiness (Readiness dashboard)
 The installer makes it Grafana's home dashboard

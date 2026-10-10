@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 223,
+      "id": 220,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -206,7 +206,7 @@
       }
     },
     {
-      "id": 149,
+      "id": 147,
       "type": "stat",
       "title": "Internet",
       "datasource": {
@@ -288,7 +288,7 @@
       }
     },
     {
-      "id": 150,
+      "id": 148,
       "type": "stat",
       "title": "Starlink",
       "datasource": {
@@ -370,7 +370,7 @@
       }
     },
     {
-      "id": 151,
+      "id": 149,
       "type": "stat",
       "title": "VPN (Twingate)",
       "datasource": {
@@ -452,7 +452,7 @@
       }
     },
     {
-      "id": 152,
+      "id": 150,
       "type": "stat",
       "title": "Signal K WebSocket",
       "datasource": {
@@ -527,7 +527,7 @@
       }
     },
     {
-      "id": 153,
+      "id": 151,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -594,7 +594,7 @@
       }
     },
     {
-      "id": 154,
+      "id": 152,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -661,7 +661,7 @@
       }
     },
     {
-      "id": 155,
+      "id": 153,
       "type": "timeseries",
       "title": "Latency",
       "datasource": {
@@ -731,7 +731,7 @@
       }
     },
     {
-      "id": 156,
+      "id": 154,
       "type": "timeseries",
       "title": "Packet Loss",
       "datasource": {
@@ -802,7 +802,7 @@
       }
     },
     {
-      "id": 157,
+      "id": 155,
       "type": "timeseries",
       "title": "Bandwidth (3 busiest links)",
       "datasource": {
@@ -896,7 +896,7 @@
       }
     },
     {
-      "id": 158,
+      "id": 156,
       "type": "timeseries",
       "title": "Telemetry Message Rates",
       "datasource": {

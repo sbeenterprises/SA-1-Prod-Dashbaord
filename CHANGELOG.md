@@ -5,7 +5,16 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.14] - 2026-10-10 — usv-722 CAN helm and drive, one-screen pages, Traffic zoom
+
+Update an installed vessel with `bash deploy/update.sh v1.2.14` (see
+`docs/runbook-usv-722.md`). Restart the MOOS mission afterwards to pick up
+the rebuilt `grafana_bridge`.
+
 ### Added
+- `deploy/update.sh`: one-step update to a release tag (fetch, checkout,
+  install, service status, printed rollback command); refuses to run over
+  local edits.
 - usv-722 helm and drive on the CAN bus (`can_bridge`, `usv722_can.hpp`,
   from USV-722-CAN-ID-Mapping.xlsx): steering actuator feedback (0x210),
   the command it follows, steering motor drive and helm / autopilot control,
@@ -21,6 +30,39 @@ Keep a Changelog; versions are git tags on `main`.
   Engine, Key Switch, Engine Faults).
 
 ### Fixed
+- `install.sh` restarts `usv-can-bridge` and `usv-signalk-bridge` after
+  rebuilding them. Before, an update left both running the old binary until
+  someone restarted them by hand.
+- Professional one-screen layouts, laid out by hand rather than squeezed:
+  every page is checked for no overlap, no gap, no clipped text and at most
+  19 grid rows (1532 px wide reference screen).
+  - Autopilot: two tile rows, three dials, three full-height trends
+    (heading, rudder, speed), CAN row. The Throttle Output and Heading &
+    Speed Error trends were dropped (they repeat the throttle dial and the
+    error tiles).
+  - Navigation: map and instrument column end on the same line; compass
+    readouts (HDG, COG) moved outside the dial, where they overlapped the
+    120 / 240 labels.
+  - Mission: bottom row aligned to the 12 / 12 grid.
+  - Traffic: even 2-row tiles, "Cmd Course" (was truncated), contact table
+    16 columns wide and 5 rows high.
+  - Cameras: table shows all 7 cameras; reserved Bitrate / PTZ /
+    Temperature charts shorter.
+  - System: services as one UP / DOWN tile per unit (the table showed two
+    rows); Disk I/O named by device; CPU Temp one line (hottest core)
+    instead of 24.
+  - Replay: help strip removed (text in the user guide); Autonomy Flags
+    given room so its labels no longer overlap.
+  - CAN Bus: PGN table is one table ("PGN / CAN id", "msgs/s"); it had
+    split into a frame per series with a selector.
+- Tile text: 2-row tiles use 18 / 20 px values (26 px clipped), and every
+  tile's value size is capped so its longest state fits the tile width
+  (Grafana does not shrink a fixed size). Rudder dial: the ±35 end labels
+  are hidden (they sat under the PORT / STBD readout).
+- Readiness: all 16 automatic checks show without scrolling (full-height
+  table on the left, no column header) and the verdict, counts, mission
+  state, operator link and route stack on the right at full tile height
+  (the squeezed tiles clipped "NOT READY" and "LINK OK").
 - Every dashboard page now fits one screen (19 grid rows) without
   scrolling. Layouts are compressed by the generator (`fit_to_screen`),
   keeping side-by-side panels aligned; dials keep at least 5 rows.

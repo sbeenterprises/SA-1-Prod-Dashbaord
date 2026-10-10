@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 215,
+      "id": 212,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -326,7 +326,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -417,7 +417,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -492,7 +492,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -577,7 +577,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -657,7 +657,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -749,7 +749,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -830,7 +830,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -897,7 +897,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -955,7 +955,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -1013,7 +1013,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -1072,7 +1072,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1131,7 +1131,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1189,7 +1189,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -1247,7 +1247,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1314,7 +1314,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1373,7 +1373,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1450,7 +1450,7 @@
         "x": 0,
         "y": 8,
         "w": 12,
-        "h": 6
+        "h": 5
       },
       "targets": [
         {
@@ -1576,7 +1576,7 @@
         "x": 12,
         "y": 8,
         "w": 12,
-        "h": 6
+        "h": 5
       },
       "targets": [
         {
@@ -1650,9 +1650,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 14,
-        "w": 13,
-        "h": 4
+        "y": 13,
+        "w": 12,
+        "h": 6
       },
       "targets": [
         {
@@ -1772,10 +1772,10 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 13,
-        "y": 14,
-        "w": 11,
-        "h": 4
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 6
       },
       "targets": [
         {

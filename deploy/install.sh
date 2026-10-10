@@ -206,6 +206,9 @@ id -u usv &>/dev/null || useradd -r -s /usr/sbin/nologin usv
 cp "$REPO"/deploy/systemd/*.service /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now usv-can-bridge
+# enable --now leaves an already running bridge on the old binary: restart
+# so a rebuilt can_bridge / signalk_bridge takes effect on every update.
+systemctl restart usv-can-bridge
 # usv-simulator.service installed but NOT enabled (bench testing only)
 
 # Signal K bridges: one per vessel when VESSELS is set in usv.env
@@ -226,6 +229,7 @@ if [[ -n "${VESSELS:-}" ]]; then
   done
 else
   systemctl enable --now usv-signalk-bridge
+  systemctl restart usv-signalk-bridge
 fi
 
 # Camera status from the Frigate NVR (FR-7). Enabled when FRIGATE_URL is set.

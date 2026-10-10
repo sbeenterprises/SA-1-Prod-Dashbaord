@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 224,
+      "id": 221,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -206,7 +206,7 @@
       }
     },
     {
-      "id": 159,
+      "id": 157,
       "type": "gauge",
       "title": "CPU",
       "datasource": {
@@ -266,7 +266,7 @@
       }
     },
     {
-      "id": 160,
+      "id": 158,
       "type": "gauge",
       "title": "GPU",
       "datasource": {
@@ -326,7 +326,7 @@
       }
     },
     {
-      "id": 161,
+      "id": 159,
       "type": "gauge",
       "title": "RAM",
       "datasource": {
@@ -386,7 +386,7 @@
       }
     },
     {
-      "id": 162,
+      "id": 160,
       "type": "gauge",
       "title": "Disk",
       "datasource": {
@@ -446,7 +446,7 @@
       }
     },
     {
-      "id": 163,
+      "id": 161,
       "type": "stat",
       "title": "CPU Temp",
       "datasource": {
@@ -507,13 +507,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 26,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 164,
+      "id": 162,
       "type": "stat",
       "title": "InfluxDB",
       "datasource": {
@@ -589,13 +589,13 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 26,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 165,
+      "id": 163,
       "type": "stat",
       "title": "Signal K",
       "datasource": {
@@ -671,13 +671,13 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 26,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 166,
+      "id": 164,
       "type": "stat",
       "title": "MOOS",
       "datasource": {
@@ -753,13 +753,13 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 26,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 167,
+      "id": 165,
       "type": "timeseries",
       "title": "CPU",
       "datasource": {
@@ -855,7 +855,7 @@
       }
     },
     {
-      "id": 168,
+      "id": 166,
       "type": "timeseries",
       "title": "GPU",
       "datasource": {
@@ -967,7 +967,7 @@
       }
     },
     {
-      "id": 169,
+      "id": 167,
       "type": "timeseries",
       "title": "Memory",
       "datasource": {
@@ -1039,7 +1039,7 @@
       }
     },
     {
-      "id": 170,
+      "id": 168,
       "type": "timeseries",
       "title": "Disk I/O",
       "datasource": {
@@ -1050,7 +1050,7 @@
         "x": 0,
         "y": 10,
         "w": 8,
-        "h": 5
+        "h": 6
       },
       "targets": [
         {
@@ -1058,7 +1058,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"diskio\" and r._field == \"read_bytes\")\n  |> filter(fn: (r) => r.name !~ /^(loop|dm-|sr)/)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"diskio\" and r._field == \"read_bytes\")\n  |> filter(fn: (r) => r.name !~ /^(loop|dm-|sr)/)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> map(fn: (r) => ({r with _field: r.name}))\n  |> keep(columns: [\"_time\", \"_value\", \"_field\"])\n",
           "refId": "A",
           "alias": "read"
         },
@@ -1067,7 +1067,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"diskio\" and r._field == \"write_bytes\")\n  |> filter(fn: (r) => r.name !~ /^(loop|dm-|sr)/)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"diskio\" and r._field == \"write_bytes\")\n  |> filter(fn: (r) => r.name !~ /^(loop|dm-|sr)/)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> map(fn: (r) => ({r with _field: r.name}))\n  |> keep(columns: [\"_time\", \"_value\", \"_field\"])\n",
           "refId": "B",
           "alias": "write"
         }
@@ -1133,7 +1133,7 @@
       }
     },
     {
-      "id": 171,
+      "id": 169,
       "type": "timeseries",
       "title": "Load Average",
       "datasource": {
@@ -1144,7 +1144,7 @@
         "x": 8,
         "y": 10,
         "w": 8,
-        "h": 5
+        "h": 6
       },
       "targets": [
         {
@@ -1250,7 +1250,7 @@
       }
     },
     {
-      "id": 172,
+      "id": 170,
       "type": "timeseries",
       "title": "CPU Temp",
       "datasource": {
@@ -1261,7 +1261,7 @@
         "x": 16,
         "y": 10,
         "w": 8,
-        "h": 5
+        "h": 6
       },
       "targets": [
         {
@@ -1269,9 +1269,9 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"temp\" and r._field == \"temp\")\n  |> filter(fn: (r) => r.sensor !~ /^(acpitz|nvme|pch|iwlwifi)/)\n  |> filter(fn: (r) => r._value > -50.0 and r._value < 150.0)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"temp\" and r._field == \"temp\")\n  |> filter(fn: (r) => r.sensor !~ /^(acpitz|nvme|pch|iwlwifi)/)\n  |> filter(fn: (r) => r._value > -50.0 and r._value < 150.0)\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> group()\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n",
           "refId": "A",
-          "alias": "\u00b0C"
+          "alias": "hottest core"
         }
       ],
       "fieldConfig": {
@@ -1320,8 +1320,8 @@
       }
     },
     {
-      "id": 173,
-      "type": "table",
+      "id": 171,
+      "type": "stat",
       "title": "Services (systemd)",
       "datasource": {
         "type": "influxdb",
@@ -1329,9 +1329,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 15,
+        "y": 16,
         "w": 24,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -1339,22 +1339,32 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"systemd_units\" and r._field == \"active_code\")\n  |> last()\n  |> group()\n  |> keep(columns: [\"name\", \"active\", \"sub\", \"_value\"])\n  |> rename(columns: {name: \"unit\", active: \"state\", sub: \"detail\", _value: \"code\"})\n  |> sort(columns: [\"unit\"])\n",
+          "query": "import \"strings\"\nfrom(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement == \"systemd_units\" and r._field == \"active_code\")\n  |> last()\n  |> map(fn: (r) => ({r with name: strings.trimSuffix(v: r.name, suffix: \".service\")}))\n  |> group(columns: [\"name\"])\n  |> keep(columns: [\"name\", \"_value\", \"_time\"])\n",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
           },
           "mappings": [
             {
               "type": "value",
               "options": {
                 "0": {
-                  "text": "active",
-                  "color": "#00bcd4",
+                  "text": "UP",
+                  "color": "#175d8d",
                   "index": 0
                 }
               }
@@ -1365,7 +1375,7 @@
                 "from": 1,
                 "to": 99,
                 "result": {
-                  "text": "not active",
+                  "text": "DOWN",
                   "color": "red",
                   "index": 1
                 }
@@ -1376,7 +1386,19 @@
         "overrides": []
       },
       "options": {
-        "showHeader": true
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value_and_name",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
       }
     }
   ],

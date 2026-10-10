@@ -190,7 +190,7 @@
   },
   "panels": [
     {
-      "id": 217,
+      "id": 214,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -291,7 +291,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -383,7 +383,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -458,7 +458,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -533,7 +533,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -608,7 +608,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -683,7 +683,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -769,7 +769,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -850,7 +850,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -908,7 +908,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -975,7 +975,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1042,7 +1042,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1101,7 +1101,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1160,7 +1160,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1219,7 +1219,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1278,7 +1278,7 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -1316,7 +1316,7 @@
         }
       ],
       "options": {
-        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? '#1c2a3d' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(124,156,176,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#7c9cb0' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#00bcd4',\n  text: dark ? '#ffffff' : '#24292e',\n  sub: dark ? '#00bcd4' : '#1e6692',\n  accent: '#00bcd4',\n  accent2: '#42a5f5',\n};\nlet v = val('A'); let actual = true;\nif (v === null || isNaN(v)) { v = val('B'); actual = false; }\nif (v === null || isNaN(v)) { v = 0; }\nv = Math.max(-35, Math.min(35, v));\nreturn {\n  series: [{\n    type: 'gauge', min: -35, max: 35,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '50%'], radius: '80%',\n    axisLine: { lineStyle: { width: 9, color: [\n      [0.5, 'rgba(242,73,92,0.85)'], [1, 'rgba(115,191,105,0.85)'] ] } },\n    splitNumber: 7,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10,\n                 formatter: (x) => Math.abs(x) },\n    pointer: { width: 4, length: '62%',\n               itemStyle: { color: C.needle,\n                            shadowColor: 'rgba(0,0,0,0.45)',\n                            shadowBlur: 6, shadowOffsetY: 2 } },\n    anchor: { show: true, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '84%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '54%'],\n              formatter: (x) => (x < -0.5 ? 'PORT ' :\n                                 (x > 0.5 ? 'STBD ' : '')) +\n                                Math.abs(x).toFixed(0) +\n                                (actual ? '\\u00b0' : '') },\n    data: [{ value: v, name: actual ? 'PORT \\u2039 RUDDER \\u203a STBD'\n                                     : 'PORT \\u2039 COMMAND \\u203a STBD' }],\n  }],\n};\n",
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? '#1c2a3d' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(124,156,176,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#7c9cb0' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#00bcd4',\n  text: dark ? '#ffffff' : '#24292e',\n  sub: dark ? '#00bcd4' : '#1e6692',\n  accent: '#00bcd4',\n  accent2: '#42a5f5',\n};\nlet v = val('A'); let actual = true;\nif (v === null || isNaN(v)) { v = val('B'); actual = false; }\nif (v === null || isNaN(v)) { v = 0; }\nv = Math.max(-35, Math.min(35, v));\nreturn {\n  series: [{\n    type: 'gauge', min: -35, max: 35,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '50%'], radius: '80%',\n    axisLine: { lineStyle: { width: 9, color: [\n      [0.5, 'rgba(242,73,92,0.85)'], [1, 'rgba(115,191,105,0.85)'] ] } },\n    splitNumber: 7,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10,\n                 // The \u00b135 end labels sat under the PORT / STBD readout.\n                 formatter: (x) => (Math.abs(x) >= 35 ? '' : Math.abs(x)) },\n    pointer: { width: 4, length: '62%',\n               itemStyle: { color: C.needle,\n                            shadowColor: 'rgba(0,0,0,0.45)',\n                            shadowBlur: 6, shadowOffsetY: 2 } },\n    anchor: { show: true, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '84%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '54%'],\n              formatter: (x) => (x < -0.5 ? 'PORT ' :\n                                 (x > 0.5 ? 'STBD ' : '')) +\n                                Math.abs(x).toFixed(0) +\n                                (actual ? '\\u00b0' : '') },\n    data: [{ value: v, name: actual ? 'PORT \\u2039 RUDDER \\u203a STBD'\n                                     : 'PORT \\u2039 COMMAND \\u203a STBD' }],\n  }],\n};\n",
         "renderer": "svg"
       },
       "fieldConfig": {
@@ -1440,7 +1440,7 @@
     {
       "id": 59,
       "type": "timeseries",
-      "title": "Desired vs Actual Heading",
+      "title": "Heading \u2014 desired vs actual",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -1448,8 +1448,8 @@
       "gridPos": {
         "x": 0,
         "y": 11,
-        "w": 12,
-        "h": 3
+        "w": 8,
+        "h": 6
       },
       "targets": [
         {
@@ -1526,130 +1526,16 @@
     {
       "id": 60,
       "type": "timeseries",
-      "title": "Speed Governor \u2014 desired / cap / commanded / actual",
+      "title": "Rudder \u2014 actuator cmd / actual (\u00b0), PID (%)",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 12,
+        "x": 8,
         "y": 11,
-        "w": 12,
-        "h": 3
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"desired_speed\" or r._field == \"speed_cap\" or r._field == \"cmd_speed\" or r._field == \"actual_speed\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "velocityknot",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 14,
-            "showPoints": "never",
-            "spanNulls": 60000,
-            "gradientMode": "opacity",
-            "lineInterpolation": "smooth"
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": ".*desired_speed.*"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#00bcd4"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": ".*speed_cap.*"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#42a5f5"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": ".*cmd_speed.*"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#c47b06"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": ".*actual_speed.*"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#9256b8"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 61,
-      "type": "timeseries",
-      "title": "Rudder \u2014 actuator command / actual (\u00b0), PID output (%)",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 14,
         "w": 8,
-        "h": 3
+        "h": 6
       },
       "targets": [
         {
@@ -1677,7 +1563,7 @@
           },
           "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"rudder_cmd\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "C",
-          "alias": "PID output (DESIRED_RUDDER)"
+          "alias": "PID output"
         }
       ],
       "fieldConfig": {
@@ -1782,90 +1668,18 @@
       }
     },
     {
-      "id": 62,
+      "id": 61,
       "type": "timeseries",
-      "title": "Throttle Output",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 8,
-        "y": 14,
-        "w": 8,
-        "h": 3
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "influxdb-usv"
-          },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"throttle_cmd\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
-          "refId": "A",
-          "alias": "throttle"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 14,
-            "showPoints": "never",
-            "spanNulls": 60000,
-            "gradientMode": "opacity",
-            "lineInterpolation": "smooth"
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": ".*throttle_cmd.*"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#00bcd4"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 63,
-      "type": "timeseries",
-      "title": "Heading & Speed Error",
+      "title": "Speed \u2014 desired / cap / commanded / actual",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
       },
       "gridPos": {
         "x": 16,
-        "y": 14,
+        "y": 11,
         "w": 8,
-        "h": 3
+        "h": 6
       },
       "targets": [
         {
@@ -1873,7 +1687,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"heading_error\" or r._field == \"speed_error\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"desired_speed\" or r._field == \"speed_cap\" or r._field == \"cmd_speed\" or r._field == \"actual_speed\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
           "refId": "A"
         }
       ],
@@ -1882,6 +1696,7 @@
           "color": {
             "mode": "palette-classic"
           },
+          "unit": "velocityknot",
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
@@ -1896,7 +1711,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*heading_error.*"
+              "options": ".*desired_speed.*"
             },
             "properties": [
               {
@@ -1911,7 +1726,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*speed_error.*"
+              "options": ".*speed_cap.*"
             },
             "properties": [
               {
@@ -1922,6 +1737,36 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*cmd_speed.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c47b06"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*actual_speed.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9256b8"
+                }
+              }
+            ]
           }
         ]
       },
@@ -1937,7 +1782,7 @@
       }
     },
     {
-      "id": 64,
+      "id": 62,
       "type": "stat",
       "title": "Rudder Actual",
       "datasource": {
@@ -1990,13 +1835,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 65,
+      "id": 63,
       "type": "stat",
       "title": "Helm Wheel",
       "datasource": {
@@ -2049,13 +1894,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 66,
+      "id": 64,
       "type": "stat",
       "title": "Steering Drive",
       "datasource": {
@@ -2108,13 +1953,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 67,
+      "id": 65,
       "type": "stat",
       "title": "Steering Control",
       "datasource": {
@@ -2183,13 +2028,13 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 68,
+      "id": 66,
       "type": "stat",
       "title": "Gear",
       "datasource": {
@@ -2263,13 +2108,13 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 69,
+      "id": 67,
       "type": "stat",
       "title": "Thrust to Engine",
       "datasource": {
@@ -2322,13 +2167,13 @@
         "colorMode": "value",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 70,
+      "id": 68,
       "type": "stat",
       "title": "Key Switch",
       "datasource": {
@@ -2402,13 +2247,13 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
     },
     {
-      "id": 71,
+      "id": 69,
       "type": "stat",
       "title": "Engine Faults",
       "datasource": {
@@ -2484,7 +2329,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 26,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
