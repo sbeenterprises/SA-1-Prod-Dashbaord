@@ -21,6 +21,16 @@ Keep a Changelog; versions are git tags on `main`.
   Engine, Key Switch, Engine Faults).
 
 ### Fixed
+- Every dashboard page now fits one screen (19 grid rows) without
+  scrolling. Layouts are compressed by the generator (`fit_to_screen`),
+  keeping side-by-side panels aligned; dials keep at least 5 rows.
+- Comms: the VPN tile reads Tailscale, OpenVPN or WireGuard units (Telegraf
+  now watches `openvpn*.service` and `wg-quick@*.service` too) and is UP when
+  any is active. The bandwidth chart shows the 3 busiest links only, and CAN
+  and VPN interfaces are no longer listed as network links.
+- Fleet: tiles no longer truncate their titles (second line for Mission
+  Progress, Signal K and MOOS); empty SOG shows "—" and no mission shows
+  "No mission".
 - Autopilot rudder units: the Rudder Angle dial now shows the real rudder
   angle from the steering actuator (`rudder_actual`, degrees) and falls back
   to the command, labelled COMMAND without a degree sign, when there is no

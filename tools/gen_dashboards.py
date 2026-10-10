@@ -1848,7 +1848,7 @@ TELE_SELECT = {
     "diskio": '  |> filter(fn: (r) => r.name !~ /^(loop|dm-|sr)/)\n',
     # Physical links only: docker/bridge/veth/tunnel interfaces would
     # otherwise fill the legend (12+ series on the OBC).
-    "net": '  |> filter(fn: (r) => r.interface !~ /^(lo|docker|br-|veth|virbr|tun|tap|wg)/)\n',
+    "net": '  |> filter(fn: (r) => r.interface !~ /^(lo|docker|br-|veth|virbr|tun|tap|wg|tailscale|slcan|can|vcan)/)\n',
 }
 
 
@@ -1889,6 +1889,7 @@ def tele_last(measurement, field, extra="", reduce="latest"):
     series' latest sample (hottest CPU sensor)."""
     q = tele(measurement, field, extra=extra).replace(AGG, LAST)
     collapse = ('  |> group()\n  |> max()\n' if reduce == "max"
+                else '  |> group()\n  |> min()\n' if reduce == "min"
                 else LATEST_ACROSS_SERIES)
     return q.replace(CLEAN_LABELS, collapse + CLEAN_LABELS)
 
@@ -1900,8 +1901,21 @@ def tele_last(measurement, field, extra="", reduce="latest"):
 # tile reads N/A where it is not fitted).
 PING_INTERNET = '  |> filter(fn: (r) => r.url == "8.8.8.8")\n'
 PING_STARLINK = '  |> filter(fn: (r) => r.url == "192.168.100.1")\n'
-UNIT_SERVICE = '  |> filter(fn: (r) => r.name == "tailscaled.service")\n'
+# Any VPN daemon counts: Tailscale (used on usv-722), OpenVPN or WireGuard.
+# Each unit's latest active_code, then the lowest: 0 (active) if any is up.
+UNIT_SERVICE = ('  |> filter(fn: (r) => r.name =~ '
+                '/^(tailscaled|openvpn.*|wg-quick@.*)\\.service$/)\n')
 BYTES_TO_BITS = '  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n'
+
+
+def busiest_net(field, n=3):
+    """Per-interface bit rate for the n busiest links over the time range
+    only. The OBC has a dozen NICs (enp5s0 to enp16s0), most idle; plotting
+    all of them made the legend scroll."""
+    return ('data = ' + tele("net", field, rate=True).lstrip() + BYTES_TO_BITS
+            + f'busiest = data\n  |> mean()\n  |> group()\n  |> top(n: {n})\n'
+            '  |> findColumn(fn: (key) => true, column: "interface")\n'
+            'data\n  |> filter(fn: (r) => contains(value: r.interface, set: busiest))\n')
 
 
 def probe_tile(title, query, x, down="DOWN", up="UP", no_value=None):
@@ -1918,8 +1932,9 @@ DASHBOARDS.append(dashboard("usv-comms", "Comms", [
     probe_tile("Internet", tele_last("ping", "result_code", extra=PING_INTERNET), 0),
     probe_tile("Starlink", tele_last("ping", "result_code", extra=PING_STARLINK), 4,
                no_value="N/A"),
-    probe_tile("VPN / Tailscale",
-               tele_last("systemd_units", "active_code", extra=UNIT_SERVICE), 8),
+    probe_tile("VPN (Tailscale)",
+               tele_last("systemd_units", "active_code", extra=UNIT_SERVICE,
+                         reduce="min"), 8),
     stat("Signal K WebSocket", flux("comms", "signalk_ws_up", last=True),
          12, 0, 4, 4, mappings=updown_map(), text_mode="value",
          color_mode="background"),
@@ -1937,9 +1952,9 @@ DASHBOARDS.append(dashboard("usv-comms", "Comms", [
     ts("Packet Loss", [target(tele("ping", "percent_packet_loss", extra=PING_INTERNET),
                               "loss")],
        12, 4, 12, 7, unit="percent", min_=0),
-    ts("Bandwidth (host interfaces)",
-       [target(tele("net", "bytes_recv", rate=True) + BYTES_TO_BITS, "down"),
-        target(tele("net", "bytes_sent", rate=True) + BYTES_TO_BITS, "up", ref="B")],
+    ts("Bandwidth (3 busiest links)",
+       [target(busiest_net("bytes_recv"), "down"),
+        target(busiest_net("bytes_sent"), "up", ref="B")],
        0, 11, 12, 7, unit="bps"),
     ts("Telemetry Message Rates",
        [target(flux("comms", ["moos_msg_rate", "signalk_msg_rate"]))],
@@ -2147,15 +2162,18 @@ fleet_panels = [
     fleet_link(stat("Geofence", fleet_last("autonomy", "geofence_breached"),
                     13, 11, 3, 3, mappings=geofence_mappings,
                     text_mode="value", color_mode="background")),
-    fleet_link(stat("SOG", fleet_last("nav", "sog"), 16, 11, 2, 3,
-                    unit="velocityknot", decimals=1)),
-    fleet_link(stat("Progress", fleet_last("mission", "progress_pct"),
-                    18, 11, 2, 3, unit="percent", decimals=0)),
+    # Second line of the row: 2-column tiles truncated their titles
+    # ("Progr...", "Sign...").
+    fleet_link(stat("SOG", fleet_last("nav", "sog"), 16, 11, 8, 3,
+                    unit="velocityknot", decimals=1, no_value="—")),
+    fleet_link(stat("Mission Progress", fleet_last("mission", "progress_pct"),
+                    0, 14, 8, 3, unit="percent", decimals=0,
+                    no_value="No mission")),
     fleet_link(stat("Signal K", fleet_last("comms", "signalk_ws_up"),
-                    20, 11, 2, 3, mappings=updown_map("DOWN", "UP"),
+                    8, 14, 8, 3, mappings=updown_map("DOWN", "UP"),
                     text_mode="value", color_mode="background")),
     fleet_link(stat("MOOS", fleet_last("comms", "moos_connected"),
-                    22, 11, 2, 3, mappings=updown_map("DOWN", "UP"),
+                    16, 14, 8, 3, mappings=updown_map("DOWN", "UP"),
                     text_mode="value", color_mode="background")),
 ]
 DASHBOARDS.append(dashboard("usv-fleet", "Fleet", fleet_panels,
@@ -2314,10 +2332,57 @@ def use_fleet_variable(d):
     return d
 
 
+# Every page must fit one operator screen without scrolling (1080p console,
+# browser chrome + Grafana header + link bar leave ~19 grid rows; the Comms
+# page at 19 rows was the reference that just fits).
+SCREEN_ROWS = 19
+MIN_PANEL_ROWS = 2
+MIN_GAUGE_ROWS = 5   # dials (ECharts) stay legible: value + sub-label
+
+
+def fit_to_screen(d, rows=SCREEN_ROWS):
+    """Compress a dashboard vertically to `rows` grid rows. Panel edges are
+    remapped monotonically, so panels that were side by side stay aligned
+    and nothing overlaps; each panel keeps at least MIN_PANEL_ROWS (or its
+    own height if smaller). The scale is lowered until the page fits."""
+    panels = [p for p in d["panels"]]
+    for p in d["panels"]:
+        if p.get("type") == "row":
+            panels.extend(p.get("panels", []))
+    bottom = max(p["gridPos"]["y"] + p["gridPos"]["h"] for p in panels)
+    if bottom <= rows:
+        return
+    edges = sorted({e for p in panels
+                    for e in (p["gridPos"]["y"], p["gridPos"]["y"] + p["gridPos"]["h"])})
+    f = 1.0
+    while f > 0.2:
+        new = {}
+        for e in edges:
+            pos = new[edges[edges.index(e) - 1]] if e != edges[0] else 0
+            for p in panels:
+                g = p["gridPos"]
+                if g["y"] + g["h"] == e:
+                    floor = (MIN_GAUGE_ROWS
+                             if p.get("type") == "volkovlabs-echarts-panel"
+                             else MIN_PANEL_ROWS)
+                    hmin = g["h"] if g["h"] < floor else \
+                        max(floor, round(g["h"] * f))
+                    pos = max(pos, new[g["y"]] + hmin)
+            new[e] = pos
+        if new[edges[-1]] <= rows:
+            break
+        f -= 0.01
+    for p in panels:
+        g = p["gridPos"]
+        y0, y1 = new[g["y"]], new[g["y"] + g["h"]]
+        g["y"], g["h"] = y0, y1 - y0
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     for d in DASHBOARDS:
         add_header_band(d)
+        fit_to_screen(d)
         if d["uid"] == "usv-fleet":
             use_fleet_variable(d)
         path = os.path.join(OUT, f"{d['uid']}.json")

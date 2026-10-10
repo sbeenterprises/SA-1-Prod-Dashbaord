@@ -186,7 +186,7 @@ STATS = {
     "Closest Target": ("1240 m", "CYAN"), "CPA": ("980 m", "CYAN"),
     "TCPA": ("410 s", "CYAN"),
     "Internet": ("ONLINE", "OK"), "Starlink": ("ONLINE", "OK"),
-    "VPN / Tailscale": ("ONLINE", "OK"), "Signal K WebSocket": ("ONLINE", "OK"),
+    "VPN (Tailscale)": ("UP", "OK"), "Signal K WebSocket": ("ONLINE", "OK"),
     "Latency": ("46 ms", "CYAN"), "Packet Loss": ("0.3%", "CYAN"),
 }
 GAUGES = {
