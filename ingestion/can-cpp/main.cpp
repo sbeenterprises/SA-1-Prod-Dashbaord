@@ -171,6 +171,11 @@ int main() {
     steer_cal.stbd = env_num("STEER_RAW_STBD", 1012.0);
     steer_cal.max_deg = env_num("STEER_MAX_DEG", 50.0);
     ThrottledWriter helm_writer;
+    // DM1 fault details from the Glendinning device (210): the summary text
+    // is written when it changes and at least every 5 s.
+    usv::usv722::Dm1Receiver dm1_rx;
+    std::string dm1_last_text;
+    double dm1_last_t = -1e9;
 
     // Stats state
     uint64_t frames = 0, error_frames = 0, dropped = 0, bits = 0;
@@ -244,6 +249,21 @@ int main() {
                     for (const auto& v : usv::usv722::Decode(id, ext, frame.data,
                                                              frame.can_dlc, steer_cal))
                         helm_writer.put(writer, v, t);
+                    usv::usv722::Dm1 dm1;
+                    bool dm1_multi = false;
+                    if (ext && dm1_rx.Feed(id, frame.data, frame.can_dlc, &dm1, &dm1_multi)) {
+                        // Single-frame values already came from Decode() above.
+                        if (dm1_multi)
+                            for (const auto& v : usv::usv722::Dm1Values(dm1))
+                                helm_writer.put(writer, v, t);
+                        const std::string text = usv::usv722::Dm1Text(dm1);
+                        if (text != dm1_last_text || t - dm1_last_t >= 5.0) {
+                            const auto& k = usv::usv722::kDm1TextField;
+                            writer.str_field(k.measurement, "", k.field, text);
+                            dm1_last_text = text;
+                            dm1_last_t = t;
+                        }
+                    }
                 }
             } else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
                 std::cerr << "read error: " << std::strerror(errno) << "\n";

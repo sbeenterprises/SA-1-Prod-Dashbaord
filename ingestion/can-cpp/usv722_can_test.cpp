@@ -100,6 +100,93 @@ int main() {
         CHECK(Find(f, "active_dtcs")->value == 1.0);
     }
 
+    // DM1 details: amber lamp, SPN 110 (0x6E) FMI 3, occurrence 1
+    {
+        auto f = Ext(0x0CFECAD2, {0x04, 0xFF, 0x6E, 0x00, 0x03, 0x01, 0xFF, 0xFF});
+        CHECK(Find(f, "lamp_amber")->value == 1.0);
+        CHECK(Find(f, "lamp_red")->value == 0.0);
+        CHECK(Find(f, "lamp_protect")->value == 0.0);
+        CHECK(Find(f, "lamp_mil")->value == 0.0);
+        CHECK(Find(f, "dtc_spn")->value == 110.0);
+        CHECK(Find(f, "dtc_fmi")->value == 3.0);
+        CHECK(Find(f, "dtc_oc")->value == 1.0);
+        // No fault: SPN/FMI/OC written as 0 so the tiles clear
+        auto n = Ext(0x0CFECAD2, {0x00, 0xFF, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xFF});
+        CHECK(Find(n, "dtc_spn")->value == 0.0);
+        CHECK(Find(n, "lamp_amber")->value == 0.0);
+        // Fault bytes not available: lamps only, no fault count
+        auto na = Ext(0x0CFECAD2, {0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF});
+        CHECK(Find(na, "active_dtcs") == nullptr);
+        CHECK(Find(na, "fault_lamps") != nullptr);
+        // Lamp bits: MIL 7-6, red 5-4, amber 3-2, protect 1-0 (01 = on, 11 = n.a.)
+        auto l = Ext(0x0CFECAD2, {0x51, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF});   // 01 01 00 01
+        CHECK(Find(l, "lamp_mil")->value == 1.0 && Find(l, "lamp_red")->value == 1.0);
+        CHECK(Find(l, "lamp_amber")->value == 0.0 && Find(l, "lamp_protect")->value == 1.0);
+        auto l3 = Ext(0x0CFECAD2, {0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF});  // all n.a.
+        CHECK(Find(l3, "lamp_mil")->value == 0.0 && Find(l3, "lamp_amber")->value == 0.0);
+        // 19-bit SPN: high 3 bits in B4 bits 7-5. SPN 524286, FMI 31
+        // (all ones, FF FF FF, is "not available" and is skipped)
+        const uint8_t big[] = {0x00, 0xFF, 0xFE, 0xFF, 0xFF, 0x05, 0xFF, 0xFF};
+        Dm1 m = ParseDm1(big, 8);
+        CHECK(m.faults.size() == 1 && m.faults[0].spn == 524286 && m.faults[0].fmi == 31);
+        // Summary text
+        const uint8_t one[] = {0x04, 0xFF, 0x6E, 0x00, 0x03, 0x01, 0xFF, 0xFF};
+        CHECK(Dm1Text(ParseDm1(one, 8)) == "SPN 110 FMI 3 voltage high / short to high (x1)");
+        const uint8_t none[] = {0x00, 0xFF, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xFF};
+        CHECK(Dm1Text(ParseDm1(none, 8)) == "NONE");
+        const uint8_t nav[] = {0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+        CHECK(Dm1Text(ParseDm1(nav, 8)) == "N/A");
+        CHECK(std::string(FmiText(31)) == "condition exists");
+        CHECK(std::string(FmiText(25)) == "reserved");
+    }
+
+    // DM1 receiver: single frame from 210, ignores other senders
+    {
+        Dm1Receiver rx;
+        Dm1 m; bool multi = true;
+        const uint8_t one[] = {0x04, 0xFF, 0x6E, 0x00, 0x03, 0x01, 0xFF, 0xFF};
+        CHECK(rx.Feed(0x0CFECAD2, one, 8, &m, &multi) && !multi && m.faults.size() == 1);
+        CHECK(!rx.Feed(0x0CFECA00, one, 8, &m));               // other source address
+        CHECK(!rx.Feed(0x0CF003D0, one, 8, &m));               // other PGN
+    }
+
+    // DM1 with three faults via J1939 BAM: 2 + 3*4 = 14 bytes in 2 packets
+    {
+        const uint8_t payload[14] = {0x10, 0xFF,               // red stop lamp on
+                                     0x6E, 0x00, 0x03, 0x02,   // SPN 110 FMI 3 x2
+                                     0x64, 0x00, 0x01, 0x01,   // SPN 100 FMI 1 x1
+                                     0xBE, 0x00, 0x00, 0x05};  // SPN 190 FMI 0 x5
+        const uint8_t cm[] = {0x20, 14, 0, 2, 0xFF, 0xCA, 0xFE, 0x00};
+        uint8_t dt1[8] = {1}, dt2[8] = {2, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+        std::memcpy(dt1 + 1, payload, 7);
+        std::memcpy(dt2 + 1, payload + 7, 7);
+        Dm1Receiver rx;
+        Dm1 m; bool multi = false;
+        CHECK(!rx.Feed(0x1CECFFD2, cm, 8, &m, &multi));
+        CHECK(!rx.Feed(0x1CEBFFD2, dt1, 8, &m, &multi));
+        CHECK(rx.Feed(0x1CEBFFD2, dt2, 8, &m, &multi) && multi);
+        CHECK(m.faults.size() == 3);
+        CHECK(m.faults[1].spn == 100 && m.faults[1].fmi == 1 && m.faults[2].spn == 190 && m.faults[2].oc == 5);
+        auto v = Dm1Values(m);
+        CHECK(Find(v, "active_dtcs")->value == 3.0 && Find(v, "lamp_red")->value == 1.0);
+        CHECK(Find(v, "dtc_spn")->value == 110.0);
+        CHECK(Dm1Text(m) == "SPN 110 FMI 3 voltage high / short to high (x2); "
+                            "SPN 100 FMI 1 below normal, most severe (x1); "
+                            "SPN 190 FMI 0 above normal, most severe (x5)");
+        // A lost packet drops the message; the next BAM still works
+        CHECK(!rx.Feed(0x1CECFFD2, cm, 8, &m));
+        CHECK(!rx.Feed(0x1CEBFFD2, dt2, 8, &m));               // packet 2 before 1
+        CHECK(!rx.Feed(0x1CEBFFD2, dt1, 8, &m));               // stale, not active
+        CHECK(!rx.Feed(0x1CECFFD2, cm, 8, &m) && !rx.Feed(0x1CEBFFD2, dt1, 8, &m)
+              && rx.Feed(0x1CEBFFD2, dt2, 8, &m) && m.faults.size() == 3);
+        // BAM carrying another PGN is ignored
+        const uint8_t cm_other[] = {0x20, 14, 0, 2, 0xFF, 0x00, 0xF0, 0x00};
+        CHECK(!rx.Feed(0x1CECFFD2, cm_other, 8, &m) && !rx.Feed(0x1CEBFFD2, dt1, 8, &m)
+              && !rx.Feed(0x1CEBFFD2, dt2, 8, &m));
+        // BAM from another source is ignored
+        CHECK(!rx.Feed(0x1CECFF00, cm, 8, &m));
+    }
+
     std::printf("usv722_can_test: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
 }

@@ -1470,7 +1470,7 @@
         "x": 0,
         "y": 11,
         "w": 8,
-        "h": 6
+        "h": 4
       },
       "targets": [
         {
@@ -1556,7 +1556,7 @@
         "x": 8,
         "y": 11,
         "w": 8,
-        "h": 6
+        "h": 4
       },
       "targets": [
         {
@@ -1700,7 +1700,7 @@
         "x": 16,
         "y": 11,
         "w": 8,
-        "h": 6
+        "h": 4
       },
       "targets": [
         {
@@ -1812,7 +1812,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 17,
+        "y": 15,
         "w": 3,
         "h": 2
       },
@@ -1871,7 +1871,7 @@
       },
       "gridPos": {
         "x": 3,
-        "y": 17,
+        "y": 15,
         "w": 3,
         "h": 2
       },
@@ -1930,7 +1930,7 @@
       },
       "gridPos": {
         "x": 6,
-        "y": 17,
+        "y": 15,
         "w": 3,
         "h": 2
       },
@@ -1989,7 +1989,7 @@
       },
       "gridPos": {
         "x": 9,
-        "y": 17,
+        "y": 15,
         "w": 3,
         "h": 2
       },
@@ -2064,7 +2064,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 17,
+        "y": 15,
         "w": 3,
         "h": 2
       },
@@ -2144,7 +2144,7 @@
       },
       "gridPos": {
         "x": 15,
-        "y": 17,
+        "y": 15,
         "w": 3,
         "h": 2
       },
@@ -2203,7 +2203,7 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 17,
+        "y": 15,
         "w": 3,
         "h": 2
       },
@@ -2283,7 +2283,7 @@
       },
       "gridPos": {
         "x": 21,
-        "y": 17,
+        "y": 15,
         "w": 3,
         "h": 2
       },
@@ -2332,6 +2332,86 @@
                   "text": "ACTIVE",
                   "color": "red",
                   "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 20,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9201,
+      "type": "stat",
+      "title": "Trim Switch",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"engine\" and (r._field == \"trim_switch\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "DOWN",
+                  "color": "#00bcd4",
+                  "index": 0
+                },
+                "0": {
+                  "text": "IDLE",
+                  "color": "#3d434b",
+                  "index": 1
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "#00bcd4",
+                  "index": 2
                 }
               }
             }

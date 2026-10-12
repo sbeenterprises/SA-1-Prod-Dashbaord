@@ -1050,6 +1050,63 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
        18, 12, 6, 5, unit="degree"),
 ], ["navigation"]))
 
+# Helm trim switch and J1939 DM1 fault details (can_bridge, usv722_can.hpp).
+# The trim switch is the helm button state only: trim POSITION is not on the
+# usv-722 bus (it needs the engine's NMEA 2000 gateway).
+TRIM_MAPPINGS = [{"type": "value", "options": {
+    "-1": {"text": "DOWN", "color": ACCENT, "index": 0},
+    "0": {"text": "IDLE", "color": NEUTRAL, "index": 1},
+    "1": {"text": "UP", "color": ACCENT, "index": 2}}}]
+FAULTS_MAPPINGS = [{"type": "value", "options": {
+    "0": {"text": "NONE", "color": TILE_OK, "index": 0}}},
+                   {"type": "range", "options": {"from": 1, "to": 999, "result": {
+                       "text": "ACTIVE", "color": "red", "index": 1}}}]
+
+
+def trim_tile(x, y, w, h=2):
+    return stat("Trim Switch", flux("engine", "trim_switch", last=True),
+                x, y, w, h, mappings=TRIM_MAPPINGS, text_mode="value",
+                color_mode="background")
+
+
+# J1939 DM1 warning lamps (can_bridge writes engine.lamp_* as 0/1): one
+# tile naming the lamps that are on, most severe first, or OFF.
+LAMPS_QUERY = 'import "strings"\n' + flux(
+    "engine", ["lamp_red", "lamp_mil", "lamp_amber", "lamp_protect"],
+    last=True) + (
+    '  |> group()\n'
+    '  |> set(key: "row", value: "lamps")\n'
+    '  |> pivot(rowKey: ["row"], columnKey: ["_field"], valueColumn: "_value")\n'
+    '  |> map(fn: (r) => {\n'
+    '      on = (if exists r.lamp_red and r.lamp_red == 1.0 then "RED STOP " else "")\n'
+    '         + (if exists r.lamp_mil and r.lamp_mil == 1.0 then "MIL " else "")\n'
+    '         + (if exists r.lamp_amber and r.lamp_amber == 1.0 then "AMBER " else "")\n'
+    '         + (if exists r.lamp_protect and r.lamp_protect == 1.0 then "PROTECT " else "")\n'
+    '      return {_value: if on == "" then "OFF" else strings.trimSpace(v: on)}\n'
+    '  })\n')
+DTC_TEXT_MAPPINGS = [{"type": "value", "options": {
+    "NONE": {"text": "NONE", "color": TILE_OK, "index": 0},
+    "N/A": {"text": "N/A", "color": NEUTRAL, "index": 1}}},
+                     {"type": "regex", "options": {"pattern": "^SPN.*", "result": {
+                         "color": "red", "index": 2}}}]
+LAMPS_MAPPINGS = [{"type": "value", "options": {
+    "OFF": {"text": "OFF", "color": NEUTRAL, "index": 0}}},
+                  {"type": "regex", "options": {"pattern": "^RED.*", "result": {
+                      "color": "red", "index": 1}}},
+                  {"type": "regex", "options": {"pattern": ".+", "result": {
+                      "color": "yellow", "index": 2}}}]
+
+
+# engine.dtc_text is "NONE", "N/A" or "SPN 110 FMI 3 ... (x2); SPN ...":
+# the tile shows the first fault and how many more there are.
+DTC_TEXT_QUERY = 'import "strings"\n' + flux(
+    "engine", "dtc_text", last=True,
+    extra=('  |> map(fn: (r) => {\n'
+           '      parts = strings.split(v: r._value, t: "; ")\n'
+           '      n = length(arr: parts)\n'
+           '      return {r with _value: if n > 1 then parts[0] + " (+" + string(v: n - 1) + " more)" else r._value}\n'
+           '  })'))
+
 # -------------------------------------------------------------- FR-3 Autopilot
 # Single-screen layout (24 x 23 incl. band): helm safety tiles, command
 # readouts, instruments, desired-vs-actual, governor + errors.
@@ -1065,8 +1122,8 @@ crash_mappings = state_map([
 ])
 
 DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
-    # One screen (17 content rows): two tile rows (h2), dials (h5), three
-    # trends (h6), CAN row (h2).
+    # One screen: two tile rows (h2), dials (h5), three trends, CAN row (h2),
+    # trim row (h2); fit_to_screen trims the trends to fit.
     # A — helm state and the Alpha mission's safety latches.
     stat("Helm State", last_str("mission_state", "helm_state"), 0, 0, 3, 2,
          mappings=helm_state_mappings, text_mode="value",
@@ -1191,7 +1248,15 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
              "0": {"text": "NONE", "color": TILE_OK, "index": 0}}},
                    {"type": "range", "options": {"from": 1, "to": 999, "result": {
                        "text": "ACTIVE", "color": "red", "index": 1}}}]),
+    # G — helm trim switch (fault lamps and codes are on the CAN Bus page).
+    trim_tile(0, 17, 24),
 ], ["autopilot"], refresh="1s"))
+# The trim tile gets its own id and the shared counter is put back, so
+# adding it does not renumber panels on other pages.
+_ap = DASHBOARDS[-1]["panels"][-1:]
+for _i, _p in enumerate(_ap):
+    _p["id"] = 9201 + _i
+_id[0] -= len(_ap)
 
 # ------------------------------------------- Autopilot Live (troubleshooting)
 # The same helm instruments as the Autopilot page, drawn large for sea trials
@@ -1222,27 +1287,30 @@ _id_before_live = _id[0]
 _LIVE = dashboard("usv-autopilot-live", "Autopilot Live", [
     # One screen (17 content rows): status tiles (h2), large dials (h9),
     # trends (h6).
-    stat("Helm State", last_str("mission_state", "helm_state"), 0, 0, 4, 2,
+    stat("Helm State", last_str("mission_state", "helm_state"), 0, 0, 3, 2,
          mappings=helm_state_mappings, text_mode="value",
          color_mode="background"),
     stat("Steering Mode", flux("autopilot", "steer_pc_control", last=True),
-         4, 0, 4, 2, text_mode="value", color_mode="background",
+         3, 0, 3, 2, text_mode="value", color_mode="background",
          mappings=[{"type": "value", "options": {
              "0": {"text": "HELM", "color": "orange", "index": 0},
              "1": {"text": "AUTOPILOT", "color": TILE_OK, "index": 1}}}]),
-    stat("Gear", flux("engine", "gear", last=True), 8, 0, 4, 2,
+    stat("Gear", flux("engine", "gear", last=True), 6, 0, 3, 2,
          text_mode="value", color_mode="background",
          mappings=[{"type": "value", "options": {
              "-1": {"text": "REVERSE", "color": "orange", "index": 0},
              "0": {"text": "NEUTRAL", "color": NEUTRAL, "index": 1},
              "1": {"text": "FORWARD", "color": TILE_OK, "index": 2}}}]),
     stat("Engine Thrust", flux("engine", "throttle_pct", last=True),
-         12, 0, 4, 2, unit="percent", decimals=0, graph_mode="area"),
+         9, 0, 3, 2, unit="percent", decimals=0, graph_mode="area"),
+    trim_tile(12, 0, 3),
+    stat("Engine Faults", flux("engine", "active_dtcs", last=True), 15, 0, 3, 2,
+         mappings=FAULTS_MAPPINGS, text_mode="value", color_mode="background"),
     stat("Speed Error", flux("autopilot", "speed_error", last=True),
-         16, 0, 4, 2, unit="velocityknot", decimals=2,
+         18, 0, 3, 2, unit="velocityknot", decimals=2,
          thresholds=[(None, OK), (1, "yellow"), (2, "red")],
          graph_mode="area"),
-    stat("XTE", flux("nav", "cross_track_error", last=True), 20, 0, 4, 2,
+    stat("XTE", flux("nav", "cross_track_error", last=True), 21, 0, 3, 2,
          unit=UNIT_M, decimals=1, graph_mode="area"),
     big_dial(instrument("Rudder Angle",
                         [target(flux("autopilot", "rudder_actual", last=True)),
@@ -1428,13 +1496,22 @@ DASHBOARDS.append(dashboard("usv-canbus", "CAN Bus", [
          thresholds=[(None, TILE_OK), (1, "red")], color_mode="background"),
     stat("Active PGNs", flux("canbus", "active_pgns", last=True), 20, 0, 4, 3,
          decimals=0),
+    # Helm trim switch and engine / helm faults (J1939 DM1 from address 210).
+    trim_tile(0, 3, 4),
+    stat("Active Faults", flux("engine", "active_dtcs", last=True), 4, 3, 4, 2,
+         mappings=FAULTS_MAPPINGS, text_mode="value", color_mode="background"),
+    stat("Fault Lamps", LAMPS_QUERY, 8, 3, 5, 2, string_value=True,
+         mappings=LAMPS_MAPPINGS, text_mode="value", color_mode="background"),
+    stat("Fault Codes", DTC_TEXT_QUERY, 13, 3, 11, 2, string_value=True,
+         mappings=DTC_TEXT_MAPPINGS,
+         text_mode="value", color_mode="background"),
     ts("Message Rate", [target(flux("canbus", "msg_rate"), "msgs/s")],
-       0, 3, 12, 7),
+       0, 5, 12, 7),
     ts("Bus Utilization", [target(flux("canbus", "utilization_pct"), "util %")],
-       12, 3, 12, 7, unit="percent", min_=0, max_=100),
+       12, 5, 12, 7, unit="percent", min_=0, max_=100),
     ts("Error / Dropped Frames",
        [target(flux("canbus", ["error_frames", "dropped_frames"]))],
-       0, 10, 12, 7),
+       0, 12, 12, 7),
     panel("table", "PGN Frequency (msgs/s)",
           [target('from(bucket: "telemetry")\n'
                   '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
@@ -1445,9 +1522,21 @@ DASHBOARDS.append(dashboard("usv-canbus", "CAN Bus", [
                   '  |> keep(columns: ["pgn", "_value"])\n'
                   '  |> sort(columns: ["_value"], desc: true)\n'
                   '  |> rename(columns: {pgn: "PGN / CAN id", _value: "msgs/s"})\n')],
-          12, 10, 12, 7,
+          12, 12, 12, 7,
           options={"showHeader": True}),
 ], ["canbus"]))
+# The four helm / fault tiles get their own id range and the shared counter
+# is put back, so adding them does not renumber panels on other pages.
+_can = DASHBOARDS[-1]["panels"]
+_new = [p for p in _can if p["title"] in ("Trim Switch", "Active Faults",
+                                           "Fault Lamps", "Fault Codes")]
+_first = min(p["id"] for p in _new)
+for _i, _p in enumerate(_new):
+    _p["id"] = 9101 + _i
+for _p in _can:
+    if _p not in _new and _p["id"] > _first:
+        _p["id"] -= len(_new)
+_id[0] -= len(_new)
 
 # ------------------------------------------------ FR-12 Pre-Departure Readiness
 # Every check is decided onboard by grafana_bridge (usv::EvaluateReadiness in
@@ -1914,7 +2003,7 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
        overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
                    "properties": [{"id": "unit", "value": "s"},
                                   {"id": "custom.axisPlacement", "value": "right"}]}]),
-], ["traffic"]))
+], ["traffic"], refresh="1s"))
 
 # Contacts table: the join emits columns alphabetically; fix the reading
 # order and drop the working columns.

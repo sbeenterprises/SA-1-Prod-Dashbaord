@@ -150,7 +150,15 @@ usv-722 CAN (can_bridge, usv722_can.hpp; RPM and temperatures are not on
 its bus): key_state (0 off, 1 run, 2 start), gear and gear_helm (-1 reverse,
 0 neutral, 1 forward; to the engine / at the lever), throttle_pct and
 throttle_helm_pct (% thrust, J1939 EEC2), trim_switch (1 up, -1 down,
-0 idle), active_dtcs (0/1 from J1939 DM1, address 210), fault_lamps.
+0 idle; the helm button only, trim position is not on this bus), and the
+J1939 DM1 from address 210 (single frame, or the BAM multi-frame form when
+two or more faults are active): active_dtcs (count of active faults),
+fault_lamps (raw lamp byte), lamp_protect / lamp_amber / lamp_red / lamp_mil
+(0/1, lamp on), dtc_spn / dtc_fmi / dtc_oc (first active fault: suspect
+parameter number, failure mode, occurrence count; 0 when none) and the string
+dtc_text ("NONE", "N/A" when the fault bytes are not available, or
+"SPN 110 FMI 3 voltage high / short to high (x1); SPN ..." listing every
+active fault).
 Not produced in the simulation environment (no engine).
 
 ### electrical (FR-4) — sources: CAN bridge (PGN 127508), Signal K

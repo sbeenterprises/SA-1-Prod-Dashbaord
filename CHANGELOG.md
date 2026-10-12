@@ -5,6 +5,41 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+## [1.2.19] - 2026-10-12 (trim switch and fault details)
+
+CAN bridge and dashboards. Update with `bash deploy/update.sh v1.2.19`, then
+Ctrl+F5 in the browser. The installer rebuilds and restarts the CAN bridge
+(usv-can-bridge); no MOOS restart needed.
+
+### Added
+- Trim switch tile (UP / DOWN / IDLE, the helm's trim button; trim position
+  is not on the usv-722 bus) on the Autopilot page (its own row), Autopilot
+  Live and CAN Bus.
+- CAN bridge decodes the J1939 DM1 fault message from address 210 in full:
+  each warning lamp (lamp_protect, lamp_amber, lamp_red, lamp_mil), the first
+  fault's SPN / FMI / occurrence count, the number of active faults, and a
+  summary text (dtc_text) listing every fault with its failure-mode meaning.
+  Two or more faults arrive as a J1939 broadcast (TP.CM BAM + TP.DT), which
+  the bridge now reassembles; before, only the single-frame form was read.
+- CAN Bus page: Trim Switch, Active Faults, Fault Lamps and Fault Codes row.
+- Autopilot Live: Engine Faults tile.
+
+### Changed
+- Traffic page refreshes every 1 s (was 5 s).
+- Autopilot page: the three trend charts are shorter (the trim row is added
+  and the page still fits one screen).
+- engine.active_dtcs is now the number of active faults (was 0/1); the
+  Engine Faults tiles read NONE / ACTIVE as before.
+
+### Verified
+- usv722_can_test: 74 passed (37 new: lamps, SPN / FMI / OC, 19-bit SPN,
+  not-available bytes, summary text, BAM reassembly, lost packet, other PGN
+  and other sender ignored). can_bridge built with -Wall -Wextra, no
+  warnings, and run end to end on a scripted frame sequence (trim up / down,
+  one fault, three faults via BAM, cleared): every value written correctly.
+- 205 Flux queries type-check; 10 of 14 dashboards byte-identical to
+  v1.2.18.
+
 ## [1.2.18] - 2026-10-12 (live monitoring)
 
 Dashboards and installer. Update with `bash deploy/update.sh v1.2.18` (the
