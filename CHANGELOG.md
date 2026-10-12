@@ -27,6 +27,12 @@ needed.
   default floor is 5 s, which hides the 1 s option). `GRAFANA_MIN_REFRESH`
   in usv.env overrides it. Other pages keep 5 s.
 
+### Fixed
+- Autopilot and Autopilot Live list 1 s in their refresh picker. Grafana
+  drops a refresh interval that is not in the picker's list (the built-in
+  list starts at 5 s), so the first 1 s build loaded with auto-refresh off
+  (seen on usv-722).
+
 ## [1.2.17] - 2026-10-10 (Replay page tidy-up)
 
 Dashboards only. Update with `bash deploy/update.sh v1.2.17`, then Ctrl+F5

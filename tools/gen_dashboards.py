@@ -2626,9 +2626,19 @@ def check_titles(d):
 DASHBOARDS.append(_LIVE)  # last: see the Autopilot Live section
 
 
+LIVE_REFRESH_INTERVALS = ["1s", "2s", "5s", "10s", "30s", "1m", "5m",
+                          "15m", "30m", "1h"]
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     for d in DASHBOARDS:
+        if d.get("refresh") == "1s":
+            # Grafana keeps a dashboard's refresh only if it is in the
+            # picker's list, and the built-in list starts at 5 s: without
+            # this, "1s" is dropped and auto-refresh is off (usv-722,
+            # 2026-10-12). Needs min_refresh_interval <= 1s (install.sh).
+            d["timepicker"] = {"refresh_intervals": LIVE_REFRESH_INTERVALS}
         add_header_band(d)
         fit_to_screen(d)
         size_compact_tiles(d)
