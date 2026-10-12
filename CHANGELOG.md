@@ -5,6 +5,28 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
+Dashboards and installer. Update with `bash deploy/update.sh` (the installer
+step allows the 1 s refresh), then Ctrl+F5 in the browser; no MOOS restart
+needed.
+
+### Added
+- Autopilot Live (`usv-autopilot-live`): the rudder, throttle and
+  heading-error dials drawn large for sea trials and troubleshooting, with
+  helm state, steering mode, gear, engine thrust, speed error and XTE tiles
+  and the heading / rudder / speed trends over the last 5 minutes. Refreshes
+  every 1 s. Dial text, rails and needle scale with the panel size (1x to
+  3x). Opened from the link on each dial of the Autopilot page; not in the
+  tab row, which is full at 1532 px. It uses only queries the Autopilot page
+  already runs, so no bridge or database change.
+
+### Changed
+- Autopilot page refreshes every 1 s (was 5 s): the dials followed the boat
+  3 to 4 s late because of the refresh interval, not the data path
+  (grafana_bridge writes at up to max_rate_hz).
+- deploy/install.sh sets Grafana's `min_refresh_interval` to 1 s (Grafana's
+  default floor is 5 s, which hides the 1 s option). `GRAFANA_MIN_REFRESH`
+  in usv.env overrides it. Other pages keep 5 s.
+
 ## [1.2.17] - 2026-10-10 (Replay page tidy-up)
 
 Dashboards only. Update with `bash deploy/update.sh v1.2.17`, then Ctrl+F5

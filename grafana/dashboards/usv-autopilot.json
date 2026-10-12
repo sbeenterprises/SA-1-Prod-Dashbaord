@@ -8,7 +8,7 @@
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
-  "refresh": "5s",
+  "refresh": "1s",
   "editable": true,
   "style": "dark",
   "time": {
@@ -1326,7 +1326,14 @@
       "swiftMeta": {
         "kind": "rudder",
         "preview": 3
-      }
+      },
+      "links": [
+        {
+          "title": "Open Autopilot Live (large dials, 1 s)",
+          "url": "/d/usv-autopilot-live?var-vessel=${vessel}",
+          "targetBlank": false
+        }
+      ]
     },
     {
       "id": 57,
@@ -1370,7 +1377,14 @@
         "split": 5,
         "sub": "COMMANDED THRUST",
         "preview": 64
-      }
+      },
+      "links": [
+        {
+          "title": "Open Autopilot Live (large dials, 1 s)",
+          "url": "/d/usv-autopilot-live?var-vessel=${vessel}",
+          "targetBlank": false
+        }
+      ]
     },
     {
       "id": 58,
@@ -1435,7 +1449,14 @@
         "split": 6,
         "sub": "OFF COURSE",
         "preview": 1.8
-      }
+      },
+      "links": [
+        {
+          "title": "Open Autopilot Live (large dials, 1 s)",
+          "url": "/d/usv-autopilot-live?var-vessel=${vessel}",
+          "targetBlank": false
+        }
+      ]
     },
     {
       "id": 59,

@@ -331,6 +331,17 @@ elif grep -q '^\[dashboards\]' /etc/grafana/grafana.ini; then
 else
   printf '\n[dashboards]\ndefault_home_dashboard_path = %s\n' "$HOME_DASH" >> /etc/grafana/grafana.ini
 fi
+# Live monitoring: Grafana refuses dashboard refresh faster than 5 s by
+# default. The Autopilot pages refresh every 1 s, so allow it.
+# GRAFANA_MIN_REFRESH in usv.env overrides (e.g. 2s on a slower computer).
+MIN_REFRESH=${GRAFANA_MIN_REFRESH:-1s}
+if grep -q '^;*min_refresh_interval *=' /etc/grafana/grafana.ini; then
+  sed -i "s|^;*min_refresh_interval *=.*|min_refresh_interval = $MIN_REFRESH|" /etc/grafana/grafana.ini
+elif grep -q '^\[dashboards\]' /etc/grafana/grafana.ini; then
+  sed -i "s|^\[dashboards\]|[dashboards]\nmin_refresh_interval = $MIN_REFRESH|" /etc/grafana/grafana.ini
+else
+  printf '\n[dashboards]\nmin_refresh_interval = %s\n' "$MIN_REFRESH" >> /etc/grafana/grafana.ini
+fi
 
 # ---------------------------------------------------------------- email (SMTP)
 # Alert emails leave the vessel only when Grafana has an SMTP relay. The

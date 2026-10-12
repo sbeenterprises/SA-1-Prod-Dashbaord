@@ -398,7 +398,7 @@ emails while it runs; always stop it before real operations.
 | Fleet instances | VESSELS in usv.env |
 | Firewall sources for Grafana | GRAFANA_ALLOW_FROM in usv.env (CIDR list; unset = LAN subnet + 100.64.0.0/10; `none` = leave ufw alone) |
 | Alert recipients | grafana/provisioning/alerting/contact-points.yml |
-| Dashboard refresh | per dashboard, default 5 s (1–5 s per SRS) |
+| Dashboard refresh | per dashboard, default 5 s; Autopilot and Autopilot Live 1 s (1–5 s per SRS; Grafana floor `GRAFANA_MIN_REFRESH`, default 1 s) |
 
 ## Roles (Operator / Engineer / Administrator)
 Grafana OSS: Administrator -> Grafana Admin, Engineer -> Editor,

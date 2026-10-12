@@ -1191,7 +1191,119 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
              "0": {"text": "NONE", "color": TILE_OK, "index": 0}}},
                    {"type": "range", "options": {"from": 1, "to": 999, "result": {
                        "text": "ACTIVE", "color": "red", "index": 1}}}]),
-], ["autopilot"]))
+], ["autopilot"], refresh="1s"))
+
+# ------------------------------------------- Autopilot Live (troubleshooting)
+# The same helm instruments as the Autopilot page, drawn large for sea trials
+# and troubleshooting, with a 1 s refresh and a 5-minute window. Not in the
+# tab row (the row is full at 1532 px); opened from the link on each dial of
+# the Autopilot page. Every query is one the Autopilot page already uses.
+LIVE_SCALE_JS = (
+    "// Fonts, rails and needle grow with the panel (1x at 200 px high,\n"
+    "// capped at 3x); falls back to 1x if the chart size is unavailable.\n"
+    "const S = (() => { try { const h = context.panel.chart.getHeight();\n"
+    "  return h > 0 ? Math.max(1, Math.min(3, h / 200)) : 1; }\n"
+    "  catch (e) { return 1; } })();\n")
+
+
+def big_dial(p):
+    """Scale an ECharts instrument's fixed pixel sizes with the panel."""
+    if p.get("type") != "volkovlabs-echarts-panel":
+        return p
+    js = p["options"]["getOption"]
+    assert js.startswith(ECH_PRELUDE), p["title"]
+    body = _re.sub(r"\b(fontSize|width|length|distance|size): (-?\d+(?:\.\d+)?)\b",
+                   r"\1: \2 * S", js[len(ECH_PRELUDE):])
+    p["options"]["getOption"] = ECH_PRELUDE + LIVE_SCALE_JS + body
+    return p
+
+
+_id_before_live = _id[0]
+_LIVE = dashboard("usv-autopilot-live", "Autopilot Live", [
+    # One screen (17 content rows): status tiles (h2), large dials (h9),
+    # trends (h6).
+    stat("Helm State", last_str("mission_state", "helm_state"), 0, 0, 4, 2,
+         mappings=helm_state_mappings, text_mode="value",
+         color_mode="background"),
+    stat("Steering Mode", flux("autopilot", "steer_pc_control", last=True),
+         4, 0, 4, 2, text_mode="value", color_mode="background",
+         mappings=[{"type": "value", "options": {
+             "0": {"text": "HELM", "color": "orange", "index": 0},
+             "1": {"text": "AUTOPILOT", "color": TILE_OK, "index": 1}}}]),
+    stat("Gear", flux("engine", "gear", last=True), 8, 0, 4, 2,
+         text_mode="value", color_mode="background",
+         mappings=[{"type": "value", "options": {
+             "-1": {"text": "REVERSE", "color": "orange", "index": 0},
+             "0": {"text": "NEUTRAL", "color": NEUTRAL, "index": 1},
+             "1": {"text": "FORWARD", "color": TILE_OK, "index": 2}}}]),
+    stat("Engine Thrust", flux("engine", "throttle_pct", last=True),
+         12, 0, 4, 2, unit="percent", decimals=0, graph_mode="area"),
+    stat("Speed Error", flux("autopilot", "speed_error", last=True),
+         16, 0, 4, 2, unit="velocityknot", decimals=2,
+         thresholds=[(None, OK), (1, "yellow"), (2, "red")],
+         graph_mode="area"),
+    stat("XTE", flux("nav", "cross_track_error", last=True), 20, 0, 4, 2,
+         unit=UNIT_M, decimals=1, graph_mode="area"),
+    big_dial(instrument("Rudder Angle",
+                        [target(flux("autopilot", "rudder_actual", last=True)),
+                         target(flux("autopilot", "rudder_cmd", last=True),
+                                ref="B")],
+                        0, 2, 8, 9, rudder_js(),
+                        {"kind": "rudder", "preview": 3})
+             if ANALOG else
+             stat("Rudder Angle", flux("autopilot", "rudder_actual", last=True),
+                  0, 2, 8, 9, unit="degree", decimals=1)),
+    big_dial(meter("Throttle", flux("autopilot", "throttle_cmd", last=True),
+                   8, 2, 8, 9, 0, 100, "%", zones=None, decimals=0, split=5,
+                   sub="COMMANDED THRUST", preview=64,
+                   fallback_thresholds=[(None, ACCENT)])),
+    big_dial(meter("Heading Error", flux("autopilot", "heading_error",
+                                         last=True),
+                   16, 2, 8, 9, -45, 45, "°",
+                   zones=[(-25, ZRED), (-8, ZYELLOW), (8, ZGREEN),
+                          (25, ZYELLOW), (45, ZRED)],
+                   decimals=1, split=6, sub="OFF COURSE", preview=1.8,
+                   fallback_thresholds=[(None, OK)])),
+    ts("Heading — desired vs actual",
+       [target(flux("autopilot", ["desired_heading", "actual_heading"]))],
+       0, 11, 8, 6, unit="degree", min_=0, max_=360),
+    ts("Rudder — actuator cmd / actual (°), PID (%)",
+       [target(flux("autopilot", "rudder_actuator_cmd"), "actuator command"),
+        target(flux("autopilot", "rudder_actual"), "actual", ref="B"),
+        target(flux("autopilot", "rudder_cmd"), "PID output",
+               ref="C")],
+       8, 11, 8, 6, unit="degree",
+       overrides=[{"matcher": {"id": "byFrameRefID", "options": "C"},
+                   "properties": [{"id": "unit", "value": "percent"},
+                                  {"id": "custom.axisPlacement",
+                                   "value": "right"},
+                                  {"id": "custom.lineStyle",
+                                   "value": {"fill": "dash",
+                                             "dash": [6, 4]}}]}]),
+    ts("Speed — desired / cap / commanded / actual",
+       [target(flux("autopilot", ["desired_speed", "speed_cap", "cmd_speed",
+                                  "actual_speed"]))],
+       16, 11, 8, 6, unit="velocityknot"),
+], ["autopilot"], refresh="1s", time_from="now-5m")
+# Own id range for this page, and the shared counter put back, so adding
+# the page does not renumber panels on every other dashboard.
+for _i, _p in enumerate(_LIVE["panels"]):
+    _p["id"] = 9001 + _i
+_id[0] = _id_before_live
+# Appended last (just before main) for the same reason: the header band
+# ids are handed out in DASHBOARDS order.
+
+# Autopilot page dials link to the large live view (panel link: no extra
+# chip in the full tab row).
+LIVE_LINK = {"title": "Open Autopilot Live (large dials, 1 s)",
+             "url": "/d/usv-autopilot-live?var-vessel=${vessel}",
+             "targetBlank": False}
+for _d in DASHBOARDS:
+    if _d["uid"] == "usv-autopilot":
+        for _p in _d["panels"]:
+            if _p.get("title") in ("Rudder Angle", "Throttle", "Heading Error") \
+                    and _p["gridPos"]["h"] >= 5:
+                _p.setdefault("links", []).append(dict(LIVE_LINK))
 
 # ---------------------------------------------------------- FR-4 Vessel Health
 DASHBOARDS.append(dashboard("usv-health", "Vessel Health", [
@@ -2509,6 +2621,9 @@ def check_titles(d):
                        f'{_title_px(t):.0f} px > {room - TITLE_SLACK:.0f} px)')
     if cut:
         raise SystemExit("panel titles cut at 1532 px:\n  " + "\n  ".join(cut))
+
+
+DASHBOARDS.append(_LIVE)  # last: see the Autopilot Live section
 
 
 def main():
