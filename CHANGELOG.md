@@ -5,9 +5,11 @@ Keep a Changelog; versions are git tags on `main`.
 
 ## [Unreleased]
 
-Dashboards and installer. Update with `bash deploy/update.sh` (the installer
-step allows the 1 s refresh), then Ctrl+F5 in the browser; no MOOS restart
-needed.
+## [1.2.18] - 2026-10-12 (live monitoring)
+
+Dashboards and installer. Update with `bash deploy/update.sh v1.2.18` (the
+installer step allows the 1 s refresh), then Ctrl+F5 in the browser; no MOOS
+restart needed.
 
 ### Added
 - Autopilot Live (`usv-autopilot-live`): the rudder, throttle and
