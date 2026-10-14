@@ -10,8 +10,8 @@ on the boat needs.
 |---|---|
 | Onboard computer | OnLogic K800, Ubuntu 22.04.5, hostname `usv-722`, user `douglas` |
 | Repo checkout | `~/Documents/SA-1-Prod-Dashbaord` (GitHub `sbeenterprises/SA-1-Prod-Dashbaord`, install from a tag, never from `main`) |
-| Installed release | v1.2.20, updated 2026-10-13 (see `git -C ~/Documents/SA-1-Prod-Dashbaord describe --tags`); previous v1.2.19, backup of the configuration in `/etc/usv/usv.env.bak-2026-10-13` |
-| Configuration | `/etc/usv/usv.env` (root only): `VESSEL_ID=usv-722`, `GRAFANA_PORT=3100`, `CAN_INTERFACE=slcan0`, `ECHARTS_PANEL_VERSION=7.2.5`, SMTP not yet set; engine profile `ENGINE_TYPE=yamaha_outboard`, `ENGINE_MODEL="Yamaha Outboard Engine F115 B 4-Stroke"` (v1.2.21), `ENGINE_SOURCE=signalk`, `HELM_PROFILE=usv722`; `SIGNALK_FUEL_TANK=none` (see Known gaps) |
+| Installed release | v1.2.22, updated 2026-10-13 from v1.2.19 through v1.2.20 and v1.2.21 (see `git -C ~/Documents/SA-1-Prod-Dashbaord describe --tags`); configuration backup from before the engine profile in `/etc/usv/usv.env.bak-2026-10-13` |
+| Configuration | `/etc/usv/usv.env` (root only): `VESSEL_ID=usv-722`, `GRAFANA_PORT=3100`, `CAN_INTERFACE=slcan0`, `ECHARTS_PANEL_VERSION=7.2.5`, SMTP not yet set; engine profile `ENGINE_TYPE=yamaha_outboard`, `ENGINE_MODEL="Yamaha Outboard Engine F115 B 4-Stroke"`, `ENGINE_SOURCE=signalk`, `HELM_PROFILE=usv722`; `SIGNALK_FUEL_TANK=none` and `SIGNALK_BATTERY_CURRENT_SIGN=-1` (see Known gaps) |
 | Grafana | `http://<obc-ip>:3100`, user `admin`, password in `usv.env`; folder "Swift Autonomous Dashboard", home page Readiness |
 | InfluxDB | localhost:8086, org `usv`, buckets `telemetry` (30 d), `events` and `telemetry_1m` (365 d) |
 | Position source | VectorNav VN-x00 INS through the Signal K plugin `signalk-vectornav-vnins` (no MOOS NAV_LAT) |
@@ -126,7 +126,7 @@ All are enabled at boot. `usv-simulator` must stay disabled on the vessel
 Tags only. One command, from the repo checkout:
 
 ```bash
-cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.20
+cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.22
 ```
 
 It fetches the tag, re-runs the installer (rebuilds and restarts the
@@ -219,7 +219,7 @@ retention (`du -sh /var/lib/influxdb`).
 | Electrical / Power panels No data | `curl -s localhost:3000/signalk/v1/api/vessels/self/electrical`: battery instance name; set SIGNALK_BATTERY if it is not the first one |
 | AIS contacts thousands of km away, Rel. Bearing wrong | MOOS NAV_LAT/NAV_LONG = 0 (no RMC/HDT reaching iDivisorNMEA); the dashboard falls back to Signal K and logs one "traffic" warning; fix on the mission side |
 
-## Known gaps on this hull (as of v1.2.20)
+## Known gaps on this hull (as of v1.2.22)
 
 - Own-ship navigation in MOOS: iDivisorNMEA posts NAV_LAT/NAV_LONG/
   NAV_HEADING = 0 because its UDP feed (port 10111) carries only AIS; the
@@ -244,6 +244,13 @@ retention (`du -sh /var/lib/influxdb`).
   the MMSI when convenient so AIS targets are told apart by context.
 - Camera Offline alert fires for the five cameras not yet powered;
   disable them in Frigate until cabled (Cameras section above).
+- Battery current sign: the Victron shunt reports charging as negative
+  current (−13 A at 13.86 V on charge, 2026-10-13), the opposite of the
+  Signal K convention. `SIGNALK_BATTERY_CURRENT_SIGN=-1` corrects Battery
+  Current, the Charging state (derived from the current, the shunt
+  publishes no charging mode) and Total Power, which reads negative while
+  charging because it is the power drawn from the battery. Points written
+  before 2026-10-13 ~23:35 boat time keep the old sign in the trends.
 - State of charge and charging mode: the VE.Direct shunt publishes
   voltage and current only.
 - ENC: none fitted; `enc_fitted = false`.
