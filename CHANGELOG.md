@@ -3,6 +3,20 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.27] - 2026-10-14 (Min CPA ignores far closing ships)
+
+grafana_bridge only. Update with `bash deploy/update.sh v1.2.27`, then
+restart the mission (grafana_bridge changed). No usv.env change.
+
+### Fixed
+- Traffic Min CPA / TCPA (tiles, Closest CPA / TCPA trend, radar.cpa_m):
+  a contact closing on its CPA ranked ahead of every opening contact, so an
+  AIS ship about 40 nm out closing to a CPA of about 75 km took over from
+  two contacts opening at 1.7 km (usv-722, 2026-10-14 01:13 to 01:27) and
+  pushed the trend to 80,000 m. Closing-first now applies only to a CPA
+  within 12 nm; beyond that a contact ranks by CPA with the rest. Risk
+  levels, the High Risk count and the collision alert are unchanged.
+
 ## [1.2.26] - 2026-10-14 (Traffic table and trend labels)
 
 Dashboards only. Update with `bash deploy/update.sh v1.2.26`, Ctrl+F5. No

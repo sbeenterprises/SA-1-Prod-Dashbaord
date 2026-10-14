@@ -1284,17 +1284,14 @@ private:
         if (n == 0) alerted_contacts_.clear();
 
         int reports = 0, radar_only = 0, high = 0, medium = 0;
-        double min_cpa = -1, min_tcpa = -1, closest = -1;
+        usv::MinCpaPick pick;
+        double closest = -1;
         for (const auto& [id, c] : contacts_.contacts()) {
             if (c.source == "report") ++reports; else ++radar_only;
             if (c.risk == 2) ++high; else if (c.risk == 1) ++medium;
-            // Closing contacts rank first; an opening contact's CPA is its
-            // current range (ComputeCpa), reported with TCPA -1 = opening.
-            const bool closing = c.tcpa_s >= 0, best_closing = min_tcpa >= 0;
-            if (c.cpa_m >= 0 && (min_cpa < 0 || (closing && !best_closing) ||
-                                 (closing == best_closing && c.cpa_m < min_cpa))) {
-                min_cpa = c.cpa_m; min_tcpa = c.tcpa_s;
-            }
+            // Closing contacts within 12 nm rank first; an opening contact's
+            // CPA is its current range (ComputeCpa), TCPA -1 = opening.
+            pick.Add(c.cpa_m, c.tcpa_s);
             if (c.range_m >= 0 && (closest < 0 || c.range_m < closest)) closest = c.range_m;
             const std::string tags = "contact=" + EscapeTag(id) +
                                      ",source=" + c.source;
@@ -1334,6 +1331,7 @@ private:
                                last_active_behavior_.find("colreg") != std::string::npos ||
                                last_active_behavior_.find("avoid") != std::string::npos;
         const bool extremis = !colav_extremis_.empty();
+        const double min_cpa = pick.cpa, min_tcpa = pick.tcpa;
         const int risk_level = high ? 2 : (medium ? 1 : 0);
         telemetry_->field("traffic", "", "contacts", n);
         telemetry_->field("traffic", "", "reports", reports);

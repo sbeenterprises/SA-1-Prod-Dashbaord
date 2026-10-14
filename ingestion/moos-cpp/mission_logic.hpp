@@ -200,6 +200,26 @@ inline bool ParseLatLon(const std::string& s, double* lat, double* lon) {
     return true;
 }
 
+// --------------------------------------------- Min CPA across the contacts
+// The traffic summary's Min CPA / TCPA. A contact still closing on its
+// closest approach ranks ahead of one already opening (whose CPA is just its
+// current range), but only within kMinCpaRankM: an AIS ship 40 nm out that
+// is slowly closing is no more relevant than one opening at 1 nm, and it
+// ranks with the others by CPA alone. Feed each contact with Add(); cpa -1
+// (unknown) is skipped, tcpa -1 = opening.
+constexpr double kMinCpaRankM = 12.0 * 1852.0;   // 12 nm
+struct MinCpaPick {
+    double cpa = -1.0, tcpa = -1.0;
+    bool preferred = false;
+    void Add(double c_cpa, double c_tcpa) {
+        if (c_cpa < 0) return;
+        const bool pref = c_tcpa >= 0 && c_cpa <= kMinCpaRankM;
+        if (cpa < 0 || (pref && !preferred) || (pref == preferred && c_cpa < cpa)) {
+            cpa = c_cpa; tcpa = c_tcpa; preferred = pref;
+        }
+    }
+};
+
 // ------------------------------------------------ COLAV_ALERTS (iWebSocket)
 
 // One contact the helm is steering around, as iWebSocket reports it in

@@ -859,6 +859,37 @@ static void test_comms_loss_return() {
     CHECK(!ParseLatLon("29.7,-91.2x", &la, &lo));
 }
 
+static void test_min_cpa_pick() {
+    // usv-722 2026-10-14: two AIS contacts opening at ~1.7 km and a ship
+    // ~40 nm out closing to a CPA of ~75 km in two hours.
+    MinCpaPick p;
+    p.Add(1690, -1); p.Add(1824, -1); p.Add(75000, 7000);
+    CHECK(std::fabs(p.cpa - 1690) < 1e-9);
+    CHECK(p.tcpa == -1);
+    // A closing contact inside 12 nm still ranks ahead of an opening one,
+    // even with a larger CPA (the TCPA is what the operator watches).
+    MinCpaPick q;
+    q.Add(1690, -1); q.Add(3000, 240); q.Add(75000, 7000);
+    CHECK(std::fabs(q.cpa - 3000) < 1e-9);
+    CHECK(std::fabs(q.tcpa - 240) < 1e-9);
+    // Order does not matter.
+    MinCpaPick r;
+    r.Add(75000, 7000); r.Add(3000, 240); r.Add(1690, -1);
+    CHECK(std::fabs(r.cpa - 3000) < 1e-9);
+    // Only far contacts: the smallest CPA, with its TCPA.
+    MinCpaPick f;
+    f.Add(90000, 9000); f.Add(60000, 8000);
+    CHECK(std::fabs(f.cpa - 60000) < 1e-9);
+    CHECK(std::fabs(f.tcpa - 8000) < 1e-9);
+    // Closing at exactly 12 nm is still preferred; unknown CPA is skipped.
+    MinCpaPick e;
+    e.Add(-1, 10); e.Add(500, -1); e.Add(kMinCpaRankM, 600);
+    CHECK(std::fabs(e.cpa - kMinCpaRankM) < 1e-9);
+    MinCpaPick none;
+    none.Add(-1, -1);
+    CHECK(none.cpa < 0 && none.tcpa < 0);
+}
+
 static void test_colav_alerts() {
     std::vector<ColavAlert> v;
     // The shape iWebSocket 7df059d posts (jsoncpp FastWriter, one line).
@@ -948,6 +979,7 @@ int main() {
     test_camera_readiness();
     test_comms_loss_return();
     test_colav_alerts();
+    test_min_cpa_pick();
 
     std::printf("mission_logic_test: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;

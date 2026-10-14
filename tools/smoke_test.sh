@@ -471,6 +471,12 @@ EOF
     sleep 2
     P "COLAV_ALERTS=[{\"cn\":\"contato_7\",\"active\":false,\"for\":7,\"mode\":\"standon:inextremis\",$CA,\"range\":250,\"bng\":36.9,\"relBng\":316.9,\"cpa\":250,\"tcpa\":0}]"
     sleep 2
+    # Min CPA: a ship ~39 nm out closing to a 40 km CPA must not outrank a
+    # contact opening at 1.5 km (closing-first only within 12 nm).
+    P NAV_SPEED=0.1 NAV_HEADING=10 NAV_X=0 NAV_Y=0 \
+      'NODE_REPORT=NAME=near_open,TYPE=ship,TIME=1,X=0,Y=1500,SPD=3,HDG=0' \
+      'NODE_REPORT=NAME=far_close,TYPE=ship,TIME=1,X=40000,Y=60000,SPD=5,HDG=180'
+    sleep 2
   fi
   kill $DB 2>/dev/null; pkill -f moos_bridge 2>/dev/null; stop_stub
 
@@ -554,6 +560,12 @@ EOF
       && ok "avoidance end -> info event" || bad "avoidance end event missing"
     grep -q 'colav,vessel=usv-moos,contact=contato_7.* active=0' "$LINES" \
       && ok "ended avoidance held as inactive row" || bad "inactive colav row missing"
+    grep -Eq 'contacts,vessel=usv-moos,contact=far_close,source=report cpa_m=[34][0-9]{4}(\.| |,|$)' "$LINES" \
+      && ok "far closing contact tracked (CPA ~40 km)" || bad "far contact missing"
+    grep -Eq 'traffic,vessel=usv-moos .*min_cpa_m=1500(\.0*)?( |,|$)' "$LINES" \
+      && ! grep -Eq 'traffic,vessel=usv-moos .*min_cpa_m=[34][0-9]{4}(\.| |,|$)' "$LINES" \
+      && ok "Min CPA: opening 1.5 km contact beats a 40 km CPA ship closing from 39 nm" \
+      || bad "Min CPA picked the far closing contact"
     grep -q 'arrival_state="decelerating"' "$LINES"    && ok "ARRIVAL_STATE -> mission_state"           || bad "ARRIVAL_STATE not mapped"
     grep -Eq "radar,.* targets=[12]" "$LINES"            && ok "NODE_REPORT -> radar.targets counted"           || bad "contact tracking missing"
     grep -q "radar,.* closest_range_m=500" "$LINES"    && ok "contact range from NAV_X/Y (500 m)"       || bad "contact range missing"

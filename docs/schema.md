@@ -86,7 +86,10 @@ expires (contact_ttl_s), so a 30-second window is the live picture.
 avoidance_active (0 idle, 1 helm avoiding: a contact in COLAV_ALERTS or an
 avd*/colreg*/avoid* behavior running, 2 in extremis), colav_avoiding and
 colav_extremis (counts of active COLAV_ALERTS entries and of those in
-extremis; written once COLAV_ALERTS has been received), closest_range_m, min_cpa_m, min_tcpa_s, planned_course (bearing to the
+extremis; written once COLAV_ALERTS has been received), closest_range_m,
+min_cpa_m and min_tcpa_s (the smallest CPA among the contacts, a contact
+still closing to a CPA within 12 nm ranking ahead of one already opening;
+-1 = none), planned_course (bearing to the
 current waypoint), course_deviation (commanded minus planned), strings
 worst_contact and reason (with COLAV_ALERTS: the contact and COLREGS
 situation the helm is avoiding first). The legacy `radar` aggregates are
