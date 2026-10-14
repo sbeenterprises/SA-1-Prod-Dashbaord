@@ -872,20 +872,30 @@ def dashboard(uid, title, panels, tags, refresh="5s", time_from="now-30m",
         "includeAll": False, "multi": False,
     }
     # Engine name for the header chip: the engine_model tag (ENGINE_MODEL in
-    # usv.env, e.g. "Yamaha Outboard Engine F115 B 4-Stroke"), the most
-    # recently written one, so a renamed engine shows its new name at once.
+    # usv.env, e.g. "Yamaha Outboard Engine F115 B 4-Stroke") of the most
+    # recent engine point, so a renamed engine shows its new name at once;
+    # the engine_type of points written before the model tag existed; and
+    # "not reported" when the vessel has written no engine point in 30 days
+    # (an empty variable would print the bare markdown "****").
     model_var = {
         "name": "engine_model", "label": "Engine model", "type": "query",
         "datasource": DS, "hide": 2,
-        "query": ('from(bucket: "telemetry")\n'
+        "query": ('import "array"\n'
+                  'named = from(bucket: "telemetry")\n'
                   '  |> range(start: -30d)\n'
                   '  |> filter(fn: (r) => r._measurement == "engine" and r.vessel == "${vessel}")\n'
-                  '  |> filter(fn: (r) => exists r.engine_model)\n'
+                  '  |> filter(fn: (r) => exists r.engine_model or exists r.engine_type)\n'
                   '  |> last()\n'
+                  # map before group: the engine measurement holds float and
+                  # string fields (dtc_text), which group() cannot merge.
+                  '  |> map(fn: (r) => ({_time: r._time, _value: if exists r.engine_model '
+                  'then r.engine_model else r.engine_type}))\n'
                   '  |> group()\n'
+                  'none = array.from(rows: [{_time: 1970-01-01T00:00:00Z, _value: "not reported"}])\n'
+                  'union(tables: [named, none])\n'
                   '  |> sort(columns: ["_time"], desc: true)\n'
                   '  |> limit(n: 1)\n'
-                  '  |> map(fn: (r) => ({_value: r.engine_model}))\n'),
+                  '  |> keep(columns: ["_value"])\n'),
         "refresh": 2, "current": {"text": "", "value": ""},
         "includeAll": False, "multi": False,
     }

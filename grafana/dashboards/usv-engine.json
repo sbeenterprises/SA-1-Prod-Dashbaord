@@ -223,7 +223,7 @@
           "uid": "influxdb-usv"
         },
         "hide": 2,
-        "query": "from(bucket: \"telemetry\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"engine\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => exists r.engine_model)\n  |> last()\n  |> group()\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.engine_model}))\n",
+        "query": "import \"array\"\nnamed = from(bucket: \"telemetry\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"engine\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => exists r.engine_model or exists r.engine_type)\n  |> last()\n  |> map(fn: (r) => ({_time: r._time, _value: if exists r.engine_model then r.engine_model else r.engine_type}))\n  |> group()\nnone = array.from(rows: [{_time: 1970-01-01T00:00:00Z, _value: \"not reported\"}])\nunion(tables: [named, none])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)\n  |> keep(columns: [\"_value\"])\n",
         "refresh": 2,
         "current": {
           "text": "",

@@ -3,7 +3,23 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
-## [1.2.21] - unreleased (Vessel Health summary, dial legibility, engine name, charging state)
+## [1.2.22] - 2026-10-14 (engine name in the header without engine data)
+
+Update with `bash deploy/update.sh v1.2.22`, then Ctrl+F5. No MOOS restart.
+
+### Fixed
+- The header read "Engine ****" on a vessel that has written no engine
+  point yet (usv-722 before the Yamaha gateway): the engine name came only
+  from engine data. signalk_bridge now writes `engine.profile = 1` every
+  60 s with the engine_type and engine_model tags of this vessel's usv.env
+  (metadata, on every vessel whatever ENGINE_SOURCE says), and the header
+  falls back to the engine type, then to "not reported", never to an empty
+  name. The variable query maps before grouping, so the engine
+  measurement's float and string fields cannot collide.
+- tools/check_flux.js also type-checks the Flux queries behind dashboard
+  variables.
+
+## [1.2.21] - 2026-10-14 (Vessel Health summary, dial legibility, engine name, charging state)
 
 Dashboards and signalk_bridge. Update with `bash deploy/update.sh v1.2.21`,
 then Ctrl+F5. Add `ENGINE_MODEL="..."` (quoted) to /etc/usv/usv.env first;

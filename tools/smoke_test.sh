@@ -298,7 +298,8 @@ EOF
   start_stub
   NODE_PATH="${NODE_PATH:-$(npm root -g 2>/dev/null)}" nohup node "$TMP/sk.js" >/dev/null 2>&1 & SK=$!
   sleep 1
-  SIGNALK_URL=ws://127.0.0.1:3111/signalk/v1/stream \
+  SIGNALK_URL=ws://127.0.0.1:3111/signalk/v1/stream ENGINE_TYPE=yamaha_outboard \
+    ENGINE_MODEL="Yamaha Outboard Engine F115 B 4-Stroke" \
     timeout 6 "$REPO/ingestion/signalk-cpp/build/signalk_bridge" >/dev/null 2>&1
   kill $SK 2>/dev/null; stop_stub
   grep -q "nav,.* sog=" "$LINES"           && ok "SOG written"           || bad "SOG missing"
@@ -320,8 +321,9 @@ import re,sys
 t=open(sys.argv[1]).read()
 def val(pat):
     m=re.search(pat,t); return float(m.group(1)) if m else None
-E0=r'engine,vessel=\S*instance=0\S* '
-E1=r'engine,vessel=\S*instance=1\S* '
+# Tag values may carry escaped spaces (engine_model=Yamaha\ Outboard ...).
+E0=r'engine,vessel=(?:\\ |\S)*?instance=0(?:\\ |\S)* '
+E1=r'engine,vessel=(?:\\ |\S)*?instance=1(?:\\ |\S)* '
 checks=[("SOG m/s->kn", val(r'nav,\S* sog=([0-9.]+)'), 4.86, 0.05),
         ("RPM Hz->rpm (id 0)", val(E0+r'rpm=([0-9.]+)'), 2520, 1),
         ("RPM Hz->rpm (id starboard -> instance 1)", val(E1+r'rpm=([0-9.]+)'), 2400, 1),
@@ -346,6 +348,10 @@ for name,got,exp,tol in checks:
         print(f"  [PASS] {name}: {got}")
 if 'dtc_text="Low Oil Pressure (alarm)"' in t: print("  [PASS] notification -> fault text")
 else: print("  [FAIL] notification -> fault text missing"); bad=1
+# Engine profile heartbeat with the escaped model name, written at start.
+if re.search(r'engine,vessel=\S*engine_type=yamaha_outboard,engine_model=Yamaha\\ Outboard\\ Engine\\ F115\\ B\\ 4-Stroke profile=1', t):
+    print("  [PASS] engine profile heartbeat with engine_type and escaped engine_model")
+else: print("  [FAIL] engine profile heartbeat missing"); bad=1
 # A battery monitor publishes no chargingMode: +14.4 A into the battery
 # reads CHARGING; total power is the draw (V x -I), negative while charging.
 if 'charging_status="charging"' in t and val(r'electrical,\S* battery_current=([0-9.-]+)') == 14.4:
@@ -353,7 +359,7 @@ if 'charging_status="charging"' in t and val(r'electrical,\S* battery_current=([
 else: print("  [FAIL] charging state not derived from battery current"); bad=1
 sys.exit(bad)
 PY
-  [ $? -eq 0 ] && PASS=$((PASS+18)) || FAIL=$((FAIL+1))
+  [ $? -eq 0 ] && PASS=$((PASS+19)) || FAIL=$((FAIL+1))
 else
   skip "Signal K test (node/ws unavailable)"
 fi

@@ -155,7 +155,10 @@ Vessel Health and Engine dial scales) and `engine_model` (ENGINE_MODEL, e.g.
 the Fleet engine tile prints it). Fields: rpm,
 coolant_temp, oil_temp (°C), oil_pressure, intake_manifold_pressure (kPa),
 fuel_level (%), fuel_rate (L/h), runtime_h (h), percent_load,
-percent_torque, pedal_position, trim_position (%), active_dtcs (count).
+percent_torque, pedal_position, trim_position (%), active_dtcs (count),
+profile (1, written every 60 s by signalk_bridge on every vessel with the
+engine_type and engine_model tags of its usv.env, so the dashboards name the
+engine before or without any engine data; never charted).
 Signal K (signalk_bridge, signalk_engine.hpp; the Yamaha CL7 / N2K gateway
 on usv-722 through the server's n2k-signalk mapping): every
 `propulsion.<id>.*` the server publishes, `<id>` = N2K engine instance or

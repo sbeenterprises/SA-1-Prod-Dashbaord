@@ -16,9 +16,17 @@ const repo = process.argv[2] || path.join(__dirname, '..');
 const queries = new Map();
 const dir = path.join(repo, 'grafana', 'dashboards');
 for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.json'))) {
-  for (const p of JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')).panels || []) {
+  const d = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+  for (const p of d.panels || []) {
     for (const t of p.targets || []) {
       if (t.query && !queries.has(t.query)) { queries.set(t.query, `${f} / ${p.title} / ${t.refId}`); }
+    }
+  }
+  // Dashboard variables backed by a Flux query (engine_type, engine_model ...).
+  for (const v of (d.templating && d.templating.list) || []) {
+    const q = typeof v.query === 'string' ? v.query : (v.query && v.query.query);
+    if (v.type === 'query' && q && q.includes('|>') && !queries.has(q)) {
+      queries.set(q, `${f} / variable ${v.name}`);
     }
   }
 }

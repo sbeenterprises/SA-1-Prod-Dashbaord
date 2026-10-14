@@ -152,6 +152,15 @@ public:
             msg_count_ = 0;
             last_emit_ = now;
         }
+        // Engine profile heartbeat: engine.profile = 1 every 60 s with the
+        // engine_type and engine_model tags of this vessel's usv.env, so the
+        // dashboards can name the engine (header chip, dial scales) before,
+        // or without, any engine data. Metadata, not engine data: written
+        // whatever ENGINE_SOURCE says. signalk_bridge runs on every vessel.
+        if (!profile_.type.empty() && now - last_profile_ >= 60.0) {
+            writer_.field("engine", profile_.Tags("instance=0"), "profile", 1);
+            last_profile_ = now;
+        }
         writer_.flush();
     }
 
@@ -387,6 +396,7 @@ private:
     uint64_t other_count_ = 0;    // deltas for other vessels, skipped
     bool other_logged_ = false;
     double last_emit_ = 0.0;
+    double last_profile_ = -1e18;   // engine profile heartbeat, first at start
     bool up_ = false;
 };
 
