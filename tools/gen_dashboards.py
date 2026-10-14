@@ -2374,7 +2374,10 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
                                      {"id": "displayName", "value": "CPA"}]},
                      {"matcher": {"id": "byName", "options": "tcpa_s"},
                       "properties": [{"id": "unit", "value": "s"}, {"id": "decimals", "value": 0},
-                                     {"id": "displayName", "value": "TCPA"}]},
+                                     {"id": "displayName", "value": "TCPA"},
+                                     # -1 = opening (past its closest approach), as on the TCPA tile
+                                     {"id": "mappings", "value": [{"type": "value", "options": {
+                                         "-1": {"text": "opening", "index": 0}}}]}]},
                      {"matcher": {"id": "byName", "options": "bearing"},
                       "properties": [{"id": "unit", "value": "degree"}, {"id": "decimals", "value": 0},
                                      {"id": "displayName", "value": "Bearing"}]},
@@ -2428,9 +2431,16 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
        [target(flux("traffic", "min_cpa_m", extra=NO_SENTINEL), "CPA m"),
         target(flux("traffic", "min_tcpa_s", extra=NO_SENTINEL), "TCPA s", ref="B")],
        18, 12, 6, 5, unit=UNIT_M,
-       overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
+       # Flux names the series after the field (min_cpa_m / min_tcpa_s) and
+       # the palette gave both the same blue: name and colour them here.
+       overrides=[{"matcher": {"id": "byFrameRefID", "options": "A"},
+                   "properties": [{"id": "displayName", "value": "CPA"},
+                                  {"id": "color", "value": {"mode": "fixed", "fixedColor": "#5794f2"}}]},
+                  {"matcher": {"id": "byFrameRefID", "options": "B"},
                    "properties": [{"id": "unit", "value": "s"},
-                                  {"id": "custom.axisPlacement", "value": "right"}]}]),
+                                  {"id": "custom.axisPlacement", "value": "right"},
+                                  {"id": "displayName", "value": "TCPA"},
+                                  {"id": "color", "value": {"mode": "fixed", "fixedColor": "#ff9830"}}]}]),
 ], ["traffic"], refresh="1s"))
 
 # Helm Avoiding (v1.2.24) takes its own id and the shared counter is put

@@ -2173,6 +2173,20 @@
                 "value": "TCPA"
               },
               {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "opening",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
+              },
+              {
                 "id": "custom.width",
                 "value": 70
               }
@@ -2650,6 +2664,25 @@
           {
             "matcher": {
               "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "CPA"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794f2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
               "options": "B"
             },
             "properties": [
@@ -2660,6 +2693,17 @@
               {
                 "id": "custom.axisPlacement",
                 "value": "right"
+              },
+              {
+                "id": "displayName",
+                "value": "TCPA"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ff9830"
+                }
               }
             ]
           }

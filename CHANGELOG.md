@@ -3,6 +3,18 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.26] - 2026-10-14 (Traffic table and trend labels)
+
+Dashboards only. Update with `bash deploy/update.sh v1.2.26`, Ctrl+F5. No
+bridge change, no mission restart.
+
+### Fixed
+- Traffic, Contacts table: TCPA reads "opening" for a contact past its
+  closest approach instead of "-1 s", as the TCPA tile does.
+- Traffic, Closest CPA / TCPA trend: the series are named CPA and TCPA
+  (they showed the field names min_cpa_m / min_tcpa_s) and drawn in two
+  colours, CPA blue on the left axis, TCPA orange on the right.
+
 ## [1.2.25] - 2026-10-14 (Traffic layout)
 
 Dashboards only. Update with `bash deploy/update.sh v1.2.25`, Ctrl+F5. No
