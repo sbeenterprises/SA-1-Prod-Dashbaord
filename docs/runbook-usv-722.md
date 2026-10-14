@@ -20,7 +20,7 @@ on the boat needs.
 | Starlink | dish at 192.168.100.1, probed by Telegraf |
 | VPN | Twingate connector on the OBC (`twingate-connector.service`); Comms tile "VPN (Twingate)" |
 | Chart UI | Swiftships UI (Freeboard fork) on port 4200, `radar-ui.service` serving `~/Documents/Swiftships-UI-navy/public`; Signal K on 3000 |
-| MOOS mission | `~/Documents/automation/moos-ivp-morgan-stern-drive-mercury/missions/s1_morgan_city_signalk/real.moos`, community `alpha`, MOOSDB on 9000, launched by hand with `pAntler real.moos` (no systemd unit yet) |
+| MOOS mission | `~/Documents/automation/moos-ivp-morgan-stern-drive-mercury/missions/s1_morgan_city_signalk/real.moos`, community `alpha`, MOOSDB on 9000, launched by hand with `pAntler real.moos` (no systemd unit yet). The repository name is historical: this hull's engine is a Yamaha outboard; the Mercury diesel sterndrive is usv-725 |
 
 ## What was added to real.moos
 
@@ -240,8 +240,13 @@ retention (`du -sh /var/lib/influxdb`).
 - Console checklist: not published by the UI; `console_checklist = false`.
 - VPN: Twingate connector on the OBC; the tile shows its service state,
   not whether an operator is connected.
-- Engine RPM, temperatures: not on this CAN bus (behind the Mercury
-  SmartCraft network); needs a SmartCraft to NMEA 2000 gateway.
+- Engine RPM, temperatures, oil pressure, fuel: the hull's engine is a
+  Yamaha outboard whose data lives on Yamaha's Command Link network, not on
+  this CAN bus. The Yamaha Command Link Plus / NMEA 2000 gateway kit (on
+  order) puts it on the N2K backbone, Signal K maps it to `propulsion.*`,
+  and signalk_bridge reads it once `ENGINE_TYPE=yamaha_outboard` and
+  `ENGINE_SOURCE=signalk` are set in usv.env (v1.2.20). Until the gateway
+  is fitted the engine dials read N/A.
 - Helm position: `uQueryDB real.moos --condition="NAV_X > -999999"` to
   confirm pHelmIvP receives NAV_X/NAV_Y on this hull (autonomy stack, not
   the dashboard).

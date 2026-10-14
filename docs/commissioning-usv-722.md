@@ -10,7 +10,7 @@ onboard computer, Signal K and the VectorNav INS. Follows the checklist in
 | Item | Found |
 |---|---|
 | OBC | OnLogic K800, Intel Arc Pro A60 (PCI 56b3, i915), Ubuntu 22.04.5, 938 GB NVMe, NTP synced |
-| Autonomy | MOOS-IvP at `~/Documents/automation/moos-ivp`, mission repo `moos-ivp-morgan-stern-drive-mercury`, production mission `missions/s1_morgan_city_signalk/real.moos` (community `alpha`, 14 apps incl. iCAN, iCANRec, iWebSocket, iRadarTargets, pContactMgrV20) |
+| Autonomy | MOOS-IvP at `~/Documents/automation/moos-ivp`, mission repo `moos-ivp-morgan-stern-drive-mercury` (the name is historical; this hull's engine is a Yamaha outboard, the Mercury diesel sterndrive is usv-725), production mission `missions/s1_morgan_city_signalk/real.moos` (community `alpha`, 14 apps incl. iCAN, iCANRec, iWebSocket, iRadarTargets, pContactMgrV20) |
 | Signal K | 2.13.5 on :3000; position, heading, attitude from the VectorNav via the `signalk-vectornav-vnins` plugin; no GNSS satellite count or HDOP |
 | CAN | `slcan0` on the K800 eMCU, `slcand -o -c -F -s5` at boot; interface UP, 0 frames (backbone off / wiring to confirm) |
 | Network | Starlink dish reachable at 192.168.100.1; OpenVPN terminates on the boat router (no tunnel interface on the OBC); ufw inactive |

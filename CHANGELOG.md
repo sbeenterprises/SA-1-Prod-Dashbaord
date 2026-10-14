@@ -101,6 +101,11 @@ and the Mercury diesel hull (usv-725). Requirements: docs/requirements-usv-725.m
   and SIGNALK_FUEL_TANK.
 - Fault Codes tiles colour any fault list red, whichever bridge wrote it
   (the mapping matched only the J1939 "SPN ..." form).
+- Docs: the usv-722 runbook and commissioning record said the engine sat
+  behind a Mercury SmartCraft network; usv-722 is the Yamaha outboard hull
+  (its data arrives through the Yamaha Command Link / N2K gateway and
+  Signal K) and usv-725 is the Mercury diesel sterndrive. The mission
+  repository name `moos-ivp-morgan-stern-drive-mercury` is historical.
 - ENGINE_SOURCE unset keeps the previous behaviour (every producer writes),
   so an existing install is unchanged until the key is added.
 
