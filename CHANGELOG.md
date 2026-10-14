@@ -3,10 +3,16 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
-## [Unreleased] (branch usv-725-engine, towards 1.2.20)
+## [1.2.20] - 2026-10-14 (engine profile, Engine page, USV-725)
 
 Per-vessel engine profile so one release serves the Yamaha hull (usv-722)
-and the Mercury diesel hull (usv-725). Requirements: docs/requirements-usv-725.md.
+and the Mercury diesel hull (usv-725). Requirements:
+docs/requirements-usv-725.md; release and installation steps:
+docs/release-1.2.20-usv-725.md. First install on usv-725 with
+`deploy/install.sh` from this tag; on usv-722 add ENGINE_TYPE,
+ENGINE_SOURCE and HELM_PROFILE to /etc/usv/usv.env, then
+`bash deploy/update.sh v1.2.20`, restart the MOOS community (grafana_bridge
+reads the profile at start) and Ctrl+F5 in the browser.
 
 ### Added
 - `/etc/usv/usv.env` engine profile keys: ENGINE_TYPE, ENGINE_SOURCE

@@ -207,7 +207,7 @@ Rules
 | A-7 | Two faults at once (two sensors) | Both faults listed in `dtc_text` (BAM path) |
 | A-8 | Engine off | Engine dials and tiles read N/A; no engine alert fires; Readiness engine row reads FAIL with "no engine data" |
 | A-9 | Reboot the onboard computer | All dashboard services and the MOOS apps return; engine values resume within 60 s of the engine running |
-| A-10 | Regression on USV-722 after updating to the same tag | All 14 pages render as before; Autopilot and CAN Bus tiles from the Glendinning helm unchanged; engine gauges N/A |
+| A-10 | Regression on USV-722 after updating to the same tag | All 15 pages render as before; Autopilot and CAN Bus tiles from the Glendinning helm unchanged; engine gauges N/A |
 | A-11 | Bench: change `ENGINE_TYPE` to `yamaha_outboard` and re-run the installer | Tachometer and coolant ranges switch to the Yamaha set; header chip changes; nothing else changes |
 | A-12 | Swiftships UI side by side with the dashboard at 1500 rpm | RPM, coolant, load and fuel rate agree; oil temperature and battery voltage differ because the UI still shows the uncorrected values until the UI owner updates it |
 

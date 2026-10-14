@@ -4,13 +4,15 @@
 Browse to http://<host>:<port> (GRAFANA_PORT in /etc/usv/usv.env: 3001 on
 a vessel, 3300 on the simulation host), log in on the Swiftships login
 page, open folder **Swift Autonomous Dashboard**. The chips across the top
-of every dashboard switch between the thirteen dashboards and keep the time
-range and vessel selection. All dashboards refresh every 5 s (the Autopilot pages and
-Traffic every 1 s; 1 to 5 s selectable) and fit one 1080p screen without scrolling. The **Vessel**
+of every dashboard switch between the fourteen dashboards in the tab row and
+keep the time range and vessel selection (Autopilot Live is the fifteenth,
+opened from the dials of the Autopilot page). All dashboards refresh every
+5 s (the Autopilot pages, Engine and Traffic every 1 s; 1 to 5 s
+selectable) and fit one 1080p screen without scrolling. The **Vessel**
 dropdown selects the vessel; the **Fleet** dashboard shows all of them. The
-tab row keeps the same order on every dashboard: Mission, Navigation,
-Autopilot, Vessel Health, CAN Bus, Traffic, Cameras, Comms, System, Replay,
-Alarms, Fleet.
+tab row keeps the same order on every dashboard: Readiness, Mission,
+Navigation, Autopilot, Vessel Health, Engine, CAN Bus, Traffic, Cameras,
+Comms, System, Replay, Alarms, Fleet.
 
 Units are nautical throughout: knots, nautical miles for long distances,
 fixed metres for short ranges (approach distance, cross-track error).

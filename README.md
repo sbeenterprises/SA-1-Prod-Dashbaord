@@ -153,7 +153,10 @@ See `docs/deployment.md` for operations, `docs/user-guide.md` for
 operators, `docs/schema.md` for the InfluxDB schema,
 `docs/traceability.md` for requirement coverage,
 `docs/validation-report.md` for what was verified and how, and
-`CHANGELOG.md` for release history (current release: v1.2.19, production on
-usv-722; simulation baseline v1.0.0), `docs/commissioning-usv-722.md` for
-the commissioning record and `docs/runbook-usv-722.md` for day-to-day
-operation of the production vessel.
+`CHANGELOG.md` for release history (current release: v1.2.20, for usv-725
+and usv-722; simulation baseline v1.0.0), `docs/release-1.2.20-usv-725.md`
+for cutting the release and installing it on both hulls,
+`docs/requirements-usv-725.md` for the Mercury diesel hull requirements,
+`docs/commissioning-usv-722.md` for the commissioning record and
+`docs/runbook-usv-722.md` for day-to-day operation of the production
+vessel.
