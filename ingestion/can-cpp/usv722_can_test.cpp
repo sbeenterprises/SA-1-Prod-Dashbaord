@@ -173,6 +173,10 @@ int main() {
         CHECK(Dm1Text(m) == "SPN 110 FMI 3 voltage high / short to high (x2); "
                             "SPN 100 FMI 1 below normal, most severe (x1); "
                             "SPN 190 FMI 0 above normal, most severe (x5)");
+        // Mercury Diesel hull: the J codes from the Mercury specification
+        CHECK(Dm1Text(m, true) == "SPN 110 FMI 3 J144 Sensor_Cool_T_High (x2); "
+                                  "SPN 100 FMI 1 J415 Oil_Press_Very_Low (x1); "
+                                  "SPN 190 FMI 0 J234 Engine_Overspeed (x5)");
         // A lost packet drops the message; the next BAM still works
         CHECK(!rx.Feed(0x1CECFFD2, cm, 8, &m));
         CHECK(!rx.Feed(0x1CEBFFD2, dt2, 8, &m));               // packet 2 before 1

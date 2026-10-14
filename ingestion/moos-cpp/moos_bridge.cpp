@@ -36,6 +36,7 @@
 #include <vector>
 
 #include "../cpp-common/engine_profile.hpp"
+#include "../cpp-common/j1939_faults.hpp"
 #include "../cpp-common/http_get.hpp"
 #include "../cpp-common/influx_query.hpp"
 #include "../cpp-common/influx_writer.hpp"
@@ -101,22 +102,35 @@ const std::multimap<std::string, FieldMap> kNumericVars = {
     {"PID_HEADING_OUT",          {"autopilot", "pid_heading_out"}},
     {"PID_SPEED_OUT",            {"autopilot", "pid_speed_out"}},
     // Engine (FR-4), iCANRec J1939 decode. Units are already display units
-    // (rpm, C, kPa, L/h, %, count, V).
-    {"ENGINE_SPEED",                      {"engine", "rpm",                      1.0, "instance=0"}},
-    {"ENGINE_COOLANT_TEMP",               {"engine", "coolant_temp",             1.0, "instance=0"}},
-    {"ENGINE_OIL_TEMP",                   {"engine", "oil_temp",                 1.0, "instance=0"}},
-    {"ENGINE_OIL_PRESSURE",               {"engine", "oil_pressure",             1.0, "instance=0"}},
-    {"ENGINE_FUEL_RATE",                  {"engine", "fuel_rate",                1.0, "instance=0"}},
-    {"ENGINE_PERCENT_LOAD",               {"engine", "percent_load",             1.0, "instance=0"}},
-    {"ENGINE_PERCENT_TORQUE",             {"engine", "percent_torque",           1.0, "instance=0"}},
-    {"ENGINE_ACCELERATOR_PEDAL_POSITION", {"engine", "pedal_position",           1.0, "instance=0"}},
-    {"ENGINE_INTAKE_MANIFOLD_PRESSURE",   {"engine", "intake_manifold_pressure", 1.0, "instance=0"}},
-    {"ENGINE_ACTIVE_DTCS",                {"engine", "active_dtcs",              1.0, "instance=0"}},
-    {"ENGINE_HOURS",                      {"engine", "runtime_h",                1.0, "instance=0"}},
-    {"ENGINE_FUEL_LEVEL",                 {"engine", "fuel_level",               1.0, "instance=0"}},
-    {"ENGINE_BATTERY_VOLTAGE",            {"electrical", "battery_voltage",      1.0, "instance=0"}},
-    {"ENGINE_BATTERY_VOLTAGE",            {"power", "system_voltage"}},
+    // (rpm, C, kPa, L/h, %, h, count, V). Every point is tagged with the
+    // engine instance (0, or the _<n> suffix of the variable name: REC-7)
+    // and the vessel's engine type. ENGINE_LAMPS and ENGINE_DTC_TEXT are
+    // handled in HandleMessage (one variable fans out to the lamp fields;
+    // the text is enriched with the Mercury fault names).
+    {"ENGINE_SPEED",                      {"engine", "rpm"}},
+    {"ENGINE_COOLANT_TEMP",               {"engine", "coolant_temp"}},
+    {"ENGINE_OIL_TEMP",                   {"engine", "oil_temp"}},
+    {"ENGINE_OIL_PRESSURE",               {"engine", "oil_pressure"}},
+    {"ENGINE_FUEL_RATE",                  {"engine", "fuel_rate"}},
+    {"ENGINE_PERCENT_LOAD",               {"engine", "percent_load"}},
+    {"ENGINE_PERCENT_TORQUE",             {"engine", "percent_torque"}},
+    {"ENGINE_ACCELERATOR_PEDAL_POSITION", {"engine", "pedal_position"}},
+    {"ENGINE_INTAKE_MANIFOLD_PRESSURE",   {"engine", "intake_manifold_pressure"}},
+    {"ENGINE_ACTIVE_DTCS",                {"engine", "active_dtcs"}},
+    {"ENGINE_DTC_SPN",                    {"engine", "dtc_spn"}},
+    {"ENGINE_DTC_FMI",                    {"engine", "dtc_fmi"}},
+    {"ENGINE_DTC_OC",                     {"engine", "dtc_oc"}},
+    {"ENGINE_HOURS",                      {"engine", "runtime_h"}},
+    {"ENGINE_FUEL_LEVEL",                 {"engine", "fuel_level"}},
+    // The ECM's own supply (J1939 VEP1 SPN 168). The house battery and the
+    // system voltage come from the Victron shunt through signalk_bridge.
+    {"ENGINE_BATTERY_VOLTAGE",            {"engine", "ecu_voltage"}},
 };
+// ENGINE_LAMPS (J1939 DM1 byte 1): bit pairs protect (0), amber (2), red
+// stop (4), MIL (6); 01 = lamp on. Written as the raw byte and one 0/1
+// field per lamp, the fields the Fault Lamps tiles read.
+const struct { int shift; const char* field; } kLampBits[] = {
+    {0, "lamp_protect"}, {2, "lamp_amber"}, {4, "lamp_red"}, {6, "lamp_mil"}};
 
 // Legacy generic mission variables. Kept for compatibility: if some app
 // publishes one, the bridge yields that field to the external producer and
@@ -268,9 +282,18 @@ protected:
         limiter_.set_default(hz);
         double engine_hz = 2.0;
         m_MissionReader.GetConfigurationParam("engine_rate_hz", engine_hz);
-        for (const auto& [var, fm] : kNumericVars)
-            if (std::string(fm.measurement) == "engine")
-                limiter_.set_rate(std::string("engine.") + fm.field, engine_hz);
+        {
+            std::vector<std::string> fields = {"fault_lamps"};
+            for (const auto& [var, fm] : kNumericVars)
+                if (std::string(fm.measurement) == "engine") fields.push_back(fm.field);
+            for (const auto& lb : kLampBits) fields.push_back(lb.field);
+            // One limiter key per field and engine instance (0 unsuffixed,
+            // "#1" .. "#3" for a second, third or fourth engine).
+            for (const auto& f : fields)
+                for (int inst = 0; inst < 4; ++inst)
+                    limiter_.set_rate("engine." + f + (inst ? "#" + std::to_string(inst) : ""),
+                                      engine_hz);
+        }
         // Engine profile of this vessel (/etc/usv/usv.env: ENGINE_SOURCE,
         // ENGINE_TYPE). ENGINE_* passthrough is on when MOOS (iCANRec) is the
         // engine source or no source is named; the mission file can override:
@@ -533,26 +556,63 @@ private:
         //    from every sample first.
         if (msg.IsDouble()) {
             if (kCachedVars.count(key)) CacheSample(key, msg.GetDouble(), now);
-            auto range = kNumericVars.equal_range(key);
+            // ENGINE_* (iCANRec) is written only when MOOS is this vessel's
+            // engine source. ENGINE_<NAME>_<n> is engine instance n; every
+            // engine point carries instance and engine_type tags.
+            const bool engine_var = key.rfind("ENGINE_", 0) == 0;
+            int inst = 0;
+            const std::string base = engine_var ? usv::EngineVarBase(key, &inst) : key;
+            const std::string isuf = inst ? "#" + std::to_string(inst) : "";
+            const std::string etags =
+                engine_var ? engine_profile_.Tags("instance=" + std::to_string(inst)) : "";
+            if (engine_var && !engine_passthrough_) return;
+            if (base == "ENGINE_LAMPS") {
+                const int lamps = static_cast<int>(msg.GetDouble());
+                if (lamps >= 0 && lamps <= 255) {
+                    if (limiter_.allow("engine.fault_lamps" + isuf, now))
+                        telemetry_->field("engine", etags, "fault_lamps", lamps);
+                    for (const auto& lb : kLampBits)
+                        if (limiter_.allow(std::string("engine.") + lb.field + isuf, now))
+                            telemetry_->field("engine", etags, lb.field,
+                                              ((lamps >> lb.shift) & 3) == 1 ? 1 : 0);
+                }
+                return;
+            }
+            auto range = kNumericVars.equal_range(base);
             for (auto it = range.first; it != range.second; ++it) {
                 const FieldMap& fm = it->second;
-                // ENGINE_* (iCANRec) is written only when MOOS is this
-                // vessel's engine source; the engine points carry the
-                // engine_type tag beside instance=0.
-                const bool engine_var = key.rfind("ENGINE_", 0) == 0;
-                if (engine_var && !engine_passthrough_) continue;
                 // Legacy PID_* producers take precedence over derived errors.
                 if (key.rfind("PID_", 0) == 0)
                     external_fields_.insert(fm.field);
                 const std::string k =
-                    std::string(fm.measurement) + "." + fm.field;
+                    std::string(fm.measurement) + "." + fm.field + isuf;
                 if (!limiter_.allow(k, now)) continue;
                 const std::string tags =
                     (engine_var && std::string(fm.measurement) == "engine")
-                        ? engine_profile_.Tags(fm.tags) : std::string(fm.tags);
+                        ? etags : std::string(fm.tags);
                 telemetry_->field(fm.measurement, tags, fm.field,
                                   msg.GetDouble() * fm.scale);
             }
+        }
+
+        // ENGINE_DTC_TEXT (iCANRec, "SPN n FMI m (xk); ..." or "NONE"):
+        // the Mercury fault names are added on the mercury_diesel hull, the
+        // J1939 failure-mode wording elsewhere. Written on change and every
+        // 5 s so a dashboard window that opens later still has a value.
+        if (msg.IsString() && key.rfind("ENGINE_DTC_TEXT", 0) == 0) {
+            if (!engine_passthrough_) return;
+            int inst = 0;
+            usv::EngineVarBase(key, &inst);
+            const std::string text = usv::j1939::EnrichDtcText(
+                msg.GetString(), engine_profile_.type == "mercury_diesel");
+            auto& st = dtc_text_[inst];
+            if (text != st.first || now - st.second >= 5.0) {
+                telemetry_->str_field("engine",
+                                      engine_profile_.Tags("instance=" + std::to_string(inst)),
+                                      "dtc_text", text);
+                st = {text, now};
+            }
+            return;
         }
 
         // 2) Legacy generic mission variables -> passthrough + yield.
@@ -1466,6 +1526,7 @@ private:
     usv::RateLimiter limiter_{5.0};
     usv::EngineProfile engine_profile_;
     bool engine_passthrough_ = true;
+    std::map<int, std::pair<std::string, double>> dtc_text_;   // per instance: last text, time
     std::set<std::string> ignore_vars_;
     std::string mission_name_;
     std::string mission_id_;

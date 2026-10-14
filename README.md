@@ -134,8 +134,8 @@ so vessels can `deploy/update.sh` to it.
 
 The smoke test builds every C++ program, runs the
 `mission_logic_test`, `mayara_logic_test`, `frigate_logic_test`,
-`usv722_can_test`, `engine_profile_test` and `signalk_engine_test` unit
-tests, drives the simulator, the CAN bridge, the Signal K bridge (every
+`usv722_can_test`, `engine_profile_test`, `j1939_faults_test` and
+`signalk_engine_test` unit tests, drives the simulator, the CAN bridge, the Signal K bridge (every
 engine path in both id forms, SK-1 to SK-3 of docs/requirements-usv-725.md)
 and (when MOOSDB is on the PATH) the MOOS bridge against an InfluxDB stub,
 and cross-checks every field the dashboards query against what the

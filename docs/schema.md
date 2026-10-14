@@ -175,6 +175,16 @@ Pressure (alarm): <message>; ..."), lamp_mil (checkEngine), lamp_red
 (emergencyStopMode, engineShuttingDown, overTemperature, lowOilPressure),
 lamp_amber (any other active notification). Written only when
 ENGINE_SOURCE is signalk (or unset).
+MOOS (grafana_bridge, from iCANRec's ENGINE_* variables on the J1939 bus
+of usv-725): the fields above in display units as iCANRec publishes them,
+ecu_voltage (V, the ECM supply, J1939 VEP1), dtc_spn / dtc_fmi / dtc_oc
+(first active fault), fault_lamps and the four lamp fields from
+ENGINE_LAMPS, dtc_text from ENGINE_DTC_TEXT with the Mercury fault names
+added on a mercury_diesel hull ("SPN 100 FMI 18 J143 Oil_Press_Low (x1)",
+cpp-common/j1939_faults.hpp, 61 SPN / FMI pairs from the Mercury
+specification) or the J1939 failure-mode wording elsewhere. The instance
+tag comes from the variable suffix (ENGINE_SPEED instance 0, ENGINE_SPEED_1
+instance 1). ENGINE_BATTERY_VOLTAGE no longer feeds electrical or power.
 usv-722 CAN (can_bridge, usv722_can.hpp; RPM and temperatures are not on
 its bus): key_state (0 off, 1 run, 2 start), gear and gear_helm (-1 reverse,
 0 neutral, 1 forward; to the engine / at the lever), throttle_pct and
@@ -187,7 +197,7 @@ fault_lamps (raw lamp byte), lamp_protect / lamp_amber / lamp_red / lamp_mil
 parameter number, failure mode, occurrence count; 0 when none) and the string
 dtc_text ("NONE", "N/A" when the fault bytes are not available, or
 "SPN 110 FMI 3 voltage high / short to high (x1); SPN ..." listing every
-active fault).
+active fault; with the Mercury fault names on a mercury_diesel hull).
 Not produced in the simulation environment (no engine).
 
 ### electrical (FR-4) — sources: CAN bridge (PGN 127508), Signal K

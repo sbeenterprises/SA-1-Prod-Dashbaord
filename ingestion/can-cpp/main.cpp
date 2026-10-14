@@ -292,7 +292,8 @@ int main() {
                         if (dm1_multi)
                             for (const auto& v : usv::usv722::Dm1Values(dm1))
                                 helm_writer.put(writer, v, t);
-                        const std::string text = usv::usv722::Dm1Text(dm1);
+                        const std::string text =
+                            usv::usv722::Dm1Text(dm1, prof.type == "mercury_diesel");
                         if (text != dm1_last_text || t - dm1_last_t >= 5.0) {
                             const auto& k = usv::usv722::kDm1TextField;
                             writer.str_field(k.measurement, prof.Tags("instance=0"),

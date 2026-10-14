@@ -21,5 +21,7 @@ target_compile_options(usv722_can_test PRIVATE -Wall -Wextra)
 # because this is the one bridge build that needs no MOOS or WebSocket library.
 add_executable(engine_profile_test ../cpp-common/engine_profile_test.cpp)
 target_compile_options(engine_profile_test PRIVATE -Wall -Wextra)
+add_executable(j1939_faults_test ../cpp-common/j1939_faults_test.cpp)
+target_compile_options(j1939_faults_test PRIVATE -Wall -Wextra)
 
 install(TARGETS can_bridge RUNTIME DESTINATION bin)

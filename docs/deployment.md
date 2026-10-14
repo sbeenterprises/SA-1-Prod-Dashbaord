@@ -390,6 +390,20 @@ prints the resolved profile and, for `moos`, the mission-file block.
 Leaving `ENGINE_SOURCE` empty keeps the pre-v1.2.20 behaviour: every
 producer writes, which is only right while one of them has data.
 
+On the MOOS path grafana_bridge maps the iCANRec variables ENGINE_SPEED,
+ENGINE_COOLANT_TEMP, ENGINE_OIL_TEMP, ENGINE_OIL_PRESSURE, ENGINE_FUEL_RATE,
+ENGINE_PERCENT_LOAD, ENGINE_PERCENT_TORQUE,
+ENGINE_ACCELERATOR_PEDAL_POSITION, ENGINE_INTAKE_MANIFOLD_PRESSURE,
+ENGINE_HOURS, ENGINE_FUEL_LEVEL, ENGINE_ACTIVE_DTCS, ENGINE_DTC_SPN /
+ENGINE_DTC_FMI / ENGINE_DTC_OC (first active fault), ENGINE_LAMPS (the DM1
+lamp byte, split into the four lamp fields), ENGINE_DTC_TEXT ("SPN n FMI m
+(xk); ..." or "NONE"; the bridge adds the Mercury J code and fault name on
+a mercury_diesel hull, the J1939 failure-mode wording elsewhere) and
+ENGINE_BATTERY_VOLTAGE (the ECM's own supply, `engine.ecu_voltage`; the
+house battery is the Victron's through Signal K). A variable with a `_<n>`
+suffix (ENGINE_SPEED_1) is engine instance n. Variables iCANRec does not
+publish yet simply leave their tiles at N/A.
+
 ## Services
 | Unit | Role |
 |---|---|

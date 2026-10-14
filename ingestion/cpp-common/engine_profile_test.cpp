@@ -114,6 +114,17 @@ int main() {
         auto p = usv::EngineProfile::FromEnv();
         CHECK(p.source == "moos");
     }
+    // 8. ENGINE_* instance suffix (REC-7): ENGINE_SPEED_1 is instance 1.
+    {
+        int inst = 9;
+        CHECK(usv::EngineVarBase("ENGINE_SPEED", &inst) == "ENGINE_SPEED" && inst == 0);
+        CHECK(usv::EngineVarBase("ENGINE_SPEED_1", &inst) == "ENGINE_SPEED" && inst == 1);
+        CHECK(usv::EngineVarBase("ENGINE_OIL_PRESSURE_2", &inst) == "ENGINE_OIL_PRESSURE" && inst == 2);
+        CHECK(usv::EngineVarBase("ENGINE_DTC_SPN", &inst) == "ENGINE_DTC_SPN" && inst == 0);
+        CHECK(usv::EngineVarBase("ENGINE_SPEED_", &inst) == "ENGINE_SPEED_" && inst == 0);
+        CHECK(usv::EngineVarBase("ENGINE_SPEED_123", &inst) == "ENGINE_SPEED_123" && inst == 0);  // not an instance
+        CHECK(usv::EngineVarBase("NAV_X", &inst) == "NAV_X" && inst == 0);
+    }
     std::printf("engine_profile_test: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

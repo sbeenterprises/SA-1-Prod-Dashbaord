@@ -147,4 +147,19 @@ private:
     }
 };
 
+// MOOS ENGINE_* variable -> base name and engine instance. iCANRec names a
+// second engine's variables with the instance as a suffix: ENGINE_SPEED is
+// instance 0, ENGINE_SPEED_1 instance 1 (REC-7 in
+// docs/requirements-usv-725.md). Any other name is instance 0 unchanged.
+inline std::string EngineVarBase(const std::string& key, int* instance) {
+    *instance = 0;
+    const size_t us = key.rfind('_');
+    if (us == std::string::npos || us + 1 >= key.size() || us + 3 < key.size())
+        return key;
+    for (size_t i = us + 1; i < key.size(); ++i)
+        if (key[i] < '0' || key[i] > '9') return key;
+    *instance = std::stoi(key.substr(us + 1));
+    return key.substr(0, us);
+}
+
 }  // namespace usv

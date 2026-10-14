@@ -36,6 +36,8 @@
 #include <string>
 #include <vector>
 
+#include "../cpp-common/j1939_faults.hpp"
+
 namespace usv {
 namespace usv722 {
 
@@ -129,38 +131,22 @@ inline std::vector<Value> Dm1Values(const Dm1& m) {
     return out;
 }
 
-// J1939-73 failure mode identifiers, short operator wording.
-inline const char* FmiText(uint8_t fmi) {
-    static const char* const kText[] = {
-        "above normal, most severe", "below normal, most severe",
-        "erratic or incorrect data", "voltage high / short to high",
-        "voltage low / short to low", "current low / open circuit",
-        "current high / short to ground", "mechanical system not responding",
-        "abnormal frequency or pulse", "abnormal update rate",
-        "abnormal rate of change", "root cause not known",
-        "bad intelligent device", "out of calibration",
-        "special instructions", "above normal, least severe",
-        "above normal, moderately severe", "below normal, least severe",
-        "below normal, moderately severe", "received network data in error",
-        "data drifted high", "data drifted low"};
-    if (fmi < sizeof(kText) / sizeof(kText[0])) return kText[fmi];
-    return fmi == 31 ? "condition exists" : "reserved";
-}
+// J1939-73 failure mode wording lives in cpp-common/j1939_faults.hpp.
+using usv::j1939::FmiText;
 
 // Field the summary text is written to (string field engine.dtc_text).
 inline const Value kDm1TextField = {"engine", "dtc_text", 0.0};
 
-// "NONE", or "SPN 110 FMI 3 voltage high / short to high (x1); SPN ..."
-inline std::string Dm1Text(const Dm1& m) {
+// "NONE", or "SPN 110 FMI 3 voltage high / short to high (x1); SPN ...";
+// with mercury = true the Mercury Diesel fault names ("SPN 100 FMI 18 J143
+// Oil_Press_Low (x1)") from cpp-common/j1939_faults.hpp.
+inline std::string Dm1Text(const Dm1& m, bool mercury = false) {
     if (!m.codes_available) return "N/A";
     if (m.faults.empty()) return "NONE";
     std::string s;
     for (const auto& f : m.faults) {
-        char buf[128];
-        std::snprintf(buf, sizeof(buf), "%sSPN %u FMI %u %s (x%u)", s.empty() ? "" : "; ",
-                      static_cast<unsigned>(f.spn), static_cast<unsigned>(f.fmi),
-                      FmiText(f.fmi), static_cast<unsigned>(f.oc));
-        s += buf;
+        if (!s.empty()) s += "; ";
+        s += usv::j1939::FaultText(f.spn, f.fmi, f.oc, mercury);
     }
     return s;
 }

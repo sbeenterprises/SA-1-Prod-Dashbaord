@@ -29,6 +29,22 @@ and the Mercury diesel hull (usv-725). Requirements: docs/requirements-usv-725.m
   prints the grafana_bridge block to put in the mission file.
 - can_bridge: HELM_PROFILE=none turns the usv-722 helm / drive decoder off
   on a hull whose frames have not been captured yet; bus statistics stay.
+- grafana_bridge (MOOS, usv-725): ENGINE_<NAME>_<n> variables carry
+  engine instance n (ENGINE_SPEED_1 -> instance=1), one write-rate ceiling
+  per field and instance; ENGINE_LAMPS (DM1 lamp byte) -> fault_lamps and
+  lamp_protect / lamp_amber / lamp_red / lamp_mil; ENGINE_DTC_SPN / FMI /
+  OC -> dtc_spn / dtc_fmi / dtc_oc; ENGINE_DTC_TEXT -> dtc_text, written on
+  change and every 5 s, with the Mercury fault names added on a
+  mercury_diesel hull ("SPN 100 FMI 18 J143 Oil_Press_Low (x1)");
+  ENGINE_BATTERY_VOLTAGE -> engine.ecu_voltage (it no longer feeds
+  electrical.battery_voltage or power.system_voltage, which come from the
+  Victron shunt through Signal K on both hulls).
+- cpp-common/j1939_faults.hpp: the J1939-73 failure-mode wording and the
+  Mercury Diesel 2.0L SPN / FMI fault table (65 rows, 61 pairs, Table 2 of
+  the Mercury J1939 specification) shared by can_bridge and grafana_bridge;
+  can_bridge's DM1 text uses the Mercury names when ENGINE_TYPE is
+  mercury_diesel. Unit test j1939_faults_test; the usv722_can_test covers
+  the Mercury wording.
 - signalk_bridge engine paths for the Yamaha gateway on usv-722
   (ingestion/signalk-cpp/signalk_engine.hpp): every `propulsion.<id>.*`
   the server publishes, with `0` / `port` -> instance 0 and `1` /
