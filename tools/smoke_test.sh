@@ -145,9 +145,16 @@ for p in glob.glob(f"{repo}/grafana/dashboards/*.json"):
     for pan in json.load(open(p))["panels"]:
         for t in pan.get("targets", []):
             q = t.get("query", "")
-            for m in pm.findall(q):
-                for f in pf.findall(q):
-                    want.add((m, f))
+            # Each _measurement test owns the _field tests that follow it,
+            # up to the next _measurement test (a query may read two
+            # measurements, e.g. nav lat/lon and mission base_lat/base_lon);
+            # fields before the first one belong to the first.
+            ms = list(pm.finditer(q))
+            for i, mm in enumerate(ms):
+                start = 0 if i == 0 else mm.start()
+                end = ms[i + 1].start() if i + 1 < len(ms) else len(q)
+                for f in pf.findall(q[start:end]):
+                    want.add((mm.group(1), f))
 have = {tuple(l.split()) for l in open(produced_file) if l.strip()}
 # Fields the MOOS bridge maps from the helm (its FieldMap table) count as
 # produced too; the live bridge run below is skipped when MOOSDB is absent.
@@ -445,6 +452,16 @@ EOF
     # Operator console region selection (iWebSocket -> BHV_OpRegionV24).
     P 'REGION_UPDATES=core_poly=pts={-3000,-3000:3000,-3000:3000,3000:0,3500:-3000,3000}'
     sleep 2
+    # Production iWebSocket comms-loss failsafe: link lost, return to base,
+    # arrival hold, return base from the UI.
+    P 'BASE_COORDS=29.72282,-91.21539'
+    sleep 1
+    P COMMS_LOSS=true
+    sleep 1
+    P RETURN=true
+    sleep 2
+    P RETURN=false RETURN_HOLD=true
+    sleep 2
   fi
   kill $DB 2>/dev/null; pkill -f moos_bridge 2>/dev/null; stop_stub
 
@@ -502,6 +519,12 @@ EOF
     grep -q "autopilot,.* heading_error=15" "$LINES"   && ok "heading_error derived (95-80=15)"   || bad "heading_error not derived"
     grep -q "engine,vessel=usv-moos,instance=0 rpm=1850" "$LINES" && ok "ENGINE_SPEED -> engine.rpm{instance=0}" || bad "ENGINE_SPEED not mapped"
     grep -q 'mission_id="R-17"' "$LINES"               && ok "ID_ROUTE -> mission_state.mission_id"     || bad "ID_ROUTE not mapped"
+    grep -q "nav,.* sog=9\.7" "$LINES"                 && ok "NAV_SPEED m/s -> kn by default (nav_speed_units unset)" || bad "NAV_SPEED default conversion changed"
+    grep -q "mission,.* base_lat=29\.72282" "$LINES"   && ok "BASE_COORDS -> mission.base_lat / base_lon" || bad "BASE_COORDS not mapped"
+    grep -q "Comms failsafe: no Swiftships-UI link, returning to base" "$LINES" && ok "COMMS_LOSS + RETURN -> critical comms failsafe event" || bad "comms failsafe event missing"
+    grep -q "autonomy,.* comms_return=1" "$LINES"      && ok "autonomy.comms_return during the failsafe return" || bad "comms_return missing"
+    grep -q "autonomy,.* operator_link=5" "$LINES"     && ok "operator_link 5 holding at base after comms loss" || bad "operator_link hold code missing"
+    grep -q 'state="HoldingAtBase"' "$LINES"           && ok "RETURN_HOLD -> state HoldingAtBase"      || bad "HoldingAtBase state missing"
     grep -q 'arrival_state="decelerating"' "$LINES"    && ok "ARRIVAL_STATE -> mission_state"           || bad "ARRIVAL_STATE not mapped"
     grep -Eq "radar,.* targets=[12]" "$LINES"            && ok "NODE_REPORT -> radar.targets counted"           || bad "contact tracking missing"
     grep -q "radar,.* closest_range_m=500" "$LINES"    && ok "contact range from NAV_X/Y (500 m)"       || bad "contact range missing"

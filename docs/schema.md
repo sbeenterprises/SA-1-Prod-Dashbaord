@@ -35,7 +35,9 @@ region_vertices (vertex count of the current operating region, written
 with the geometry set), route_length_m, route_in_region (0/1, every
 waypoint inside the region; the readiness course check reads them back),
 dist_to_waypoint (m), dist_to_station (m, planchaPID DIST_TO_STATION),
-eta_s (s), distance_traveled (m), elapsed_s (s).
+eta_s (s), distance_traveled (m), elapsed_s (s), base_lat / base_lon (deg,
+the comms-loss return base from iWebSocket's BASE_COORDS, re-written every
+second while known).
 `dist_to_waypoint` comes from the Alpha mission's `DIST_TO_NEXT_WPT`;
 `waypoints_total`/`progress_pct`/`eta_s`/`distance_traveled` are derived by
 the bridge (VIEW_SEGLIST count, index/total, dist/speed, NAV_X/Y odometry)
@@ -122,7 +124,16 @@ unexpected all-stop reasons; ManualOverride/NothingToDo are benign),
 geofence_breached (0 ok | 1 breach | 2 recovering; decays to 0 after 30 s
 without an OPR_BREACHED post), obstacle_alerts (count, 120 s TTL),
 comms_phase (0 link ok | 1 grace, mission continues | 2 failsafe hold |
-3 return to base), remote_control (REMOTE_CONTROL), crash_stop (CRASH_STOP).
+3 return to base; the simulation iWebSocket's COMMS_LOST phases),
+remote_control (REMOTE_CONTROL), crash_stop (CRASH_STOP), comms_loss
+(COMMS_LOSS from the boats' iWebSocket: no frame from any Swiftships-UI for
+comms_loss_timeout s), return_hold (RETURN_HOLD: holding station on the
+base), comms_return (1 while the link is lost and the boat returns to or
+holds on its base), operator_link (0 ok | 1 grace | 2 failsafe hold |
+3 lost, returning to base | 4 no UI link, boat stays (helm parked and
+idle) | 5 lost, holding on the base; the Operator Link tiles read it).
+All numeric fields are written with 12 significant digits (6 before
+v1.2.23, about 10 m of resolution for a latitude).
 
 ### autopilot (FR-3) — sources: MOOS bridge, CAN bridge
 desired_heading, actual_heading (deg), desired_speed, actual_speed (kn),

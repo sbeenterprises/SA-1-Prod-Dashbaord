@@ -595,6 +595,11 @@
                   "text": "Completed",
                   "color": "purple",
                   "index": 11
+                },
+                "HoldingAtBase": {
+                  "text": "Holding at Base",
+                  "color": "orange",
+                  "index": 12
                 }
               }
             }

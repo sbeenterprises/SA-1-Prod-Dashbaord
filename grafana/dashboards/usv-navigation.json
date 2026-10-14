@@ -305,6 +305,14 @@
           },
           "query": "import \"math\"\np = from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"lat\" or r._field == \"lon\" or r._field == \"heading\" or r._field == \"cog\" or r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> pivot(rowKey: [\"vessel\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.lat and exists r.lon and exists r.sog and (exists r.cog or exists r.heading))\n  |> filter(fn: (r) => r.sog >= 0.5)\n  |> map(fn: (r) => ({r with crs: if exists r.cog then r.cog else r.heading}))\na = p |> map(fn: (r) => ({seq: 0, lat: r.lat, lon: r.lon}))\nb = p |> map(fn: (r) => ({seq: 1,\n      lat: r.lat + r.sog / 600.0 * math.cos(x: r.crs * math.pi / 180.0),\n      lon: r.lon + r.sog / 600.0 * math.sin(x: r.crs * math.pi / 180.0) / math.cos(x: r.lat * math.pi / 180.0)}))\nunion(tables: [a, b])\n  |> sort(columns: [\"seq\"])\n",
           "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission\" and (r._field == \"base_lat\" or r._field == \"base_lon\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> pivot(rowKey: [\"vessel\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.base_lat and exists r.base_lon)\n  |> map(fn: (r) => ({lat: r.base_lat, lon: r.base_lon}))\n",
+          "refId": "F"
         }
       ],
       "fieldConfig": {
@@ -325,6 +333,46 @@
           "name": "OSM"
         },
         "layers": [
+          {
+            "type": "markers",
+            "name": "Return base",
+            "location": {
+              "mode": "coords",
+              "latitude": "lat",
+              "longitude": "lon"
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "F"
+            },
+            "config": {
+              "style": {
+                "size": {
+                  "fixed": 9
+                },
+                "color": {
+                  "fixed": "#ff9830"
+                },
+                "opacity": 1,
+                "symbol": {
+                  "fixed": "img/icons/marker/square.svg",
+                  "mode": "fixed"
+                },
+                "text": {
+                  "fixed": "BASE",
+                  "mode": "fixed"
+                },
+                "textConfig": {
+                  "fontSize": 11,
+                  "offsetX": 0,
+                  "offsetY": -14,
+                  "textAlign": "center",
+                  "textBaseline": "middle"
+                }
+              },
+              "showLegend": false
+            }
+          },
           {
             "type": "route",
             "name": "Operating region",
@@ -771,7 +819,7 @@
       "gridPos": {
         "x": 14,
         "y": 10,
-        "w": 5,
+        "w": 3,
         "h": 2
       },
       "targets": [
@@ -827,9 +875,9 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 19,
+        "x": 17,
         "y": 10,
-        "w": 5,
+        "w": 4,
         "h": 2
       },
       "targets": [
@@ -848,6 +896,66 @@
             "mode": "thresholds"
           },
           "decimals": 6,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 20,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9501,
+      "type": "stat",
+      "title": "Dist to Base",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 10,
+        "w": 3,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "import \"math\"\nfrom(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r._measurement == \"nav\" and (r._field == \"lat\" or r._field == \"lon\"))\n      or (r._measurement == \"mission\" and (r._field == \"base_lat\" or r._field == \"base_lon\")))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> group()\n  |> pivot(rowKey: [\"vessel\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => exists r.lat and exists r.lon and exists r.base_lat and exists r.base_lon)\n  |> map(fn: (r) => {\n      p1 = r.lat * math.pi / 180.0\n      p2 = r.base_lat * math.pi / 180.0\n      dp = p2 - p1\n      dl = (r.base_lon - r.lon) * math.pi / 180.0\n      a = math.sin(x: dp / 2.0) * math.sin(x: dp / 2.0)\n          + math.cos(x: p1) * math.cos(x: p2) * math.sin(x: dl / 2.0) * math.sin(x: dl / 2.0)\n      return {_value: 2.0 * 6371008.8 * math.asin(x: math.sqrt(x: a)) / 1852.0}\n  })\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "no base",
+          "unit": "suffix: nm",
+          "decimals": 2,
           "thresholds": {
             "mode": "absolute",
             "steps": [

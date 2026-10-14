@@ -1040,6 +1040,62 @@ groups:
             type: last
             params: []
           type: query
+  - uid: usv-comms-return
+    title: Operator Link Lost (Returning to Base)
+    condition: C
+    for: 0s
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: 'No frame from the Swiftships-UI for the comms-loss timeout: the boat is returning to its
+        base (comms_return) or holding there (comms_hold). Clears when the link returns; the return or
+        hold continues until the operator''s next command.'
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"autonomy\" and r._field == \"comms_return\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
   - uid: usv-helm-allstop
     title: Helm All-Stop (Unexpected)
     condition: C

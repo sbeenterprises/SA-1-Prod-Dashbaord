@@ -100,16 +100,28 @@ used by alerts and queries:
 | Remote | Operator driving the boat through remote control (REMOTE_CONTROL); autonomy is not in charge |
 | Paused | Operator pause — boat holds at zero speed |
 | StationKeeping | Holding a station point (operator request or station waypoint) |
-| ReturnToBase (shown "Return to Base") | Driving back to the base/return point |
+| ReturnToBase (shown "Return to Base") | Driving back to the base/return point (operator command, or the comms-loss failsafe: the events say which) |
+| HoldingAtBase (shown "Holding at Base") | Arrived at the return base after a return to base; holding station there until the operator's next command from the Swiftships-UI |
 | EnteringRegion | Mission started outside the region — recovering inside before the survey may run |
 | AwaitingRearm | Operator link is back but the mission is NOT re-armed; the survey stays held until an operator AUTONOMOUS_START/RESUME |
-| CommsLost | Operator-link failsafe in force (action shown in the events table); boat holds at the loss position |
+| CommsLost | Simulation iWebSocket only: operator-link failsafe in force (action shown in the events table); boat holds at the loss position |
 | Parked | Helm parked (manual override) — thrust actively zeroed. All-Stop shows PARKED / IDLE in grey for these benign causes; only unexpected all-stops are red |
 | Completed | Survey finished; boat stopped at the final waypoint / parked |
 | Idle | No mission requested |
 
 `AwaitingRearm` and `CommsLost` are the two states that need operator
 action — both also raise alerts.
+
+**Operator link on the boats.** The boats' iWebSocket returns the boat to
+its base when nothing is heard from any Swiftships-UI for 30 s, with the
+helm in DRIVE or the boat underway, and holds station there on arrival.
+The Operator Link tiles read LINK OK, NO UI LINK (lost, but the boat is
+parked and idle, so it stays where it is; no alarm), LOST — RTB (returning
+to base) or LOST — AT BASE (holding on the base). The Operator Link Lost
+(Returning to Base) alert fires for the last two. The return base set from
+the Swiftships-UI (right click > Define base) is the orange BASE square on
+the Navigation map, and Dist to Base gives the distance to it in nautical
+miles.
 
 ## Mission replay
 1. Open **Replay**.
@@ -125,7 +137,9 @@ Active alerts appear on the Alarms dashboard and are emailed to the
 operations contact point. Engine rules: Engine Over Temperature (coolant
 above 105 °C), Engine Low Oil Pressure (below 150 kPa with the engine
 running above 700 rpm), Engine Fault (any active J1939 fault), Low Fuel
-Level (below 15 %); none of them fires on missing data. Severity `critical` repeats every 10 min until
+Level (below 15 %); none of them fires on missing data. Operator Link
+Lost (Returning to Base) is critical while the comms-loss failsafe drives
+the boat. Severity `critical` repeats every 10 min until
 resolved; `warning` hourly. Alarm history is kept 1 year in the events
 bucket.
 

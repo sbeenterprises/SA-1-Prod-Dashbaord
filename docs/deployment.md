@@ -345,6 +345,18 @@ disable or remove it in Frigate (Configuration Editor, Save & Restart)
 until it is cabled. Camera passwords in Frigate's URLs are never logged or
 stored. Check with `journalctl -u usv-frigate-bridge -n 5`.
 
+## Speed units of the helm (MOOS)
+On the boats the helm's speeds are in knots: iDivisorNMEA posts NAV_SPEED
+from the GPS in knots and the behaviours are set to match (the mission
+repository's iWebSocket says so with `nav_speed_units = knots`); the
+simulator's uSimMarineV22 uses m/s. grafana_bridge converts NAV_SPEED,
+DESIRED_SPEED, SPEED_CAP, CMD_SPEED and PID_SPEED_ERROR by
+`NAV_SPEED_UNITS` in `/etc/usv/usv.env` (`knots` on a vessel; unset = mps,
+as before v1.2.23), or `nav_speed_units` in its mission block, which wins.
+The pAntler console prints the value in use at start. With the wrong
+setting the Autopilot speeds and the speed error read 1.94 times too high
+(or too low).
+
 ## Battery instance (Signal K)
 `signalk_bridge` charts one battery: the instance named in
 `SIGNALK_BATTERY` in `/etc/usv/usv.env`, or the first

@@ -3,6 +3,49 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.23] - 2026-10-14 (comms-loss return to base, return base, helm speed units)
+
+Follows the 13 October changes in moos-ivp-morgan-stern-drive-mercury
+(iWebSocket: return to base on loss of the Swiftships-UI link). Update with
+`bash deploy/update.sh v1.2.23`, add `NAV_SPEED_UNITS=knots` to
+/etc/usv/usv.env on a vessel, restart the MOOS community (grafana_bridge
+changed), Ctrl+F5.
+
+### Added
+- grafana_bridge reads the boats' comms-loss failsafe: COMMS_LOSS (no frame
+  from any Swiftships-UI for comms_loss_timeout s), RETURN_HOLD (holding
+  station on the base after the return) and BASE_COORDS (the return base,
+  `lat,lon`). New mission state HoldingAtBase ("Holding at Base"); new
+  autonomy fields comms_loss, return_hold, comms_return and operator_link;
+  mission.base_lat / base_lon. Events: link lost, failsafe return
+  (critical), arrival hold, link restored (the return or hold continues
+  until the operator's next command), return base changed.
+- Operator Link tiles (Mission, Readiness, Fleet, Alarms) read
+  autonomy.operator_link: LINK OK, GRACE / LOST — FAILSAFE / LOST — RTB
+  (simulation), NO UI LINK (lost with the boat parked and idle: it stays,
+  no alarm), LOST — RTB, LOST — AT BASE.
+- Alert rule Operator Link Lost (Returning to Base), critical, while the
+  comms-loss failsafe drives the boat (23 rules).
+- Navigation: the return base as an orange BASE square on the map, and a
+  Dist to Base tile (nm, great circle from the last position).
+- `NAV_SPEED_UNITS` (usv.env) / `nav_speed_units` (mission block): the
+  units of the helm's speeds. The boats publish NAV_SPEED in knots; the
+  bridge had converted it as m/s, so the Autopilot actual / desired speed,
+  speed cap, commanded speed and speed error read 1.94 times too high on a
+  vessel. Unset keeps m/s (the simulator).
+
+### Fixed
+- Numeric fields are written with 12 significant digits instead of 6: a
+  latitude of 29.7219xx was stored as 29.7219, about 10 m of resolution, on
+  the map track, the vessel position and every derived distance.
+- The smoke test's dashboard-field check pairs each measurement with its
+  own fields (a query reading nav lat/lon and mission base_lat/base_lon no
+  longer counts mission.lat as queried).
+
+### Unchanged
+- The simulation iWebSocket's COMMS_LOST / MISSION_ARMED handling, the
+  CommsLost and AwaitingRearm states and their alert rules.
+
 ## [1.2.22] - 2026-10-14 (engine name in the header without engine data)
 
 Update with `bash deploy/update.sh v1.2.22`, then Ctrl+F5. No MOOS restart.

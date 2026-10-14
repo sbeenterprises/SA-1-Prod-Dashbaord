@@ -12,12 +12,21 @@
 //    starts outside the region (opr24 recovers the boat inside first).
 //  - MOOS_MANUAL_OVERRIDE=true parks the helm; planchaPID actively zeroes
 //    thrust while parked.
+//  - The production iWebSocket (moos-ivp-morgan-stern-drive-mercury, comms
+//    loss return to base) publishes COMMS_LOSS=true/false instead of the
+//    COMMS_LOST phases: after comms_loss_timeout s without a frame from any
+//    Swiftships-UI it engages RETURN (comms_return behaviour) when the helm
+//    is in DRIVE or the boat is underway, and comms_hold keeps station on
+//    the base on arrival (RETURN_HOLD=true). With the helm parked and the
+//    boat idle it stays where it is. Both variants are handled; a vessel
+//    publishes one or the other.
 #pragma once
 
 #include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <map>
 #include <string>
 #include <vector>
@@ -125,7 +134,9 @@ struct MissionFlags {
     bool armed = true;                 // MISSION_ARMED
     bool survey_complete = false;      // latched by waypt_survey endflag
     std::string entry_gate = "open";   // SURVEY_ENTRY_GATE
-    std::string comms_lost = "false";  // COMMS_LOST
+    std::string comms_lost = "false";  // COMMS_LOST (simulation iWebSocket)
+    bool comms_loss = false;           // COMMS_LOSS (production iWebSocket)
+    bool return_hold = false;          // RETURN_HOLD: holding station on the base
     std::string helm_state;            // IVPHELM_STATE (informational)
     std::string allstop = "clear";     // IVPHELM_ALLSTOP (informational)
 };
@@ -141,6 +152,7 @@ inline const char* DeriveMissionState(const MissionFlags& f) {
     if (f.manual_override && f.survey_complete)  return "Completed";
     if (f.manual_override)                       return "Parked";
     if (f.pause)                                 return "Paused";
+    if (f.return_hold)                           return "HoldingAtBase";
     if (f.stationing)                            return "StationKeeping";
     if (f.returning)                             return "ReturnToBase";
     if (f.waypoint && !gate_open(f.entry_gate))  return "EnteringRegion";
@@ -148,6 +160,44 @@ inline const char* DeriveMissionState(const MissionFlags& f) {
     if (f.waypoint)                              return "Autonomous";
     if (f.survey_complete)                       return "Completed";
     return "Idle";
+}
+
+// Operator link as one code for the dashboards (autonomy.operator_link):
+//   0 link ok
+//   1 grace, 2 failsafe hold, 3 returning to base   (COMMS_LOST phases)
+//   3 returning to base after a COMMS_LOSS (production)
+//   4 no Swiftships-UI link, boat stays (helm parked and idle: no action)
+//   5 returned after a COMMS_LOSS, holding station on the base
+inline int operator_link(const MissionFlags& f) {
+    const int p = comms_phase(f.comms_lost);
+    if (p > 0) return p;
+    if (!f.comms_loss) return 0;
+    if (f.return_hold) return 5;
+    if (f.returning) return 3;
+    return 4;
+}
+
+// The comms-loss failsafe is driving the boat (production iWebSocket): the
+// link is lost and the boat is returning to, or holding on, its base.
+inline bool comms_return(const MissionFlags& f) {
+    return f.comms_loss && (f.returning || f.return_hold);
+}
+
+// "lat,lon" (BASE_COORDS from iWebSocket) -> true with both values when
+// they parse and lie within the valid ranges.
+inline bool ParseLatLon(const std::string& s, double* lat, double* lon) {
+    const size_t comma = s.find(',');
+    if (comma == std::string::npos) return false;
+    char* end = nullptr;
+    const std::string a = trim(s.substr(0, comma)), b = trim(s.substr(comma + 1));
+    if (a.empty() || b.empty()) return false;
+    const double la = std::strtod(a.c_str(), &end);
+    if (*end) return false;
+    const double lo = std::strtod(b.c_str(), &end);
+    if (*end) return false;
+    if (!(la >= -90 && la <= 90 && lo >= -180 && lo <= 180)) return false;
+    *lat = la; *lon = lo;
+    return true;
 }
 
 // The no-silent-resume hold: survey requested but the operator has not

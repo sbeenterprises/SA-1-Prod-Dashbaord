@@ -78,6 +78,7 @@ GRAFANA_PORT=3001                       # or 3100 to match usv-722
 VESSEL_ID=usv-725
 ENGINE_TYPE=mercury_diesel
 ENGINE_MODEL="Mercury Diesel 2.0L"
+NAV_SPEED_UNITS=knots
 ENGINE_SOURCE=moos
 HELM_PROFILE=none
 CAN_INTERFACE=slcan0

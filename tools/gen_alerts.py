@@ -179,6 +179,16 @@ RULES = [
          "iWebSocket operator-link watchdog tripped — failsafe action in "
          "force, mission disarmed. Boat holds at the loss position.",
          for_="0s", no_data="OK"),
+    # Production iWebSocket (the boats): COMMS_LOSS and the return to base /
+    # hold on the base it engages. A lost link with the helm parked and the
+    # boat idle (UI closed at the dock) does not fire: the boat stays put.
+    rule("usv-comms-return", "Operator Link Lost (Returning to Base)",
+         q("autonomy", "comms_return"), "gt", 0, "critical",
+         "No frame from the Swiftships-UI for the comms-loss timeout: the "
+         "boat is returning to its base (comms_return) or holding there "
+         "(comms_hold). Clears when the link returns; the return or hold "
+         "continues until the operator's next command.",
+         for_="0s", no_data="OK"),
     rule("usv-helm-allstop", "Helm All-Stop (Unexpected)",
          q("autonomy", "allstop"), "gt", 0, "critical",
          "IVPHELM_ALLSTOP with an unexpected reason (e.g. MissingDecVars) — "

@@ -58,6 +58,17 @@ inline std::map<std::string, std::string> ReadEnvFile(const std::string& path) {
     return out;
 }
 
+// One setting from the process environment, else from /etc/usv/usv.env
+// (USV_ENV_FILE overrides the path); "" when neither has it. For programs
+// that run outside systemd (grafana_bridge under pAntler).
+inline std::string UsvSetting(const std::string& key) {
+    if (const char* v = std::getenv(key.c_str())) return v;
+    const char* f = std::getenv("USV_ENV_FILE");
+    auto m = ReadEnvFile(f ? f : "/etc/usv/usv.env");
+    auto it = m.find(key);
+    return it == m.end() ? "" : it->second;
+}
+
 struct EngineProfile {
     std::string type;          // ENGINE_TYPE, "" when unset
     std::string model;         // ENGINE_MODEL, the name the dashboards show;

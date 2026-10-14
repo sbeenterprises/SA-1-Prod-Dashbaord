@@ -46,6 +46,12 @@ namespace {
 
 constexpr double MS_TO_KN = 1.94384;
 constexpr double KN_TO_MS = 1.0 / MS_TO_KN;   // RADAR_TARGET spd is knots ($RATTM)
+// FieldMap scale for the helm's own speed variables (NAV_SPEED,
+// DESIRED_SPEED, SPEED_CAP, CMD_SPEED, PID_SPEED_ERROR): converted with
+// nav_speed_units, because they are knots on the boats (NAV_SPEED from the
+// GPS through iDivisorNMEA, the helm speeds set to match) and m/s in the
+// simulator (uSimMarineV22).
+constexpr double kHelmSpeed = -1.0;
 
 struct FieldMap {
     const char* measurement;
@@ -69,7 +75,7 @@ const std::multimap<std::string, FieldMap> kNumericVars = {
     {"NAV_LAT",                  {"nav", "lat"}},
     {"NAV_LONG",                 {"nav", "lon"}},
     {"NAV_HEADING",              {"nav", "heading"}},
-    {"NAV_SPEED",                {"nav", "sog", MS_TO_KN}},
+    {"NAV_SPEED",                {"nav", "sog", kHelmSpeed}},
     {"NAV_COG",                  {"nav", "cog"}},           // iDivisorNMEA
     {"NAV_HEADING_OVER_GROUND",  {"nav", "cog"}},           // uSimMarine
     {"NAV_YAW",                  {"nav", "yaw"}},           // vessel: see ignore_vars
@@ -84,21 +90,21 @@ const std::multimap<std::string, FieldMap> kNumericVars = {
     // Autopilot (FR-3). NAV_HEADING/NAV_SPEED double as the "actual" side
     // of the desired-vs-actual pairs on the Autopilot dashboard.
     {"NAV_HEADING",              {"autopilot", "actual_heading"}},
-    {"NAV_SPEED",                {"autopilot", "actual_speed", MS_TO_KN}},
+    {"NAV_SPEED",                {"autopilot", "actual_speed", kHelmSpeed}},
     {"DESIRED_HEADING",          {"autopilot", "desired_heading"}},
-    {"DESIRED_SPEED",            {"autopilot", "desired_speed", MS_TO_KN}},
+    {"DESIRED_SPEED",            {"autopilot", "desired_speed", kHelmSpeed}},
     {"DESIRED_RUDDER",           {"autopilot", "rudder_cmd"}},
     {"DESIRED_THRUST",           {"autopilot", "throttle_cmd"}},
     {"ANGULO_LEME",              {"autopilot", "rudder_actual"}},  // $AGRSA
     // planchaPID speed governor (m/s -> kn)
-    {"SPEED_CAP",                {"autopilot", "speed_cap", MS_TO_KN}},
-    {"CMD_SPEED",                {"autopilot", "cmd_speed", MS_TO_KN}},
+    {"SPEED_CAP",                {"autopilot", "speed_cap", kHelmSpeed}},
+    {"CMD_SPEED",                {"autopilot", "cmd_speed", kHelmSpeed}},
     {"NEXT_TURN_ANGLE",          {"autopilot", "next_turn_angle"}},
     {"DIST_TO_STATION",          {"mission", "dist_to_station"}},
     // Legacy pMarinePID outputs (not published by planchaPID; if they ever
     // appear they take precedence over the bridge-derived errors).
     {"PID_HEADING_ERROR",        {"autopilot", "heading_error"}},
-    {"PID_SPEED_ERROR",          {"autopilot", "speed_error", MS_TO_KN}},
+    {"PID_SPEED_ERROR",          {"autopilot", "speed_error", kHelmSpeed}},
     {"PID_HEADING_OUT",          {"autopilot", "pid_heading_out"}},
     {"PID_SPEED_OUT",            {"autopilot", "pid_speed_out"}},
     // Engine (FR-4), iCANRec J1939 decode. Units are already display units
@@ -174,11 +180,13 @@ const std::set<std::string> kFlagVars = {
     "MOOS_MANUAL_OVERRIDE", "MOOS_MANUAL_OVERIDE",
     "MISSION_ARMED", "SURVEY_COMPLETE",
     "REMOTE_CONTROL", "CRASH_STOP",
+    // Production iWebSocket comms-loss failsafe (return to base and hold).
+    "COMMS_LOSS", "RETURN_HOLD",
 };
 
 // Everything else we subscribe to.
 const std::set<std::string> kSpecialVars = {
-    "COMMS_LOST", "SURVEY_ENTRY_GATE",
+    "COMMS_LOST", "SURVEY_ENTRY_GATE", "BASE_COORDS",
     "IVPHELM_STATE", "IVPHELM_ALLSTOP", "IVPHELM_SUMMARY",
     "OPR_BREACHED", "VIEW_SEGLIST", "OPR_POLY_ACTUAL", "REGION_UPDATES", "OBSTACLE_ALERT",
     "CHECKLIST_STATUS", "DB_CLIENTS",
@@ -320,6 +328,19 @@ protected:
         if (!signalk_http_.empty() && signalk_http_.find("://") == std::string::npos)
             signalk_http_ = "http://" + signalk_http_;
         m_MissionReader.GetConfigurationParam("signalk_token", signalk_token_);
+        // Units of the helm's speeds (NAV_SPEED and the rest): knots on the
+        // boats, m/s in the simulator. NAV_SPEED_UNITS in /etc/usv/usv.env,
+        // or nav_speed_units in this block (wins); default mps, the units
+        // the bridge has always assumed.
+        {
+            std::string units = usv::lower(usv::trim(usv::UsvSetting("NAV_SPEED_UNITS")));
+            m_MissionReader.GetConfigurationParam("nav_speed_units", units);
+            units = usv::lower(usv::trim(units));
+            const bool knots = units == "knots" || units == "kn" || units == "kts";
+            helm_speed_to_kn_ = knots ? 1.0 : MS_TO_KN;
+            helm_speed_to_mps_ = knots ? KN_TO_MS : 1.0;
+            MOOSTrace("grafana_bridge: nav_speed_units=%s\n", knots ? "knots" : "mps");
+        }
         std::string profile = "vessel";
         m_MissionReader.GetConfigurationParam("readiness_profile", profile);
         readiness_strict_ = usv::lower(usv::trim(profile)) != "sim";
@@ -591,7 +612,8 @@ private:
                     (engine_var && std::string(fm.measurement) == "engine")
                         ? etags : std::string(fm.tags);
                 telemetry_->field(fm.measurement, tags, fm.field,
-                                  msg.GetDouble() * fm.scale);
+                                  msg.GetDouble() * (fm.scale == kHelmSpeed
+                                                     ? helm_speed_to_kn_ : fm.scale));
             }
         }
 
@@ -682,6 +704,19 @@ private:
             HandleFlag(key, usv::truthy(AsString(msg)));
         } else if (key == "COMMS_LOST") {
             HandleCommsLost(AsString(msg));
+        } else if (key == "BASE_COORDS") {
+            // "lat,lon": where the comms-loss failsafe returns the boat.
+            double la = 0, lo = 0;
+            if (usv::ParseLatLon(AsString(msg), &la, &lo)) {
+                if (have_base_ && (la != base_lat_ || lo != base_lon_)) {
+                    char m[96];
+                    std::snprintf(m, sizeof(m), "Return base set to %.5f, %.5f", la, lo);
+                    Event("mission", "info", m);
+                }
+                base_lat_ = la; base_lon_ = lo; have_base_ = true;
+                telemetry_->field("mission", "", "base_lat", base_lat_);
+                telemetry_->field("mission", "", "base_lon", base_lon_);
+            }
         } else if (key == "SURVEY_ENTRY_GATE") {
             // iWebSocket re-posts this every iterate (20 Hz): change-only.
             const std::string gate = usv::lower(usv::trim(AsString(msg)));
@@ -750,6 +785,8 @@ private:
         else if (key == "SURVEY_COMPLETE")      slot = &flags_.survey_complete;
         else if (key == "REMOTE_CONTROL")       slot = &flags_.remote_control;
         else if (key == "CRASH_STOP")           slot = &flags_.crash_stop;
+        else if (key == "COMMS_LOSS")           slot = &flags_.comms_loss;
+        else if (key == "RETURN_HOLD")          slot = &flags_.return_hold;
         if (!slot || *slot == val) return;
         *slot = val;
 
@@ -778,8 +815,31 @@ private:
             if (val) Event("alarm", "critical", "CRASH STOP commanded");
             else     Event("alarm", "info", "Crash stop cleared");
         } else if (key == "RETURN" && val) {
-            Event("mission", "info", "Return-to-base started");
+            if (flags_.comms_loss)
+                Event("alarm", "critical",
+                      "Comms failsafe: no Swiftships-UI link, returning to base");
+            else
+                Event("mission", "info", "Return-to-base started");
             if (mission_start_ == 0.0) mission_start_ = MonoSeconds();
+        } else if (key == "COMMS_LOSS") {
+            // iWebSocket: nothing heard from any Swiftships-UI for
+            // comms_loss_timeout s. It returns to base when the helm is in
+            // DRIVE or the boat is underway (RETURN follows), else stays.
+            if (val)
+                Event("alarm", "warning",
+                      "Operator link lost: no frame from the Swiftships-UI");
+            else
+                Event("alarm", "info",
+                      (flags_.returning || flags_.return_hold)
+                          ? "Operator link restored; return / hold on the base "
+                            "continues until the operator's next command"
+                          : "Operator link restored");
+        } else if (key == "RETURN_HOLD") {
+            Event("mission", "info",
+                  val ? (flags_.comms_loss
+                             ? "Arrived at base after comms loss: holding station"
+                             : "Arrived at base: holding station")
+                      : "Hold on the base ended");
         } else if (key == "SURVEY_COMPLETE" && val) {
             Event("mission", "info",
                   "Survey complete — stopping at final waypoint");
@@ -863,7 +923,7 @@ private:
 
     // Derived-quantity inputs, updated from every sample (before limiting).
     void CacheSample(const std::string& key, double v, double now) {
-        if (key == "NAV_SPEED") last_speed_mps_ = v;
+        if (key == "NAV_SPEED") last_speed_mps_ = v * helm_speed_to_mps_;
         else if (key == "NAV_X") { nav_x_ = v; have_x_ = true; }
         else if (key == "NAV_Y") {
             nav_y_ = v; have_y_ = true;
@@ -871,7 +931,7 @@ private:
         }
         else if (key == "NAV_HEADING") nav_hdg_ = v;
         else if (key == "DESIRED_HEADING") { desired_hdg_ = v; have_desired_hdg_ = true; }
-        else if (key == "DESIRED_SPEED") { desired_spd_ = v; have_desired_spd_ = true; }
+        else if (key == "DESIRED_SPEED") { desired_spd_ = v * helm_speed_to_mps_; have_desired_spd_ = true; }
 
         // Heading / speed error: planchaPID publishes neither (the PID_*
         // names belong to pMarinePID), so derive them at 2 Hz unless an
@@ -1415,6 +1475,17 @@ private:
         telemetry_->field("autonomy", "", "remote_control",
                           b(flags_.remote_control));
         telemetry_->field("autonomy", "", "crash_stop", b(flags_.crash_stop));
+        // Operator link for both iWebSocket variants (usv::operator_link):
+        // the tiles read this; comms_phase / comms_lost keep their meaning.
+        telemetry_->field("autonomy", "", "operator_link", usv::operator_link(flags_));
+        telemetry_->field("autonomy", "", "comms_loss", b(flags_.comms_loss));
+        telemetry_->field("autonomy", "", "comms_return", b(usv::comms_return(flags_)));
+        telemetry_->field("autonomy", "", "return_hold", b(flags_.return_hold));
+        // Return base re-written so last() over any window finds it.
+        if (have_base_) {
+            telemetry_->field("mission", "", "base_lat", base_lat_);
+            telemetry_->field("mission", "", "base_lon", base_lon_);
+        }
 
         // Derived state written periodically too, so the state timeline is
         // continuous and last() panels never go stale. Same for the
@@ -1515,6 +1586,10 @@ private:
     int survey_wpt_total_ = 0;
     double last_dist_ = 0.0, last_dist_time_ = -1e18;
     double last_speed_mps_ = 0.0;
+    double helm_speed_to_kn_ = MS_TO_KN;   // nav_speed_units: mps (default) or knots
+    double helm_speed_to_mps_ = 1.0;
+    double base_lat_ = 0.0, base_lon_ = 0.0;   // BASE_COORDS
+    bool have_base_ = false;
     double nav_x_ = 0.0, nav_y_ = 0.0;
     bool have_x_ = false, have_y_ = false;
     double nav_hdg_ = 0.0, desired_hdg_ = 0.0, desired_spd_ = 0.0;

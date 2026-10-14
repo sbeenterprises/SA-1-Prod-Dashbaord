@@ -94,6 +94,9 @@ public:
         if (std::isnan(value) || std::isinf(value)) return;
         if (on_field_) on_field_(measurement, name, value);
         std::ostringstream line;
+        // 12 significant digits: the stream default (6) stored a latitude
+        // of 29.7219xx as 29.7219, about 10 m of resolution.
+        line.precision(12);
         line << measurement << ",vessel=" << vessel_;
         if (!tags.empty()) line << "," << tags;
         line << " " << name << "=" << value;

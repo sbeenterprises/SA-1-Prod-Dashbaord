@@ -795,6 +795,70 @@ static void test_readiness() {
     CHECK(s.get("nav", "nothing", now) == nullptr);
 }
 
+// Production iWebSocket (comms loss return to base): COMMS_LOSS, RETURN,
+// RETURN_HOLD, BASE_COORDS.
+static void test_comms_loss_return() {
+    MissionFlags f;
+    CHECK_EQ_STR(DeriveMissionState(f), "Idle");
+    CHECK(operator_link(f) == 0);
+    CHECK(!comms_return(f));
+
+    // At the dock, helm parked, UI closed: link lost, boat stays.
+    f.manual_override = true;
+    f.comms_loss = true;
+    CHECK_EQ_STR(DeriveMissionState(f), "Parked");
+    CHECK(operator_link(f) == 4);
+    CHECK(!comms_return(f));
+    CHECK(!comms_lost_active(f.comms_lost));      // simulation phase untouched
+
+    // Underway: iWebSocket engages RETURN and releases the park.
+    f.manual_override = false;
+    f.waypoint = false;
+    f.returning = true;
+    CHECK_EQ_STR(DeriveMissionState(f), "ReturnToBase");
+    CHECK(operator_link(f) == 3);
+    CHECK(comms_return(f));
+
+    // Arrival: comms_return endflags RETURN=false, RETURN_HOLD=true.
+    f.returning = false;
+    f.return_hold = true;
+    CHECK_EQ_STR(DeriveMissionState(f), "HoldingAtBase");
+    CHECK(operator_link(f) == 5);
+    CHECK(comms_return(f));
+
+    // Link back: the hold continues until the operator's next command.
+    f.comms_loss = false;
+    CHECK_EQ_STR(DeriveMissionState(f), "HoldingAtBase");
+    CHECK(operator_link(f) == 0);
+    CHECK(!comms_return(f));
+
+    // Operator return to base with the link up is not a comms failsafe.
+    f.return_hold = false;
+    f.returning = true;
+    CHECK_EQ_STR(DeriveMissionState(f), "ReturnToBase");
+    CHECK(operator_link(f) == 0);
+    CHECK(!comms_return(f));
+
+    // Priorities: remote control, park and pause outrank the hold.
+    MissionFlags h; h.return_hold = true;
+    h.pause = true;            CHECK_EQ_STR(DeriveMissionState(h), "Paused");
+    h.pause = false; h.remote_control = true;
+                               CHECK_EQ_STR(DeriveMissionState(h), "Remote");
+    // The simulation phases keep their meaning when both are present.
+    MissionFlags s; s.comms_lost = "grace"; s.comms_loss = true; s.returning = true;
+    CHECK(operator_link(s) == 1);
+
+    // BASE_COORDS
+    double la = 0, lo = 0;
+    CHECK(ParseLatLon("29.72282,-91.21539", &la, &lo) && la == 29.72282 && lo == -91.21539);
+    CHECK(ParseLatLon(" 29.7 , -91.2 ", &la, &lo) && la == 29.7);
+    CHECK(!ParseLatLon("", &la, &lo));
+    CHECK(!ParseLatLon("29.7", &la, &lo));
+    CHECK(!ParseLatLon("lat,lon", &la, &lo));
+    CHECK(!ParseLatLon("95,-91", &la, &lo));
+    CHECK(!ParseLatLon("29.7,-91.2x", &la, &lo));
+}
+
 int main() {
     test_flag_parsing();
     test_allstop_classification();
@@ -822,6 +886,7 @@ int main() {
     test_helm_behaviors_fallback();
     test_readiness();
     test_camera_readiness();
+    test_comms_loss_return();
 
     std::printf("mission_logic_test: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;

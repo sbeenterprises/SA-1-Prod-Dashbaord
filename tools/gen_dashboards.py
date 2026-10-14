@@ -130,6 +130,44 @@ def position_query():
             '  |> keep(columns: ["vessel", "lat", "lon", "heading"])\n')
 
 
+def base_query():
+    """Return base of the comms-loss failsafe (mission.base_lat / base_lon,
+    from BASE_COORDS) as one lat/lon row for the map."""
+    return ('from(bucket: "telemetry")\n'
+            '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+            '  |> filter(fn: (r) => r._measurement == "mission" and (r._field == "base_lat" or r._field == "base_lon"))\n'
+            '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+            '  |> last()\n'
+            '  |> group()\n'
+            '  |> pivot(rowKey: ["vessel"], columnKey: ["_field"], valueColumn: "_value")\n'
+            '  |> filter(fn: (r) => exists r.base_lat and exists r.base_lon)\n'
+            '  |> map(fn: (r) => ({lat: r.base_lat, lon: r.base_lon}))\n')
+
+
+# Great-circle distance from the vessel's last position to the return base,
+# in nautical miles.
+base_distance_query = (
+    'import "math"\n'
+    'from(bucket: "telemetry")\n'
+    '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+    '  |> filter(fn: (r) => (r._measurement == "nav" and (r._field == "lat" or r._field == "lon"))\n'
+    '      or (r._measurement == "mission" and (r._field == "base_lat" or r._field == "base_lon")))\n'
+    '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+    '  |> last()\n'
+    '  |> group()\n'
+    '  |> pivot(rowKey: ["vessel"], columnKey: ["_field"], valueColumn: "_value")\n'
+    '  |> filter(fn: (r) => exists r.lat and exists r.lon and exists r.base_lat and exists r.base_lon)\n'
+    '  |> map(fn: (r) => {\n'
+    '      p1 = r.lat * math.pi / 180.0\n'
+    '      p2 = r.base_lat * math.pi / 180.0\n'
+    '      dp = p2 - p1\n'
+    '      dl = (r.base_lon - r.lon) * math.pi / 180.0\n'
+    '      a = math.sin(x: dp / 2.0) * math.sin(x: dp / 2.0)\n'
+    '          + math.cos(x: p1) * math.cos(x: p2) * math.sin(x: dl / 2.0) * math.sin(x: dl / 2.0)\n'
+    '      return {_value: 2.0 * 6371008.8 * math.asin(x: math.sqrt(x: a)) / 1852.0}\n'
+    '  })\n')
+
+
 def vector_query():
     """Own-ship speed vector for the map (ECDIS style): a two-point line from
     the vessel to where it will be in 6 minutes at the current SOG, along
@@ -180,13 +218,27 @@ TRACK_RED = "#e53935"
 ROUTE_GREEN = "#2e7d32"
 REGION_CYAN = "#00bcd4"
 VECTOR_LIME = "#9be22d"
+BASE_ORANGE = "#ff9830"
 
 
 def overlay_layers(track_ref="A", vessel_ref="B", route_ref="C",
-                   region_ref="D", vector_ref="E"):
+                   region_ref="D", vector_ref="E", base_ref=None):
     def coords():
         return {"mode": "coords", "latitude": "lat", "longitude": "lon"}
-    return [
+    # Return base of the comms-loss failsafe (BASE_COORDS): an orange square
+    # labelled BASE, drawn under the vessel.
+    base = [{"type": "markers", "name": "Return base",
+             "location": coords(),
+             "filterData": {"id": "byRefId", "options": base_ref},
+             "config": {"style": {
+                 "size": {"fixed": 9}, "color": {"fixed": BASE_ORANGE},
+                 "opacity": 1,
+                 "symbol": {"fixed": "img/icons/marker/square.svg", "mode": "fixed"},
+                 "text": {"fixed": "BASE", "mode": "fixed"},
+                 "textConfig": {"fontSize": 11, "offsetX": 0, "offsetY": -14,
+                                "textAlign": "center", "textBaseline": "middle"},
+             }, "showLegend": False}}] if base_ref else []
+    return base + [
         {"type": "route", "name": "Operating region",
          "location": coords(),
          "filterData": {"id": "byRefId", "options": region_ref},
@@ -408,7 +460,7 @@ def ts(title, targets_, x, y, w=12, h=8, unit=None, overrides=None,
 STATE_LABELS = {
     "StationKeeping": "Station Keeping", "ReturnToBase": "Return to Base",
     "EnteringRegion": "Entering Region", "AwaitingRearm": "Awaiting Re-arm",
-    "CommsLost": "Comms Lost",
+    "CommsLost": "Comms Lost", "HoldingAtBase": "Holding at Base",
     # value written by bridges before v1.0.1 (historical data / replay)
     "ReturnToHome": "Return to Base",
 }
@@ -961,6 +1013,7 @@ mission_state_mappings = state_map([
     ("ReturnToHome", "orange"),
     ("EnteringRegion", "super-light-blue"), ("AwaitingRearm", "orange"),
     ("CommsLost", "red"), ("Parked", "#6e7680"), ("Completed", "purple"),
+    ("HoldingAtBase", "orange"),
 ])
 helm_state_mappings = state_map([
     ("DRIVE", TILE_OK), ("PARK", "#6e7680"), ("STANDBY", "yellow"),
@@ -986,6 +1039,14 @@ geofence_mappings = value_color_map([
 comms_phase_mappings = value_color_map([
     (0, "LINK OK", TILE_OK), (1, "GRACE", "yellow"),
     (2, "LOST — FAILSAFE", "red"), (3, "LOST — RTB", "orange"),
+])
+# Operator link for both iWebSocket variants (autonomy.operator_link,
+# usv::operator_link): the simulation's COMMS_LOST phases 1 to 3, and the
+# boats' COMMS_LOSS (production iWebSocket: return to base, hold there).
+operator_link_mappings = value_color_map([
+    (0, "LINK OK", TILE_OK), (1, "GRACE", "yellow"),
+    (2, "LOST — FAILSAFE", "red"), (3, "LOST — RTB", "orange"),
+    (4, "NO UI LINK", "yellow"), (5, "LOST — AT BASE", "orange"),
 ])
 flag_timeline_mappings = [{"type": "value", "options": {
     "0": {"text": "—", "color": "rgba(110, 120, 130, 0.12)", "index": 0},
@@ -1058,8 +1119,8 @@ DASHBOARDS.append(dashboard("usv-mission", "Mission", [
              "0": {"text": "DISARMED", "color": "orange", "index": 0},
              "1": {"text": "ARMED", "color": TILE_OK, "index": 1}}}],
          text_mode="value", color_mode="background"),
-    stat("Operator Link", flux("autonomy", "comms_phase", last=True),
-         9, 0, 3, 2, mappings=comms_phase_mappings,
+    stat("Operator Link", flux("autonomy", "operator_link", last=True),
+         9, 0, 3, 2, mappings=operator_link_mappings,
          text_mode="value", color_mode="background"),
     stat("Geofence", flux("autonomy", "geofence_breached", last=True),
          12, 0, 3, 2, mappings=geofence_mappings, text_mode="value",
@@ -1173,12 +1234,13 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
           [target(track_query("5s")), target(position_query(), ref="B"),
            target(geometry_query("route"), ref="C"),
            target(geometry_query("region"), ref="D"),
-           target(vector_query(), ref="E")],
+           target(vector_query(), ref="E"),
+           target(base_query(), ref="F")],
           0, 0, 14, 10,
           options={
               "view": {"id": "fit", "zoom": 15},
               "basemap": {"type": "osm-standard", "name": "OSM"},
-              "layers": overlay_layers(),
+              "layers": overlay_layers(base_ref="F"),
               "tooltip": {"mode": "details"},
           }),
     # Instruments: compass (HDG + COG needles) and SOG meter.
@@ -1201,8 +1263,11 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
     stat("Satellites", flux("nav", "satellites", last=True), 19, 6, 5, 2,
          decimals=0, thresholds=neutral_base([(None, "red"), (5, "yellow"), (8, TILE_OK)]),
          color_mode="background", no_value="N/A"),
-    stat("Latitude", flux("nav", "lat", last=True), 14, 8, 5, 2, decimals=6),
-    stat("Longitude", flux("nav", "lon", last=True), 19, 8, 5, 2, decimals=6),
+    stat("Latitude", flux("nav", "lat", last=True), 14, 8, 3, 2, decimals=6),
+    stat("Longitude", flux("nav", "lon", last=True), 17, 8, 4, 2, decimals=6),
+    # Distance to the comms-loss return base (BASE_COORDS).
+    stat("Dist to Base", base_distance_query, 21, 8, 3, 2, unit=UNIT_NM,
+         decimals=2, no_value="no base"),
     # KPI strip: 8 equal tiles.
     stat("Speed Cap", flux("autopilot", "speed_cap", last=True), 0, 10, 3, 2,
          unit="velocityknot", decimals=1),
@@ -1235,6 +1300,16 @@ DASHBOARDS.append(dashboard("usv-navigation", "Navigation", [
     ts("Attitude — Roll / Pitch", [target(flux("nav", ["roll", "pitch"]))],
        18, 12, 6, 5, unit="degree"),
 ], ["navigation"]))
+# Dist to Base (v1.2.23) takes its own id and the shared counter is put back,
+# so adding it does not renumber the panels of the later dashboards.
+for _p in DASHBOARDS[-1]["panels"]:
+    if _p.get("title") == "Dist to Base":
+        _id[0] -= 1
+        _dist_old = _p["id"]
+        _p["id"] = 9501
+        for _q in DASHBOARDS[-1]["panels"]:
+            if _q["id"] > _dist_old and _q is not _p:
+                _q["id"] -= 1
 
 # Helm trim switch and J1939 DM1 fault details (can_bridge, usv722_can.hpp).
 # The trim switch is the helm button state only: trim POSITION is not on the
@@ -1906,8 +1981,8 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
          thresholds=[(None, "#8e9299"), (1, "orange")]),
     stat("Mission State", last_str("mission_state", "state"), 16, 7, 4, 3,
          mappings=mission_state_mappings, text_mode="value", color_mode="background"),
-    stat("Operator Link", flux("autonomy", "comms_phase", last=True), 20, 7, 4, 3,
-         mappings=comms_phase_mappings, text_mode="value", color_mode="background"),
+    stat("Operator Link", flux("autonomy", "operator_link", last=True), 20, 7, 4, 3,
+         mappings=operator_link_mappings, text_mode="value", color_mode="background"),
     stat("Route", last_str("mission_state", "route_name"), 16, 10, 8, 2, text_mode="value",
          no_value="no route"),
     # B — the two lists
@@ -2687,8 +2762,8 @@ fleet_panels = [
                         "0": {"text": "DISARMED", "color": "orange", "index": 0},
                         "1": {"text": "ARMED", "color": TILE_OK, "index": 1}}}],
                     text_mode="value", color_mode="background")),
-    fleet_link(stat("Operator Link", fleet_last("autonomy", "comms_phase"),
-                    10, 11, 3, 3, mappings=comms_phase_mappings,
+    fleet_link(stat("Operator Link", fleet_last("autonomy", "operator_link"),
+                    10, 11, 3, 3, mappings=operator_link_mappings,
                     text_mode="value", color_mode="background")),
     fleet_link(stat("Geofence", fleet_last("autonomy", "geofence_breached"),
                     13, 11, 3, 3, mappings=geofence_mappings,
@@ -2781,8 +2856,8 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms", [
     # Autonomy / mission safety row (Alpha mission).
     stat("Mission State", last_str("mission_state", "state"), 0, 18, 4, 4,
          mappings=mission_state_mappings, text_mode="value", color_mode="background"),
-    stat("Operator Link", flux("autonomy", "comms_lost", last=True),
-         4, 18, 4, 4, mappings=alert_map("OK", "FAILSAFE"),
+    stat("Operator Link", flux("autonomy", "operator_link", last=True),
+         4, 18, 4, 4, mappings=operator_link_mappings,
          text_mode="value", color_mode="background"),
     stat("Mission Armed", flux("autonomy", "armed", last=True), 8, 18, 4, 4,
          mappings=[{"type": "value", "options": {

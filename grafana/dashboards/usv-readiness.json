@@ -668,6 +668,11 @@
                   "text": "Completed",
                   "color": "purple",
                   "index": 11
+                },
+                "HoldingAtBase": {
+                  "text": "Holding at Base",
+                  "color": "orange",
+                  "index": 12
                 }
               }
             }
@@ -712,7 +717,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"comms_phase\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"operator_link\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
           "refId": "A"
         }
       ],
@@ -754,6 +759,16 @@
                   "text": "LOST \u2014 RTB",
                   "color": "orange",
                   "index": 3
+                },
+                "4": {
+                  "text": "NO UI LINK",
+                  "color": "yellow",
+                  "index": 4
+                },
+                "5": {
+                  "text": "LOST \u2014 AT BASE",
+                  "color": "orange",
+                  "index": 5
                 }
               }
             }
