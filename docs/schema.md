@@ -142,7 +142,13 @@ port / centre / full starboard, x STEER_MAX_DEG (50).
 
 ### engine (FR-4) — sources: MOOS bridge (iCANRec ENGINE_*, SAE J1939 on
 slcan0), CAN bridge (N2K PGN 127488/127505 if an N2K bus exists), Signal K
-Tag: `instance` (multi-engine; ENGINE_* is instance 0). Fields: rpm,
+One writer per vessel: `ENGINE_SOURCE` in /etc/usv/usv.env (signalk | moos |
+can) names the producer of the engine fields and the other two leave them
+alone (usv-722: signalk once the Yamaha gateway is fitted; usv-725: moos).
+Unset, every producer writes, as before v1.2.20.
+Tags: `instance` (0 for a single engine, 0/1 port/starboard; on every engine
+point) and `engine_type` (ENGINE_TYPE from usv.env, e.g. yamaha_outboard,
+mercury_diesel; the header chip and the dial ranges read it). Fields: rpm,
 coolant_temp, oil_temp (°C), oil_pressure, intake_manifold_pressure (kPa),
 fuel_level (%), fuel_rate (L/h), runtime_h (h), percent_load,
 percent_torque, pedal_position (%), active_dtcs (count).

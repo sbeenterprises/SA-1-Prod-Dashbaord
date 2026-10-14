@@ -30,6 +30,35 @@ if [[ $INFLUX_TOKEN == CHANGE_ME* || $INFLUX_PASSWORD == CHANGE_ME* ]]; then
   echo "Edit $ENV_FILE first (CHANGE_ME values present)."; exit 1
 fi
 
+# ---------------------------------------------------------------- engine profile
+# One release serves every hull; usv.env says where this vessel's engine
+# data comes from (docs/requirements-usv-725.md, section 4.4). The bridges
+# read the same keys (ingestion/cpp-common/engine_profile.hpp); the checks
+# here only stop an install with a value no bridge understands.
+ENGINE_SOURCE=${ENGINE_SOURCE:-}
+ENGINE_TYPE=${ENGINE_TYPE:-}
+ENGINE_COUNT=${ENGINE_COUNT:-1}
+HELM_PROFILE=${HELM_PROFILE:-usv722}
+case "$ENGINE_SOURCE" in
+  ""|signalk|moos|can) ;;
+  *) echo "ENGINE_SOURCE=$ENGINE_SOURCE in $ENV_FILE: use signalk, moos or can"; exit 1 ;;
+esac
+case "$ENGINE_COUNT" in 1|2) ;; *) echo "ENGINE_COUNT=$ENGINE_COUNT in $ENV_FILE: use 1 or 2"; exit 1 ;; esac
+case "$HELM_PROFILE" in
+  usv722|none) ;;
+  *) echo "WARNING: HELM_PROFILE=$HELM_PROFILE has no decoder in this release; helm tiles will read N/A" ;;
+esac
+if [[ -z $ENGINE_SOURCE ]]; then
+  echo "NOTE: ENGINE_SOURCE is not set in $ENV_FILE: every bridge keeps writing engine"
+  echo "      fields (pre-v1.2.20 behaviour). Set signalk, moos or can so each engine"
+  echo "      field has one writer on this vessel."
+fi
+if [[ -n $ENGINE_SOURCE && -z $ENGINE_TYPE ]]; then
+  echo "WARNING: ENGINE_TYPE is empty: dials use the default ranges and the header"
+  echo "         shows no engine chip (yamaha_outboard | mercury_diesel)."
+fi
+say "Engine profile: source=${ENGINE_SOURCE:-unset} type=${ENGINE_TYPE:-unset} count=$ENGINE_COUNT helm=$HELM_PROFILE"
+
 # ---------------------------------------------------------------- apt repos
 say "Adding InfluxData and Grafana apt repositories"
 apt-get update -q
@@ -422,3 +451,16 @@ fi
 
 say "Done. Grafana: http://$(hostname -I | awk '{print $1}'):${GRAFANA_PORT:-3001} (folder 'Swift Autonomous Dashboard')"
 say "Reminder: merge ingestion/moos-cpp/example.moos into your mission file."
+if [[ $ENGINE_SOURCE == moos ]]; then
+  cat <<EOF
+Engine data on this vessel comes from MOOS (iCANRec, J1939). grafana_bridge
+reads ENGINE_SOURCE / ENGINE_TYPE from $ENV_FILE at start; the mission file
+needs only (ProcessConfig = grafana_bridge):
+  vessel_id       = ${VESSEL_ID:-usv-01}
+  engine_rate_hz  = 2
+  // engine_passthrough = true     // default from ENGINE_SOURCE=moos
+  // engine_type = ${ENGINE_TYPE:-mercury_diesel}   // default from ENGINE_TYPE
+Restart pAntler (or the MOOS mission) after the first install so grafana_bridge
+picks the profile up.
+EOF
+fi

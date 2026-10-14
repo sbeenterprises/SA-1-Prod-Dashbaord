@@ -85,15 +85,17 @@ else
   bad "mission_logic_test failed"; echo "$OUT" | tail -5
 fi
 
-hdr "Bridge logic unit tests (radar targets, cameras, usv-722 CAN)"
+hdr "Bridge logic unit tests (radar targets, cameras, usv-722 CAN, engine profile)"
 for t in ingestion/moos-cpp/build/mayara_logic_test ingestion/moos-cpp/build-tests/mayara_logic_test \
-         ingestion/frigate-cpp/build/frigate_logic_test ingestion/can-cpp/build/usv722_can_test; do
+         ingestion/frigate-cpp/build/frigate_logic_test ingestion/can-cpp/build/usv722_can_test \
+         ingestion/can-cpp/build/engine_profile_test; do
   [[ -x "$REPO/$t" ]] || continue
   if OUT=$("$REPO/$t" 2>&1); then ok "$(basename "$t"): $(echo "$OUT" | tail -1)"
   else bad "$(basename "$t") failed"; echo "$OUT" | tail -5; fi
 done
 [[ -x "$REPO/ingestion/frigate-cpp/build/frigate_logic_test" ]] || bad "frigate_logic_test not built"
 [[ -x "$REPO/ingestion/can-cpp/build/usv722_can_test" ]] || bad "usv722_can_test not built"
+[[ -x "$REPO/ingestion/can-cpp/build/engine_profile_test" ]] || bad "engine_profile_test not built"
 
 hdr "Simulator -> InfluxDB line protocol"
 start_stub

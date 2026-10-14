@@ -35,6 +35,7 @@
 #include <thread>
 #include <vector>
 
+#include "../cpp-common/engine_profile.hpp"
 #include "../cpp-common/http_get.hpp"
 #include "../cpp-common/influx_query.hpp"
 #include "../cpp-common/influx_writer.hpp"
@@ -270,6 +271,16 @@ protected:
         for (const auto& [var, fm] : kNumericVars)
             if (std::string(fm.measurement) == "engine")
                 limiter_.set_rate(std::string("engine.") + fm.field, engine_hz);
+        // Engine profile of this vessel (/etc/usv/usv.env: ENGINE_SOURCE,
+        // ENGINE_TYPE). ENGINE_* passthrough is on when MOOS (iCANRec) is the
+        // engine source or no source is named; the mission file can override:
+        //   engine_passthrough = true | false
+        //   engine_type = mercury_diesel          // tag on every engine point
+        engine_profile_ = usv::EngineProfile::FromEnv();
+        engine_passthrough_ = engine_profile_.moos_engine;
+        m_MissionReader.GetConfigurationParam("engine_passthrough", engine_passthrough_);
+        if (m_MissionReader.GetConfigurationParam("engine_type", v) && !v.empty())
+            engine_profile_.type = usv::trim(v);
         limiter_.set_rate("autopilot.error", 2.0);
         if (m_MissionReader.GetConfigurationParam("ignore_vars", v))
             for (const auto& s : usv::SplitCsv(v)) ignore_vars_.insert(s);
@@ -391,6 +402,8 @@ protected:
 
         MOOSTrace("grafana_bridge: influx=%s bucket=%s vessel=%s\n",
                   opts.url.c_str(), opts.bucket.c_str(), opts.vessel.c_str());
+        MOOSTrace("grafana_bridge: %s engine_passthrough=%d\n",
+                  engine_profile_.Describe().c_str(), engine_passthrough_ ? 1 : 0);
         return true;
     }
 
@@ -523,13 +536,21 @@ private:
             auto range = kNumericVars.equal_range(key);
             for (auto it = range.first; it != range.second; ++it) {
                 const FieldMap& fm = it->second;
+                // ENGINE_* (iCANRec) is written only when MOOS is this
+                // vessel's engine source; the engine points carry the
+                // engine_type tag beside instance=0.
+                const bool engine_var = key.rfind("ENGINE_", 0) == 0;
+                if (engine_var && !engine_passthrough_) continue;
                 // Legacy PID_* producers take precedence over derived errors.
                 if (key.rfind("PID_", 0) == 0)
                     external_fields_.insert(fm.field);
                 const std::string k =
                     std::string(fm.measurement) + "." + fm.field;
                 if (!limiter_.allow(k, now)) continue;
-                telemetry_->field(fm.measurement, fm.tags, fm.field,
+                const std::string tags =
+                    (engine_var && std::string(fm.measurement) == "engine")
+                        ? engine_profile_.Tags(fm.tags) : std::string(fm.tags);
+                telemetry_->field(fm.measurement, tags, fm.field,
                                   msg.GetDouble() * fm.scale);
             }
         }
@@ -1443,6 +1464,8 @@ private:
 
     // Deployment configuration (OnStartUp).
     usv::RateLimiter limiter_{5.0};
+    usv::EngineProfile engine_profile_;
+    bool engine_passthrough_ = true;
     std::set<std::string> ignore_vars_;
     std::string mission_name_;
     std::string mission_id_;

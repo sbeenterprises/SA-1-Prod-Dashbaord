@@ -353,6 +353,32 @@ VE.Direct). Its voltage also feeds System Voltage when no
 `electrical.system.voltage` sensor exists, and voltage x -current feeds
 Total Power when no `electrical.loads.total.power` exists.
 
+## Engine profile (one release, two hulls)
+The engine data path differs per hull and is chosen in `/etc/usv/usv.env`,
+never in the dashboards:
+
+| Hull | Engine | Engine data path | usv.env |
+|---|---|---|---|
+| usv-722 | Yamaha outboard | NMEA 2000 (Yamaha Command Link gateway, on order) -> Signal K `propulsion.*` -> signalk_bridge | `ENGINE_TYPE=yamaha_outboard` `ENGINE_SOURCE=signalk` `HELM_PROFILE=usv722` |
+| usv-725 | Mercury diesel sterndrive | SAE J1939 on slcan0 -> iCANRec `ENGINE_*` -> grafana_bridge | `ENGINE_TYPE=mercury_diesel` `ENGINE_SOURCE=moos` `HELM_PROFILE=none` (until its helm frames are captured) |
+
+`ENGINE_SOURCE` names the one producer of the `engine` fields; the other
+bridges leave them alone (docs/schema.md, "engine"). `ENGINE_TYPE` becomes
+the `engine_type` tag on every engine point. `ENGINE_COUNT` /
+`ENGINE_INSTANCES` describe twin installations (0,1 = port, starboard).
+`HELM_PROFILE` selects the drive-bus decoder in can_bridge (`usv722`, or
+`none` to keep only the bus statistics). The derived switches can be forced
+with `SIGNALK_ENGINE`, `CAN_N2K_ENGINE`, `CAN_DM1` and `MOOS_ENGINE` (0/1).
+
+The systemd bridges receive the keys from usv.env directly. grafana_bridge
+runs under pAntler and reads `/etc/usv/usv.env` itself at start (a
+`USV_ENV_FILE` environment variable points elsewhere); `engine_passthrough`
+and `engine_type` in its ProcessConfig block override the file. install.sh
+prints the resolved profile and, for `moos`, the mission-file block.
+
+Leaving `ENGINE_SOURCE` empty keeps the pre-v1.2.20 behaviour: every
+producer writes, which is only right while one of them has data.
+
 ## Services
 | Unit | Role |
 |---|---|
@@ -385,6 +411,7 @@ emails while it runs; always stop it before real operations.
 | What | Where |
 |---|---|
 | Secrets, vessel id, retention | /etc/usv/usv.env (re-run install.sh after edits) |
+| Engine profile (type, source, count, helm decoder) | ENGINE_TYPE, ENGINE_SOURCE, ENGINE_COUNT, ENGINE_INSTANCES, HELM_PROFILE in usv.env; ingestion/cpp-common/engine_profile.hpp |
 | MOOS variable map | ingestion/moos-cpp/moos_bridge.cpp |
 | Signal K path map | ingestion/signalk-cpp/signalk_bridge.cpp kPaths |
 | PGN decoders | ingestion/can-cpp/main.cpp decode_pgn() |

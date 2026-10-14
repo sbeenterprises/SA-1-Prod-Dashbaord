@@ -8,6 +8,9 @@
 // Env: SIGNALK_URL, INFLUX_URL, INFLUX_TOKEN, INFLUX_ORG, INFLUX_BUCKET,
 //      VESSEL_ID, SIGNALK_BATTERY (battery instance to chart, e.g. House;
 //      default: the first electrical.batteries.<id> seen)
+//      ENGINE_SOURCE / ENGINE_TYPE (cpp-common/engine_profile.hpp): engine
+//      fields are written only when Signal K is this vessel's engine source;
+//      every engine point carries instance and engine_type tags.
 // Reconnection: IXWebSocket automatic backoff + status heartbeat.
 
 #include <ixwebsocket/IXNetSystem.h>
@@ -26,6 +29,7 @@
 #include <string>
 #include <thread>
 
+#include "../cpp-common/engine_profile.hpp"
 #include "../cpp-common/influx_writer.hpp"
 
 using json = nlohmann::json;
@@ -251,12 +255,24 @@ private:
         } else {
             auto it = kPaths.find(path);
             if (it == kPaths.end() || !value.is_number()) return;
-            writer_.field(it->second.measurement, "", it->second.field,
+            std::string tags;
+            if (std::string(it->second.measurement) == "engine") {
+                // Engine fields have one writer per vessel (ENGINE_SOURCE);
+                // the paths read here are instance 0.
+                if (!profile_.signalk_engine) return;
+                tags = profile_.Tags("instance=0");
+            }
+            writer_.field(it->second.measurement, tags, it->second.field,
                           it->second.convert(value.get<double>()));
         }
     }
 
+public:
+    const usv::EngineProfile& profile() const { return profile_; }
+
+private:
     std::mutex mu_;
+    usv::EngineProfile profile_ = usv::EngineProfile::FromEnv();
     usv::InfluxWriter writer_{"telemetry"};
     uint64_t msg_count_ = 0;
     std::string self_;            // own vessel context from the hello message
@@ -277,6 +293,9 @@ int main() {
         "SIGNALK_URL", "ws://localhost:3000/signalk/v1/stream?subscribe=self");
 
     Bridge bridge;
+    std::cerr << "signalk_bridge: " << bridge.profile().Describe()
+              << (bridge.profile().signalk_engine
+                      ? "\n" : " (engine paths ignored on this vessel)\n");
     ix::WebSocket ws;
     ws.setUrl(url);
     ws.setPingInterval(20);

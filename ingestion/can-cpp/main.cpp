@@ -13,6 +13,11 @@
 // Env:   CAN_INTERFACE, INFLUX_URL, INFLUX_TOKEN, INFLUX_ORG, INFLUX_BUCKET, VESSEL_ID
 //        STEER_MAX_DEG (50), STEER_RAW_PORT (0), STEER_RAW_CENTER (511),
 //        STEER_RAW_STBD (1012): steering calibration of the usv-722 drive
+//        ENGINE_SOURCE / ENGINE_TYPE / HELM_PROFILE (cpp-common/engine_profile.hpp):
+//        N2K engine PGNs are decoded only when ENGINE_SOURCE=can, the J1939
+//        DM1 faults unless ENGINE_SOURCE=moos, the helm / drive frames when
+//        HELM_PROFILE=usv722 (default); engine points carry instance and
+//        engine_type tags. Bus statistics are always written.
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
@@ -30,6 +35,7 @@
 #include <map>
 #include <string>
 
+#include "../cpp-common/engine_profile.hpp"
 #include "../cpp-common/influx_writer.hpp"
 #include "usv722_can.hpp"
 
@@ -37,6 +43,13 @@ using usv::InfluxWriter;
 using usv::env_or;
 
 namespace {
+
+// Tags for the N2K / J1939 engine points this bridge writes (instance from
+// the frame, engine_type from the vessel profile).
+const usv::EngineProfile& profile() {
+    static const usv::EngineProfile p = usv::EngineProfile::FromEnv();
+    return p;
+}
 
 volatile std::sig_atomic_t g_stop = 0;
 void on_signal(int) { g_stop = 1; }
@@ -75,11 +88,11 @@ constexpr double RAD = 57.29577951308232;
 void decode_pgn(InfluxWriter& w, uint32_t pgn, const uint8_t* d, uint8_t len) {
     switch (pgn) {
         case 127488: {  // Engine Parameters, Rapid Update
-            if (len < 8) break;
+            if (len < 8 || !profile().can_n2k_engine) break;
             uint8_t instance = d[0];
             uint16_t rpm_raw = u16(d + 1);
             if (rpm_raw != 0xFFFF)
-                w.field("engine", "instance=" + std::to_string(instance),
+                w.field("engine", profile().Tags("instance=" + std::to_string(instance)),
                         "rpm", rpm_raw * 0.25);
             break;
         }
@@ -123,11 +136,12 @@ void decode_pgn(InfluxWriter& w, uint32_t pgn, const uint8_t* d, uint8_t len) {
             break;
         }
         case 127505: {  // Fluid Level (instance 0 = fuel by convention)
-            if (len < 8) break;
+            if (len < 8 || !profile().can_n2k_engine) break;
             uint8_t type = d[0] & 0x0F;
             int16_t level_raw = s16(d + 1);
             if (type == 0 && level_raw != 0x7FFF)
-                w.field("engine", "", "fuel_level", level_raw * 0.004);
+                w.field("engine", profile().Tags("instance=0"), "fuel_level",
+                        level_raw * 0.004);
             break;
         }
         default:
@@ -146,7 +160,13 @@ public:
         if (it != last_.end() && it->second.value == v.value && t - it->second.t < 0.5) return;
         if (it != last_.end() && t - it->second.t < 0.1) return;   // at most 10 Hz
         last_[key] = {v.value, t};
-        w.field(v.measurement, "", v.field, v.value);
+        w.field(v.measurement, EngineTags(v.measurement), v.field, v.value);
+    }
+
+    // The drive-bus values are the single engine's: engine points carry the
+    // instance and engine_type tags, the autopilot (rudder) ones none.
+    static std::string EngineTags(const std::string& measurement) {
+        return measurement == "engine" ? profile().Tags("instance=0") : std::string();
     }
 private:
     struct Last { double value; double t; };
@@ -165,6 +185,14 @@ int main() {
 
     const std::string ifname = env_or("CAN_INTERFACE", "can0");
     InfluxWriter writer;
+    const usv::EngineProfile& prof = profile();
+    // Which decoders run on this vessel (bus statistics always do).
+    const bool helm_decode = prof.helm_profile == "usv722";
+    if (prof.helm_profile != "usv722" && prof.helm_profile != "none")
+        std::cerr << "HELM_PROFILE=" << prof.helm_profile
+                  << " has no decoder in this build; helm / drive tiles will read N/A\n";
+    std::cerr << "can_bridge: " << prof.Describe()
+              << " helm_decode=" << (helm_decode ? "1" : "0") << "\n";
     usv::usv722::SteerCal steer_cal;
     steer_cal.port = env_num("STEER_RAW_PORT", 0.0);
     steer_cal.centre = env_num("STEER_RAW_CENTER", 511.0);
@@ -246,12 +274,20 @@ int main() {
                         ++pgn_counts[pgn];
                         decode_pgn(writer, pgn, frame.data, frame.can_dlc);
                     }
-                    for (const auto& v : usv::usv722::Decode(id, ext, frame.data,
-                                                             frame.can_dlc, steer_cal))
-                        helm_writer.put(writer, v, t);
+                    // J1939 DM1 from the drive bus: single frame 0CFECAD2 or the
+                    // BAM transport 1CECFFD2 / 1CEBFFD2. Skipped when the engine
+                    // reports its faults through MOOS (ENGINE_SOURCE=moos).
+                    const bool is_dm1 = ext && (id == 0x0CFECAD2 || id == 0x1CECFFD2 ||
+                                                id == 0x1CEBFFD2);
+                    const bool want = is_dm1 ? prof.can_dm1 : helm_decode;
+                    if (want)
+                        for (const auto& v : usv::usv722::Decode(id, ext, frame.data,
+                                                                 frame.can_dlc, steer_cal))
+                            helm_writer.put(writer, v, t);
                     usv::usv722::Dm1 dm1;
                     bool dm1_multi = false;
-                    if (ext && dm1_rx.Feed(id, frame.data, frame.can_dlc, &dm1, &dm1_multi)) {
+                    if (is_dm1 && prof.can_dm1 &&
+                        dm1_rx.Feed(id, frame.data, frame.can_dlc, &dm1, &dm1_multi)) {
                         // Single-frame values already came from Decode() above.
                         if (dm1_multi)
                             for (const auto& v : usv::usv722::Dm1Values(dm1))
@@ -259,7 +295,8 @@ int main() {
                         const std::string text = usv::usv722::Dm1Text(dm1);
                         if (text != dm1_last_text || t - dm1_last_t >= 5.0) {
                             const auto& k = usv::usv722::kDm1TextField;
-                            writer.str_field(k.measurement, "", k.field, text);
+                            writer.str_field(k.measurement, prof.Tags("instance=0"),
+                                             k.field, text);
                             dm1_last_text = text;
                             dm1_last_t = t;
                         }

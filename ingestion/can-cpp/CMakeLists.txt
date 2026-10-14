@@ -17,4 +17,9 @@ target_compile_options(can_bridge PRIVATE -Wall -Wextra)
 add_executable(usv722_can_test usv722_can_test.cpp)
 target_compile_options(usv722_can_test PRIVATE -Wall -Wextra)
 
+# Per-vessel engine profile (cpp-common), shared by all bridges; tested here
+# because this is the one bridge build that needs no MOOS or WebSocket library.
+add_executable(engine_profile_test ../cpp-common/engine_profile_test.cpp)
+target_compile_options(engine_profile_test PRIVATE -Wall -Wextra)
+
 install(TARGETS can_bridge RUNTIME DESTINATION bin)

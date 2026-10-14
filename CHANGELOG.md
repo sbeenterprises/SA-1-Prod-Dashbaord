@@ -3,7 +3,43 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
-## [Unreleased]
+## [Unreleased] (branch usv-725-engine, towards 1.2.20)
+
+Per-vessel engine profile so one release serves the Yamaha hull (usv-722)
+and the Mercury diesel hull (usv-725). Requirements: docs/requirements-usv-725.md.
+
+### Added
+- `/etc/usv/usv.env` engine profile keys: ENGINE_TYPE, ENGINE_SOURCE
+  (signalk | moos | can), ENGINE_COUNT, ENGINE_INSTANCES, HELM_PROFILE, and
+  the overrides SIGNALK_ENGINE, CAN_N2K_ENGINE, CAN_DM1, MOOS_ENGINE
+  (ingestion/cpp-common/engine_profile.hpp, shared by the three bridges;
+  unit tests in engine_profile_test.cpp).
+- Single writer per engine field: with ENGINE_SOURCE set, only the named
+  producer writes the `engine` measurement. signalk_bridge skips the
+  propulsion paths unless the source is signalk; can_bridge skips N2K
+  127488 / 127505 unless the source is can and skips the J1939 DM1 faults
+  when the source is moos (iCANRec reports the engine's own faults then);
+  grafana_bridge passes ENGINE_* through only when the source is moos.
+  grafana_bridge reads the keys from /etc/usv/usv.env itself (it runs under
+  pAntler, outside systemd); `engine_passthrough` and `engine_type` in the
+  mission file override them.
+- `engine_type` tag on every engine point, and `instance=0` on the Signal K
+  and drive-bus engine points (the N2K points already carried the instance).
+- install.sh validates the profile, prints it, and for ENGINE_SOURCE=moos
+  prints the grafana_bridge block to put in the mission file.
+- can_bridge: HELM_PROFILE=none turns the usv-722 helm / drive decoder off
+  on a hull whose frames have not been captured yet; bus statistics stay.
+
+### Changed
+- usv.env.example documents the profile with the usv-722 and usv-725 values.
+- ENGINE_SOURCE unset keeps the previous behaviour (every producer writes),
+  so an existing install is unchanged until the key is added.
+
+### Notes
+- After this update the drive-bus engine fields on usv-722 (gear, throttle,
+  key, trim, faults) carry `instance=0`; for one dashboard time range after
+  the update a tile can show the pre-update and the post-update series side
+  by side. It clears once the range no longer spans the update.
 
 ## [1.2.19] - 2026-10-12 (trim switch and fault details)
 
