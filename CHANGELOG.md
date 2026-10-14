@@ -109,6 +109,13 @@ and the Mercury diesel hull (usv-725). Requirements: docs/requirements-usv-725.m
 - ENGINE_SOURCE unset keeps the previous behaviour (every producer writes),
   so an existing install is unchanged until the key is added.
 
+- tools/smoke_test.sh pins an empty engine profile (USV_ENV_FILE, ENGINE_*
+  unset) so a vessel's own usv.env cannot change the test vectors, and
+  accepts a Flux query built from a variable alone (array.from, the
+  Traffic View range), flagged as incomplete since v1.2.15.
+- docs/validation-report.md section 10: smoke test 120 PASS / 0 FAIL / 1
+  SKIP for this release candidate, with the bridge-level checks.
+
 ### Notes
 - After this update the drive-bus engine fields on usv-722 (gear, throttle,
   key, trim, faults) carry `instance=0`; for one dashboard time range after

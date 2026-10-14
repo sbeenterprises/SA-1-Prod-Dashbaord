@@ -392,3 +392,64 @@ target: the Readiness tab shows 16 rows with evidence within 10 s of the
 bridge restart; the Failed tile and the "Readiness NOT READY: ..." event
 name the blocking checks; poking the two console variables turns the
 CONSOLE rows into PASS.
+
+## 10. Engine profile and USV-725 release candidate (2026-10-14, branch usv-725-engine)
+
+Scope: the per-vessel engine profile (ENGINE_SOURCE / ENGINE_TYPE, one
+writer per engine field), the Engine page and per-engine-type dial
+scales, the restyled analog instruments, the Signal K engine paths for
+the Yamaha gateway, the grafana_bridge additions for the Mercury diesel
+(instance suffix, lamps, fault text with the Mercury J codes, ECU
+voltage) and the shared J1939 fault table. Requirements:
+docs/requirements-usv-725.md.
+
+Environment: Ubuntu build host; g++ 13, CMake 3.28, libcurl 8.5,
+nlohmann-json 3.11, IXWebSocket v11.4.5 built from source, core-MOOS v10
+built from source (MOOSDB and umm), Node 22 with `ws` and
+`@influxdata/flux-lsp-node`. Repository state: commit 46ffc43 plus the
+smoke-test change below.
+
+1. **Smoke test (`tools/smoke_test.sh`): 120 PASS, 0 FAIL, 1 SKIP** (the
+   CAN live capture needs a vcan kernel module the host lacks; the same
+   frames were replayed through the built can_bridge with a SocketCAN
+   stand-in: trim UP / DOWN / IDLE, the single-frame DM1, the three-fault
+   BAM DM1 with its text, and the cleared state). Every C++ program built,
+   including moos_bridge against real MOOS 10 headers with -Wall -Wextra
+   clean. Unit tests: mission_logic_test 316, mayara_logic_test 59,
+   frigate_logic_test 19, usv722_can_test 75, engine_profile_test 44,
+   j1939_faults_test 18, signalk_engine_test 95, all passing. The Signal K
+   mock server fed every engine path in both id forms (17 unit checks);
+   the MOOS section ran the full Alpha scenario against MOOSDB with
+   ENGINE_SPEED -> engine.rpm{instance=0}; 232 Flux queries type-check;
+   all 22 alert rules query fields the stack writes; 19 ECharts
+   instruments return an option with and without data in both themes.
+2. **Smoke-test changes from this run**: the test now pins an empty engine
+   profile (`USV_ENV_FILE` to an empty file, ENGINE_* unset) so a vessel's
+   own `/etc/usv/usv.env` cannot change the vectors when the test runs on
+   the boat; and the query-completeness check accepts a query built from a
+   variable alone (`array.from`, the Traffic View range), which it had
+   flagged since v1.2.15.
+3. **Bridges driven directly** (outside the smoke test, same binaries):
+   grafana_bridge with ENGINE_* mail: ENGINE_SPEED_1 -> instance=1,
+   ENGINE_LAMPS 0x14 -> amber and red on, ENGINE_DTC_TEXT "SPN 100 FMI 18
+   (x1); SPN 190 FMI 0 (x3)" -> "SPN 100 FMI 18 J143 Oil_Press_Low (x1);
+   SPN 190 FMI 0 J234 Engine_Overspeed (x3)" on a mercury_diesel profile,
+   ENGINE_BATTERY_VOLTAGE -> engine.ecu_voltage only, and no engine point
+   at all with ENGINE_SOURCE=signalk. signalk_bridge with ENGINE_SOURCE=moos
+   writes no engine point. usv-725 profile through install.sh's checks:
+   ENGINE_SOURCE=moos, HELM_PROFILE=none accepted, the grafana_bridge
+   mission block printed.
+4. **Dashboards rendered** from the generated JSON with ECharts at 1080p
+   (mocked Grafana context, both themes, both engine types, no-data
+   state): Engine page, Vessel Health cluster, Autopilot, Autopilot Live,
+   Navigation. The typed dials switch scale with the engine_type variable
+   (Mercury 0 to 5000 rpm / 0 to 800 kPa, Yamaha 0 to 6000 / 0 to 600) and
+   fall back to the Yamaha scale without it.
+
+To verify on the target (USV-725 first, section 6 of the requirements):
+the header chip reads mercury_diesel, the Engine page shows RPM, coolant,
+oil pressure and boost from iCANRec within 10 s of pAntler start, Oil Temp
+and the ECU voltage are the values iCANRec publishes today (wrong until
+REC-1 and REC-3 land in the MOOS repo), Engine Hours and Fuel Level read
+N/A until REC-6, the Fault Codes tile reads NONE or the J-coded text, and
+the Readiness engine row passes with the engine running above 700 rpm.

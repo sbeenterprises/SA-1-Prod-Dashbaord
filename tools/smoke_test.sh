@@ -56,6 +56,13 @@ stop_stub()  { pkill -f "$TMP/stub.py" 2>/dev/null; sleep 0.3; }
 
 export INFLUX_URL=http://127.0.0.1:8086 INFLUX_TOKEN=smoke-token \
        INFLUX_ORG=usv INFLUX_BUCKET=telemetry VESSEL_ID=usv-smoke
+# The host's own engine profile (/etc/usv/usv.env on a vessel) must not
+# shape the test: every bridge reads an empty profile, so every producer
+# writes its engine fields and the vectors below hold on any host.
+: > "$TMP/usv.env"
+export USV_ENV_FILE="$TMP/usv.env"
+unset ENGINE_TYPE ENGINE_SOURCE ENGINE_COUNT ENGINE_INSTANCES HELM_PROFILE \
+      SIGNALK_ENGINE CAN_N2K_ENGINE CAN_DM1 MOOS_ENGINE SIGNALK_BATTERY SIGNALK_FUEL_TANK
 
 # measurement,field pairs seen in the captured line protocol
 seen() { grep -oE '^[a-z_]+,[^ ]* [a-z_]+' "$LINES" | sed 's/,[^ ]* / /' | sort -u; }
@@ -118,6 +125,9 @@ for p in glob.glob(f"{sys.argv[1]}/grafana/dashboards/*.json"):
     for pan in json.load(open(p))["panels"]:
         for t in pan.get("targets", []):
             q = t.get("query", "")
+            # A query built from a variable alone (array.from) reads no bucket.
+            if q and "array.from(" in q and "from(bucket" not in q:
+                continue
             if q and ("from(bucket" not in q or "|> range(" not in q):
                 bad += 1; print(f"  [FAIL] incomplete query: {p.split('/')[-1]} / {pan['title']} / {t['refId']}")
 print("  [PASS] every dashboard query has from() and range()" if not bad else f"  {bad} incomplete")
