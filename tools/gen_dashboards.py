@@ -2245,7 +2245,7 @@ if (worst && worst.risk >= 1 && worst.range / NM <= maxR * 1.02) {
 const fmtT = (t) => t == null || t < 0 ? '—' : Math.floor(t / 60) + ':' + ('0' + Math.round(t % 60)).slice(-2);
 return {
   backgroundColor: 'transparent',
-  polar: { center: ['50%', '52%'], radius: '78%' },
+  polar: { center: ['50%', '49%'], radius: '74%' },
   angleAxis: { type: 'value', min: 0, max: 360, startAngle: 90, clockwise: true, splitNumber: 12,
     axisLine: { lineStyle: { color: C.tick } }, axisTick: { show: false },
     axisLabel: { color: C.label, fontSize: 10, formatter: (v) => v === 0 ? 'N' : ('00' + v).slice(-3) },
@@ -2260,7 +2260,7 @@ return {
     btn('zoom-in', '+', 8, 4, () => setRange(RANGES[Math.max(0, idx - 1)]), false),
     btn('zoom-out', '\u2212', 8, 30, () => setRange(RANGES[Math.min(RANGES.length - 1, idx + 1)]), false),
     btn('zoom-auto', 'A', 8, 56, () => setRange(0), sel <= 0),
-    { type: 'text', left: 8, bottom: 6, style: { text: '{g|●} report / AIS   {a|●} radar   {r|●} HIGH risk   {o|○} helm avoiding   — 6 min vector', fill: C.label, fontSize: 10,
+    { type: 'text', left: 8, bottom: 6, style: { text: '{g|●} AIS  {a|●} radar  {r|●} HIGH  {o|○} avoiding  — 6 min', fill: C.label, fontSize: 10,
         rich: { g: { fill: '#5ad8a6', fontSize: 12 }, a: { fill: '#f0b429', fontSize: 12 }, r: { fill: '#ff6b6b', fontSize: 12 },
           o: { fill: '#ff9830', fontSize: 13, fontWeight: 700 } } } },
     { type: 'text', right: 8, bottom: 6, style: { text: worst && worst.risk >= 1 ? worst.id + '  CPA ' + Math.round(worst.cpa) + ' m · TCPA ' + fmtT(worst.tcpa) : 'no risk contacts',
@@ -2453,9 +2453,17 @@ for _p in DASHBOARDS[-1]["panels"]:
 _ct = next(p for p in DASHBOARDS[-1]["panels"] if p["title"].startswith("Contacts —"))
 _ct["transformations"] = [{"id": "organize", "options": {
     "excludeByName": {"rel_bearing": True, "rel_speed_kn": True, "hdg": True,
-                      "type": True, "spd_kn": True},
-    "indexByName": {"contact": 0, "source": 1, "range_m": 2, "bearing": 3,
-                    "cpa_m": 4, "tcpa_s": 5, "encounter": 6, "risk": 7}}}]
+                      "type": True, "spd_kn": True, "source": True, "bearing": True},
+    "indexByName": {"contact": 0, "range_m": 1, "cpa_m": 2, "tcpa_s": 3,
+                    "encounter": 4, "risk": 5}}}]
+# Six columns across w10 (about 620 px at 1080p) without a scrollbar: the
+# contact name gets the room, the numbers stay compact. Source and bearing
+# are on the Traffic View and the highest-risk card.
+for _o in _ct["fieldConfig"]["overrides"]:
+    _n = _o["matcher"]["options"]
+    _w = {"contact": 130, "range_m": 80, "cpa_m": 75, "tcpa_s": 70, "risk": 75}.get(_n)
+    if _w:
+        _o["properties"].append({"id": "custom.width", "value": _w})
 
 # --------------------------------------------------------------- FR-7 Camera
 # Source: frigate_bridge (Frigate NVR API). One `camera` series per camera

@@ -3,6 +3,20 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.25] - 2026-10-14 (Traffic layout)
+
+Dashboards only. Update with `bash deploy/update.sh v1.2.25`, Ctrl+F5. No
+bridge change, no mission restart.
+
+### Fixed
+- Traffic: the Contacts table (narrowed in 1.2.24 for the Helm Avoiding
+  table) hid CPA, TCPA, Encounter and Risk behind a scrollbar. It now shows
+  Contact, Range, CPA, TCPA, Encounter and Risk without scrolling; source
+  and bearing stay on the Traffic View and the highest-risk card.
+- Traffic View: the longer legend ran under the 180 bearing label. Legend
+  shortened (AIS, radar, HIGH, avoiding, 6 min) and the plot raised
+  slightly so the label clears it.
+
 ## [1.2.24] - 2026-10-14 (helm collision avoidance on the Traffic page)
 
 Follows the 13 October changes in moos-ivp-morgan-stern-drive-mercury
