@@ -1220,11 +1220,13 @@ LAMPS_QUERY = 'import "strings"\n' + flux(
     '         + (if exists r.lamp_protect and r.lamp_protect == 1.0 then "PROTECT " else "")\n'
     '      return {_value: if on == "" then "OFF" else strings.trimSpace(v: on)}\n'
     '  })\n')
+# Fault text: "NONE", "N/A", or a list of faults ("SPN 110 FMI 3 ..." from
+# the J1939 DM1, "Check Engine (alarm); ..." from Signal K notifications).
 DTC_TEXT_MAPPINGS = [{"type": "value", "options": {
     "NONE": {"text": "NONE", "color": TILE_OK, "index": 0},
     "N/A": {"text": "N/A", "color": NEUTRAL, "index": 1}}},
-                     {"type": "regex", "options": {"pattern": "^SPN.*", "result": {
-                         "color": "red", "index": 2}}}]
+                     {"type": "regex", "options": {"pattern": "^(?!(NONE|N/A)$).+",
+                                                   "result": {"color": "red", "index": 2}}}]
 LAMPS_MAPPINGS = [{"type": "value", "options": {
     "OFF": {"text": "OFF", "color": NEUTRAL, "index": 0}}},
                   {"type": "regex", "options": {"pattern": "^RED.*", "result": {

@@ -353,6 +353,17 @@ VE.Direct). Its voltage also feeds System Voltage when no
 `electrical.system.voltage` sensor exists, and voltage x -current feeds
 Total Power when no `electrical.loads.total.power` exists.
 
+## Fuel tank instance (Signal K)
+With `ENGINE_SOURCE=signalk`, `signalk_bridge` takes the fuel level from one
+tank: `tanks.fuel.<id>.currentLevel` for the `<id>` named in
+`SIGNALK_FUEL_TANK` in `/etc/usv/usv.env`, or the first fuel tank Signal K
+reports (an N2K 127505 fluid level sender maps to its instance number, 0
+for a single tank). The engine's own `propulsion.<id>.fuel.level`, when a
+source publishes it, is written as the same field. Engine ids: the bridge
+reads every `propulsion.<id>` the server publishes and normalises `0` /
+`port` to instance 0 and `1` / `starboard` to instance 1; any other id is
+logged once and ignored (`journalctl -u usv-signalk-bridge`).
+
 ## Engine profile (one release, two hulls)
 The engine data path differs per hull and is chosen in `/etc/usv/usv.env`,
 never in the dashboards:

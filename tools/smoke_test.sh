@@ -85,10 +85,10 @@ else
   bad "mission_logic_test failed"; echo "$OUT" | tail -5
 fi
 
-hdr "Bridge logic unit tests (radar targets, cameras, usv-722 CAN, engine profile)"
+hdr "Bridge logic unit tests (radar targets, cameras, usv-722 CAN, engine profile, Signal K engine paths)"
 for t in ingestion/moos-cpp/build/mayara_logic_test ingestion/moos-cpp/build-tests/mayara_logic_test \
          ingestion/frigate-cpp/build/frigate_logic_test ingestion/can-cpp/build/usv722_can_test \
-         ingestion/can-cpp/build/engine_profile_test; do
+         ingestion/can-cpp/build/engine_profile_test ingestion/signalk-cpp/build/signalk_engine_test; do
   [[ -x "$REPO/$t" ]] || continue
   if OUT=$("$REPO/$t" 2>&1); then ok "$(basename "$t"): $(echo "$OUT" | tail -1)"
   else bad "$(basename "$t") failed"; echo "$OUT" | tail -5; fi
@@ -96,6 +96,7 @@ done
 [[ -x "$REPO/ingestion/frigate-cpp/build/frigate_logic_test" ]] || bad "frigate_logic_test not built"
 [[ -x "$REPO/ingestion/can-cpp/build/usv722_can_test" ]] || bad "usv722_can_test not built"
 [[ -x "$REPO/ingestion/can-cpp/build/engine_profile_test" ]] || bad "engine_profile_test not built"
+[[ -x "$REPO/ingestion/signalk-cpp/build/signalk_engine_test" ]] || bad "signalk_engine_test not built"
 
 hdr "Simulator -> InfluxDB line protocol"
 start_stub
@@ -258,12 +259,26 @@ const ais = {context:'vessels.urn:mrn:imo:mmsi:368274930', updates:[{values:[
 wss.on('connection', ws => { ws.send(JSON.stringify({name:'signalk-server', version:'2.x', self:SELF, roles:['master']}));
   setInterval(() => { ws.send(JSON.stringify(ais)); ws.send(JSON.stringify({context:SELF, updates:[{values:[
   {path:'navigation.headingTrue', value:1.0}]}]})); }, 200);
+  // Engine paths in both id forms (SK-1 / SK-2): N2K instance "0" and the
+  // server-given name "port" are the same engine, "starboard" is instance 1.
   setInterval(() => ws.send(JSON.stringify({updates:[{values:[
   {path:'navigation.speedOverGround', value:2.5},
   {path:'navigation.position', value:{latitude:29.61, longitude:-91.21}},
   {path:'navigation.attitude', value:{roll:0.02, pitch:0.01, yaw:0.9}},
   {path:'propulsion.0.revolutions', value:42.0},
   {path:'propulsion.0.coolantTemperature', value:358.15},
+  {path:'propulsion.port.oilPressure', value:340000},
+  {path:'propulsion.port.oilTemperature', value:363.15},
+  {path:'propulsion.0.boostPressure', value:186000},
+  {path:'propulsion.0.fuel.rate', value:1.0e-5},
+  {path:'propulsion.0.runTime', value:7200},
+  {path:'propulsion.0.engineLoad', value:0.64},
+  {path:'propulsion.0.alternatorVoltage', value:14.2},
+  {path:'propulsion.0.drive.trimState', value:0.25},
+  {path:'propulsion.0.transmission.gear', value:'Forward'},
+  {path:'propulsion.starboard.revolutions', value:40.0},
+  {path:'tanks.fuel.0.currentLevel', value:0.91},
+  {path:'notifications.propulsion.0.lowOilPressure', value:{state:'alarm', method:['visual','sound'], message:'Low Oil Pressure'}},
   {path:'electrical.batteries.0.voltage', value:12.9},
   {path:'navigation.gnss.type', value:'RTK Fixed'}]}]})), 200); });
 EOF
@@ -283,24 +298,44 @@ EOF
   else ok "AIS target deltas (other vessel context) skipped"; fi
   grep -qE "nav,[^ ]* ([^ ]*,)?heading=57\.2" "$LINES" && ok "own-ship delta with self context accepted" \
     || bad "own-ship delta with self context dropped"
-  # unit conversions: 2.5 m/s -> ~4.86 kn ; 42 Hz -> 2520 rpm ; 358.15K -> 85 C
+  # unit conversions (SK-2): 2.5 m/s -> ~4.86 kn ; 42 Hz -> 2520 rpm ;
+  # 358.15 K -> 85 C ; Pa -> kPa ; m3/s -> L/h ; s -> h ; ratios -> % ;
+  # "port" -> instance 0, "starboard" -> instance 1 ; gear Forward -> 1 ;
+  # one alarm notification -> active_dtcs 1, red lamp, fault text.
   python3 - "$LINES" <<'PY'
 import re,sys
 t=open(sys.argv[1]).read()
 def val(pat):
     m=re.search(pat,t); return float(m.group(1)) if m else None
+E0=r'engine,vessel=\S*instance=0\S* '
+E1=r'engine,vessel=\S*instance=1\S* '
 checks=[("SOG m/s->kn", val(r'nav,\S* sog=([0-9.]+)'), 4.86, 0.05),
-        ("RPM Hz->rpm", val(r'engine,\S* rpm=([0-9.]+)'), 2520, 1),
-        ("coolant K->C", val(r'engine,\S* coolant_temp=([0-9.]+)'), 85.0, 0.1)]
+        ("RPM Hz->rpm (id 0)", val(E0+r'rpm=([0-9.]+)'), 2520, 1),
+        ("RPM Hz->rpm (id starboard -> instance 1)", val(E1+r'rpm=([0-9.]+)'), 2400, 1),
+        ("coolant K->C", val(E0+r'coolant_temp=([0-9.]+)'), 85.0, 0.1),
+        ("oil pressure Pa->kPa (id port -> instance 0)", val(E0+r'oil_pressure=([0-9.]+)'), 340, 0.1),
+        ("oil temperature K->C", val(E0+r'oil_temp=([0-9.]+)'), 90.0, 0.1),
+        ("boost Pa->kPa", val(E0+r'intake_manifold_pressure=([0-9.]+)'), 186, 0.1),
+        ("fuel rate m3/s->L/h", val(E0+r'fuel_rate=([0-9.]+)'), 36.0, 0.01),
+        ("run time s->h", val(E0+r'runtime_h=([0-9.]+)'), 2.0, 0.001),
+        ("engine load ratio->%", val(E0+r'percent_load=([0-9.]+)'), 64.0, 0.01),
+        ("trim ratio->%", val(E0+r'trim_position=([0-9.]+)'), 25.0, 0.01),
+        ("gear Forward->1", val(E0+r'gear=([0-9.-]+)'), 1, 0),
+        ("alternator V", val(r'electrical,\S* alternator_voltage=([0-9.]+)'), 14.2, 0.001),
+        ("fuel tank ratio->%", val(E0+r'fuel_level=([0-9.]+)'), 91.0, 0.01),
+        ("notification -> active_dtcs", val(E0+r'active_dtcs=([0-9.]+)'), 1, 0),
+        ("notification -> red lamp", val(E0+r'lamp_red=([0-9.]+)'), 1, 0)]
 bad=0
 for name,got,exp,tol in checks:
     if got is None or abs(got-exp)>tol:
         print(f"  [FAIL] {name}: got {got}, expected ~{exp}"); bad=1
     else:
         print(f"  [PASS] {name}: {got}")
+if 'dtc_text="Low Oil Pressure (alarm)"' in t: print("  [PASS] notification -> fault text")
+else: print("  [FAIL] notification -> fault text missing"); bad=1
 sys.exit(bad)
 PY
-  [ $? -eq 0 ] && PASS=$((PASS+3)) || FAIL=$((FAIL+1))
+  [ $? -eq 0 ] && PASS=$((PASS+17)) || FAIL=$((FAIL+1))
 else
   skip "Signal K test (node/ws unavailable)"
 fi

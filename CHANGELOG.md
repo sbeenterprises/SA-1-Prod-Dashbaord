@@ -29,6 +29,20 @@ and the Mercury diesel hull (usv-725). Requirements: docs/requirements-usv-725.m
   prints the grafana_bridge block to put in the mission file.
 - can_bridge: HELM_PROFILE=none turns the usv-722 helm / drive decoder off
   on a hull whose frames have not been captured yet; bus statistics stay.
+- signalk_bridge engine paths for the Yamaha gateway on usv-722
+  (ingestion/signalk-cpp/signalk_engine.hpp): every `propulsion.<id>.*`
+  the server publishes, with `0` / `port` -> instance 0 and `1` /
+  `starboard` -> instance 1 (the fixed `propulsion.0.*` list is gone);
+  `temperature` as well as `coolantTemperature` for coolant; new
+  oilTemperature, boostPressure, engineLoad, engineTorque,
+  drive.trimState (trim_position), transmission.gear and
+  alternatorVoltage mappings; the fuel level from
+  `tanks.fuel.<SIGNALK_FUEL_TANK>.currentLevel`; the server's
+  `notifications.propulsion.<id>.*` tracked per engine into active_dtcs,
+  dtc_text ("Check Engine (alarm); ...") and the lamp fields. Unit test
+  signalk_engine_test (95 checks, builds without IXWebSocket) and smoke-test
+  vectors for every path in both id forms (SK-1 to SK-3 of the
+  requirements).
 
 - Engine page (tab after Vessel Health, own panel ids 9401+): four large
   dials (Tachometer, Coolant, Oil Pressure, Boost) at 1 s, oil temp, fuel
@@ -67,7 +81,10 @@ and the Mercury diesel hull (usv-725). Requirements: docs/requirements-usv-725.m
   200 kPa (ticks every 100) so the small dial stays legible.
 - Vessel Health: the Boost tile (intake manifold pressure, J1939 IC1)
   replaces the Alternator tile, which no hull feeds.
-- usv.env.example documents the profile with the usv-722 and usv-725 values.
+- usv.env.example documents the profile with the usv-722 and usv-725 values,
+  and SIGNALK_FUEL_TANK.
+- Fault Codes tiles colour any fault list red, whichever bridge wrote it
+  (the mapping matched only the J1939 "SPN ..." form).
 - ENGINE_SOURCE unset keeps the previous behaviour (every producer writes),
   so an existing install is unchanged until the key is added.
 

@@ -153,7 +153,28 @@ header chip, the Vessel Health and Engine dial scales and the Fleet engine
 tile). Fields: rpm,
 coolant_temp, oil_temp (°C), oil_pressure, intake_manifold_pressure (kPa),
 fuel_level (%), fuel_rate (L/h), runtime_h (h), percent_load,
-percent_torque, pedal_position (%), active_dtcs (count).
+percent_torque, pedal_position, trim_position (%), active_dtcs (count).
+Signal K (signalk_bridge, signalk_engine.hpp; the Yamaha CL7 / N2K gateway
+on usv-722 through the server's n2k-signalk mapping): every
+`propulsion.<id>.*` the server publishes, `<id>` = N2K engine instance or
+the name the server was given (0 / port -> instance 0, 1 / starboard ->
+instance 1): revolutions (Hz x 60 -> rpm), temperature or
+coolantTemperature (K -> coolant_temp °C), oilPressure (Pa -> oil_pressure
+kPa), oilTemperature (-> oil_temp), boostPressure (Pa ->
+intake_manifold_pressure kPa), fuel.rate (m³/s -> fuel_rate L/h), runTime
+(s -> runtime_h), engineLoad and engineTorque (ratio -> percent_load /
+percent_torque), drive.trimState (ratio -> trim_position %),
+transmission.gear (Forward 1 / Neutral 0 / Reverse -1 -> gear),
+alternatorVoltage (-> electrical.alternator_voltage);
+`tanks.fuel.<SIGNALK_FUEL_TANK>.currentLevel` (ratio -> fuel_level %, the
+first fuel tank seen when the key is unset); `notifications.propulsion.
+<id>.<name>` (one per N2K 127489 status bit, state alarm / warn / alert /
+emergency, back to normal or null when clear) -> active_dtcs (count of
+active notifications), dtc_text ("NONE" or "Check Engine (alarm); Low Oil
+Pressure (alarm): <message>; ..."), lamp_mil (checkEngine), lamp_red
+(emergencyStopMode, engineShuttingDown, overTemperature, lowOilPressure),
+lamp_amber (any other active notification). Written only when
+ENGINE_SOURCE is signalk (or unset).
 usv-722 CAN (can_bridge, usv722_can.hpp; RPM and temperatures are not on
 its bus): key_state (0 off, 1 run, 2 start), gear and gear_helm (-1 reverse,
 0 neutral, 1 forward; to the engine / at the lever), throttle_pct and

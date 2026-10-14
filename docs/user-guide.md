@@ -49,7 +49,12 @@ and oil pressure dials on Vessel Health and the Engine page scale to that
 type: 0 to 6000 rpm for the outboard, 0 to 5000 rpm with the green band to
 4000 (wide-open throttle) for the Mercury diesel; oil pressure to 600 or
 800 kPa. The chip stays blank until the vessel has written its first engine
-value; the dials then use the outboard scale.
+value; the dials then use the outboard scale. Fault lamps and fault codes
+come from the engine's own fault message: the J1939 DM1 on the Mercury
+diesel (SPN / FMI codes with their meaning), the N2K engine status bits
+through Signal K on the Yamaha outboard (named conditions such as "Check
+Engine (alarm)" or "Low Oil Pressure (alarm)"; MIL lamp = check engine, RED
+= a stop condition, AMBER = any other warning).
 
 ## Instruments
 Navigation, Autopilot, Vessel Health and Engine carry analog instruments styled

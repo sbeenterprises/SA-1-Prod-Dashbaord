@@ -8,9 +8,13 @@
 // Env: SIGNALK_URL, INFLUX_URL, INFLUX_TOKEN, INFLUX_ORG, INFLUX_BUCKET,
 //      VESSEL_ID, SIGNALK_BATTERY (battery instance to chart, e.g. House;
 //      default: the first electrical.batteries.<id> seen)
+//      SIGNALK_FUEL_TANK (tanks.fuel.<id> instance for the fuel level;
+//      default: the first fuel tank seen)
 //      ENGINE_SOURCE / ENGINE_TYPE (cpp-common/engine_profile.hpp): engine
 //      fields are written only when Signal K is this vessel's engine source;
 //      every engine point carries instance and engine_type tags.
+// Engine paths (propulsion.<id>.*, notifications.propulsion.<id>.*,
+// tanks.fuel.<id>.currentLevel) are mapped in signalk_engine.hpp.
 // Reconnection: IXWebSocket automatic backoff + status heartbeat.
 
 #include <ixwebsocket/IXNetSystem.h>
@@ -22,15 +26,18 @@
 #include <chrono>
 #include <cmath>
 #include <csignal>
+#include <cstring>
 #include <functional>
 #include <iostream>
 #include <map>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 
 #include "../cpp-common/engine_profile.hpp"
 #include "../cpp-common/influx_writer.hpp"
+#include "signalk_engine.hpp"
 
 using json = nlohmann::json;
 
@@ -66,19 +73,7 @@ const std::map<std::string, Mapping> kPaths = {
     // producer (grafana_bridge, from DIST_TO_NEXT_WPT).
     {"navigation.courseRhumbline.nextPoint.distance",
      {"nav", "course_next_point", [](double v) { return v; }}},
-    // Engine (FR-4), instance 0
-    {"propulsion.0.revolutions",
-     {"engine", "rpm", [](double v) { return v * 60.0; }}},          // Hz->RPM
-    {"propulsion.0.coolantTemperature",
-     {"engine", "coolant_temp", [](double v) { return v - 273.15; }}},
-    {"propulsion.0.oilPressure",
-     {"engine", "oil_pressure", [](double v) { return v / 1000.0; }}},  // Pa->kPa
-    {"propulsion.0.fuel.level",
-     {"engine", "fuel_level", [](double v) { return v * 100.0; }}},
-    {"propulsion.0.fuel.rate",
-     {"engine", "fuel_rate", [](double v) { return v * 3.6e6; }}},   // m3/s->L/h
-    {"propulsion.0.runTime",
-     {"engine", "runtime_h", [](double v) { return v / 3600.0; }}},
+    // Engine (FR-4): propulsion.<id>.* in handle_propulsion() below.
     // Electrical (FR-4). Battery paths (electrical.batteries.<id>.*) are
     // handled in handle_battery(): the instance is named by the source
     // (usv-722's Victron VE.Direct shunt publishes "House", not "0").
@@ -162,6 +157,10 @@ private:
     static constexpr double kCogMinSogKn = 0.5;   // COG published above this SOG
     double last_sog_kn_ = 0.0;
     std::string battery_id_ = usv::env_or("SIGNALK_BATTERY", "");
+    std::string fuel_tank_id_ = usv::env_or("SIGNALK_FUEL_TANK", "");
+    std::set<std::string> unknown_engines_;
+    std::set<int> seen_notifications_;
+    usv::sk::EngineNotifications notifications_;
     double batt_v_ = 0.0, batt_v_t_ = -1e18;
     bool have_system_voltage_ = false, have_total_power_ = false;
 
@@ -213,10 +212,102 @@ private:
         return true;
     }
 
+    // propulsion.<id>.<rest>: every engine Signal K publishes, keyed by the
+    // N2K engine instance or the name the server was given (0 / port ->
+    // instance 0, 1 / starboard -> instance 1). Returns true when the path
+    // was an engine path (written, or deliberately ignored on this vessel).
+    bool handle_propulsion(const std::string& path, const json& value) {
+        static const std::string kPrefix = "propulsion.";
+        if (path.compare(0, kPrefix.size(), kPrefix) != 0) return false;
+        if (!profile_.signalk_engine) return true;   // another bridge owns the engine
+        const size_t dot = path.find('.', kPrefix.size());
+        if (dot == std::string::npos) return true;
+        const std::string id = path.substr(kPrefix.size(), dot - kPrefix.size());
+        const std::string rest = path.substr(dot + 1);
+        const int inst = usv::sk::EngineInstance(id);
+        if (inst < 0) {
+            if (unknown_engines_.insert(id).second)
+                std::cerr << "signalk_bridge: ignoring propulsion." << id
+                          << " (not an engine instance this release charts)\n";
+            return true;
+        }
+        const std::string tags = profile_.Tags("instance=" + std::to_string(inst));
+        if (rest == "transmission.gear") {
+            double g;
+            if (value.is_string() && usv::sk::GearValue(value.get<std::string>(), &g))
+                writer_.field("engine", tags, "gear", g);
+            return true;
+        }
+        if (!value.is_number()) return true;
+        usv::sk::EngineField f;
+        if (!usv::sk::MapPropulsion(rest, value.get<double>(), &f)) return true;
+        // alternator_voltage lives in the electrical measurement (one
+        // alternator charted, as electrical.alternators.0.voltage).
+        writer_.field(f.measurement, std::strcmp(f.measurement, "engine") == 0 ? tags : "",
+                      f.field, f.value);
+        return true;
+    }
+
+    // tanks.fuel.<id>.currentLevel (ratio) -> engine.fuel_level (%), for the
+    // tank named in SIGNALK_FUEL_TANK or the first fuel tank seen.
+    bool handle_tank(const std::string& path, const json& value) {
+        static const std::string kPrefix = "tanks.fuel.";
+        if (path.compare(0, kPrefix.size(), kPrefix) != 0) return false;
+        if (!profile_.signalk_engine) return true;
+        const size_t dot = path.find('.', kPrefix.size());
+        if (dot == std::string::npos) return true;
+        const std::string id = path.substr(kPrefix.size(), dot - kPrefix.size());
+        const std::string field = path.substr(dot + 1);
+        if (field != "currentLevel" || !value.is_number()) return true;
+        if (fuel_tank_id_.empty()) {
+            fuel_tank_id_ = id;
+            std::cerr << "signalk_bridge: fuel level from tank '" << id
+                      << "' (set SIGNALK_FUEL_TANK to choose another)\n";
+        }
+        if (id != fuel_tank_id_) return true;
+        writer_.field("engine", profile_.Tags("instance=0"), "fuel_level",
+                      value.get<double>() * 100.0);
+        return true;
+    }
+
+    // notifications.propulsion.<id>.<name>: value {state, message} or null.
+    // Every change rewrites the instance's active count, fault text and
+    // lamps, so the Engine page follows the server's own alarm state.
+    bool handle_notification(const std::string& path, const json& value) {
+        static const std::string kPrefix = "notifications.propulsion.";
+        if (path.compare(0, kPrefix.size(), kPrefix) != 0) return false;
+        if (!profile_.signalk_engine) return true;
+        const size_t dot = path.find('.', kPrefix.size());
+        if (dot == std::string::npos) return true;
+        const int inst = usv::sk::EngineInstance(path.substr(kPrefix.size(), dot - kPrefix.size()));
+        if (inst < 0) return true;
+        const std::string name = path.substr(dot + 1);
+        std::string state, message;
+        if (value.is_object()) {
+            if (value.contains("state") && value["state"].is_string())
+                state = value["state"].get<std::string>();
+            if (value.contains("message") && value["message"].is_string())
+                message = value["message"].get<std::string>();
+        }
+        const bool first = seen_notifications_.insert(inst).second;
+        if (!notifications_.Update(inst, name, state, message) && !first) return true;
+        const std::string tags = profile_.Tags("instance=" + std::to_string(inst));
+        const usv::sk::Lamps l = notifications_.LampsOf(inst);
+        writer_.field("engine", tags, "active_dtcs", notifications_.Active(inst));
+        writer_.str_field("engine", tags, "dtc_text", notifications_.Text(inst));
+        writer_.field("engine", tags, "lamp_red", l.red ? 1 : 0);
+        writer_.field("engine", tags, "lamp_mil", l.mil ? 1 : 0);
+        writer_.field("engine", tags, "lamp_amber", l.amber ? 1 : 0);
+        return true;
+    }
+
     void handle_value(const std::string& path, const json& value) {
         if (path == "electrical.system.voltage") have_system_voltage_ = true;
         if (path == "electrical.loads.total.power") have_total_power_ = true;
         if (handle_battery(path, value)) return;
+        if (handle_propulsion(path, value)) return;
+        if (handle_tank(path, value)) return;
+        if (handle_notification(path, value)) return;
         if (path == "navigation.position" && value.is_object()) {
             if (value.contains("latitude"))
                 writer_.field("nav", "", "lat", value["latitude"].get<double>());
@@ -255,14 +346,7 @@ private:
         } else {
             auto it = kPaths.find(path);
             if (it == kPaths.end() || !value.is_number()) return;
-            std::string tags;
-            if (std::string(it->second.measurement) == "engine") {
-                // Engine fields have one writer per vessel (ENGINE_SOURCE);
-                // the paths read here are instance 0.
-                if (!profile_.signalk_engine) return;
-                tags = profile_.Tags("instance=0");
-            }
-            writer_.field(it->second.measurement, tags, it->second.field,
+            writer_.field(it->second.measurement, "", it->second.field,
                           it->second.convert(value.get<double>()));
         }
     }

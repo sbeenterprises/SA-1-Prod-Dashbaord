@@ -1249,7 +1249,7 @@
             {
               "type": "regex",
               "options": {
-                "pattern": "^SPN.*",
+                "pattern": "^(?!(NONE|N/A)$).+",
                 "result": {
                   "color": "red",
                   "index": 2

@@ -132,12 +132,14 @@ Release: add the changes under a new version in `CHANGELOG.md`, commit,
 then tag on `main` (`git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`)
 so vessels can `deploy/update.sh` to it.
 
-The smoke test (102 checks) builds every C++ program, runs the
-`mission_logic_test`, `mayara_logic_test`, `frigate_logic_test` and
-`usv722_can_test` unit tests, drives the simulator, the CAN bridge,
-the Signal K bridge and (when MOOSDB is on the PATH) the MOOS bridge
-against an InfluxDB stub, and cross-checks every field the dashboards
-query against what the producers actually write. It also runs every
+The smoke test builds every C++ program, runs the
+`mission_logic_test`, `mayara_logic_test`, `frigate_logic_test`,
+`usv722_can_test`, `engine_profile_test` and `signalk_engine_test` unit
+tests, drives the simulator, the CAN bridge, the Signal K bridge (every
+engine path in both id forms, SK-1 to SK-3 of docs/requirements-usv-725.md)
+and (when MOOSDB is on the PATH) the MOOS bridge against an InfluxDB stub,
+and cross-checks every field the dashboards query against what the
+producers actually write. It also runs every
 ECharts instrument in a mocked Grafana context (`tools/check_echarts_panels.js`),
 type-checks every Flux query when `@influxdata/flux-lsp-node` is installed
 (`tools/check_flux.js`), and checks that map markers use Grafana's built-in shapes and the
