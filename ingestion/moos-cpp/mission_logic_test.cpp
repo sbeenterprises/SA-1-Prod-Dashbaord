@@ -859,6 +859,66 @@ static void test_comms_loss_return() {
     CHECK(!ParseLatLon("29.7,-91.2x", &la, &lo));
 }
 
+static void test_colav_alerts() {
+    std::vector<ColavAlert> v;
+    // The shape iWebSocket 7df059d posts (jsoncpp FastWriter, one line).
+    const std::string js =
+        "[{\"cn\":\"TUG_ANNA\",\"mmsi\":367123450,\"active\":true,\"for\":12,"
+        "\"mode\":\"giveway:stern\",\"hdg\":271.5,\"spd\":4.2,\"lat\":29.7,\"lon\":-91.2,"
+        "\"len\":24,\"type\":\"tug\",\"age\":1.5,\"range\":812.4,\"bng\":44.1,"
+        "\"relBng\":12.3,\"cpa\":96.2,\"tcpa\":118.0},"
+        "{\"cn\":\"R7\",\"mmsi\":-1,\"active\":false,\"for\":3,\"mode\":\"standon:inextremis\","
+        "\"hdg\":-1,\"spd\":-1,\"lat\":0,\"lon\":0,\"len\":-1,\"type\":\"\",\"age\":-1,"
+        "\"range\":-1,\"bng\":-1,\"relBng\":-1,\"cpa\":-1,\"tcpa\":-1}]";
+    CHECK(ParseColavAlerts(js, &v));
+    CHECK(v.size() == 2);
+    if (v.size() == 2) {
+        CHECK_EQ_STR(v[0].cn, "TUG_ANNA");
+        CHECK(v[0].active);
+        CHECK(std::fabs(v[0].cpa - 96.2) < 1e-9);
+        CHECK(std::fabs(v[0].tcpa - 118.0) < 1e-9);
+        CHECK(std::fabs(v[0].spd - 4.2) < 1e-9);
+        CHECK(std::fabs(v[0].rel_bng - 12.3) < 1e-9);
+        CHECK(v[0].mmsi == 367123450);
+        CHECK_EQ_STR(v[0].mode, "giveway:stern");
+        CHECK(!v[1].active);
+        CHECK(v[1].cpa == -1);
+    }
+    // Pretty-printed (StyledWriter) and empty arrays.
+    CHECK(ParseColavAlerts("[\n  {\n    \"cn\" : \"A\",\n    \"active\" : true\n  }\n]\n", &v));
+    CHECK(v.size() == 1);
+    CHECK(ParseColavAlerts("[]", &v) && v.empty());
+    CHECK(ParseColavAlerts(" [ ] ", &v) && v.empty());
+    // Escapes in names.
+    CHECK(ParseColavAlerts("[{\"cn\":\"A\\\"B\",\"active\":true}]", &v) && v.size() == 1 && v[0].cn == "A\"B");
+    // Garbage is rejected and leaves nothing behind.
+    CHECK(!ParseColavAlerts("", &v) && v.empty());
+    CHECK(!ParseColavAlerts("{\"cn\":\"A\"}", &v) && v.empty());
+    CHECK(!ParseColavAlerts("[{\"cn\":\"A\",", &v) && v.empty());
+    CHECK(!ParseColavAlerts("[{\"cn\":\"A\",\"active\":tru}]", &v) && v.empty());
+    // Entries without a contact name are dropped.
+    CHECK(ParseColavAlerts("[{\"mode\":\"cpa\"}]", &v) && v.empty());
+
+    CHECK_EQ_STR(ColregsOf("headon").rule, "Rule 14");
+    CHECK_EQ_STR(ColregsOf("headon:").name, "Head-on");
+    CHECK_EQ_STR(ColregsOf("overtaking:port").name, "Overtaking, passing to port");
+    CHECK_EQ_STR(ColregsOf("overtaking:starboard").rule, "Rule 13");
+    CHECK_EQ_STR(ColregsOf("giveway:stern").name, "Give-way, crossing astern");
+    CHECK_EQ_STR(ColregsOf("giveway:bow").name, "Give-way, crossing ahead");
+    CHECK_EQ_STR(ColregsOf("giveway:bow").rule, "Rule 16");
+    CHECK_EQ_STR(ColregsOf("standon").name, "Stand-on");
+    CHECK(!ColregsOf("standon").extremis);
+    CHECK_EQ_STR(ColregsOf("standon_ot").name, "Stand-on, being overtaken");
+    CHECK(ColregsOf("standon:inextremis").extremis);
+    CHECK_EQ_STR(ColregsOf("standon:inextremis").rule, "Rule 17(b)");
+    CHECK_EQ_STR(ColregsOf("standon_ot:inextremis").name, "Being overtaken, in extremis");
+    CHECK(!ColregsOf("giveway:inextremis").extremis);
+    CHECK_EQ_STR(ColregsOf("cpa").rule, "");
+    CHECK_EQ_STR(ColregsOf("cpa").name, "Keep clear (CPA)");
+    CHECK_EQ_STR(ColregsOf("none").name, "Avoiding");
+    CHECK_EQ_STR(ColregsOf("").name, "Avoiding");
+}
+
 int main() {
     test_flag_parsing();
     test_allstop_classification();
@@ -887,6 +947,7 @@ int main() {
     test_readiness();
     test_camera_readiness();
     test_comms_loss_return();
+    test_colav_alerts();
 
     std::printf("mission_logic_test: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;

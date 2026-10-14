@@ -83,11 +83,26 @@ its X/Y; own ship from a fresh own fix (NAV_LAT/NAV_LONG or Signal K
 nav.lat/lon) on the same datum, else NAV_X/NAV_Y. Rows stop when a contact
 expires (contact_ttl_s), so a 30-second window is the live picture.
 `traffic`: contacts, reports, radar_only, high_risk, risk_level,
-avoidance_active (helm running an avd*/colreg*/avoid* behavior),
-closest_range_m, min_cpa_m, min_tcpa_s, planned_course (bearing to the
+avoidance_active (0 idle, 1 helm avoiding: a contact in COLAV_ALERTS or an
+avd*/colreg*/avoid* behavior running, 2 in extremis), colav_avoiding and
+colav_extremis (counts of active COLAV_ALERTS entries and of those in
+extremis; written once COLAV_ALERTS has been received), closest_range_m, min_cpa_m, min_tcpa_s, planned_course (bearing to the
 current waypoint), course_deviation (commanded minus planned), strings
-worst_contact and reason. The legacy `radar` aggregates are kept for the
-alert rules.
+worst_contact and reason (with COLAV_ALERTS: the contact and COLREGS
+situation the helm is avoiding first). The legacy `radar` aggregates are
+kept for the alert rules.
+`colav`: one series per contact listed in COLAV_ALERTS (production
+iWebSocket: the contacts the helm is steering around), tag `contact`
+(the NODE_REPORT name, as in `contacts`), 1 Hz while listed: active (1
+avoiding, 0 avoidance ended and held for colav_alert_hold, 15 s),
+extremis (1 stand-on in extremis, COLREGS Rule 17(b)), for_s, range_m,
+bearing, rel_bearing (0..360), cpa_m, tcpa_s (0 = opening), hdg, spd_kn,
+mmsi (AIS contacts), -1 = unknown; strings situation (Head-on, Overtaking,
+passing to port, Give-way, crossing astern, Stand-on, Stand-on, being
+overtaken, Stand-on, in extremis, Keep clear (CPA), Avoiding), rule
+(Rule 13 | 14 | 16 | 17 | 17(b), "-" for none) and mode (the behaviour's
+own `base:submode`). A list that stops updating for 10 s is dropped (the
+iWebSocket that posted it has stopped).
 
 ### readiness / readiness_summary (FR-12) — source: MOOS bridge, every readiness_period_s (5 s)
 readiness, tag `check` (gps | course | enc | autonomy | apps | steering |

@@ -4,7 +4,7 @@
 // calls it: once with no data (vessel offline) and once with sample frames.
 // Each call must return an option object with a series array, without
 // throwing. The Traffic View gets extra checks for the contact symbols, the
-// speed vectors and the own-ship pin.
+// speed vectors, the own-ship pin and the rings on contacts the helm avoids.
 //
 //   node tools/check_echarts_panels.js [repo]     exit 1 on any failure
 'use strict';
@@ -36,6 +36,8 @@ const TRAFFIC = [
     hdg: [270, null, 0, 120, 10], spd_kn: [12, 5, 0.2, null, 3],
     risk: [2, 1, 0, 0, 0], cpa_m: [100, 400, 2000, 1500, 300], tcpa_s: [120, 300, -1, 600, 50] }),
   frame('B', { _value: [90] }),
+  // Helm avoiding (COLAV_ALERTS): AIS 367123 in extremis, R1 avoided.
+  frame('V', { contact: ['AIS 367123', 'R1'], active: [1, 1], extremis: [1, 0] }),
 ];
 
 const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json')).sort();
@@ -95,7 +97,12 @@ function checkTraffic(o, name, dark) {
   if (own.symbolOffset[1] !== '-50%') { throw new Error('pin tip not on the centre'); }
   const cpa = o.series.find((s) => s.lineStyle && s.lineStyle.type === 'dashed');
   if (!cpa) { throw new Error('CPA line missing'); }
-  ok(`Traffic View symbols, vectors, pin and CPA line (${tag})`);
+  const ring = o.series.find((s) => s.symbol === 'circle');
+  if (!ring || ring.data.length !== 2) { throw new Error('helm-avoiding rings missing'); }
+  const rc = ring.data.map((d) => d.itemStyle.borderColor).sort().join(',');
+  if (rc !== '#ff4d4f,#ff9830') { throw new Error(`ring colours wrong: ${rc}`); }
+  if (!byName['R1'].label.show) { throw new Error('avoided contact not labelled'); }
+  ok(`Traffic View symbols, vectors, pin, CPA line and avoidance rings (${tag})`);
 }
 
 console.log(`  echarts panels: ${pass} passed, ${fail} failed`);

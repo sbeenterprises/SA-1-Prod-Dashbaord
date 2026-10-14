@@ -2053,6 +2053,61 @@ def contacts_query(limit=None, rank=True):
     return q
 
 
+# Helm avoidance (COLAV_ALERTS from the production iWebSocket): one `colav`
+# row per contact the helm is steering around, written every second while
+# iWebSocket lists it (15 s after the avoidance ends, marked inactive).
+COLAV_FIELDS = ["active", "extremis", "for_s", "range_m", "cpa_m", "tcpa_s"]
+COLAV_STR_FIELDS = ["situation", "rule"]
+
+
+def colav_query():
+    """One row per contact the helm is avoiding or has just cleared: the
+    COLREGS situation with its rule, CPA / TCPA, range and a state column
+    (IN EXTREMIS, AVOIDING, CLEAR); in extremis first, then by CPA."""
+    nums = " or ".join(f'r._field == "{f}"' for f in COLAV_FIELDS)
+    strs = " or ".join(f'r._field == "{f}"' for f in COLAV_STR_FIELDS)
+    return ('base = from(bucket: "telemetry")\n'
+            '  |> range(start: -5s)\n'
+            '  |> filter(fn: (r) => r._measurement == "colav")\n'
+            '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+            '  |> last()\n'
+            '  |> drop(columns: ["_start", "_stop", "_measurement", "vessel", "_time"])\n'
+            f'nums = base |> filter(fn: (r) => {nums})\n'
+            '  |> group()\n'
+            '  |> pivot(rowKey: ["contact"], columnKey: ["_field"], valueColumn: "_value")\n'
+            f'strs = base |> filter(fn: (r) => {strs})\n'
+            '  |> group()\n'
+            '  |> pivot(rowKey: ["contact"], columnKey: ["_field"], valueColumn: "_value")\n'
+            'join(tables: {n: nums, s: strs}, on: ["contact"])\n'
+            '  |> map(fn: (r) => ({\n'
+            '      contact: r.contact,\n'
+            '      situation: if r.rule == "-" then r.situation else r.situation + " (" + r.rule + ")",\n'
+            '      cpa_m: r.cpa_m, tcpa_s: r.tcpa_s, range_m: r.range_m, for_s: r.for_s,\n'
+            '      state: if r.extremis > 0.0 then "IN EXTREMIS" else if r.active > 0.0 then "AVOIDING" else "CLEAR",\n'
+            '      rank: if r.extremis > 0.0 then 0 else if r.active > 0.0 then 1 else 2,\n'
+            '      cpa_rank: if r.cpa_m >= 0.0 then r.cpa_m else 1000000000.0}))\n'
+            '  |> sort(columns: ["rank", "cpa_rank"])\n'
+            '  |> drop(columns: ["rank", "cpa_rank"])\n')
+
+
+# Contacts the helm is avoiding, for the rings on the traffic view (refId V).
+COLAV_RING_QUERY = ('from(bucket: "telemetry")\n'
+                    '  |> range(start: -5s)\n'
+                    '  |> filter(fn: (r) => r._measurement == "colav")\n'
+                    '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+                    '  |> filter(fn: (r) => r._field == "active" or r._field == "extremis")\n'
+                    '  |> last()\n'
+                    '  |> drop(columns: ["_start", "_stop", "_measurement", "vessel", "_time"])\n'
+                    '  |> group()\n'
+                    '  |> pivot(rowKey: ["contact"], columnKey: ["_field"], valueColumn: "_value")\n'
+                    '  |> filter(fn: (r) => r.active > 0.0)\n')
+
+colav_state_mappings = [{"type": "value", "options": {
+    "IN EXTREMIS": {"text": "IN EXTREMIS", "color": "red", "index": 0},
+    "AVOIDING": {"text": "AVOIDING", "color": "orange", "index": 1},
+    "CLEAR": {"text": "CLEAR", "color": TILE_OK, "index": 2}}}]
+
+
 def worst_contact_query(column, string=False):
     """A single value (the riskiest contact's column) for a stat tile."""
     q = contacts_query(limit=1)
@@ -2088,7 +2143,7 @@ def traffic_js():
 const ownHdg = val('B') || 0;
 const rows = [];
 for (const s of context.panel.data.series) {
-  if (s.refId === 'B' || s.refId === 'R') { continue; }
+  if (s.refId === 'B' || s.refId === 'R' || s.refId === 'V') { continue; }
   const col = {};
   for (const f of s.fields) { col[f.name] = f.values && f.values.toArray ? f.values.toArray() : f.values; }
   const n = (col.range_m || []).length;
@@ -2100,6 +2155,16 @@ for (const s of context.panel.data.series) {
       risk: col.risk ? col.risk[i] : 0,
       cpa: col.cpa_m ? col.cpa_m[i] : null, tcpa: col.tcpa_s ? col.tcpa_s[i] : null });
   }
+}
+// Contacts the helm is avoiding (COLAV_ALERTS, refId V): ringed orange,
+// red in extremis.
+const avoid = {};
+for (const s of context.panel.data.series) {
+  if (s.refId !== 'V') { continue; }
+  const col = {};
+  for (const f of s.fields) { col[f.name] = f.values && f.values.toArray ? f.values.toArray() : f.values; }
+  const n = (col.contact || []).length;
+  for (let i = 0; i < n; i++) { avoid[col.contact[i]] = col.extremis && col.extremis[i] > 0 ? 2 : 1; }
 }
 const NM = 1852;
 // Display range: the traffic_range variable (refId R, 0 = auto) or, on
@@ -2140,7 +2205,7 @@ const scatter = pts.map(r => ({
   value: [r.range / NM, wrap(r.rb)],
   symbolRotate: r.hdg === null ? 0 : -(r.hdg - ownHdg),
   itemStyle: { color: colorOf(r), borderColor: dark ? '#0b0f14' : '#ffffff', borderWidth: 1 },
-  label: { show: r.risk >= 1, formatter: r.id, color: dark ? '#fff' : '#24292e', fontSize: 11, fontWeight: 600, position: 'top' },
+  label: { show: r.risk >= 1 || !!avoid[r.id], formatter: r.id, color: dark ? '#fff' : '#24292e', fontSize: 11, fontWeight: 600, position: 'top' },
   name: r.id, risk: r.risk, cpa: r.cpa, tcpa: r.tcpa, source: r.source, spd: r.spd }));
 // Speed vector: where the contact will be in 6 minutes (spd_kn / 10 nm),
 // drawn from the bow along its heading. Kept visible but never longer than
@@ -2163,6 +2228,10 @@ const series = [{
     (p.data.cpa != null ? '<br>CPA ' + Math.round(p.data.cpa) + ' m' : '') +
     (p.data.tcpa != null && p.data.tcpa >= 0 ? ' · TCPA ' + Math.round(p.data.tcpa) + ' s' : '') +
     (p.data.spd != null ? '<br>' + p.data.spd.toFixed(1) + ' kn' : '') }
+}, {
+  type: 'scatter', coordinateSystem: 'polar', symbol: 'circle', symbolSize: 34, z: 2, silent: true,
+  data: pts.filter(r => avoid[r.id]).map(r => ({ value: [r.range / NM, wrap(r.rb)],
+    itemStyle: { color: 'rgba(0,0,0,0)', borderColor: avoid[r.id] > 1 ? '#ff4d4f' : '#ff9830', borderWidth: 2.5 } }))
 }, ...vectors, {
   // Own ship: red map pin with a white vessel glyph, tip on the centre.
   type: 'scatter', coordinateSystem: 'polar', symbol: OWN_PIN, symbolSize: [28, 36], symbolOffset: [0, '-50%'],
@@ -2191,8 +2260,9 @@ return {
     btn('zoom-in', '+', 8, 4, () => setRange(RANGES[Math.max(0, idx - 1)]), false),
     btn('zoom-out', '\u2212', 8, 30, () => setRange(RANGES[Math.min(RANGES.length - 1, idx + 1)]), false),
     btn('zoom-auto', 'A', 8, 56, () => setRange(0), sel <= 0),
-    { type: 'text', left: 8, bottom: 6, style: { text: '{g|●} report / AIS   {a|●} radar   {r|●} HIGH risk   — 6 min vector', fill: C.label, fontSize: 10,
-        rich: { g: { fill: '#5ad8a6', fontSize: 12 }, a: { fill: '#f0b429', fontSize: 12 }, r: { fill: '#ff6b6b', fontSize: 12 } } } },
+    { type: 'text', left: 8, bottom: 6, style: { text: '{g|●} report / AIS   {a|●} radar   {r|●} HIGH risk   {o|○} helm avoiding   — 6 min vector', fill: C.label, fontSize: 10,
+        rich: { g: { fill: '#5ad8a6', fontSize: 12 }, a: { fill: '#f0b429', fontSize: 12 }, r: { fill: '#ff6b6b', fontSize: 12 },
+          o: { fill: '#ff9830', fontSize: 13, fontWeight: 700 } } } },
     { type: 'text', right: 8, bottom: 6, style: { text: worst && worst.risk >= 1 ? worst.id + '  CPA ' + Math.round(worst.cpa) + ' m · TCPA ' + fmtT(worst.tcpa) : 'no risk contacts',
         fill: worst && worst.risk >= 2 ? '#ff6b6b' : C.text, fontSize: 11, fontWeight: 600 } }
   ],
@@ -2223,7 +2293,8 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
     stat("Avoidance", flux("traffic", "avoidance_active", last=True), 3, 0, 3, 2,
          mappings=[{"type": "value", "options": {
              "0": {"text": "IDLE", "color": "#3d434b", "index": 0},
-             "1": {"text": "ACTIVE", "color": "orange", "index": 1}}}],
+             "1": {"text": "ACTIVE", "color": "orange", "index": 1},
+             "2": {"text": "IN EXTREMIS", "color": "red", "index": 2}}}],
          text_mode="value", color_mode="background"),
     stat("Contacts", flux("traffic", "contacts", last=True), 6, 0, 3, 2, decimals=0),
     stat("Reports / AIS", flux("traffic", "reports", last=True), 9, 0, 3, 2, decimals=0),
@@ -2244,7 +2315,8 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
     (instrument("Traffic View",
                 [target(contacts_query()),
                  target(flux("nav", "heading", last=True), ref="B"),
-                 target(TRAFFIC_RANGE_QUERY, ref="R")],
+                 target(TRAFFIC_RANGE_QUERY, ref="R"),
+                 target(COLAV_RING_QUERY, ref="V")],
                 0, 2, 10, 10,
                 traffic_js(), {"kind": "traffic"})
      if ANALOG else
@@ -2290,9 +2362,9 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
          text_mode="value", no_value="none"),
     stat("Reason", last_str("traffic", "reason"), 17, 10, 7, 2, text_mode="value",
          string_value=True),
-    # C — contact table and CPA / TCPA trend
+    # C — contact table, helm avoidance (COLAV_ALERTS) and CPA / TCPA trend
     panel("table", "Contacts — riskiest first", [target(contacts_query(limit=12))],
-          0, 12, 16, 5, options={"showHeader": True}, no_value="no contacts",
+          0, 12, 10, 5, options={"showHeader": True}, no_value="no contacts",
           mappings=risk_mappings,
           overrides=[{"matcher": {"id": "byName", "options": "range_m"},
                       "properties": [{"id": "unit", "value": UNIT_M}, {"id": "decimals", "value": 0},
@@ -2322,14 +2394,59 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
                       "properties": [{"id": "displayName", "value": "Encounter"}]},
                      {"matcher": {"id": "byRegexp", "options": "rel_bearing|rel_speed_kn|hdg"},
                       "properties": [{"id": "custom.hidden", "value": True}]}]),
+    panel("table", "Helm Avoiding (COLREGS)", [target(colav_query())],
+          10, 12, 8, 5, options={"showHeader": True}, no_value="helm not avoiding",
+          overrides=[{"matcher": {"id": "byName", "options": "contact"},
+                      "properties": [{"id": "displayName", "value": "Contact"},
+                                     {"id": "custom.width", "value": 105}]},
+                     {"matcher": {"id": "byName", "options": "situation"},
+                      "properties": [{"id": "displayName", "value": "Situation"}]},
+                     {"matcher": {"id": "byName", "options": "cpa_m"},
+                      "properties": [{"id": "unit", "value": UNIT_M}, {"id": "decimals", "value": 0},
+                                     {"id": "displayName", "value": "CPA"},
+                                     {"id": "custom.width", "value": 62},
+                                     {"id": "mappings", "value": [{"type": "range", "options": {
+                                         "from": -1.5, "to": -0.5,
+                                         "result": {"text": "?", "index": 0}}}]}]},
+                     {"matcher": {"id": "byName", "options": "tcpa_s"},
+                      "properties": [{"id": "unit", "value": "s"}, {"id": "decimals", "value": 0},
+                                     {"id": "displayName", "value": "TCPA"},
+                                     {"id": "custom.width", "value": 66},
+                                     {"id": "mappings", "value": [
+                                         {"type": "range", "options": {"from": -1.5, "to": -0.5,
+                                          "result": {"text": "?", "index": 0}}},
+                                         {"type": "value", "options": {
+                                          "0": {"text": "opening", "index": 1}}}]}]},
+                     {"matcher": {"id": "byName", "options": "state"},
+                      "properties": [{"id": "displayName", "value": "State"},
+                                     {"id": "custom.width", "value": 100},
+                                     {"id": "mappings", "value": colav_state_mappings},
+                                     {"id": "custom.cellOptions", "value": {"type": "color-text"}}]},
+                     {"matcher": {"id": "byRegexp", "options": "range_m|for_s"},
+                      "properties": [{"id": "custom.hidden", "value": True}]}]),
     ts("Closest CPA / TCPA",
        [target(flux("traffic", "min_cpa_m", extra=NO_SENTINEL), "CPA m"),
         target(flux("traffic", "min_tcpa_s", extra=NO_SENTINEL), "TCPA s", ref="B")],
-       16, 12, 8, 5, unit=UNIT_M,
+       18, 12, 6, 5, unit=UNIT_M,
        overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
                    "properties": [{"id": "unit", "value": "s"},
                                   {"id": "custom.axisPlacement", "value": "right"}]}]),
 ], ["traffic"], refresh="1s"))
+
+# Helm Avoiding (v1.2.24) takes its own id and the shared counter is put
+# back, so adding it does not renumber the panels of the later dashboards.
+for _p in DASHBOARDS[-1]["panels"]:
+    if _p.get("title") == "Helm Avoiding (COLREGS)":
+        _id[0] -= 1
+        _colav_old = _p["id"]
+        _p["id"] = 9601
+        for _q in DASHBOARDS[-1]["panels"]:
+            if _q["id"] > _colav_old and _q is not _p:
+                _q["id"] -= 1
+        _p["transformations"] = [{"id": "organize", "options": {
+            "excludeByName": {"range_m": True, "for_s": True},
+            "indexByName": {"contact": 0, "situation": 1, "cpa_m": 2, "tcpa_s": 3,
+                            "state": 4}}}]
 
 # Contacts table: the join emits columns alphabetically; fix the reading
 # order and drop the working columns.

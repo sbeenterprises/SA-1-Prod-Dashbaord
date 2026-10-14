@@ -3,6 +3,28 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.24] - 2026-10-14 (helm collision avoidance on the Traffic page)
+
+Follows the 13 October changes in moos-ivp-morgan-stern-drive-mercury
+(iWebSocket: COLAV_ALERTS, the contacts the helm is avoiding, with the
+COLREGS situation). Update with `bash deploy/update.sh v1.2.24`, restart
+the MOOS community (grafana_bridge changed), Ctrl+F5. No usv.env change.
+Nothing changes on a vessel or simulator that does not publish
+COLAV_ALERTS.
+
+### Added
+- grafana_bridge reads COLAV_ALERTS (JSON list from iWebSocket) and writes
+  a `colav` row per contact (situation, COLREGS rule, CPA, TCPA, range,
+  bearings, contact course and speed, active / ended, in extremis) and
+  traffic.colav_avoiding / colav_extremis. A list that stops updating for
+  10 s is dropped. Events: helm avoiding (warning, with the situation and
+  CPA), in extremis (critical), avoidance ended (info).
+- Traffic: Avoidance tile IN EXTREMIS (red) next to IDLE / ACTIVE; the
+  Reason tile names the contact and situation; orange rings (red in
+  extremis) on the contacts the helm is avoiding in the Traffic View; new
+  Helm Avoiding (COLREGS) table in the bottom row.
+- Alert rule Collision Avoidance IN EXTREMIS, critical (24 rules).
+
 ## [1.2.23] - 2026-10-14 (comms-loss return to base, return base, helm speed units)
 
 Follows the 13 October changes in moos-ivp-morgan-stern-drive-mercury

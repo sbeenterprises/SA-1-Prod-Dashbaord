@@ -462,6 +462,15 @@ EOF
     sleep 2
     P RETURN=false RETURN_HOLD=true
     sleep 2
+    # Production iWebSocket COLAV_ALERTS: give-way avoidance of contato_7,
+    # then stand-on in extremis, then the avoidance ends (held inactive).
+    CA='"mmsi":0,"hdg":90,"spd":5,"lat":29.7,"lon":-91.2,"len":-1,"type":"ship","age":1'
+    P "COLAV_ALERTS=[{\"cn\":\"contato_7\",\"active\":true,\"for\":3,\"mode\":\"giveway:stern\",$CA,\"range\":500,\"bng\":36.9,\"relBng\":316.9,\"cpa\":96.2,\"tcpa\":118}]"
+    sleep 2
+    P "COLAV_ALERTS=[{\"cn\":\"contato_7\",\"active\":true,\"for\":5,\"mode\":\"standon:inextremis\",$CA,\"range\":300,\"bng\":36.9,\"relBng\":316.9,\"cpa\":20,\"tcpa\":30}]"
+    sleep 2
+    P "COLAV_ALERTS=[{\"cn\":\"contato_7\",\"active\":false,\"for\":7,\"mode\":\"standon:inextremis\",$CA,\"range\":250,\"bng\":36.9,\"relBng\":316.9,\"cpa\":250,\"tcpa\":0}]"
+    sleep 2
   fi
   kill $DB 2>/dev/null; pkill -f moos_bridge 2>/dev/null; stop_stub
 
@@ -525,6 +534,26 @@ EOF
     grep -q "autonomy,.* comms_return=1" "$LINES"      && ok "autonomy.comms_return during the failsafe return" || bad "comms_return missing"
     grep -q "autonomy,.* operator_link=5" "$LINES"     && ok "operator_link 5 holding at base after comms loss" || bad "operator_link hold code missing"
     grep -q 'state="HoldingAtBase"' "$LINES"           && ok "RETURN_HOLD -> state HoldingAtBase"      || bad "HoldingAtBase state missing"
+    grep -q 'colav,vessel=usv-moos,contact=contato_7.*situation="Give-way, crossing astern"' "$LINES" \
+      && ok "COLAV_ALERTS -> colav row with the COLREGS situation" || bad "colav situation missing"
+    grep -q 'colav,vessel=usv-moos,contact=contato_7.*rule="Rule 16"' "$LINES" \
+      && ok "colav row carries the COLREGS rule" || bad "colav rule missing"
+    grep -Eq 'colav,vessel=usv-moos,contact=contato_7.* cpa_m=96\.2' "$LINES" \
+      && ok "colav CPA from iWebSocket (96.2 m)" || bad "colav cpa missing"
+    grep -q "Helm avoiding contato_7: Give-way, crossing astern (Rule 16), CPA 96 m in 118 s" "$LINES" \
+      && ok "avoidance start -> warning event" || bad "avoidance start event missing"
+    grep -q "IN EXTREMIS with contato_7: Stand-on, in extremis (Rule 17(b))" "$LINES" \
+      && ok "in extremis -> critical event" || bad "in-extremis event missing"
+    grep -q "traffic,vessel=usv-moos .*colav_extremis=1" "$LINES" \
+      && ok "traffic.colav_extremis counts the in-extremis contact" || bad "colav_extremis missing"
+    grep -q "traffic,vessel=usv-moos .*avoidance_active=2" "$LINES" \
+      && ok "Avoidance tile reads IN EXTREMIS (2)" || bad "avoidance_active=2 missing"
+    grep -q 'reason="Avoiding contato_7, Give-way, crossing astern (Rule 16)"' "$LINES" \
+      && ok "Reason names the contact and the situation" || bad "colav reason missing"
+    grep -q "Clear of contato_7, avoidance ended" "$LINES" \
+      && ok "avoidance end -> info event" || bad "avoidance end event missing"
+    grep -q 'colav,vessel=usv-moos,contact=contato_7.* active=0' "$LINES" \
+      && ok "ended avoidance held as inactive row" || bad "inactive colav row missing"
     grep -q 'arrival_state="decelerating"' "$LINES"    && ok "ARRIVAL_STATE -> mission_state"           || bad "ARRIVAL_STATE not mapped"
     grep -Eq "radar,.* targets=[12]" "$LINES"            && ok "NODE_REPORT -> radar.targets counted"           || bad "contact tracking missing"
     grep -q "radar,.* closest_range_m=500" "$LINES"    && ok "contact range from NAV_X/Y (500 m)"       || bad "contact range missing"

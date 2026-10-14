@@ -33,6 +33,7 @@
 #include <set>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <vector>
 
 #include "../cpp-common/engine_profile.hpp"
@@ -187,6 +188,9 @@ const std::set<std::string> kFlagVars = {
 // Everything else we subscribe to.
 const std::set<std::string> kSpecialVars = {
     "COMMS_LOST", "SURVEY_ENTRY_GATE", "BASE_COORDS",
+    // Production iWebSocket: contacts the helm is steering around, with the
+    // COLREGS situation (JSON, rebuilt once a second while any is listed).
+    "COLAV_ALERTS",
     "IVPHELM_STATE", "IVPHELM_ALLSTOP", "IVPHELM_SUMMARY",
     "OPR_BREACHED", "VIEW_SEGLIST", "OPR_POLY_ACTUAL", "REGION_UPDATES", "OBSTACLE_ALERT",
     "CHECKLIST_STATUS", "DB_CLIENTS",
@@ -717,6 +721,17 @@ private:
                 telemetry_->field("mission", "", "base_lat", base_lat_);
                 telemetry_->field("mission", "", "base_lon", base_lon_);
             }
+        } else if (key == "COLAV_ALERTS" && msg.IsString()) {
+            std::vector<usv::ColavAlert> v;
+            if (usv::ParseColavAlerts(msg.GetString(), &v)) {
+                have_colav_ = true;
+                colav_time_ = now;
+                ApplyColav(v);
+            } else if (!warned_colav_parse_) {
+                warned_colav_parse_ = true;
+                std::fprintf(stderr, "grafana_bridge: COLAV_ALERTS not understood: %.120s\n",
+                             msg.GetString().c_str());
+            }
         } else if (key == "SURVEY_ENTRY_GATE") {
             // iWebSocket re-posts this every iterate (20 Hz): change-only.
             const std::string gate = usv::lower(usv::trim(AsString(msg)));
@@ -1138,6 +1153,86 @@ private:
     // "traffic" summary and the legacy "radar" aggregates, 1 Hz. Contacts
     // are only written while active, so a dashboard query over the last
     // 30 s sees exactly the live picture.
+    // COLAV_ALERTS: events on the transitions. A contact the helm starts
+    // avoiding is a warning, one in extremis (Rule 17(b), the stand-on
+    // vessel must act) is critical, the end of an avoidance is info.
+    static std::string ColavText(const usv::ColavAlert& a) {
+        const usv::ColregsSituation s = usv::ColregsOf(a.mode);
+        std::string t = s.name;
+        if (!s.rule.empty()) t += " (" + s.rule + ")";
+        char m[96] = "";
+        if (a.cpa >= 0 && a.tcpa > 0)
+            std::snprintf(m, sizeof m, ", CPA %.0f m in %.0f s", a.cpa, a.tcpa);
+        else if (a.range >= 0)
+            std::snprintf(m, sizeof m, ", range %.0f m, opening", a.range);
+        return t + m;
+    }
+
+    void ApplyColav(const std::vector<usv::ColavAlert>& v) {
+        std::set<std::string> active, extremis;
+        for (const auto& a : v) {
+            if (!a.active) continue;
+            active.insert(a.cn);
+            const bool ex = usv::ColregsOf(a.mode).extremis;
+            if (ex) extremis.insert(a.cn);
+            if (ex && !colav_extremis_.count(a.cn))
+                Event("traffic", "critical", "IN EXTREMIS with " + a.cn + ": " + ColavText(a));
+            else if (!ex && !colav_active_.count(a.cn))
+                Event("traffic", "warning", "Helm avoiding " + a.cn + ": " + ColavText(a));
+        }
+        for (const auto& cn : colav_active_)
+            if (!active.count(cn))
+                Event("traffic", "info", "Clear of " + cn + ", avoidance ended");
+        colav_active_ = std::move(active);
+        colav_extremis_ = std::move(extremis);
+        colav_ = v;
+    }
+
+    // The alert the operator must see first: in extremis, then the closest
+    // approach still ahead, then the longest-running.
+    const usv::ColavAlert* ColavLead() const {
+        const usv::ColavAlert* best = nullptr;
+        auto key = [](const usv::ColavAlert& a) {
+            const bool ex = usv::ColregsOf(a.mode).extremis;
+            const double cpa = (a.cpa >= 0 && a.tcpa > 0) ? a.cpa : 1e9;
+            return std::make_tuple(ex ? 0 : 1, cpa, -a.for_s);
+        };
+        for (const auto& a : colav_)
+            if (a.active && (!best || key(a) < key(*best))) best = &a;
+        return best;
+    }
+
+    void WriteColav(double now) {
+        // iWebSocket rebuilds a non-empty list every second (the "for"
+        // counters move); one that has not moved for 10 s is from an
+        // iWebSocket that stopped, and is dropped.
+        if (!colav_.empty() && now - colav_time_ > kColavStaleS) {
+            std::fprintf(stderr, "grafana_bridge: COLAV_ALERTS stale for %.0f s, cleared\n",
+                         now - colav_time_);
+            ApplyColav({});
+        }
+        for (const auto& a : colav_) {
+            const usv::ColregsSituation s = usv::ColregsOf(a.mode);
+            const std::string tags = "contact=" + EscapeTag(a.cn);
+            telemetry_->field("colav", tags, "active", a.active ? 1 : 0);
+            telemetry_->field("colav", tags, "extremis", (a.active && s.extremis) ? 1 : 0);
+            telemetry_->str_field("colav", tags, "situation", s.name);
+            telemetry_->str_field("colav", tags, "rule", s.rule.empty() ? "-" : s.rule);
+            telemetry_->str_field("colav", tags, "mode", a.mode.empty() ? "none" : a.mode);
+            telemetry_->field("colav", tags, "for_s", a.for_s);
+            telemetry_->field("colav", tags, "range_m", a.range);
+            telemetry_->field("colav", tags, "bearing", a.bng);
+            telemetry_->field("colav", tags, "rel_bearing", a.rel_bng);
+            telemetry_->field("colav", tags, "cpa_m", a.cpa);
+            telemetry_->field("colav", tags, "tcpa_s", a.tcpa);
+            telemetry_->field("colav", tags, "hdg", a.hdg);
+            telemetry_->field("colav", tags, "spd_kn", a.spd >= 0 ? a.spd * MS_TO_KN : -1.0);
+            if (a.mmsi > 0) telemetry_->field("colav", tags, "mmsi", a.mmsi);
+        }
+        telemetry_->field("traffic", "", "colav_avoiding", static_cast<double>(colav_active_.size()));
+        telemetry_->field("traffic", "", "colav_extremis", static_cast<double>(colav_extremis_.size()));
+    }
+
     void WriteTraffic(double now) {
         usv::OwnShip own;
         own.valid = have_x_ && have_y_;
@@ -1232,16 +1327,21 @@ private:
             }
         }
 
-        const bool avoidance = last_active_behavior_.find("avd") != std::string::npos ||
+        if (have_colav_) WriteColav(now);
+        const usv::ColavAlert* lead = have_colav_ ? ColavLead() : nullptr;
+        const bool avoidance = lead ||
+                               last_active_behavior_.find("avd") != std::string::npos ||
                                last_active_behavior_.find("colreg") != std::string::npos ||
                                last_active_behavior_.find("avoid") != std::string::npos;
+        const bool extremis = !colav_extremis_.empty();
         const int risk_level = high ? 2 : (medium ? 1 : 0);
         telemetry_->field("traffic", "", "contacts", n);
         telemetry_->field("traffic", "", "reports", reports);
         telemetry_->field("traffic", "", "radar_only", radar_only);
         telemetry_->field("traffic", "", "high_risk", high);
         telemetry_->field("traffic", "", "risk_level", risk_level);
-        telemetry_->field("traffic", "", "avoidance_active", avoidance ? 1 : 0);
+        // 0 idle, 1 avoiding, 2 in extremis (COLAV_ALERTS only).
+        telemetry_->field("traffic", "", "avoidance_active", extremis ? 2 : avoidance ? 1 : 0);
         // -1 = nothing to report: the tiles map it to "none" instead of
         // holding the last real value for the whole dashboard window.
         telemetry_->field("traffic", "", "closest_range_m", closest >= 0 ? closest : -1.0);
@@ -1265,7 +1365,16 @@ private:
             telemetry_->field("traffic", "", "planned_course", -1.0);   // no route
             telemetry_->field("traffic", "", "course_deviation", -999.0);
         }
+        std::string colav_reason;
+        if (lead) {
+            const usv::ColregsSituation ls = usv::ColregsOf(lead->mode);
+            colav_reason = std::string(ls.extremis ? "IN EXTREMIS: " : "Avoiding ") + lead->cn +
+                           ", " + ls.name + (ls.rule.empty() ? "" : " (" + ls.rule + ")");
+            if (colav_active_.size() > 1)
+                colav_reason += " +" + std::to_string(colav_active_.size() - 1) + " more";
+        }
         telemetry_->str_field("traffic", "", "reason",
+                              lead ? colav_reason :
                               avoidance ? "Collision avoidance active" :
                               high ? "High-risk contact, helm not avoiding" :
                               medium ? "Contact closing (MEDIUM), monitoring" :
@@ -1678,6 +1787,12 @@ private:
     // Radar / contacts.
     usv::ContactTracker contacts_{10.0};
     std::set<std::string> alerted_contacts_;
+    // COLAV_ALERTS from the production iWebSocket.
+    static constexpr double kColavStaleS = 10.0;
+    bool have_colav_ = false, warned_colav_parse_ = false;
+    double colav_time_ = 0.0;
+    std::vector<usv::ColavAlert> colav_;
+    std::set<std::string> colav_active_, colav_extremis_;
     double radar_ttm_rate_ = 0.0, radar_ttm_time_ = -1e18;
     bool radar_seen_ = false;
 

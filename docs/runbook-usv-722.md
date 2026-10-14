@@ -244,11 +244,12 @@ retention (`du -sh /var/lib/influxdb`).
   the MMSI when convenient so AIS targets are told apart by context.
 - Camera Offline alert fires for the five cameras not yet powered;
   disable them in Frigate until cabled (Cameras section above).
-- Comms-loss failsafe and return base: the dashboard reads COMMS_LOSS,
-  RETURN_HOLD and BASE_COORDS (v1.2.23), which only the 13 October 2026
-  iWebSocket of moos-ivp-morgan-stern-drive-mercury publishes. Until that
-  build runs here the Operator Link tiles read LINK OK and Dist to Base reads
-  "no base". Pulling those commits onto this boat conflicts with the local
+- Comms-loss failsafe, return base and helm collision alerts: the
+  dashboard reads COMMS_LOSS, RETURN_HOLD and BASE_COORDS (v1.2.23) and
+  COLAV_ALERTS (v1.2.24), which only the 13 October 2026 iWebSocket of
+  moos-ivp-morgan-stern-drive-mercury publishes. Until that build runs here
+  the Operator Link tiles read LINK OK, Dist to Base reads "no base" and the
+  Helm Avoiding (COLREGS) table on Traffic stays empty. Pulling those commits onto this boat conflicts with the local
   grafana_bridge lines in real.moos: merge by hand and keep them.
 - Battery current sign: the Victron shunt reports charging as negative
   current (−13 A at 13.86 V on charge, 2026-10-13), the opposite of the

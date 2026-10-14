@@ -144,6 +144,13 @@ RULES = [
          q("traffic", "high_risk"), "gt", 0, "critical",
          "A contact is closing inside the alert CPA within the alert TCPA "
          "(grafana_bridge radar_cpa_alert_m / tcpa_alert_s).", no_data="OK"),
+    rule("usv-colav-extremis", "Collision Avoidance IN EXTREMIS",
+         q("traffic", "colav_extremis"), "gt", 0, "critical",
+         "The helm reports a stand-on encounter in extremis (COLREGS Rule "
+         "17(b), COLAV_ALERTS from iWebSocket): the give-way vessel has not "
+         "acted and own ship is manoeuvring to avoid collision. Watch the "
+         "Traffic page and be ready to take control.",
+         for_="0s", no_data="OK"),
     rule("usv-radar-offline", "Radar Offline",
          q("radar", "online"), "lt", 1, "warning",
          "Radar is offline — collision avoidance degraded.", no_data="OK"),

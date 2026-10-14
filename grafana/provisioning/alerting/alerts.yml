@@ -605,6 +605,62 @@ groups:
             type: last
             params: []
           type: query
+  - uid: usv-colav-extremis
+    title: Collision Avoidance IN EXTREMIS
+    condition: C
+    for: 0s
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: 'The helm reports a stand-on encounter in extremis (COLREGS Rule 17(b), COLAV_ALERTS from
+        iWebSocket): the give-way vessel has not acted and own ship is manoeuvring to avoid collision.
+        Watch the Traffic page and be ready to take control.'
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"traffic\" and r._field == \"colav_extremis\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
   - uid: usv-radar-offline
     title: Radar Offline
     condition: C

@@ -35,7 +35,7 @@ Interface theme.
 | Vessel Health | Whole-vessel summary: instrument cluster (tachometer, coolant, oil pressure, fuel, battery volts, SOC), Engine Faults, battery current, charging state, total power, system voltage, alternator and ECU supply tiles, battery / power / SOC / fuel trends. The engine dial scales follow the vessel's engine type; the three engine dials and the Engine Faults tile open the Engine page, where all engine detail lives |
 | Engine | Large machinery dials at 1 s for sea trials and troubleshooting: tachometer, coolant, oil pressure, boost (intake manifold pressure); oil temp, fuel rate, engine load, torque, engine hours, fuel level, fault lamps and active fault count; every active fault code across the width; RPM, coolant / oil temperature and oil pressure / boost trends over 15 min. A value the hull's engine does not report reads N/A |
 | CAN Bus | Utilization, msgs/s, error/dropped frames, PGN table; trim switch, active fault count, fault lamps (OFF, or the lamps on, most severe first: RED STOP, MIL, AMBER, PROTECT) and fault codes (first active fault as SPN / FMI with its meaning and occurrence count, "+N more" when several) |
-| Traffic | Collision avoidance picture: risk level, avoidance state, contact counts by source, closest range and CPA; heading-up polar traffic view with range rings, own ship as a red pin at the centre, contacts as hulls turned to their heading (green report / AIS, amber radar, red HIGH risk) with 6-minute speed vectors, and a CPA line to the riskiest contact (zoom with the **+ / − / A** buttons in its top-right corner or the **Traffic range** selector: 0.25 to 24 nm, A = auto; contacts outside a zoomed range are counted as "+N beyond"); highest-risk contact card (CPA, TCPA, range, bearings, relative speed, type, encounter); MOOS action (planned vs commanded course, actual heading, speed command vs SOG, avoidance behavior, reason); contact table and CPA/TCPA trend |
+| Traffic | Collision avoidance picture: risk level, avoidance state, contact counts by source, closest range and CPA; heading-up polar traffic view with range rings, own ship as a red pin at the centre, contacts as hulls turned to their heading (green report / AIS, amber radar, red HIGH risk) with 6-minute speed vectors, and a CPA line to the riskiest contact (zoom with the **+ / − / A** buttons in its top-right corner or the **Traffic range** selector: 0.25 to 24 nm, A = auto; contacts outside a zoomed range are counted as "+N beyond"); highest-risk contact card (CPA, TCPA, range, bearings, relative speed, type, encounter); MOOS action (planned vs commanded course, actual heading, speed command vs SOG, avoidance behavior, reason); contact table, Helm Avoiding (COLREGS) table and CPA/TCPA trend |
 | Cameras | Frigate NVR up/down; cameras enabled, streaming and network-connected; one row per camera (Network, Stream, Frame rate, Recording); frame-rate trend. Bitrate, PTZ and temperature charts are reserved for a camera-API source |
 | Comms | Internet / Starlink / VPN (Twingate) / Signal K status, latency, loss, bandwidth of the three busiest links, telemetry message rates |
 | System | CPU, GPU, RAM, disk, CPU temperature, load, Signal K and MOOS reachability, trends, systemd services |
@@ -123,6 +123,37 @@ the Swiftships-UI (right click > Define base) is the orange BASE square on
 the Navigation map, and Dist to Base gives the distance to it in nautical
 miles.
 
+## Collision avoidance (Traffic dashboard)
+On the boats the helm reports every contact it is steering around
+(COLAV_ALERTS, the same list as the Swiftships-UI Alert List). The
+Traffic page shows it three ways:
+- **Avoidance** tile: IDLE, ACTIVE (the helm is avoiding a contact) or
+  IN EXTREMIS in red.
+- **Traffic View**: an orange ring around each contact the helm is
+  avoiding, red when in extremis.
+- **Helm Avoiding (COLREGS)** table: one row per contact with the
+  situation and its rule, CPA, TCPA and state. AVOIDING is orange; CLEAR
+  means the avoidance has ended, and the row stays for 15 s before it
+  goes; IN EXTREMIS is red.
+
+The **Reason** tile names the contact and situation the helm is dealing
+with first.
+
+| Situation | Rule | Meaning |
+|---|---|---|
+| Head-on | 14 | Meeting end-on, both alter to starboard |
+| Overtaking, passing to port / starboard | 13 | Own ship is overtaking and keeps clear |
+| Give-way, crossing astern / ahead | 16 | Crossing, own ship gives way |
+| Stand-on / Stand-on, being overtaken | 17 | Own ship holds course and speed |
+| Stand-on, in extremis / Being overtaken, in extremis | 17(b) | The give-way vessel has not acted and own ship is manoeuvring to avoid collision |
+| Keep clear (CPA) | none | Closest-approach avoidance outside a COLREGS situation |
+
+In extremis is the only situation that raises an alarm (Collision
+Avoidance IN EXTREMIS, critical). Starting and ending an avoidance are
+recorded in the events (warning and info). The simulator does not
+publish COLAV_ALERTS: there the Avoidance tile follows the helm's active
+behaviours and the table stays empty.
+
 ## Mission replay
 1. Open **Replay**.
 2. Pick the mission window with the time picker (annotations mark waypoint
@@ -139,7 +170,8 @@ above 105 °C), Engine Low Oil Pressure (below 150 kPa with the engine
 running above 700 rpm), Engine Fault (any active J1939 fault), Low Fuel
 Level (below 15 %); none of them fires on missing data. Operator Link
 Lost (Returning to Base) is critical while the comms-loss failsafe drives
-the boat. Severity `critical` repeats every 10 min until
+the boat. Collision Avoidance IN EXTREMIS is critical while the helm
+reports a stand-on encounter in extremis. Severity `critical` repeats every 10 min until
 resolved; `warning` hourly. Alarm history is kept 1 year in the events
 bucket.
 

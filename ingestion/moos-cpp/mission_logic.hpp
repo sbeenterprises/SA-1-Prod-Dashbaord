@@ -200,6 +200,128 @@ inline bool ParseLatLon(const std::string& s, double* lat, double* lon) {
     return true;
 }
 
+// ------------------------------------------------ COLAV_ALERTS (iWebSocket)
+
+// One contact the helm is steering around, as iWebSocket reports it in
+// COLAV_ALERTS (a JSON array): -1 is unknown. spd is m/s (NODE_REPORT units).
+struct ColavAlert {
+    std::string cn, mode, type;
+    double mmsi = 0, for_s = 0, hdg = -1, spd = -1, range = -1, bng = -1,
+           rel_bng = -1, cpa = -1, tcpa = -1, lat = 0, lon = 0, len = 0, age = -1;
+    bool active = false;
+};
+
+// Minimal reader for the flat array of flat objects iWebSocket writes
+// (jsoncpp, no nesting): strings with escapes, numbers, true / false / null.
+// Returns false, with `out` emptied, on anything else.
+inline bool ParseColavAlerts(const std::string& js, std::vector<ColavAlert>* out) {
+    out->clear();
+    size_t i = 0;
+    auto ws = [&]() { while (i < js.size() && std::isspace(static_cast<unsigned char>(js[i]))) ++i; };
+    auto str = [&](std::string* v) -> bool {
+        if (i >= js.size() || js[i] != '"') return false;
+        ++i; v->clear();
+        while (i < js.size() && js[i] != '"') {
+            if (js[i] == '\\' && i + 1 < js.size()) {
+                const char e = js[++i];
+                if (e == 'n') *v += '\n'; else if (e == 't') *v += '\t';
+                else if (e == 'u' && i + 4 < js.size()) { *v += '?'; i += 4; }
+                else *v += e;
+            } else {
+                *v += js[i];
+            }
+            ++i;
+        }
+        if (i >= js.size()) return false;
+        ++i;
+        return true;
+    };
+    ws();
+    if (i >= js.size() || js[i] != '[') return false;
+    ++i; ws();
+    if (i < js.size() && js[i] == ']') return true;
+    while (i < js.size()) {
+        ws();
+        if (js[i] != '{') { out->clear(); return false; }
+        ++i;
+        ColavAlert a;
+        while (true) {
+            ws();
+            if (i < js.size() && js[i] == '}') { ++i; break; }
+            std::string key;
+            if (!str(&key)) { out->clear(); return false; }
+            ws();
+            if (i >= js.size() || js[i] != ':') { out->clear(); return false; }
+            ++i; ws();
+            std::string sval; double num = 0; bool is_num = false, bval = false, is_bool = false;
+            if (i < js.size() && js[i] == '"') {
+                if (!str(&sval)) { out->clear(); return false; }
+            } else if (js.compare(i, 4, "true") == 0) { bval = true; is_bool = true; i += 4; }
+            else if (js.compare(i, 5, "false") == 0) { is_bool = true; i += 5; }
+            else if (js.compare(i, 4, "null") == 0) { i += 4; }
+            else {
+                char* end = nullptr;
+                num = std::strtod(js.c_str() + i, &end);
+                if (end == js.c_str() + i) { out->clear(); return false; }
+                i = static_cast<size_t>(end - js.c_str());
+                is_num = true;
+            }
+            if (key == "cn") a.cn = sval;
+            else if (key == "mode") a.mode = sval;
+            else if (key == "type") a.type = sval;
+            else if (key == "active") a.active = is_bool && bval;
+            else if (is_num) {
+                if (key == "mmsi") a.mmsi = num; else if (key == "for") a.for_s = num;
+                else if (key == "hdg") a.hdg = num; else if (key == "spd") a.spd = num;
+                else if (key == "range") a.range = num; else if (key == "bng") a.bng = num;
+                else if (key == "relBng") a.rel_bng = num; else if (key == "cpa") a.cpa = num;
+                else if (key == "tcpa") a.tcpa = num; else if (key == "lat") a.lat = num;
+                else if (key == "lon") a.lon = num; else if (key == "len") a.len = num;
+                else if (key == "age") a.age = num;
+            }
+            ws();
+            if (i < js.size() && js[i] == ',') { ++i; continue; }
+            if (i < js.size() && js[i] == '}') { ++i; break; }
+            out->clear(); return false;
+        }
+        if (!a.cn.empty()) out->push_back(a);
+        ws();
+        if (i < js.size() && js[i] == ',') { ++i; continue; }
+        if (i < js.size() && js[i] == ']') return true;
+        out->clear(); return false;
+    }
+    out->clear();
+    return false;
+}
+
+// COLREGS situation of a BHV_AvdColregs mode ("giveway:stern"), worded as
+// the Swiftships-UI words it. extremis: stand-on (crossing or being
+// overtaken) in extremis, Rule 17(b), the one situation that is an alarm.
+struct ColregsSituation { std::string rule, name; bool extremis = false; };
+inline ColregsSituation ColregsOf(const std::string& mode) {
+    const size_t c = mode.find(':');
+    const std::string base = lower(trim(c == std::string::npos ? mode : mode.substr(0, c)));
+    const std::string sub = c == std::string::npos ? "" : lower(trim(mode.substr(c + 1)));
+    ColregsSituation s;
+    if ((base == "standon" || base == "standon_ot") && sub == "inextremis") {
+        s.rule = "Rule 17(b)";
+        s.name = base == "standon" ? "Stand-on, in extremis" : "Being overtaken, in extremis";
+        s.extremis = true;
+        return s;
+    }
+    if (base == "headon")          { s.rule = "Rule 14"; s.name = "Head-on"; }
+    else if (base == "overtaking") { s.rule = "Rule 13"; s.name = "Overtaking";
+        if (sub == "port" || sub == "starboard") s.name += ", passing to " + sub; }
+    else if (base == "giveway")    { s.rule = "Rule 16"; s.name = "Give-way";
+        if (sub == "stern") s.name += ", crossing astern";
+        else if (sub == "bow") s.name += ", crossing ahead"; }
+    else if (base == "standon")    { s.rule = "Rule 17"; s.name = "Stand-on"; }
+    else if (base == "standon_ot") { s.rule = "Rule 17"; s.name = "Stand-on, being overtaken"; }
+    else if (base == "cpa")        { s.rule = "";        s.name = "Keep clear (CPA)"; }
+    else                           { s.rule = "";        s.name = "Avoiding"; }
+    return s;
+}
+
 // The no-silent-resume hold: survey requested but the operator has not
 // re-armed after a comms loss. Surfaced as its own field + warning alert.
 inline bool awaiting_rearm(const MissionFlags& f) {
