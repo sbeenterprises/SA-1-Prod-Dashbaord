@@ -24,6 +24,14 @@ if [[ ! -f $ENV_FILE ]]; then
   echo "Created $ENV_FILE — edit secrets now, then re-run install."
   exit 1
 fi
+# The file is read by bash: a value with spaces must be quoted
+# (ENGINE_MODEL="Yamaha Outboard Engine F115 B 4-Stroke").
+if grep -qE '^[A-Z_]+=[^"'"'"'#[:space:]][^#]*[[:space:]][^#[:space:]]' $ENV_FILE; then
+  echo "In $ENV_FILE these values contain spaces and need quotes:"
+  grep -nE '^[A-Z_]+=[^"'"'"'#[:space:]][^#]*[[:space:]][^#[:space:]]' $ENV_FILE | sed 's/=.*/=.../'
+  echo 'Write them as KEY="value with spaces", then re-run install.'
+  exit 1
+fi
 # shellcheck disable=SC1090
 source $ENV_FILE
 if [[ $INFLUX_TOKEN == CHANGE_ME* || $INFLUX_PASSWORD == CHANGE_ME* ]]; then
@@ -57,7 +65,7 @@ if [[ -n $ENGINE_SOURCE && -z $ENGINE_TYPE ]]; then
   echo "WARNING: ENGINE_TYPE is empty: dials use the default ranges and the header"
   echo "         shows no engine chip (yamaha_outboard | mercury_diesel)."
 fi
-say "Engine profile: source=${ENGINE_SOURCE:-unset} type=${ENGINE_TYPE:-unset} count=$ENGINE_COUNT helm=$HELM_PROFILE"
+say "Engine profile: source=${ENGINE_SOURCE:-unset} type=${ENGINE_TYPE:-unset} model=\"${ENGINE_MODEL:-default}\" count=$ENGINE_COUNT helm=$HELM_PROFILE"
 
 # ---------------------------------------------------------------- apt repos
 say "Adding InfluxData and Grafana apt repositories"

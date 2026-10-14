@@ -77,6 +77,7 @@ GRAFANA_ADMIN_PASSWORD=<strong password>
 GRAFANA_PORT=3001                       # or 3100 to match usv-722
 VESSEL_ID=usv-725
 ENGINE_TYPE=mercury_diesel
+ENGINE_MODEL="Mercury Diesel 2.0L"
 ENGINE_SOURCE=moos
 HELM_PROFILE=none
 CAN_INTERFACE=slcan0
@@ -194,7 +195,7 @@ rpm / coolant_temp / oil_pressure / fuel_rate / percent_load /
 intake_manifold_pressure present. Then in a browser,
 `http://<obc-ip>:<GRAFANA_PORT>` (admin / the password from usv.env):
 
-- Header band on every page: `Vessel usv-725 · Engine mercury_diesel`.
+- Header band on every page: `Vessel usv-725 · Engine Mercury Diesel 2.0L` (from v1.2.21; v1.2.20 shows `mercury_diesel`).
 - Vessel Health and the Engine tab: the tachometer scale ends at 5, the
   oil pressure dial at 800; RPM, coolant, oil pressure and boost move
   with the engine; Fuel, Engine Hours, Fuel Level read N/A (not sent by

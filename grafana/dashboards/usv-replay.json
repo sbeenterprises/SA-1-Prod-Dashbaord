@@ -213,12 +213,30 @@
         },
         "includeAll": false,
         "multi": false
+      },
+      {
+        "name": "engine_model",
+        "label": "Engine model",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "influxdb-usv"
+        },
+        "hide": 2,
+        "query": "from(bucket: \"telemetry\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"engine\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => exists r.engine_model)\n  |> last()\n  |> group()\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({_value: r.engine_model}))\n",
+        "refresh": 2,
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "includeAll": false,
+        "multi": false
       }
     ]
   },
   "panels": [
     {
-      "id": 223,
+      "id": 220,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -230,11 +248,11 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **REPLAY** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Engine **${engine_type}**"
+        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **REPLAY** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Engine **${engine_model}**"
       }
     },
     {
-      "id": 172,
+      "id": 169,
       "type": "geomap",
       "title": "GPS Track",
       "datasource": {
@@ -486,7 +504,7 @@
       }
     },
     {
-      "id": 173,
+      "id": 170,
       "type": "state-timeline",
       "title": "Mission State",
       "datasource": {
@@ -505,7 +523,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: 30s, fn: last, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: 30s, fn: last, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
           "refId": "A"
         }
       ],
@@ -609,7 +627,7 @@
       }
     },
     {
-      "id": 174,
+      "id": 171,
       "type": "table",
       "title": "Mission Events",
       "datasource": {
@@ -709,7 +727,7 @@
       }
     },
     {
-      "id": 175,
+      "id": 172,
       "type": "timeseries",
       "title": "Heading History",
       "datasource": {
@@ -728,7 +746,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "bucket = if int(v: now()) - int(v: v.timeRangeStart) > int(v: 30d) then \"telemetry_1m\" else \"telemetry\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"heading\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
+          "query": "bucket = if int(v: now()) - int(v: v.timeRangeStart) > int(v: 30d) then \"telemetry_1m\" else \"telemetry\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"heading\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
           "refId": "A",
           "alias": "heading"
         }
@@ -781,7 +799,7 @@
       }
     },
     {
-      "id": 176,
+      "id": 173,
       "type": "timeseries",
       "title": "Speed History",
       "datasource": {
@@ -800,7 +818,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "bucket = if int(v: now()) - int(v: v.timeRangeStart) > int(v: 30d) then \"telemetry_1m\" else \"telemetry\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
+          "query": "bucket = if int(v: now()) - int(v: v.timeRangeStart) > int(v: 30d) then \"telemetry_1m\" else \"telemetry\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
           "refId": "A",
           "alias": "SOG"
         }
@@ -851,7 +869,7 @@
       }
     },
     {
-      "id": 177,
+      "id": 174,
       "type": "timeseries",
       "title": "Actuator Commands",
       "datasource": {
@@ -870,7 +888,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "bucket = if int(v: now()) - int(v: v.timeRangeStart) > int(v: 30d) then \"telemetry_1m\" else \"telemetry\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"rudder_cmd\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
+          "query": "bucket = if int(v: now()) - int(v: v.timeRangeStart) > int(v: 30d) then \"telemetry_1m\" else \"telemetry\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"rudder_cmd\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
           "refId": "A",
           "alias": "rudder cmd %"
         },
@@ -879,7 +897,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "bucket = if int(v: now()) - int(v: v.timeRangeStart) > int(v: 30d) then \"telemetry_1m\" else \"telemetry\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"throttle_cmd\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
+          "query": "bucket = if int(v: now()) - int(v: v.timeRangeStart) > int(v: 30d) then \"telemetry_1m\" else \"telemetry\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"throttle_cmd\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
           "refId": "B",
           "alias": "throttle %"
         }
@@ -961,7 +979,7 @@
       }
     },
     {
-      "id": 178,
+      "id": 175,
       "type": "timeseries",
       "title": "Cross-Track Error",
       "datasource": {
@@ -980,7 +998,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "bucket = if int(v: now()) - int(v: v.timeRangeStart) > int(v: 30d) then \"telemetry_1m\" else \"telemetry\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cross_track_error\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
+          "query": "bucket = if int(v: now()) - int(v: v.timeRangeStart) > int(v: 30d) then \"telemetry_1m\" else \"telemetry\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cross_track_error\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
           "refId": "A",
           "alias": "XTE"
         }
@@ -1031,7 +1049,7 @@
       }
     },
     {
-      "id": 179,
+      "id": 176,
       "type": "state-timeline",
       "title": "Autonomy Flags",
       "datasource": {
@@ -1050,7 +1068,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"waypoint\" or r._field == \"pause\" or r._field == \"stationing\" or r._field == \"returning\" or r._field == \"armed\" or r._field == \"comms_lost\" or r._field == \"manual_override\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: 30s, fn: last, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"waypoint\" or r._field == \"pause\" or r._field == \"stationing\" or r._field == \"returning\" or r._field == \"armed\" or r._field == \"comms_lost\" or r._field == \"manual_override\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: 30s, fn: last, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
           "refId": "A"
         }
       ],
@@ -1094,7 +1112,7 @@
       }
     },
     {
-      "id": 180,
+      "id": 177,
       "type": "timeseries",
       "title": "Distance to Next Waypoint",
       "datasource": {
@@ -1113,7 +1131,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "bucket = if int(v: now()) - int(v: v.timeRangeStart) > int(v: 30d) then \"telemetry_1m\" else \"telemetry\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission\" and (r._field == \"dist_to_waypoint\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
+          "query": "bucket = if int(v: now()) - int(v: v.timeRangeStart) > int(v: 30d) then \"telemetry_1m\" else \"telemetry\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission\" and (r._field == \"dist_to_waypoint\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
           "refId": "A",
           "alias": "distance m"
         }

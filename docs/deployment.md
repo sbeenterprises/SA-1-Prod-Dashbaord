@@ -156,7 +156,7 @@ the operating region; the engine row fails on any active J1939 DTC.
 
 ### Console checklist and ENC selection
 The manual pre-departure checklist lives in the operator console
-(Freeboard). For Grafana to mirror it, the console publishes two MOOS
+(Swiftships-UI). For Grafana to mirror it, the console publishes two MOOS
 variables (strings) whenever they change and at least every minute:
 ```
 CHECKLIST_STATUS = done=9,total=11,pending=Weather Conditions|Port Clearance,by=douglas
@@ -370,12 +370,16 @@ never in the dashboards:
 
 | Hull | Engine | Engine data path | usv.env |
 |---|---|---|---|
-| usv-722 | Yamaha outboard | NMEA 2000 (Yamaha Command Link gateway, on order) -> Signal K `propulsion.*` -> signalk_bridge | `ENGINE_TYPE=yamaha_outboard` `ENGINE_SOURCE=signalk` `HELM_PROFILE=usv722` |
-| usv-725 | Mercury diesel sterndrive | SAE J1939 on slcan0 -> iCANRec `ENGINE_*` -> grafana_bridge | `ENGINE_TYPE=mercury_diesel` `ENGINE_SOURCE=moos` `HELM_PROFILE=none` (until its helm frames are captured) |
+| usv-722 | Yamaha Outboard Engine F115 B 4-Stroke | NMEA 2000 (Yamaha Command Link gateway, on order) -> Signal K `propulsion.*` -> signalk_bridge | `ENGINE_TYPE=yamaha_outboard` `ENGINE_MODEL="Yamaha Outboard Engine F115 B 4-Stroke"` `ENGINE_SOURCE=signalk` `HELM_PROFILE=usv722` |
+| usv-725 | Mercury Diesel 2.0L sterndrive | SAE J1939 on slcan0 -> iCANRec `ENGINE_*` -> grafana_bridge | `ENGINE_TYPE=mercury_diesel` `ENGINE_MODEL="Mercury Diesel 2.0L"` `ENGINE_SOURCE=moos` `HELM_PROFILE=none` (until its helm frames are captured) |
 
 `ENGINE_SOURCE` names the one producer of the `engine` fields; the other
 bridges leave them alone (docs/schema.md, "engine"). `ENGINE_TYPE` becomes
-the `engine_type` tag on every engine point. `ENGINE_COUNT` /
+the `engine_type` tag on every engine point and selects the dial scales;
+`ENGINE_MODEL` (quoted, it contains spaces) becomes the `engine_model` tag,
+the name in the header chip and on the Fleet page (default "Yamaha
+outboard" / "Mercury diesel"). install.sh refuses a value with spaces that
+is not quoted, because the file is read by bash. `ENGINE_COUNT` /
 `ENGINE_INSTANCES` describe twin installations (0,1 = port, starboard).
 `HELM_PROFILE` selects the drive-bus decoder in can_bridge (`usv722`, or
 `none` to keep only the bus statistics). The derived switches can be forced

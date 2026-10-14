@@ -32,7 +32,7 @@ Interface theme.
 | Navigation | Live map (operating region in cyan, planned route with numbered waypoints in green, track in red, vessel as a red heading arrow with a lime 6-minute speed vector along its course), compass (HDG/COG needles), speed meter, GPS fix and satellites, lat/lon, KPI strip (SOG, COG, heading, XTE, distance to WP, HDOP, depth, roll/pitch), trends |
 | Autopilot | Helm state, all-stop, station keeping, entry gate, re-arm hold, remote control, corridor, crash stop; active behaviors, heading/speed error, rudder/throttle commands, speed cap, next turn; rudder (actual angle from the steering actuator, or the command labelled COMMAND when there is no CAN feedback) / throttle / heading-error instruments; rudder trend (actuator command and actual in degrees, PID output in % on the right axis); CAN row (rudder actual, helm wheel, steering drive, helm / autopilot control, gear, thrust to engine, key switch, engine faults); trim switch (UP / DOWN / IDLE: the helm button, not the trim position); desired vs actual heading; speed governor (desired / cap / commanded / actual) |
 | Autopilot Live | Large rudder / throttle / heading-error dials for sea trials and troubleshooting, helm state, steering mode, gear, engine thrust, trim switch, engine faults, speed error and XTE tiles, heading / rudder / speed trends over 5 min; 1 s refresh. Open it from the link icon on any dial of the Autopilot page |
-| Vessel Health | Instrument cluster (tachometer, coolant, oil pressure, fuel, battery volts, SOC), engine and electrical tiles (fuel rate, engine hours, oil temp, engine load, battery current, charging, boost, total power), trends. The tachometer, coolant and oil pressure scales follow the vessel's engine type (header chip); the three dials open the Engine page |
+| Vessel Health | Whole-vessel summary: instrument cluster (tachometer, coolant, oil pressure, fuel, battery volts, SOC), Engine Faults, battery current, charging state, total power, system voltage, alternator and ECU supply tiles, battery / power / SOC / fuel trends. The engine dial scales follow the vessel's engine type; the three engine dials and the Engine Faults tile open the Engine page, where all engine detail lives |
 | Engine | Large machinery dials at 1 s for sea trials and troubleshooting: tachometer, coolant, oil pressure, boost (intake manifold pressure); oil temp, fuel rate, engine load, torque, engine hours, fuel level, fault lamps and active fault count; every active fault code across the width; RPM, coolant / oil temperature and oil pressure / boost trends over 15 min. A value the hull's engine does not report reads N/A |
 | CAN Bus | Utilization, msgs/s, error/dropped frames, PGN table; trim switch, active fault count, fault lamps (OFF, or the lamps on, most severe first: RED STOP, MIL, AMBER, PROTECT) and fault codes (first active fault as SPN / FMI with its meaning and occurrence count, "+N more" when several) |
 | Traffic | Collision avoidance picture: risk level, avoidance state, contact counts by source, closest range and CPA; heading-up polar traffic view with range rings, own ship as a red pin at the centre, contacts as hulls turned to their heading (green report / AIS, amber radar, red HIGH risk) with 6-minute speed vectors, and a CPA line to the riskiest contact (zoom with the **+ / − / A** buttons in its top-right corner or the **Traffic range** selector: 0.25 to 24 nm, A = auto; contacts outside a zoomed range are counted as "+N beyond"); highest-risk contact card (CPA, TCPA, range, bearings, relative speed, type, encounter); MOOS action (planned vs commanded course, actual heading, speed command vs SOG, avoidance behavior, reason); contact table and CPA/TCPA trend |
@@ -44,9 +44,10 @@ Interface theme.
 | Fleet | Last known positions on one map and a status row per vessel (mission state, helm, armed, operator link, geofence, SOG; mission progress, Signal K, MOOS, engine type with the last RPM), each tile opening that vessel's Mission dashboard |
 
 ## Engine type
-The header band of every page shows the vessel's engine type next to its
-name (usv-722: yamaha_outboard, usv-725: mercury_diesel), taken from the
-`ENGINE_TYPE` setting of that vessel's installation. The tachometer, coolant
+The header band of every page shows the vessel's engine next to its name
+(usv-722: Yamaha Outboard Engine F115 B 4-Stroke, usv-725: Mercury Diesel
+2.0L), taken from the `ENGINE_MODEL` setting of that vessel's installation;
+`ENGINE_TYPE` (yamaha_outboard, mercury_diesel) sets the scales. The tachometer, coolant
 and oil pressure dials on Vessel Health and the Engine page scale to that
 type: 0 to 6000 rpm for the outboard, 0 to 5000 rpm with the green band to
 4000 (wide-open throttle) for the Mercury diesel; oil pressure to 600 or
@@ -84,7 +85,7 @@ a real vessel the bridge is configured to treat that as a FAIL (see
 docs/deployment.md, readiness_profile). CONSOLE means the operator
 console has not yet published the ENC selection or the checklist. The
 manual items themselves (life jackets, VHF check, port clearance ...) are
-ticked in Freeboard as before; Grafana mirrors the count and the pending
+ticked in Swiftships-UI as before; Grafana mirrors the count and the pending
 items and adds the automatic verification on top.
 
 ## Mission states (Mission dashboard)

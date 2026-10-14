@@ -160,7 +160,7 @@ const std::map<std::string, FieldMap> kStringPassthrough = {
     {"CORRIDOR_STATUS",    {"mission_state", "corridor_status"}},
     {"CRASH_STOP_STATUS",  {"mission_state", "crash_stop_status"}},
     {"WPT_STAT",           {"mission_state", "wpt_stat"}},
-    // Operator console (Freeboard) state for the Readiness dashboard:
+    // Operator console (Swiftships-UI) state for the Readiness dashboard:
     // ENC_STATUS = "selected:<chart name>" | "none"
     {"ENC_STATUS",         {"mission_state", "enc_status"}},
 };

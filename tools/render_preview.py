@@ -756,8 +756,8 @@ def render_panel(uid, p):
                     f'<span style="color:{DIM}">&middot;</span>'
                     f'<span style="color:{DIM}">Vessel <b>alpha</b></span>'
                     + (f'<span style="color:{DIM}">&middot;</span>'
-                       f'<span style="color:{DIM}">Engine <b>yamaha_outboard</b></span>'
-                       if "${engine_type}" in content else "")
+                       f'<span style="color:{DIM}">Engine <b>Yamaha Outboard Engine F115 B 4-Stroke</b></span>'
+                       if "${engine_model}" in content else "")
                     + '</div>')
         else:
             body = f'<div class="ptext">{content}</div>'

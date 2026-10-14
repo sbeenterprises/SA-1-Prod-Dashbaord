@@ -132,7 +132,7 @@ Rules
 | ID | Requirement |
 | --- | --- |
 | UI-1 | Every dashboard header band shows the engine type and source next to the vessel name: `Vessel usv-725 · MERCURY DIESEL · J1939 via MOOS`. |
-| UI-2 | Vessel Health keeps its layout: six dials (Tachometer, Coolant, Oil Pressure, Fuel, Battery, State of Charge), eight tiles (Fuel Rate, Engine Hours, Oil Temp, Engine Load, Battery Current, Charging, Alternator, Total Power), six trends. Dial scales and colour bands come from CFG-6. |
+| UI-2 | Vessel Health is the whole-vessel summary: six dials (Tachometer, Coolant, Oil Pressure, Fuel, Battery, State of Charge; the three engine dials link to the Engine page), seven tiles (Engine Faults linking to the Engine page, Battery Current, Charging, Total Power, System Voltage, Alternator, ECU Supply), four trends (Battery Voltage / Current, Power / System Voltage, State of Charge, Fuel Level / Consumption). Engine detail (fuel rate, hours, oil temperature, load, boost, engine trends) is on the Engine page only. Dial scales and colour bands come from CFG-6. |
 | UI-3 | A dial or tile whose field has no data in the selected time range reads N/A in the neutral colour, never 0 and never red. On USV-725 this applies to Engine Hours and Fuel until REC-6 confirms the PGNs exist, and to Alternator. |
 | UI-4 | On Vessel Health the Boost tile (intake manifold pressure, kPa) replaces the Alternator tile, which no hull feeds. Torque is shown on the Engine page (UI-11). |
 | UI-5 | On a two-engine hull (`ENGINE_COUNT=2`) the Tachometer, Coolant and Oil Pressure dials show two needles (port in white, starboard in orange) and the value line reads `P <value> · S <value>`; trends show one line per engine. On a one-engine hull the page is unchanged. |

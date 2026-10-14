@@ -3,6 +3,45 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.21] - unreleased (Vessel Health summary, dial legibility, engine name, charging state)
+
+Dashboards and signalk_bridge. Update with `bash deploy/update.sh v1.2.21`,
+then Ctrl+F5. Add `ENGINE_MODEL="..."` (quoted) to /etc/usv/usv.env first;
+restart the MOOS community afterwards so grafana_bridge tags the engine
+points with the name.
+
+### Added
+- `ENGINE_MODEL` in usv.env -> `engine_model` tag on every engine point
+  (line-protocol escaped); the header chip and the Fleet engine tile show
+  it (usv-722 "Yamaha Outboard Engine F115 B 4-Stroke", usv-725 "Mercury
+  Diesel 2.0L"). Default from the type. install.sh stops with a clear
+  message when a value with spaces is not quoted (the file is read by
+  bash).
+- signalk_bridge: with a battery monitor that publishes no chargingMode
+  (Victron SmartShunt / BMV over VE.Direct, usv-722) the Charging tile
+  follows the battery current: CHARGING above +0.5 A, DISCHARGING below
+  -0.5 A, IDLE between. `SIGNALK_BATTERY_CURRENT_SIGN=-1` corrects a shunt
+  that reports charging as negative current (current and derived power).
+  Charger modes (bulk, absorption, float, off) have their own wording.
+- Vessel Health tiles: Engine Faults (links to the Engine page), System
+  Voltage, Alternator, ECU Supply (the Mercury ECM supply, mapped since
+  v1.2.20 but not shown).
+
+### Changed
+- Vessel Health is the whole-vessel summary: the Fuel Rate, Engine Hours,
+  Oil Temp, Engine Load and Boost tiles and the Engine RPM and Coolant /
+  Oil Pressure trends were duplicates of the Engine page and are removed;
+  the electrical and power trends are wider (two rows of two).
+- Needle meters and the rudder indicator size themselves to their panel
+  (geometry 0.6x to 3x of the 260 px reference, fonts with a legible
+  floor): the readout no longer runs into the label on the small Vessel
+  Health dials; ticks sit clear of the numerals, which had read like minus
+  signs ("-0", "-40"); no fill dot at the start of the scale at zero.
+- A tile whose lowest threshold is an alarm colour (Fuel Level) shows "No
+  data" in the neutral colour instead of red.
+- "Freeboard" -> "Swiftships-UI" in panel titles, descriptions and docs
+  (Readiness console checklist).
+
 ## [1.2.20] - 2026-10-14 (engine profile, Engine page, USV-725)
 
 Per-vessel engine profile so one release serves the Yamaha hull (usv-722)

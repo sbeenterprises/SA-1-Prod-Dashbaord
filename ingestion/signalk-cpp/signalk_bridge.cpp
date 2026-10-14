@@ -10,6 +10,8 @@
 //      default: the first electrical.batteries.<id> seen)
 //      SIGNALK_FUEL_TANK (tanks.fuel.<id> instance for the fuel level;
 //      default: the first fuel tank seen)
+//      SIGNALK_BATTERY_CURRENT_SIGN (-1 when the shunt reports charging as
+//      negative current; default 1, the Signal K convention)
 //      ENGINE_SOURCE / ENGINE_TYPE (cpp-common/engine_profile.hpp): engine
 //      fields are written only when Signal K is this vessel's engine source;
 //      every engine point carries instance and engine_type tags.
@@ -68,7 +70,7 @@ const std::map<std::string, Mapping> kPaths = {
     {"navigation.courseRhumbline.crossTrackError",
      {"nav", "cross_track_error", [](double v) { return v; }}},
     // The SK course computer's next point is whatever course the Signal K
-    // server holds (Freeboard manual planning) — NOT the autonomy route.
+    // server holds (Swiftships-UI manual planning) — NOT the autonomy route.
     // Kept as its own field; mission.dist_to_waypoint has exactly one
     // producer (grafana_bridge, from DIST_TO_NEXT_WPT).
     {"navigation.courseRhumbline.nextPoint.distance",
@@ -158,6 +160,10 @@ private:
     double last_sog_kn_ = 0.0;
     std::string battery_id_ = usv::env_or("SIGNALK_BATTERY", "");
     std::string fuel_tank_id_ = usv::env_or("SIGNALK_FUEL_TANK", "");
+    double current_sign_ = usv::env_or("SIGNALK_BATTERY_CURRENT_SIGN", "1") == "-1" ? -1.0 : 1.0;
+    bool have_charging_mode_ = false;
+    const char* last_charge_state_ = "";
+    double last_charge_t_ = -1e18;
     std::set<std::string> unknown_engines_;
     std::set<int> seen_notifications_;
     usv::sk::EngineNotifications notifications_;
@@ -187,12 +193,17 @@ private:
         if (id != battery_id_) return true;
 
         if (field == "chargingMode" && value.is_string()) {
+            have_charging_mode_ = true;
             writer_.str_field("electrical", "", "charging_status",
                               value.get<std::string>());
             return true;
         }
         if (!value.is_number()) return true;
-        const double v = value.get<double>();
+        double v = value.get<double>();
+        // Signal K current is positive into the battery. A shunt wired or
+        // configured the other way round is corrected with
+        // SIGNALK_BATTERY_CURRENT_SIGN=-1 (current and the derived power).
+        if (field == "current") v *= current_sign_;
         if (field == "voltage") {
             writer_.field("electrical", "", "battery_voltage", v);
             // No separate DC bus sensor: the battery is the system voltage.
@@ -201,6 +212,19 @@ private:
             batt_v_ = v; batt_v_t_ = mono_s();
         } else if (field == "current") {
             writer_.field("electrical", "", "battery_current", v);
+            // A battery monitor (Victron SmartShunt / BMV over VE.Direct)
+            // publishes no chargingMode; the state follows the current:
+            // above +0.5 A charging, below -0.5 A discharging, else idle.
+            // Written on change and every 5 s.
+            if (!have_charging_mode_) {
+                const char* st = v > 0.5 ? "charging" : (v < -0.5 ? "discharging" : "idle");
+                const double now = mono_s();
+                if (st != last_charge_state_ || now - last_charge_t_ >= 5.0) {
+                    writer_.str_field("electrical", "", "charging_status", st);
+                    last_charge_state_ = st;
+                    last_charge_t_ = now;
+                }
+            }
             // Signal K current is positive when charging; the power drawn
             // from the battery (V x -I) stands in for total load power when
             // no electrical.loads.total.power is published.

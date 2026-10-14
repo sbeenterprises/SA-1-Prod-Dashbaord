@@ -60,6 +60,8 @@ inline std::map<std::string, std::string> ReadEnvFile(const std::string& path) {
 
 struct EngineProfile {
     std::string type;          // ENGINE_TYPE, "" when unset
+    std::string model;         // ENGINE_MODEL, the name the dashboards show;
+                               // defaults to a name for the type
     std::string source;        // signalk | moos | can | "" (unset: every producer writes)
     int count = 1;             // ENGINE_COUNT
     std::string instances;     // ENGINE_INSTANCES as written, e.g. "0" or "0,1"
@@ -85,6 +87,8 @@ struct EngineProfile {
         };
         EngineProfile p;
         p.type = Slug(get("ENGINE_TYPE"));
+        p.model = Trim(get("ENGINE_MODEL"));
+        if (p.model.empty()) p.model = DefaultModel(p.type);
         p.source = Lower(get("ENGINE_SOURCE"));
         if (p.source != "signalk" && p.source != "moos" && p.source != "can") p.source = "";
         const std::string c = get("ENGINE_COUNT");
@@ -110,14 +114,38 @@ struct EngineProfile {
     }
 
     // Line-protocol tags for an engine point: the caller's tags (e.g.
-    // "instance=0") plus engine_type when the profile names one.
+    // "instance=0") plus engine_type and engine_model when the profile
+    // names a type. engine_type selects the dial scales; engine_model is the
+    // name in the header chip and on the Fleet page.
     std::string Tags(const std::string& base) const {
         if (type.empty()) return base;
-        return base.empty() ? "engine_type=" + type : base + ",engine_type=" + type;
+        std::string t = "engine_type=" + type;
+        if (!model.empty()) t += ",engine_model=" + EscapeTag(model);
+        return base.empty() ? t : base + "," + t;
+    }
+
+    // Name shown when ENGINE_MODEL is not set.
+    static std::string DefaultModel(const std::string& type) {
+        if (type == "yamaha_outboard") return "Yamaha outboard";
+        if (type == "mercury_diesel") return "Mercury diesel";
+        return type;
+    }
+
+    // InfluxDB line protocol: spaces, commas and equals signs in a tag
+    // value are backslash-escaped.
+    static std::string EscapeTag(const std::string& v) {
+        std::string out;
+        for (char ch : v) {
+            if (ch == ' ' || ch == ',' || ch == '=') out += '\\';
+            if (ch == '\n' || ch == '\r') continue;
+            out += ch;
+        }
+        return out;
     }
 
     std::string Describe() const {
         return "engine_type=" + (type.empty() ? std::string("(unset)") : type) +
+               " engine_model=\"" + model + "\"" +
                " engine_source=" + (source.empty() ? std::string("(unset: all producers)") : source) +
                " count=" + std::to_string(count) + " instances=" + instances +
                " helm_profile=" + helm_profile +
@@ -128,6 +156,12 @@ struct EngineProfile {
     }
 
 private:
+    static std::string Trim(const std::string& s) {
+        const size_t a = s.find_first_not_of(" \t");
+        if (a == std::string::npos) return "";
+        const size_t b = s.find_last_not_of(" \t");
+        return s.substr(a, b - a + 1);
+    }
     static std::string Lower(std::string s) {
         for (auto& ch : s) ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
         return s;

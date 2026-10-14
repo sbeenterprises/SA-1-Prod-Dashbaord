@@ -11,7 +11,7 @@ on the boat needs.
 | Onboard computer | OnLogic K800, Ubuntu 22.04.5, hostname `usv-722`, user `douglas` |
 | Repo checkout | `~/Documents/SA-1-Prod-Dashbaord` (GitHub `sbeenterprises/SA-1-Prod-Dashbaord`, install from a tag, never from `main`) |
 | Installed release | v1.2.20, updated 2026-10-13 (see `git -C ~/Documents/SA-1-Prod-Dashbaord describe --tags`); previous v1.2.19, backup of the configuration in `/etc/usv/usv.env.bak-2026-10-13` |
-| Configuration | `/etc/usv/usv.env` (root only): `VESSEL_ID=usv-722`, `GRAFANA_PORT=3100`, `CAN_INTERFACE=slcan0`, `ECHARTS_PANEL_VERSION=7.2.5`, SMTP not yet set; engine profile `ENGINE_TYPE=yamaha_outboard`, `ENGINE_SOURCE=signalk`, `HELM_PROFILE=usv722`; `SIGNALK_FUEL_TANK=none` (see Known gaps) |
+| Configuration | `/etc/usv/usv.env` (root only): `VESSEL_ID=usv-722`, `GRAFANA_PORT=3100`, `CAN_INTERFACE=slcan0`, `ECHARTS_PANEL_VERSION=7.2.5`, SMTP not yet set; engine profile `ENGINE_TYPE=yamaha_outboard`, `ENGINE_MODEL="Yamaha Outboard Engine F115 B 4-Stroke"` (v1.2.21), `ENGINE_SOURCE=signalk`, `HELM_PROFILE=usv722`; `SIGNALK_FUEL_TANK=none` (see Known gaps) |
 | Grafana | `http://<obc-ip>:3100`, user `admin`, password in `usv.env`; folder "Swift Autonomous Dashboard", home page Readiness |
 | InfluxDB | localhost:8086, org `usv`, buckets `telemetry` (30 d), `events` and `telemetry_1m` (365 d) |
 | Position source | VectorNav VN-x00 INS through the Signal K plugin `signalk-vectornav-vnins` (no MOOS NAV_LAT) |
@@ -19,7 +19,7 @@ on the boat needs.
 | GPU | Intel Arc Pro A60 (`intel_gpu_top` probe, sudoers rule `usv-telegraf-gpu`) |
 | Starlink | dish at 192.168.100.1, probed by Telegraf |
 | VPN | Twingate connector on the OBC (`twingate-connector.service`); Comms tile "VPN (Twingate)" |
-| Chart UI | Swiftships UI (Freeboard fork) on port 4200, `radar-ui.service` serving `~/Documents/Swiftships-UI-navy/public`; Signal K on 3000 |
+| Chart UI | Swiftships-UI on port 4200, `radar-ui.service` serving `~/Documents/Swiftships-UI-navy/public`; Signal K on 3000 |
 | MOOS mission | `~/Documents/automation/moos-ivp-morgan-stern-drive-mercury/missions/s1_morgan_city_signalk/real.moos`, community `alpha`, MOOSDB on 9000, launched by hand with `pAntler real.moos` (no systemd unit yet). The repository name is historical: this hull's engine is a Yamaha outboard; the Mercury diesel sterndrive is usv-725 |
 
 ## What was added to real.moos

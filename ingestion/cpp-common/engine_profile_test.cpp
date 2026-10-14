@@ -15,7 +15,7 @@ static int fails = 0, checks = 0;
 static void clear_env() {
     for (const char* k : {"ENGINE_TYPE", "ENGINE_SOURCE", "ENGINE_COUNT", "ENGINE_INSTANCES",
                           "HELM_PROFILE", "SIGNALK_ENGINE", "CAN_N2K_ENGINE", "CAN_DM1",
-                          "MOOS_ENGINE", "USV_ENV_FILE"})
+                          "MOOS_ENGINE", "USV_ENV_FILE", "ENGINE_MODEL"})
         unsetenv(k);
 }
 
@@ -67,8 +67,9 @@ int main() {
         CHECK(!p.can_n2k_engine);
         CHECK(!p.can_dm1);
         CHECK(p.helm_profile == "none");
-        CHECK(p.Tags("instance=0") == "instance=0,engine_type=mercury_diesel");
-        CHECK(p.Tags("") == "engine_type=mercury_diesel");
+        CHECK(p.model == "Mercury diesel");                     // default name
+        CHECK(p.Tags("instance=0") == "instance=0,engine_type=mercury_diesel,engine_model=Mercury\\ diesel");
+        CHECK(p.Tags("") == "engine_type=mercury_diesel,engine_model=Mercury\\ diesel");
     }
     // 4. usv-722: signalk source from the environment wins over the file.
     {
@@ -113,6 +114,19 @@ int main() {
         setenv("USV_ENV_FILE", write_file("ENGINE_SOURCE=moos\n").c_str(), 1);
         auto p = usv::EngineProfile::FromEnv();
         CHECK(p.source == "moos");
+    }
+    // 9. ENGINE_MODEL: quoted in the file, spaces escaped in the tag.
+    {
+        clear_env();
+        auto p = usv::EngineProfile::FromEnv(write_file(
+            "ENGINE_TYPE=yamaha_outboard\nENGINE_MODEL=\"Yamaha Outboard Engine F115 B 4-Stroke\"\n"));
+        CHECK(p.model == "Yamaha Outboard Engine F115 B 4-Stroke");
+        CHECK(p.Tags("instance=0") ==
+              "instance=0,engine_type=yamaha_outboard,engine_model=Yamaha\\ Outboard\\ Engine\\ F115\\ B\\ 4-Stroke");
+        CHECK(usv::EngineProfile::EscapeTag("a,b=c d") == "a\\,b\\=c\\ d");
+        clear_env();
+        auto q = usv::EngineProfile::FromEnv(write_file("ENGINE_SOURCE=moos\n"));
+        CHECK(q.model.empty() && q.Tags("instance=0") == "instance=0");   // no type, no tags
     }
     // 8. ENGINE_* instance suffix (REC-7): ENGINE_SPEED_1 is instance 1.
     {

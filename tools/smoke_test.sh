@@ -292,6 +292,7 @@ wss.on('connection', ws => { ws.send(JSON.stringify({name:'signalk-server', vers
   {path:'tanks.fuel.0.currentLevel', value:0.91},
   {path:'notifications.propulsion.0.lowOilPressure', value:{state:'alarm', method:['visual','sound'], message:'Low Oil Pressure'}},
   {path:'electrical.batteries.0.voltage', value:12.9},
+  {path:'electrical.batteries.0.current', value:14.4},
   {path:'navigation.gnss.type', value:'RTK Fixed'}]}]})), 200); });
 EOF
   start_stub
@@ -345,9 +346,14 @@ for name,got,exp,tol in checks:
         print(f"  [PASS] {name}: {got}")
 if 'dtc_text="Low Oil Pressure (alarm)"' in t: print("  [PASS] notification -> fault text")
 else: print("  [FAIL] notification -> fault text missing"); bad=1
+# A battery monitor publishes no chargingMode: +14.4 A into the battery
+# reads CHARGING; total power is the draw (V x -I), negative while charging.
+if 'charging_status="charging"' in t and val(r'electrical,\S* battery_current=([0-9.-]+)') == 14.4:
+    print("  [PASS] battery current +14.4 A -> charging_status charging")
+else: print("  [FAIL] charging state not derived from battery current"); bad=1
 sys.exit(bad)
 PY
-  [ $? -eq 0 ] && PASS=$((PASS+17)) || FAIL=$((FAIL+1))
+  [ $? -eq 0 ] && PASS=$((PASS+18)) || FAIL=$((FAIL+1))
 else
   skip "Signal K test (node/ws unavailable)"
 fi
@@ -426,7 +432,7 @@ EOF
     sleep 1
     P 'OPR_POLY_ACTUAL=pts={-100,-100:100,-100:100,100:-100,100}'
     sleep 2
-    # Operator console mirrors (Freeboard checklist / ENC selection).
+    # Operator console mirrors (Swiftships-UI checklist / ENC selection).
     P 'CHECKLIST_STATUS=done=9,total=11,pending=Weather Conditions|Port Clearance,by=douglas' \
       'ENC_STATUS=selected:US5LA31M'
     sleep 3

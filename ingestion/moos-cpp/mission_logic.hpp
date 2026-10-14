@@ -1329,7 +1329,7 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             ev.empty() ? "no geofence breach, no HIGH collision risk, no crash stop" : ev,
             ev.empty() ? READY_PASS : READY_FAIL);
     }
-    // 16 Console checklist (manual items ticked in Freeboard)
+    // 16 Console checklist (manual items ticked in Swiftships-UI)
     {
         const Sample* done = num("mission_state", "checklist_done", 1e9);
         const Sample* total = num("mission_state", "checklist_total", 1e9);

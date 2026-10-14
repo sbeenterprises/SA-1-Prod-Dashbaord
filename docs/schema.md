@@ -27,7 +27,7 @@ fleet expansion.
 | x, y | float | m | MOOS local grid |
 | depth | float | m | NAV_DEPTH |
 | gps_quality | float | GGA fix code | 0 none, 1 GPS, 2 DGPS, 4 RTK fixed, 5 RTK float (GPS_QUALITY, iDivisorNMEA) |
-| course_next_point | float | m | Signal K course computer (Freeboard manual courses) — NOT the autonomy route; that is mission.dist_to_waypoint |
+| course_next_point | float | m | Signal K course computer (Swiftships-UI manual courses) — NOT the autonomy route; that is mission.dist_to_waypoint |
 
 ### mission (FR-1) — source: MOOS bridge
 progress_pct (%), waypoint_index, waypoints_total, waypoints_remaining,
@@ -147,10 +147,12 @@ can) names the producer of the engine fields and the other two leave them
 alone (usv-722: signalk once the Yamaha gateway is fitted; usv-725: moos).
 Unset, every producer writes, as before v1.2.20.
 Tags: `instance` (0 for a single engine, 0/1 port/starboard; on every engine
-point) and `engine_type` (ENGINE_TYPE from usv.env, e.g. yamaha_outboard,
+point), `engine_type` (ENGINE_TYPE from usv.env, e.g. yamaha_outboard,
 mercury_diesel; the hidden `engine_type` dashboard variable reads it for the
-header chip, the Vessel Health and Engine dial scales and the Fleet engine
-tile). Fields: rpm,
+Vessel Health and Engine dial scales) and `engine_model` (ENGINE_MODEL, e.g.
+"Yamaha Outboard Engine F115 B 4-Stroke", line-protocol escaped; the hidden
+`engine_model` variable shows the most recent one in the header chip, and
+the Fleet engine tile prints it). Fields: rpm,
 coolant_temp, oil_temp (°C), oil_pressure, intake_manifold_pressure (kPa),
 fuel_level (%), fuel_rate (L/h), runtime_h (h), percent_load,
 percent_torque, pedal_position, trim_position (%), active_dtcs (count).
