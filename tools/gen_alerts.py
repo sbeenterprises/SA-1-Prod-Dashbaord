@@ -115,6 +115,28 @@ RULES = [
     rule("usv-engine-overtemp", "Engine Over Temperature",
          q("engine", "coolant_temp"), "gt", 105, "critical",
          "Engine coolant temperature above 105 °C.", no_data="OK"),
+    # Oil pressure is judged only with the engine running: a stopped engine
+    # (key on) reports 0 kPa, which is not a fault. The query joins the last
+    # oil_pressure and rpm of the vessel and keeps oil_pressure while
+    # rpm > 700; an engine below that produces no row (no data = OK).
+    rule("usv-low-oil-pressure", "Engine Low Oil Pressure",
+         ('from(bucket: "telemetry")\n'
+          '  |> range(start: -2m)\n'
+          '  |> filter(fn: (r) => r._measurement == "engine" and '
+          '(r._field == "oil_pressure" or r._field == "rpm"))\n'
+          '  |> last()\n'
+          '  |> group(columns: ["vessel"])\n'
+          '  |> pivot(rowKey: ["vessel"], columnKey: ["_field"], valueColumn: "_value")\n'
+          '  |> filter(fn: (r) => exists r.rpm and exists r.oil_pressure and r.rpm > 700.0)\n'
+          '  |> map(fn: (r) => ({_time: now(), _value: r.oil_pressure, vessel: r.vessel}))\n'),
+         "lt", 150, "critical",
+         "Engine oil pressure below 150 kPa with the engine running.",
+         for_="30s", no_data="OK"),
+    rule("usv-engine-fault", "Engine Fault",
+         q("engine", "active_dtcs"), "gt", 0, "critical",
+         "The engine reports an active fault (J1939 DM1); see the Engine "
+         "Faults tile for the SPN / FMI and the fault name.",
+         for_="10s", no_data="OK"),
     rule("usv-low-fuel", "Low Fuel Level",
          q("engine", "fuel_level"), "lt", 15, "warning",
          "Fuel level below 15%.", no_data="OK"),

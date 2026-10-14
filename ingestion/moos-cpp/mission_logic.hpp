@@ -1179,16 +1179,19 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
     }
     // 9 Engine pre-start (J1939)
     {
+        const Sample* rpm = num("engine", "rpm", 60.0);
         const Sample* cool = num("engine", "coolant_temp", 60.0);
         const Sample* oil = num("engine", "oil_pressure", 60.0);
         const Sample* fuel = num("engine", "fuel_level", 120.0);
         const Sample* dtcs = num("engine", "active_dtcs", 120.0);
         // Helm / drive state from the CAN bus (usv-722: key switch, gear and
-        // thrust sent to the engine; RPM and temperatures are not on its bus).
+        // thrust sent to the engine; its engine data arrives through Signal K
+        // once the Yamaha gateway is fitted). On usv-725 the J1939 engine
+        // (iCANRec) supplies rpm, coolant, oil pressure and faults.
         const Sample* key = num("engine", "key_state", 60.0);
         const Sample* gear = num("engine", "gear", 60.0);
         const Sample* thr = num("engine", "throttle_pct", 60.0);
-        if (!cool && !oil && !fuel && !key) add("engine", "Engine pre-start", "no engine data", missing);
+        if (!cool && !oil && !fuel && !key && !rpm) add("engine", "Engine pre-start", "no engine data", missing);
         else {
             bool ok = true;
             std::string ev;
@@ -1200,8 +1203,13 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             }
             if (gear) ev += sep() + "gear " + (gear->num > 0.5 ? "FORWARD" : (gear->num < -0.5 ? "REVERSE" : "NEUTRAL"));
             if (thr) ev += sep() + "thrust " + fmt0(thr->num) + " %";
+            if (rpm) ev += sep() + "rpm " + fmt0(rpm->num);
             if (cool) { ev += sep() + "coolant " + fmt0(cool->num) + " °C"; ok = ok && cool->num < 105.0; }
-            if (oil) ev += sep() + "oil " + fmt0(oil->num) + " kPa";
+            // Oil pressure is only meaningful with the engine running: a
+            // stopped engine with the key on reports 0 kPa.
+            const bool running = rpm && rpm->num > 700.0;
+            if (oil && running && oil->num < 150.0) { ev += sep() + "oil " + fmt0(oil->num) + " kPa LOW"; ok = false; }
+            else if (oil) ev += sep() + "oil " + fmt0(oil->num) + " kPa";
             if (fuel) { ev += sep() + "fuel " + fmt0(fuel->num) + " %"; ok = ok && fuel->num > 15.0; }
             if (dtcs && dtcs->num > 0.0) { ev += " · " + fmt0(dtcs->num) + " ACTIVE DTC"; ok = false; }
             else if (dtcs) ev += " · no DTC";

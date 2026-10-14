@@ -68,6 +68,16 @@
     },
     {
       "type": "link",
+      "title": "Engine",
+      "url": "/d/usv-engine",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Engine"
+    },
+    {
+      "type": "link",
       "title": "CAN Bus",
       "url": "/d/usv-canbus",
       "keepTime": true,
@@ -185,12 +195,30 @@
         },
         "includeAll": false,
         "multi": false
+      },
+      {
+        "name": "engine_type",
+        "label": "Engine",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "influxdb-usv"
+        },
+        "hide": 2,
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"telemetry\", tag: \"engine_type\", predicate: (r) => r.vessel == \"${vessel}\", start: -30d)",
+        "refresh": 2,
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "includeAll": false,
+        "multi": false
       }
     ]
   },
   "panels": [
     {
-      "id": 224,
+      "id": 225,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -202,11 +230,11 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **ALARMS** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel**"
+        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **ALARMS** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Engine **${engine_type}**"
       }
     },
     {
-      "id": 192,
+      "id": 193,
       "type": "alertlist",
       "title": "Active Alerts",
       "datasource": {
@@ -245,7 +273,7 @@
       }
     },
     {
-      "id": 193,
+      "id": 194,
       "type": "table",
       "title": "Alarm History (events bucket)",
       "datasource": {
@@ -281,7 +309,7 @@
       }
     },
     {
-      "id": 194,
+      "id": 195,
       "type": "stat",
       "title": "Battery SOC",
       "datasource": {
@@ -300,7 +328,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"electrical\" and (r._field == \"soc\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"electrical\" and (r._field == \"soc\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -353,7 +381,7 @@
       }
     },
     {
-      "id": 195,
+      "id": 196,
       "type": "stat",
       "title": "GPS Fix",
       "datasource": {
@@ -372,7 +400,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"fix_type\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"fix_type\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n  |> keep(columns: [\"_value\"])\n",
           "refId": "A"
         }
       ],
@@ -444,7 +472,7 @@
       }
     },
     {
-      "id": 196,
+      "id": 197,
       "type": "stat",
       "title": "CAN Bus",
       "datasource": {
@@ -463,7 +491,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"canbus\" and (r._field == \"interface_up\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"canbus\" and (r._field == \"interface_up\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -519,7 +547,7 @@
       }
     },
     {
-      "id": 197,
+      "id": 198,
       "type": "stat",
       "title": "Coolant",
       "datasource": {
@@ -538,7 +566,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"engine\" and (r._field == \"coolant_temp\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"engine\" and (r._field == \"coolant_temp\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -591,7 +619,7 @@
       }
     },
     {
-      "id": 198,
+      "id": 199,
       "type": "stat",
       "title": "Fuel",
       "datasource": {
@@ -610,7 +638,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"engine\" and (r._field == \"fuel_level\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"engine\" and (r._field == \"fuel_level\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -663,7 +691,7 @@
       }
     },
     {
-      "id": 199,
+      "id": 200,
       "type": "stat",
       "title": "Radar",
       "datasource": {
@@ -682,7 +710,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"radar\" and (r._field == \"online\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"radar\" and (r._field == \"online\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -738,7 +766,7 @@
       }
     },
     {
-      "id": 200,
+      "id": 201,
       "type": "stat",
       "title": "Camera",
       "datasource": {
@@ -818,7 +846,7 @@
       }
     },
     {
-      "id": 201,
+      "id": 202,
       "type": "stat",
       "title": "Signal K",
       "datasource": {
@@ -837,7 +865,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"signalk_ws_up\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"signalk_ws_up\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -893,7 +921,7 @@
       }
     },
     {
-      "id": 202,
+      "id": 203,
       "type": "stat",
       "title": "MOOS Rate",
       "datasource": {
@@ -912,7 +940,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"moos_msg_rate\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"comms\" and (r._field == \"moos_msg_rate\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -964,7 +992,7 @@
       }
     },
     {
-      "id": 203,
+      "id": 204,
       "type": "stat",
       "title": "Comms Link",
       "datasource": {
@@ -983,7 +1011,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"result_code\")\n  |> filter(fn: (r) => r.url == \"8.8.8.8\")\n\n  |> last()\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"result_code\")\n  |> filter(fn: (r) => r.url == \"8.8.8.8\")\n\n  |> last()\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -1046,7 +1074,7 @@
       }
     },
     {
-      "id": 204,
+      "id": 205,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -1065,7 +1093,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"average_response_ms\")\n  |> filter(fn: (r) => r.url == \"8.8.8.8\")\n\n  |> last()\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"average_response_ms\")\n  |> filter(fn: (r) => r.url == \"8.8.8.8\")\n\n  |> last()\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -1114,7 +1142,7 @@
       }
     },
     {
-      "id": 205,
+      "id": 206,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -1133,7 +1161,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"percent_packet_loss\")\n  |> filter(fn: (r) => r.url == \"8.8.8.8\")\n\n  |> last()\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\" and r._field == \"percent_packet_loss\")\n  |> filter(fn: (r) => r.url == \"8.8.8.8\")\n\n  |> last()\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -1182,7 +1210,7 @@
       }
     },
     {
-      "id": 206,
+      "id": 207,
       "type": "stat",
       "title": "Mission State",
       "datasource": {
@@ -1201,7 +1229,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n  |> keep(columns: [\"_value\"])\n",
           "refId": "A"
         }
       ],
@@ -1308,7 +1336,7 @@
       }
     },
     {
-      "id": 207,
+      "id": 208,
       "type": "stat",
       "title": "Operator Link",
       "datasource": {
@@ -1327,7 +1355,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"comms_lost\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"comms_lost\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -1383,7 +1411,7 @@
       }
     },
     {
-      "id": 208,
+      "id": 209,
       "type": "stat",
       "title": "Mission Armed",
       "datasource": {
@@ -1402,7 +1430,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"armed\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"armed\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -1458,7 +1486,7 @@
       }
     },
     {
-      "id": 209,
+      "id": 210,
       "type": "stat",
       "title": "Geofence",
       "datasource": {
@@ -1477,7 +1505,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"geofence_breached\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"geofence_breached\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -1538,7 +1566,7 @@
       }
     },
     {
-      "id": 210,
+      "id": 211,
       "type": "stat",
       "title": "Helm All-Stop",
       "datasource": {
@@ -1557,7 +1585,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"allstop\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"allstop\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -1613,7 +1641,7 @@
       }
     },
     {
-      "id": 211,
+      "id": 212,
       "type": "stat",
       "title": "Obstacles",
       "datasource": {
@@ -1632,7 +1660,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"obstacle_alerts\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"obstacle_alerts\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],

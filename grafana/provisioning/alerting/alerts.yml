@@ -384,6 +384,118 @@ groups:
             type: last
             params: []
           type: query
+  - uid: usv-low-oil-pressure
+    title: Engine Low Oil Pressure
+    condition: C
+    for: 30s
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: Engine oil pressure below 150 kPa with the engine running.
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"engine\" and (r._field == \"oil_pressure\" or r._field == \"rpm\"))\n  |> last()\n  |>\
+          \ group(columns: [\"vessel\"])\n  |> pivot(rowKey: [\"vessel\"], columnKey: [\"_field\"], valueColumn:\
+          \ \"_value\")\n  |> filter(fn: (r) => exists r.rpm and exists r.oil_pressure and r.rpm > 700.0)\n\
+          \  |> map(fn: (r) => ({_time: now(), _value: r.oil_pressure, vessel: r.vessel}))\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 150
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-engine-fault
+    title: Engine Fault
+    condition: C
+    for: 10s
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: The engine reports an active fault (J1939 DM1); see the Engine Faults tile for the SPN
+        / FMI and the fault name.
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"engine\" and r._field == \"active_dtcs\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
   - uid: usv-low-fuel
     title: Low Fuel Level
     condition: C

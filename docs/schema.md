@@ -148,7 +148,9 @@ alone (usv-722: signalk once the Yamaha gateway is fitted; usv-725: moos).
 Unset, every producer writes, as before v1.2.20.
 Tags: `instance` (0 for a single engine, 0/1 port/starboard; on every engine
 point) and `engine_type` (ENGINE_TYPE from usv.env, e.g. yamaha_outboard,
-mercury_diesel; the header chip and the dial ranges read it). Fields: rpm,
+mercury_diesel; the hidden `engine_type` dashboard variable reads it for the
+header chip, the Vessel Health and Engine dial scales and the Fleet engine
+tile). Fields: rpm,
 coolant_temp, oil_temp (°C), oil_pressure, intake_manifold_pressure (kPa),
 fuel_level (%), fuel_rate (L/h), runtime_h (h), percent_load,
 percent_torque, pedal_position (%), active_dtcs (count).

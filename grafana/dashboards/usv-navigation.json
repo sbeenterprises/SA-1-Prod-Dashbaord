@@ -68,6 +68,16 @@
     },
     {
       "type": "link",
+      "title": "Engine",
+      "url": "/d/usv-engine",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Engine"
+    },
+    {
+      "type": "link",
       "title": "CAN Bus",
       "url": "/d/usv-canbus",
       "keepTime": true,
@@ -185,12 +195,30 @@
         },
         "includeAll": false,
         "multi": false
+      },
+      {
+        "name": "engine_type",
+        "label": "Engine",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "influxdb-usv"
+        },
+        "hide": 2,
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"telemetry\", tag: \"engine_type\", predicate: (r) => r.vessel == \"${vessel}\", start: -30d)",
+        "refresh": 2,
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "includeAll": false,
+        "multi": false
       }
     ]
   },
   "panels": [
     {
-      "id": 213,
+      "id": 214,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -202,7 +230,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **NAVIGATION** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel**"
+        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **NAVIGATION** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Engine **${engine_type}**"
       }
     },
     {
@@ -480,7 +508,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"heading\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"heading\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A",
           "alias": "HDG"
         },
@@ -489,13 +517,13 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "B",
           "alias": "COG"
         }
       ],
       "options": {
-        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? '#1c2a3d' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(124,156,176,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#7c9cb0' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#00bcd4',\n  text: dark ? '#ffffff' : '#24292e',\n  sub: dark ? '#00bcd4' : '#1e6692',\n  accent: '#00bcd4',\n  accent2: '#42a5f5',\n};\nlet hdg = val('A'); if (hdg === null || isNaN(hdg)) { hdg = 0; }\nlet cog = val('B'); if (cog === null || isNaN(cog)) { cog = hdg; }\nhdg = ((hdg % 360) + 360) % 360;\ncog = ((cog % 360) + 360) % 360;\nconst card = {0: 'N', 90: 'E', 180: 'S', 270: 'W', 360: ''};\nconst base = {\n  type: 'gauge', min: 0, max: 360, startAngle: 90, endAngle: -270,\n  clockwise: true, center: ['50%', '54%'], radius: '86%',\n};\nreturn {\n  series: [Object.assign({}, base, {\n    axisLine: { lineStyle: { width: 4, color: [[1, C.rail]] } },\n    splitNumber: 12,\n    splitLine: { length: 10, distance: -10,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { splitNumber: 3, length: 5, distance: -5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 13, fontSize: 11, fontWeight: 600,\n                 color: C.label,\n                 formatter: (x) => (card[x] !== undefined ? card[x] : x) },\n    pointer: { width: 5, length: '66%',\n               itemStyle: { color: C.accent,\n                            shadowColor: 'rgba(0,0,0,0.45)',\n                            shadowBlur: 6, shadowOffsetY: 2 } },\n    anchor: { show: true, size: 11, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    // Readouts sit outside the dial (graphic below): inside it they ran\n    // into the 120 / 240 labels on a 5-column panel.\n    title: { show: false }, detail: { show: false },\n    data: [{ value: hdg }],\n  }), Object.assign({}, base, {\n    axisLine: { show: false }, splitLine: { show: false },\n    axisTick: { show: false }, axisLabel: { show: false },\n    pointer: { width: 3, length: '52%',\n               itemStyle: { color: C.accent2, opacity: 0.9 } },\n    anchor: { show: false }, title: { show: false },\n    detail: { show: false },\n    data: [{ value: cog }],\n  })],\n  graphic: [\n    { type: 'text', left: 8, top: 4, style: { text: 'HDG', fill: C.label, fontSize: 10, fontWeight: 600 } },\n    { type: 'text', left: 8, top: 17, style: { text: hdg.toFixed(0) + '\\u00b0', fill: C.accent, fontSize: 18, fontWeight: 700 } },\n    { type: 'text', right: 8, top: 4, style: { text: 'COG', fill: C.label, fontSize: 10, fontWeight: 600, align: 'right' } },\n    { type: 'text', right: 8, top: 17, style: { text: cog.toFixed(0) + '\\u00b0', fill: C.accent2, fontSize: 18, fontWeight: 700, align: 'right' } },\n  ],\n};\n",
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? '#1c2a3d' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(124,156,176,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#7c9cb0' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#00bcd4',\n  text: dark ? '#ffffff' : '#24292e',\n  sub: dark ? '#00bcd4' : '#1e6692',\n  accent: '#00bcd4',\n  accent2: '#42a5f5',\n  // Dial face (radial gradient, centre to rim), meter rail, tick marks and\n  // numerals, and the glow of the fill arc.\n  face0: dark ? '#1c2634' : '#f7f8fa',\n  face1: dark ? '#0a0e14' : '#d9dee5',\n  mrail: dark ? 'rgba(124,156,176,0.16)' : 'rgba(36,41,46,0.10)',\n  mtick: dark ? '#e6ecf2' : '#2b3138',\n  mlabel: dark ? '#d2dbe4' : '#3b4249',\n  glow: 'rgba(0,188,212,0.55)',\n};\n// Dial face shared by the needle instruments: a silent pie series drawn\n// under the gauge. r = radius as a percentage of the panel's shorter side.\nconst face = (r) => ({\n  type: 'pie', silent: true, radius: [0, r], center: ['50%', '50%'], z: 0,\n  label: { show: false }, labelLine: { show: false },\n  data: [{ value: 1, itemStyle: { color: { type: 'radial', x: 0.5, y: 0.5, r: 0.5,\n    colorStops: [{ offset: 0, color: C.face0 }, { offset: 1, color: C.face1 }] } } }],\n});\nlet hdg = val('A'); if (hdg === null || isNaN(hdg)) { hdg = 0; }\nlet cog = val('B'); if (cog === null || isNaN(cog)) { cog = hdg; }\nhdg = ((hdg % 360) + 360) % 360;\ncog = ((cog % 360) + 360) % 360;\nconst card = {0: 'N', 90: 'E', 180: 'S', 270: 'W', 360: ''};\nconst base = {\n  type: 'gauge', min: 0, max: 360, startAngle: 90, endAngle: -270,\n  clockwise: true, center: ['50%', '54%'], radius: '86%',\n};\nreturn {\n  series: [Object.assign({}, base, {\n    axisLine: { lineStyle: { width: 4, color: [[1, C.rail]] } },\n    splitNumber: 12,\n    splitLine: { length: 10, distance: -10,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { splitNumber: 3, length: 5, distance: -5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 13, fontSize: 11, fontWeight: 600,\n                 color: C.label,\n                 formatter: (x) => (card[x] !== undefined ? card[x] : x) },\n    pointer: { width: 5, length: '66%',\n               itemStyle: { color: C.accent,\n                            shadowColor: 'rgba(0,0,0,0.45)',\n                            shadowBlur: 6, shadowOffsetY: 2 } },\n    anchor: { show: true, size: 11, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    // Readouts sit outside the dial (graphic below): inside it they ran\n    // into the 120 / 240 labels on a 5-column panel.\n    title: { show: false }, detail: { show: false },\n    data: [{ value: hdg }],\n  }), Object.assign({}, base, {\n    axisLine: { show: false }, splitLine: { show: false },\n    axisTick: { show: false }, axisLabel: { show: false },\n    pointer: { width: 3, length: '52%',\n               itemStyle: { color: C.accent2, opacity: 0.9 } },\n    anchor: { show: false }, title: { show: false },\n    detail: { show: false },\n    data: [{ value: cog }],\n  })],\n  graphic: [\n    { type: 'text', left: 8, top: 4, style: { text: 'HDG', fill: C.label, fontSize: 10, fontWeight: 600 } },\n    { type: 'text', left: 8, top: 17, style: { text: hdg.toFixed(0) + '\\u00b0', fill: C.accent, fontSize: 18, fontWeight: 700 } },\n    { type: 'text', right: 8, top: 4, style: { text: 'COG', fill: C.label, fontSize: 10, fontWeight: 600, align: 'right' } },\n    { type: 'text', right: 8, top: 17, style: { text: cog.toFixed(0) + '\\u00b0', fill: C.accent2, fontSize: 18, fontWeight: 700, align: 'right' } },\n  ],\n};\n",
         "renderer": "svg"
       },
       "fieldConfig": {
@@ -528,12 +556,12 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
       "options": {
-        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? '#1c2a3d' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(124,156,176,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#7c9cb0' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#00bcd4',\n  text: dark ? '#ffffff' : '#24292e',\n  sub: dark ? '#00bcd4' : '#1e6692',\n  accent: '#00bcd4',\n  accent2: '#42a5f5',\n};\nlet v = val();\nconst nodata = (v === null || isNaN(v));\nif (nodata) { v = 0; }\nv = Math.max(0, Math.min(40, v));\nreturn {\n  series: [{\n    type: 'gauge', min: 0, max: 40,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '50%'], radius: '80%',\n    axisLine: { roundCap: true, lineStyle: { width: 9, color: [[1, C.rail]] } }, progress: { show: true, width: 9, roundCap: true, itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [ { offset: 0, color: '#00bcd4' }, { offset: 1, color: '#42a5f5' } ] }, shadowColor: 'rgba(0,188,212,0.45)', shadowBlur: 8 } },\n    splitNumber: 8,\n    splitLine: { length: 12, distance: -12,\n                 lineStyle: { color: C.tick, width: 2 } },\n    axisTick: { length: 6, distance: -6, splitNumber: 5,\n                lineStyle: { color: C.tick, width: 1 } },\n    axisLabel: { distance: 15, color: C.label, fontSize: 10 },\n    pointer: { show: !nodata, width: 4, length: '62%',\n               itemStyle: { color: C.needle,\n                            shadowColor: 'rgba(0,0,0,0.45)',\n                            shadowBlur: 6, shadowOffsetY: 2 } },\n    anchor: { show: !nodata, size: 10, showAbove: true,\n              itemStyle: { color: C.pivot, borderColor: C.needle,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '84%'], color: C.sub,\n             fontSize: 10 },\n    detail: { valueAnimation: true, color: C.text, fontSize: 17,\n              fontWeight: 600, offsetCenter: [0, '54%'],\n              formatter: nodata ? (() => 'N/A') : ((x) => x.toFixed(1) + ' kn') },\n    data: [{ value: v, name: 'KNOTS' }],\n  }],\n};\n",
+        "getOption": "const val = (ref) => {\n  for (const s of context.panel.data.series) {\n    if (ref && s.refId !== ref) { continue; }\n    for (const f of s.fields) {\n      if (f.type === 'number') {\n        const a = f.values && f.values.toArray ? f.values.toArray() : f.values;\n        if (a && a.length) { return a[a.length - 1]; }\n      }\n    }\n  }\n  return null;\n};\nconst dark = context.grafana.theme.isDark;\nconst C = {\n  rail: dark ? '#1c2a3d' : 'rgba(36,41,46,0.10)',\n  tick: dark ? 'rgba(124,156,176,0.55)' : 'rgba(36,41,46,0.45)',\n  label: dark ? '#7c9cb0' : '#57606a',\n  needle: dark ? '#e8ebee' : '#24292e',\n  pivot: '#00bcd4',\n  text: dark ? '#ffffff' : '#24292e',\n  sub: dark ? '#00bcd4' : '#1e6692',\n  accent: '#00bcd4',\n  accent2: '#42a5f5',\n  // Dial face (radial gradient, centre to rim), meter rail, tick marks and\n  // numerals, and the glow of the fill arc.\n  face0: dark ? '#1c2634' : '#f7f8fa',\n  face1: dark ? '#0a0e14' : '#d9dee5',\n  mrail: dark ? 'rgba(124,156,176,0.16)' : 'rgba(36,41,46,0.10)',\n  mtick: dark ? '#e6ecf2' : '#2b3138',\n  mlabel: dark ? '#d2dbe4' : '#3b4249',\n  glow: 'rgba(0,188,212,0.55)',\n};\n// Dial face shared by the needle instruments: a silent pie series drawn\n// under the gauge. r = radius as a percentage of the panel's shorter side.\nconst face = (r) => ({\n  type: 'pie', silent: true, radius: [0, r], center: ['50%', '50%'], z: 0,\n  label: { show: false }, labelLine: { show: false },\n  data: [{ value: 1, itemStyle: { color: { type: 'radial', x: 0.5, y: 0.5, r: 0.5,\n    colorStops: [{ offset: 0, color: C.face0 }, { offset: 1, color: C.face1 }] } } }],\n});\nlet v = val();\nconst nodata = (v === null || isNaN(v));\nif (nodata) { v = 0; }\nv = Math.max(0, Math.min(40, v));\nreturn {\n  series: [face('84%'),\n  {\n    type: 'gauge', min: 0, max: 40,\n    startAngle: 210, endAngle: -30,\n    center: ['50%', '50%'], radius: '78%', z: 2,\n    axisLine: { roundCap: true, lineStyle: { width: 12, color: [[1, C.mrail]] } },\n    progress: { show: !nodata, width: 12, roundCap: true,\n                itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0,\n                                      colorStops: [{ offset: 0, color: C.accent2 },\n                                                   { offset: 1, color: C.accent }] },\n                             shadowColor: C.glow, shadowBlur: 12 } },\n    splitNumber: 8,\n    splitLine: { length: 5, distance: 1,\n                 lineStyle: { color: C.mtick, width: 2 } },\n    axisTick: { show: false },\n    axisLabel: { distance: 10, color: C.mlabel, fontSize: 10,\n                 fontWeight: 500 },\n    pointer: { show: !nodata, icon: 'path://M-1.5,0 L0,-100 L1.5,0 L0,10 Z',\n               length: '52%', width: 4,\n               itemStyle: { color: C.text, shadowColor: 'rgba(0,0,0,0.5)',\n                            shadowBlur: 6 } },\n    anchor: { show: true, size: 12, showAbove: true,\n              itemStyle: { color: C.face1, borderColor: C.accent,\n                           borderWidth: 2 } },\n    title: { show: true, offsetCenter: [0, '93%'], color: C.sub,\n             fontSize: 10, fontWeight: 700 },\n    detail: { valueAnimation: true, offsetCenter: [0, '70%'],\n              formatter: nodata ? (() => '{v|N/A}')\n                : ((x) => '{v|' + x.toFixed(1) + '}{u| kn}'),\n              rich: { v: { color: C.text, fontSize: 22, fontWeight: 700 },\n                      u: { color: C.mlabel, fontSize: 11, fontWeight: 600 } } },\n    data: [{ value: v, name: 'KNOTS' }],\n  }],\n};\n",
         "renderer": "svg"
       },
       "fieldConfig": {
@@ -572,7 +600,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"fix_type\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"fix_type\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n  |> keep(columns: [\"_value\"])\n",
           "refId": "A"
         }
       ],
@@ -663,7 +691,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"satellites\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"satellites\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -734,7 +762,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"lat\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"lat\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -792,7 +820,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"lon\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"lon\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -850,7 +878,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"speed_cap\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"speed_cap\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -909,7 +937,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -968,7 +996,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"planned_course\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"traffic\" and (r._field == \"planned_course\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -1042,7 +1070,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cross_track_error\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cross_track_error\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -1101,7 +1129,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission\" and (r._field == \"dist_to_waypoint\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission\" and (r._field == \"dist_to_waypoint\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -1173,7 +1201,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"hdop\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"hdop\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -1244,7 +1272,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"depth\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"depth\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -1303,7 +1331,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"roll\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"roll\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -1362,7 +1390,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"heading\" or r._field == \"cog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"heading\" or r._field == \"cog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],
@@ -1448,7 +1476,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"sog\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A",
           "alias": "SOG"
         }
@@ -1518,7 +1546,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cross_track_error\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"cross_track_error\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A",
           "alias": "XTE"
         }
@@ -1588,7 +1616,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"roll\" or r._field == \"pitch\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nav\" and (r._field == \"roll\" or r._field == \"pitch\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n",
           "refId": "A"
         }
       ],

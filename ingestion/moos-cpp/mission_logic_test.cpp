@@ -632,6 +632,32 @@ static void test_readiness() {
         only_key.put("engine", "key_state", 2, now);
         CHECK_EQ_STR(find_check(EvaluateReadiness(only_key, now, true), "engine").evidence, "key START");
     }
+    // usv-725: J1939 engine through iCANRec (rpm, coolant, oil pressure,
+    // faults; no key switch, no fuel level). Oil pressure is judged only
+    // with the engine running.
+    {
+        LatestStore d;
+        d.put("engine", "rpm", 1540, now);
+        d.put("engine", "coolant_temp", 81, now);
+        d.put("engine", "oil_pressure", 340, now);
+        d.put("engine", "active_dtcs", 0, now);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(d, now, true), "engine").evidence,
+                     "rpm 1540 · coolant 81 °C · oil 340 kPa · no DTC");
+        CHECK(find_check(EvaluateReadiness(d, now, true), "engine").status == READY_PASS);
+        d.put("engine", "oil_pressure", 120, now);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(d, now, true), "engine").evidence,
+                     "rpm 1540 · coolant 81 °C · oil 120 kPa LOW · no DTC");
+        CHECK(find_check(EvaluateReadiness(d, now, true), "engine").status == READY_FAIL);
+        // Key on, engine stopped: 0 rpm and 0 kPa is not a fault.
+        d.put("engine", "rpm", 0, now);
+        d.put("engine", "oil_pressure", 0, now);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(d, now, true), "engine").evidence,
+                     "rpm 0 · coolant 81 °C · oil 0 kPa · no DTC");
+        CHECK(find_check(EvaluateReadiness(d, now, true), "engine").status == READY_PASS);
+        LatestStore only_rpm;
+        only_rpm.put("engine", "rpm", 620, now);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(only_rpm, now, true), "engine").evidence, "rpm 620");
+    }
 
     // Faults: rudder not following, low fuel, pending checklist, HIGH risk,
     // stale position, a missing app, active DTCs, route leaving the region,

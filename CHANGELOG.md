@@ -30,7 +30,43 @@ and the Mercury diesel hull (usv-725). Requirements: docs/requirements-usv-725.m
 - can_bridge: HELM_PROFILE=none turns the usv-722 helm / drive decoder off
   on a hull whose frames have not been captured yet; bus statistics stay.
 
+- Engine page (tab after Vessel Health, own panel ids 9401+): four large
+  dials (Tachometer, Coolant, Oil Pressure, Boost) at 1 s, oil temp, fuel
+  rate, load, torque, hours, fuel level, fault lamps and active fault tiles,
+  the fault codes across the width, RPM / temperature / pressure trends over
+  15 min. The Vessel Health engine dials link to it.
+- Per-engine-type dial scales: the Tachometer, Coolant and Oil Pressure
+  dials (Vessel Health, Engine) read the hidden `engine_type` dashboard
+  variable (the engine_type tag of the selected vessel) when they render
+  and pick their scale from the ENGINE_TYPES table in gen_dashboards.py:
+  yamaha_outboard (0 to 6000 rpm, as before) or mercury_diesel (0 to 5000
+  rpm, green to 4000 = wide-open throttle per the Mercury 2.0L spec sheet;
+  oil pressure 0 to 800 kPa). Unknown or empty = the outboard scale.
+- Header band shows the engine type after the vessel name on every page.
+- Fleet page: Engine tile per vessel (engine type and last RPM).
+- Alert rules: Engine Low Oil Pressure (oil_pressure below 150 kPa while
+  rpm above 700, so a stopped engine never fires it) and Engine Fault
+  (active_dtcs above 0). 22 rules.
+- Readiness "Engine pre-start": rpm in the evidence; oil pressure below
+  150 kPa with the engine running above 700 rpm fails the check; 0 kPa with
+  the engine stopped does not.
+
 ### Changed
+- Analog instruments restyled (every needle meter: the engine dials on
+  Vessel Health and the Engine page, Fuel, Battery, State of Charge, Speed
+  Over Ground, Throttle, Heading Error, and the rudder indicator): a dark
+  radial dial face, a glowing teal arc that fills to the value over a faint
+  rail, the alarm bands as a thin ring outside the arc (green normal, yellow
+  caution, red alarm, thresholds unchanged), tick marks and numerals inside
+  it, a hairline needle and a large digital readout with the unit in small
+  type and the label beneath. The heading-error meter keeps the needle and
+  the ring without the fill (its scale is centre-zero); the rudder keeps
+  its red / green halves on the rail. N/A: no needle, no fill, "N/A" in the
+  readout. Light theme carries the same design on a light face. The
+  preview renderer mirrors the new look. Yamaha oil pressure numerals every
+  200 kPa (ticks every 100) so the small dial stays legible.
+- Vessel Health: the Boost tile (intake manifold pressure, J1939 IC1)
+  replaces the Alternator tile, which no hull feeds.
 - usv.env.example documents the profile with the usv-722 and usv-725 values.
 - ENGINE_SOURCE unset keeps the previous behaviour (every producer writes),
   so an existing install is unchanged until the key is added.

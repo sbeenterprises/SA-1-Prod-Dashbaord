@@ -2,7 +2,7 @@
 
 Engine telemetry for the Mercury diesel from J1939 through MOOS, same dashboard release as USV-722
 
-Status: draft 2 for review (draft 1 assumed Signal K as the engine source; that was wrong)
+Status: draft 3 for review (draft 2 added the MOOS source; draft 3 adds the Mercury 2.0L J1939 specification facts and the Engine page)
 Date: 2026-10-13
 Owner: mali
 Applies to: SA-1-Dashboard-prod, next release after v1.2.19, and iCANRec in the MOOS mission repo
@@ -19,9 +19,9 @@ USV-722 (Yamaha) is waiting for the Yamaha Command Link Plus / Command Link NMEA
 
 | Item | USV-725 | USV-722 |
 | --- | --- | --- |
-| Engine | Mercury diesel sterndrive, turbocharged. Sea-trial logs of 29 May 2026 show idle 450 to 640 rpm, maximum 3315 rpm, boost 102 to 286 kPa. [Model and rated rpm to be filled from the engine plate] | Yamaha outboard |
+| Engine | Mercury Diesel 2.0L sterndrive (Cummins-based ECM, J-series fault codes), operated without SmartCraft per Mercury's "2.0L J1939 Interface Specification" (rev. 1 Feb 2024). 4000 rpm at wide-open throttle (Mercury spec sheet). Sea-trial logs of 29 May 2026: idle 450 to 640 rpm, maximum 3315 rpm, boost 102 to 286 kPa | Yamaha outboard |
 | Engine count | 1 (one `ENGINE_*` stream in the logs) [confirm] | [to confirm] |
-| Engine network | J1939 on `slcan0`, shared with the drive commands | Yamaha network; NMEA 2000 gateway on order |
+| Engine network | J1939 on `slcan0` (250 kbit/s), shared with the drive commands. Engine source address 0x00; the vessel controller must use 0x17 for every PGN except EEC2 throttle demand, which must come from 0x31 | Yamaha network; NMEA 2000 gateway on order |
 | Engine data path today | J1939 → iCANRec → MOOS `ENGINE_*` → iWebSocket → Swiftships UI | none yet |
 | Dashboard installed | No | v1.2.19 |
 | Helm frames on the drive bus | 18F30A1A steering and 18F005D0 gear sent by iCAN; receive side to confirm with a capture | Glendinning helm frames, decoded by `usv722_can.hpp` |
@@ -39,7 +39,7 @@ J1939 traffic verified from the iCANRec appcast and `ENGINE_*` values in the fou
 | 65271 | VEP1, battery potential | 1 Hz | decoded wrongly (0.05 to 3264 V) |
 | 65226 | DM1, active faults | 1 Hz | 0 faults |
 
-Not seen because iCANRec does not decode them: 65253 engine hours, 65276 fuel level. Whether the engine sends them is unknown until a raw capture is taken.
+Per Mercury's specification the engine also answers PGN 65253 (engine hours), 65251 (engine configuration) and 65271 (VEP) only when requested with PGN 59904 at 1 s intervals; VEP arrives at 1 Hz in the logs regardless. Fuel level (PGN 65276) is not in the engine's PGN list, so the Fuel dial on USV-725 reads N/A unless a tank sender is fitted on a bus the dashboard reads. Also available and not decoded today: fuel delivery pressure (EFL/P1 SPN 94), intake manifold temperature (IC1 SPN 105), fuel temperature (ET1 SPN 174), and PGN 65242 Component Identification, whose Engine_Model field reads 504 for the 2.0L.
 
 ## 3. Scope
 
@@ -88,8 +88,8 @@ Out of scope
 | DM-9 | `ENGINE_INTAKE_MANIFOLD_PRESSURE` | PGN 65270 IC1, SPN 102, byte 2, 2 kPa/bit | `engine.intake_manifold_pressure` | kPa | Correct |
 | DM-10 | `ENGINE_BATTERY_VOLTAGE` | PGN 65271 VEP1, SPN 168, bytes 5-6, 0.05 V/bit | `electrical.battery_voltage` and `power.system_voltage` | V | Wrong bytes: reads bytes 6-7 (REC-3). On USV-725 the house battery comes from the Victron through Signal K, so this variable is mapped to a new field `engine.ecu_voltage` instead (DM-13) |
 | DM-11 | `ENGINE_ACTIVE_DTCS` | PGN 65226 DM1 | `engine.active_dtcs` | count | Partly: single frame only, faults never cleared (REC-4, REC-5) |
-| DM-12 | `ENGINE_HOURS` | PGN 65253 HOURS, SPN 247, bytes 1-4, 0.05 h/bit | `engine.runtime_h` | h | Not decoded (REC-6); only if the engine sends the PGN |
-| DM-13 | `ENGINE_FUEL_LEVEL` | PGN 65276 DD, SPN 96, byte 2, 0.4 %/bit | `engine.fuel_level` | % | Not decoded (REC-6); only if the engine or a tank sender sends the PGN |
+| DM-12 | `ENGINE_HOURS` | PGN 65253 HOURS, bytes 1-4, 0.05 h/bit (Mercury lists it as SPN 246; SAE J1939-71 names bytes 1-4 of this PGN SPN 247; same field) | `engine.runtime_h` | h | Not decoded (REC-6); the engine sends it only on request (PGN 59904), so iCANRec must request it every 1 to 5 s |
+| DM-13 | `ENGINE_FUEL_LEVEL` | PGN 65276 DD, SPN 96, byte 2, 0.4 %/bit | `engine.fuel_level` | % | Not sent by the Mercury 2.0L; decoded (REC-6) only for a tank sender that publishes the PGN |
 | DM-14 | `ENGINE_DTC_TEXT` | PGN 65226 DM1, every active fault as "SPN n FMI m (xk)" joined with "; ", "NONE" when empty | `engine.dtc_text` | text | New (REC-5) |
 | DM-15 | `ENGINE_LAMPS` | PGN 65226 DM1, byte 1 lamp status | `engine.fault_lamps`, `engine.lamp_red`, `engine.lamp_amber`, `engine.lamp_protect`, `engine.lamp_mil` | 0/1 | New (REC-5) |
 
@@ -109,8 +109,8 @@ Rules
 | REC-2 | Actual engine torque (SPN 513) decoded from EEC1 byte 3, −125 offset. Driver's demand (SPN 512, byte 2) published separately as `ENGINE_DEMAND_TORQUE` if available. | Code reads byte 2 and labels it SPN 513 |
 | REC-3 | Battery potential (SPN 168) decoded from VEP1 bytes 5-6, 0.05 V/bit. | Logged values 0.05 to 3264 V; appcast showed 76.85 V |
 | REC-4 | DM1: the active fault list is rebuilt from every DM1 message; a fault absent from the latest message is cleared; a DM1 with SPN 0 means no faults. | Code only ever adds to the list |
-| REC-5 | DM1 with two or more faults arrives as a J1939 BAM transport (TP.CM 0xECFF + TP.DT 0xEBFF, PGN 65226 inside) and is reassembled. Lamp byte and per-fault SPN, FMI and occurrence count are published (DM-14, DM-15). The reassembly already exists in the dashboard's `usv722_can.hpp` (`Dm1Receiver`) and is reused. | Single-frame DM1 holds at most one fault |
-| REC-6 | PGN 65253 (engine hours) and PGN 65276 (fuel level) are decoded when present. | Not decoded today |
+| REC-5 | DM1 with two or more faults arrives as a J1939 BAM transport (TP.CM 0xECFF + TP.DT 0xEBFF, PGN 65226 inside) and is reassembled; Mercury confirms both forms and SPN conversion methods 1 and 4. Lamp byte and per-fault SPN, FMI and occurrence count are published (DM-14, DM-15). The fault text names each fault with Mercury's J code and description from Table 2 of the specification (69 SPN/FMI pairs, e.g. SPN 100 FMI 18 "J143 Oil_Press_Low", SPN 190 FMI 0 "J234 Engine_Overspeed"), falling back to the generic FMI meaning. The reassembly already exists in the dashboard's `usv722_can.hpp` (`Dm1Receiver`) and is reused. | Single-frame DM1 holds at most one fault |
+| REC-6 | PGN 65253 (engine hours) is requested with PGN 59904 from source address 0x17 every 5 s and decoded; PGN 65276 (fuel level) is decoded when a sender publishes it. Optional: SPN 94 fuel delivery pressure, SPN 105 intake manifold temperature, PGN 65242 engine model. | Not decoded today; hours are request-driven per Mercury |
 | REC-7 | The J1939 source address of each frame is kept; `ENGINE_*` variables carry the engine instance when more than one source address publishes EEC1 (`ENGINE_SPEED` for instance 0, `ENGINE_SPEED_1` for instance 1). A single engine keeps the current names. | Source address is discarded in `extractPGN` |
 | REC-8 | Every decode has a unit test with a recorded or hand-built frame, including the not-available codes, in the MOOS repo build. | No tests exist |
 | REC-9 | The iCANRec and iCAN source committed in the mission repo is the source running on USV-725. The 29 May 2026 logs show an iCAN with thrust slew limiting ("ramped, slew 20 %/s") that is in neither the repo nor the PC copy; that build is recovered from the boat and committed before any iCANRec change is deployed. | Log appcast vs repo |
@@ -124,7 +124,7 @@ Rules
 | CFG-3 | USV-722 values after the Yamaha gateway: `VESSEL_ID=usv-722`, `ENGINE_TYPE=yamaha_outboard`, `ENGINE_SOURCE=signalk`, `HELM_PROFILE=usv722`, `SIGNALK_ENGINE=1`, `CAN_N2K_ENGINE=0`. Until then `SIGNALK_ENGINE=0` and the gauges read N/A. |
 | CFG-4 | `install.sh` reads the keys and passes them to the services it enables. `ENGINE_SOURCE` decides which producer writes engine fields; the installer never enables two. For `moos` the installer prints the `grafana_bridge` block to add to the mission file. |
 | CFG-5 | `ENGINE_TYPE` is written as the `engine_type` tag by every bridge that writes engine fields and shown on the dashboards (UI-1). |
-| CFG-6 | The dashboard generator keeps a table of gauge ranges per `ENGINE_TYPE`. `mercury_diesel`: tachometer 0 to [RPM_MAX, 4000 until the plate is read], green to [3000], yellow to [3400], red above; coolant green below 95 °C, yellow to 105 °C, red above; oil pressure red below 150 kPa, yellow to 200 kPa; intake manifold pressure 0 to 300 kPa. `yamaha_outboard`: tachometer 0 to 6000, green to 4500, yellow to 5500, red above; coolant green below 95 °C, yellow to 105 °C, red above; oil pressure red below 150 kPa. Values in brackets are placeholders taken from the sea-trial logs and are replaced from the engine manual before the release. |
+| CFG-6 | The dashboard generator keeps a table of gauge ranges per `ENGINE_TYPE` (ENGINE_TYPES in `tools/gen_dashboards.py`). `mercury_diesel`: tachometer 0 to 5000, green to 4000 (wide-open throttle), yellow to 4400, red above; coolant green below 95 °C, yellow to 105 °C, red above; oil pressure 0 to 800 kPa, red below 150, yellow to 200, green to 700; boost 0 to 300 kPa, yellow above 250, red above 280. `yamaha_outboard`: tachometer 0 to 6000, green to 4500, yellow to 5500, red above; coolant as above; oil pressure 0 to 600 kPa, red below 150, yellow to 250. The dials read the hidden `engine_type` dashboard variable when they render, so one dashboard file serves both hulls. |
 | CFG-7 | Changing `ENGINE_TYPE` in `usv.env` and re-running the installer is the only step needed to switch a hull between range sets. No dashboard JSON is edited by hand. |
 
 ### 4.5 Dashboard pages
@@ -134,13 +134,14 @@ Rules
 | UI-1 | Every dashboard header band shows the engine type and source next to the vessel name: `Vessel usv-725 · MERCURY DIESEL · J1939 via MOOS`. |
 | UI-2 | Vessel Health keeps its layout: six dials (Tachometer, Coolant, Oil Pressure, Fuel, Battery, State of Charge), eight tiles (Fuel Rate, Engine Hours, Oil Temp, Engine Load, Battery Current, Charging, Alternator, Total Power), six trends. Dial scales and colour bands come from CFG-6. |
 | UI-3 | A dial or tile whose field has no data in the selected time range reads N/A in the neutral colour, never 0 and never red. On USV-725 this applies to Engine Hours and Fuel until REC-6 confirms the PGNs exist, and to Alternator. |
-| UI-4 | The Engine Load tile shows `percent_load`; a Boost tile (intake manifold pressure, kPa) and a Torque tile (actual torque, %) are added to the secondary row on diesel hulls, replacing nothing on outboard hulls (they read N/A there). |
+| UI-4 | On Vessel Health the Boost tile (intake manifold pressure, kPa) replaces the Alternator tile, which no hull feeds. Torque is shown on the Engine page (UI-11). |
 | UI-5 | On a two-engine hull (`ENGINE_COUNT=2`) the Tachometer, Coolant and Oil Pressure dials show two needles (port in white, starboard in orange) and the value line reads `P <value> · S <value>`; trends show one line per engine. On a one-engine hull the page is unchanged. |
 | UI-6 | The Engine Faults tiles (Autopilot Live, CAN Bus) show the active fault count, the lamp state and the fault text from DM-11, DM-14 and DM-15 whichever bridge wrote them. |
 | UI-7 | The Gear, Engine Thrust, Key Switch and Trim tiles read their fields regardless of which bridge wrote them. Fields without a producer on USV-725 read N/A. |
 | UI-8 | The Fleet page shows an Engine column (engine type) and an engine status column (last RPM, or N/A). |
 | UI-9 | Refresh rates stay as released: Autopilot, Autopilot Live and Traffic at 1 s, the other pages at 5 s, Grafana `min_refresh_interval` 1 s. |
-| UI-10 | The User Guide describes the engine chip, the diesel tiles, the two-needle dials and the N/A rule. |
+| UI-10 | The User Guide describes the engine chip, the Engine page, the diesel tiles, the two-needle dials and the N/A rule. |
+| UI-11 | An Engine page (tab after Vessel Health, 1 s refresh, one screen) carries four large dials (Tachometer, Coolant, Oil Pressure, Boost) with the engine-type scales, the tiles Oil Temp, Fuel Rate, Engine Load, Torque, Engine Hours, Fuel Level, Fault Lamps and Active Faults, the full fault text across the width, and RPM, coolant / oil temperature and oil pressure / boost trends over 15 min. The three engine dials on Vessel Health link to it. |
 
 ### 4.6 Alerts and readiness
 
@@ -199,7 +200,7 @@ Rules
 | --- | --- | --- |
 | A-1 | `candump -L slcan0` for 10 minutes with the engine running, saved to the commissioning record | PGN list with rates; presence or absence of 65253 and 65276 recorded; source addresses recorded |
 | A-2 | `influx query` of `engine` fields for `vessel=usv-725`, grouped by `instance` and `_field` | One series per field, `instance=0`, `engine_type=mercury_diesel`; no series from `signalk_bridge` or `can_bridge` for RPM, coolant, oil, fuel, load or faults |
-| A-3 | Gauge comparison against VesselView (or the engine's own display) at idle, 1500 and 3000 rpm, 5 minutes each | RPM within 1 %; coolant within 2 °C; oil temperature within 3 °C and between 60 and 130 °C with the engine warm (no sweep); oil pressure within 10 kPa; fuel rate within 5 %; load within 5 %; hours equal if shown |
+| A-3 | Gauge comparison against the engine's own display at idle, 1500 and 3000 rpm, 5 minutes each, on Vessel Health and on the Engine page | RPM within 1 %; coolant within 2 °C; oil temperature within 3 °C and between 60 and 130 °C with the engine warm (no sweep); oil pressure within 10 kPa; fuel rate within 5 %; load within 5 %; boost within 10 kPa; hours equal once requested |
 | A-4 | ECU voltage against a meter at the engine battery | `engine.ecu_voltage` within 0.2 V and between 11 and 15 V |
 | A-5 | Gear changes: neutral, forward, neutral, reverse | Gear tile follows within 2 s on every page that shows it (if a helm decoder is enabled) |
 | A-6 | Fault injection: disconnect a sensor the engine monitors, then restore | Engine Faults tile shows the fault count, lamp and SPN/FMI text within 5 s; count returns to 0 and text to NONE within 5 s of restore; the Engine Fault alert fires and clears |
@@ -215,7 +216,7 @@ Rules
 | # | Question | Needed for | How to get it |
 | --- | --- | --- | --- |
 | Q-1 | Raw CAN capture from USV-725 with the engine running (A-1) | REC-6, REC-7, CAN-2, test vectors for REC-8 | `candump -L slcan0 > usv725-engine.log` for 10 minutes, idle to 3000 rpm |
-| Q-2 | Engine model, rated rpm, redline, coolant alarm temperature, minimum oil pressure | CFG-6 | Engine plate and manual |
+| Q-2 | Coolant alarm temperature and minimum oil pressure of the 2.0L (the model and the 4000 rpm WOT are known) | CFG-6 bands | Mercury 2.0L operation manual |
 | Q-3 | The iCAN and iCANRec source actually running on USV-725 (the May build has slew limiting that the repo lacks) | REC-9 | `git status` and `git diff` in the mission repo on the boat; copy of `src/iCAN` and `src/iCANRec` |
 | Q-4 | Helm and control system on USV-725: is the Glendinning helm fitted, which receive frames exist | CAN-2 | The same capture as Q-1 |
 | Q-5 | Fuel tank capacity, cruise consumption and cruise speed | AL-7 | Vessel data sheet |

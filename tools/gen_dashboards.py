@@ -44,7 +44,7 @@ def nid():
 # tags would otherwise be appended to every legend entry as labels
 # ("heading alpha", {name="autonomy", vessel="alpha"}).
 CLEAN_LABELS = ('  |> drop(fn: (column) => column =~ '
-                '/^(_start|_stop|_measurement|vessel|host|instance|source)$/)\n')
+                '/^(_start|_stop|_measurement|vessel|host|instance|source|engine_type)$/)\n')
 
 # Fixed units: Grafana's "lengthm" auto-scales to km above 1000 m, which
 # operators must never see. Short ranges stay in metres, long ones are
@@ -481,7 +481,23 @@ const C = {
   sub: dark ? '#00bcd4' : '#1e6692',
   accent: '#00bcd4',
   accent2: '#42a5f5',
+  // Dial face (radial gradient, centre to rim), meter rail, tick marks and
+  // numerals, and the glow of the fill arc.
+  face0: dark ? '#1c2634' : '#f7f8fa',
+  face1: dark ? '#0a0e14' : '#d9dee5',
+  mrail: dark ? 'rgba(124,156,176,0.16)' : 'rgba(36,41,46,0.10)',
+  mtick: dark ? '#e6ecf2' : '#2b3138',
+  mlabel: dark ? '#d2dbe4' : '#3b4249',
+  glow: 'rgba(0,188,212,0.55)',
 };
+// Dial face shared by the needle instruments: a silent pie series drawn
+// under the gauge. r = radius as a percentage of the panel's shorter side.
+const face = (r) => ({
+  type: 'pie', silent: true, radius: [0, r], center: ['50%', '50%'], z: 0,
+  label: { show: false }, labelLine: { show: false },
+  data: [{ value: 1, itemStyle: { color: { type: 'radial', x: 0.5, y: 0.5, r: 0.5,
+    colorStops: [{ offset: 0, color: C.face0 }, { offset: 1, color: C.face1 }] } } }],
+});
 """
 
 
@@ -492,53 +508,76 @@ def _zone_fracs(min_, max_, zones):
 
 def meter_js(min_, max_, unit, zones=None, decimals=0, split=6, sub="",
              label_js=None, detail_js=None):
-    """ECharts option code for a 240° analog needle meter. zones =
-    [(upper_bound, color), ...]; None -> neutral rail + teal progress arc."""
+    """ECharts option code for a 240° analog meter: dark radial dial face,
+    a glowing teal arc that fills to the value over a faint rail, the
+    alarm bands as a thin ring outside the arc, tick marks and numerals
+    inside it, a hairline needle and a large digital readout with the unit
+    in small type. zones = [(upper_bound, color), ...]; None -> no ring.
+    A centre-zero scale (min < 0 < max, heading error) keeps the needle
+    and the ring but not the fill, which would start at the negative end.
+    detail_js replaces the readout formatter (plain text, no rich spans)."""
+    fill = "!nodata" if not (min_ < 0 < max_) else "false"
+    ring = ""
     if zones:
-        axis = (f"axisLine: {{ lineStyle: {{ width: 9, "
-                f"color: [{_zone_fracs(min_, max_, zones)}] }} }}, "
-                f"progress: {{ show: false }}")
-    else:
-        axis = ("axisLine: { roundCap: true, lineStyle: { width: 9, "
-                "color: [[1, C.rail]] } }, "
-                "progress: { show: true, width: 9, roundCap: true, "
-                "itemStyle: { color: { type: 'linear', x: 0, y: 0, "
-                "x2: 1, y2: 0, colorStops: [ "
-                "{ offset: 0, color: '#00bcd4' }, "
-                "{ offset: 1, color: '#42a5f5' } ] }, "
-                "shadowColor: 'rgba(0,188,212,0.45)', shadowBlur: 8 } }")
+        ring = f"""\
+  {{
+    type: 'gauge', silent: true, min: {min_}, max: {max_},
+    startAngle: 210, endAngle: -30,
+    center: ['50%', '50%'], radius: '86%', z: 1,
+    axisLine: {{ lineStyle: {{ width: 4,
+                 color: [{_zone_fracs(min_, max_, zones)}] }} }},
+    splitLine: {{ show: false }}, axisTick: {{ show: false }},
+    axisLabel: {{ show: false }}, pointer: {{ show: false }},
+    detail: {{ show: false }}, data: [{{ value: v }}],
+  }},
+"""
     label_fmt = f", formatter: {label_js}" if label_js else ""
-    detail_fmt = (detail_js if detail_js
-                  else f"(x) => x.toFixed({decimals}) + ' {unit}'")
+    if detail_js:
+        detail = (f"detail: {{ valueAnimation: true, color: C.text, "
+                  f"fontSize: 22, fontWeight: 700, offsetCenter: [0, '70%'], "
+                  f"formatter: nodata ? (() => 'N/A') : ({detail_js}) }}")
+    else:
+        detail = (f"detail: {{ valueAnimation: true, offsetCenter: [0, '70%'],\n"
+                  f"              formatter: nodata ? (() => '{{v|N/A}}')\n"
+                  f"                : ((x) => '{{v|' + x.toFixed({decimals}) + "
+                  f"'}}{{u| {unit}}}'),\n"
+                  f"              rich: {{ v: {{ color: C.text, fontSize: 22, "
+                  f"fontWeight: 700 }},\n"
+                  f"                      u: {{ color: C.mlabel, fontSize: 11, "
+                  f"fontWeight: 600 }} }} }}")
     return ECH_PRELUDE + f"""\
 let v = val();
 const nodata = (v === null || isNaN(v));
 if (nodata) {{ v = {min_}; }}
 v = Math.max({min_}, Math.min({max_}, v));
 return {{
-  series: [{{
+  series: [face('84%'),
+{ring}  {{
     type: 'gauge', min: {min_}, max: {max_},
     startAngle: 210, endAngle: -30,
-    center: ['50%', '50%'], radius: '80%',
-    {axis},
+    center: ['50%', '50%'], radius: '78%', z: 2,
+    axisLine: {{ roundCap: true, lineStyle: {{ width: 12, color: [[1, C.mrail]] }} }},
+    progress: {{ show: {fill}, width: 12, roundCap: true,
+                itemStyle: {{ color: {{ type: 'linear', x: 0, y: 0, x2: 1, y2: 0,
+                                      colorStops: [{{ offset: 0, color: C.accent2 }},
+                                                   {{ offset: 1, color: C.accent }}] }},
+                             shadowColor: C.glow, shadowBlur: 12 }} }},
     splitNumber: {split},
-    splitLine: {{ length: 12, distance: -12,
-                 lineStyle: {{ color: C.tick, width: 2 }} }},
-    axisTick: {{ length: 6, distance: -6, splitNumber: 5,
-                lineStyle: {{ color: C.tick, width: 1 }} }},
-    axisLabel: {{ distance: 15, color: C.label, fontSize: 10{label_fmt} }},
-    pointer: {{ show: !nodata, width: 4, length: '62%',
-               itemStyle: {{ color: C.needle,
-                            shadowColor: 'rgba(0,0,0,0.45)',
-                            shadowBlur: 6, shadowOffsetY: 2 }} }},
-    anchor: {{ show: !nodata, size: 10, showAbove: true,
-              itemStyle: {{ color: C.pivot, borderColor: C.needle,
+    splitLine: {{ length: 5, distance: 1,
+                 lineStyle: {{ color: C.mtick, width: 2 }} }},
+    axisTick: {{ show: false }},
+    axisLabel: {{ distance: 10, color: C.mlabel, fontSize: 10,
+                 fontWeight: 500{label_fmt} }},
+    pointer: {{ show: !nodata, icon: 'path://M-1.5,0 L0,-100 L1.5,0 L0,10 Z',
+               length: '52%', width: 4,
+               itemStyle: {{ color: C.text, shadowColor: 'rgba(0,0,0,0.5)',
+                            shadowBlur: 6 }} }},
+    anchor: {{ show: true, size: 12, showAbove: true,
+              itemStyle: {{ color: C.face1, borderColor: C.accent,
                            borderWidth: 2 }} }},
-    title: {{ show: true, offsetCenter: [0, '84%'], color: C.sub,
-             fontSize: 10 }},
-    detail: {{ valueAnimation: true, color: C.text, fontSize: 17,
-              fontWeight: 600, offsetCenter: [0, '54%'],
-              formatter: nodata ? (() => 'N/A') : ({detail_fmt}) }},
+    title: {{ show: true, offsetCenter: [0, '93%'], color: C.sub,
+             fontSize: 10, fontWeight: 700 }},
+    {detail},
     data: [{{ value: v, name: '{sub}' }}],
   }}],
 }};
@@ -612,31 +651,30 @@ if (v === null || isNaN(v)) { v = val('B'); actual = false; }
 if (v === null || isNaN(v)) { v = 0; }
 v = Math.max(-35, Math.min(35, v));
 return {
-  series: [{
+  series: [face('84%'), {
     type: 'gauge', min: -35, max: 35,
     startAngle: 210, endAngle: -30,
-    center: ['50%', '50%'], radius: '80%',
-    axisLine: { lineStyle: { width: 9, color: [
+    center: ['50%', '50%'], radius: '78%', z: 2,
+    axisLine: { lineStyle: { width: 12, color: [
       [0.5, 'rgba(242,73,92,0.85)'], [1, 'rgba(115,191,105,0.85)'] ] } },
     splitNumber: 7,
-    splitLine: { length: 12, distance: -12,
-                 lineStyle: { color: C.tick, width: 2 } },
-    axisTick: { length: 6, distance: -6, splitNumber: 5,
-                lineStyle: { color: C.tick, width: 1 } },
-    axisLabel: { distance: 15, color: C.label, fontSize: 10,
+    splitLine: { length: 5, distance: 1,
+                 lineStyle: { color: C.mtick, width: 2 } },
+    axisTick: { show: false },
+    axisLabel: { distance: 10, color: C.mlabel, fontSize: 10, fontWeight: 500,
                  // The \u00b135 end labels sat under the PORT / STBD readout.
                  formatter: (x) => (Math.abs(x) >= 35 ? '' : Math.abs(x)) },
-    pointer: { width: 4, length: '62%',
-               itemStyle: { color: C.needle,
-                            shadowColor: 'rgba(0,0,0,0.45)',
-                            shadowBlur: 6, shadowOffsetY: 2 } },
-    anchor: { show: true, size: 10, showAbove: true,
-              itemStyle: { color: C.pivot, borderColor: C.needle,
+    pointer: { icon: 'path://M-1.5,0 L0,-100 L1.5,0 L0,10 Z',
+               length: '52%', width: 4,
+               itemStyle: { color: C.text, shadowColor: 'rgba(0,0,0,0.5)',
+                            shadowBlur: 6 } },
+    anchor: { show: true, size: 12, showAbove: true,
+              itemStyle: { color: C.face1, borderColor: C.accent,
                            borderWidth: 2 } },
-    title: { show: true, offsetCenter: [0, '84%'], color: C.sub,
-             fontSize: 10 },
-    detail: { valueAnimation: true, color: C.text, fontSize: 17,
-              fontWeight: 600, offsetCenter: [0, '54%'],
+    title: { show: true, offsetCenter: [0, '93%'], color: C.sub,
+             fontSize: 10, fontWeight: 700 },
+    detail: { valueAnimation: true, color: C.text, fontSize: 22,
+              fontWeight: 700, offsetCenter: [0, '70%'],
               formatter: (x) => (x < -0.5 ? 'PORT ' :
                                  (x > 0.5 ? 'STBD ' : '')) +
                                 Math.abs(x).toFixed(0) +
@@ -681,6 +719,88 @@ def meter(title, query, x, y, w, h, min_, max_, unit, zones=None,
                  max_=max_, thresholds=thr)
 
 
+# Per-engine-type instrument scales. ENGINE_TYPE in /etc/usv/usv.env becomes
+# the engine_type tag on every engine point and the hidden engine_type
+# dashboard variable; typed_meter() builds one dial whose scale is chosen
+# from that variable when the panel renders, so one usv-health.json serves
+# every hull. Sources: the Yamaha outboard set is the one shipped so far;
+# Mercury Diesel 2.0L: 4000 rpm at wide-open throttle (Mercury spec sheet),
+# oil pressure 240 to 640 kPa and coolant 77 to 83 °C in the 29 May 2026 sea
+# trials (docs/requirements-usv-725.md, section 2).
+_COOLANT = dict(min_=40, max_=120, zones=[(95, ZGREEN), (105, ZYELLOW), (120, ZRED)],
+                split=4)
+ENGINE_TYPES = {
+    "yamaha_outboard": {
+        "label": "Yamaha outboard",
+        "tach": dict(min_=0, max_=6000, split=6,
+                     zones=[(4500, ZGREEN), (5500, ZYELLOW), (6000, ZRED)],
+                     labels={i * 1000: str(i) for i in range(7)}),
+        "coolant": dict(_COOLANT),
+        # Tick every 100 kPa, numeral every 200 (seven numerals crowd the
+        # small Vessel Health dial).
+        "oil": dict(min_=0, max_=600, split=6,
+                    zones=[(150, ZRED), (250, ZYELLOW), (520, ZGREEN), (600, ZYELLOW)],
+                    label_js="(x) => (x % 200 === 0 ? x : '')",
+                    labels={0: "0", 200: "200", 400: "400", 600: "600"}),
+        "boost": dict(min_=0, max_=300, split=6,
+                      zones=[(250, ZGREEN), (280, ZYELLOW), (300, ZRED)]),
+    },
+    "mercury_diesel": {
+        "label": "Mercury Diesel",
+        "tach": dict(min_=0, max_=5000, split=5,
+                     zones=[(4000, ZGREEN), (4400, ZYELLOW), (5000, ZRED)],
+                     labels={i * 1000: str(i) for i in range(6)}),
+        "coolant": dict(_COOLANT),
+        "oil": dict(min_=0, max_=800, split=4,
+                    zones=[(150, ZRED), (200, ZYELLOW), (700, ZGREEN), (800, ZYELLOW)]),
+        # Intake manifold pressure (J1939 IC1): 102 to 286 kPa in the sea
+        # trials; Mercury fault J124 Boost_Press_High above the engine's limit.
+        "boost": dict(min_=0, max_=300, split=6,
+                      zones=[(250, ZGREEN), (280, ZYELLOW), (300, ZRED)]),
+    },
+}
+DEFAULT_ENGINE_TYPE = "yamaha_outboard"   # unknown or empty engine_type
+
+TYPED_SELECT_JS = (
+    "const __ET = (() => { try {\n"
+    "  return String(context.grafana.replaceVariables('${engine_type}') || '');\n"
+    "} catch (e) { return ''; } })();\n")
+
+
+def typed_meter(title, query, x, y, w, h, key, unit, decimals=0, sub="",
+                label_js=None, preview=None, fallback_thresholds=None):
+    """Analog meter whose min / max / colour bands come from
+    ENGINE_TYPES[<engine_type variable>][key] at render time (key = tach |
+    coolant | oil). The --classic gauge and the preview use the default type."""
+    default = ENGINE_TYPES[DEFAULT_ENGINE_TYPE][key]
+    if not ANALOG:
+        return meter(title, query, x, y, w, h, default["min_"], default["max_"],
+                     unit, zones=default["zones"], decimals=decimals,
+                     split=default["split"], sub=sub,
+                     label_js=default.get("label_js", label_js),
+                     preview=preview, fallback_thresholds=fallback_thresholds)
+    bodies = []
+    for name, spec in ENGINE_TYPES.items():
+        sp = spec[key]
+        body = meter_js(sp["min_"], sp["max_"], unit, sp["zones"], decimals,
+                        sp["split"], sub,
+                        sp.get("label_js", label_js))[len(ECH_PRELUDE):]
+        bodies.append(f"  '{name}': () => {{\n{body}  }},\n")
+    js = (ECH_PRELUDE + TYPED_SELECT_JS + "const __BY = {\n" + "".join(bodies)
+          + "};\n" + f"return (__BY[__ET] || __BY['{DEFAULT_ENGINE_TYPE}'])();\n")
+    meta = {"kind": "meter", "min": default["min_"], "max": default["max_"],
+            "unit": unit, "zones": default["zones"], "decimals": decimals,
+            "split": default["split"], "sub": sub,
+            "preview": preview if preview is not None else default["min_"],
+            "typed": {name: {"min": sp[key]["min_"], "max": sp[key]["max_"],
+                             "zones": sp[key]["zones"], "split": sp[key]["split"]}
+                      for name, sp in ENGINE_TYPES.items()}}
+    if default.get("labels"):
+        meta["labels"] = default["labels"]
+    return instrument(title, [target(query)], x, y, w, h, js, meta)
+
+
+
 # Fixed tab order on every dashboard (Grafana's tag-based link list sorts
 # alphabetically and drops the current dashboard, so the row shifted from
 # page to page). Operational sequence: readiness (also Grafana's home
@@ -689,6 +809,7 @@ TAB_ORDER = [
     ("usv-readiness", "Readiness"), ("usv-mission", "Mission"),
     ("usv-navigation", "Navigation"),
     ("usv-autopilot", "Autopilot"), ("usv-health", "Vessel Health"),
+    ("usv-engine", "Engine"),
     ("usv-canbus", "CAN Bus"), ("usv-traffic", "Traffic"),
     ("usv-camera", "Cameras"), ("usv-comms", "Comms"),
     ("usv-system", "System"), ("usv-replay", "Replay"),
@@ -714,6 +835,21 @@ def dashboard(uid, title, panels, tags, refresh="5s", time_from="now-30m",
         vessel_var.update({"name": "fleet_vessel", "label": "Vessels",
                            "includeAll": True, "multi": True,
                            "current": {"text": "All", "value": "$__all"}})
+    # Engine type of the selected vessel: the engine_type tag every bridge
+    # writes from ENGINE_TYPE in /etc/usv/usv.env (yamaha_outboard,
+    # mercury_diesel). Hidden from the picker; the header band shows it and
+    # the engine dials pick their scale from it (typed_meter). Empty until
+    # the vessel has written an engine point with the tag.
+    engine_var = {
+        "name": "engine_type", "label": "Engine", "type": "query",
+        "datasource": DS, "hide": 2,
+        "query": ('import "influxdata/influxdb/schema"\n'
+                  'schema.tagValues(bucket: "telemetry", tag: "engine_type", '
+                  'predicate: (r) => r.vessel == "${vessel}", start: -30d)'),
+        "refresh": 2, "current": {"text": "", "value": ""},
+        "includeAll": False, "multi": False,
+    }
+    variables = [vessel_var] if fleet else [vessel_var, engine_var]
     return {
         "uid": uid, "title": title, "tags": ["usv"] + tags,
         "timezone": "browser", "schemaVersion": 39, "version": 1,
@@ -745,7 +881,7 @@ def dashboard(uid, title, panels, tags, refresh="5s", time_from="now-30m",
             "icon": "external link",
             "tooltip": "Open in a new tab in the dark theme (or press c, t)",
         }],
-        "templating": {"list": [vessel_var]},
+        "templating": {"list": variables},
         "panels": panels,
         "annotations": {"list": [{
             "name": "Mission events", "datasource": DS, "enable": True,
@@ -1358,6 +1494,73 @@ _LIVE = dashboard("usv-autopilot-live", "Autopilot Live", [
 for _i, _p in enumerate(_LIVE["panels"]):
     _p["id"] = 9001 + _i
 _id[0] = _id_before_live
+
+# ------------------------------------------------------------ FR-4 Engine
+# Large machinery dials at 1 s for sea trials and troubleshooting (Vessel
+# Health stays the overview with the electrical rows). Scales follow the
+# vessel's engine type (typed_meter); a value the hull's engine does not
+# report reads N/A. One screen: dials (h8), tiles (h2), fault text (h2),
+# trends (h5).
+_id_before_engine = _id[0]
+_ENGINE = dashboard("usv-engine", "Engine", [
+    big_dial(typed_meter("Tachometer", flux("engine", "rpm", last=True),
+                         0, 0, 6, 8, "tach", "rpm", decimals=0, sub="×1000 RPM",
+                         label_js="(x) => (x / 1000).toFixed(0)", preview=1540,
+                         fallback_thresholds=[(None, OK), (4500, "yellow"),
+                                              (5500, "red")])),
+    big_dial(typed_meter("Coolant", flux("engine", "coolant_temp", last=True),
+                         6, 0, 6, 8, "coolant", "°C", decimals=0, sub="TEMP °C",
+                         preview=81,
+                         fallback_thresholds=[(None, OK), (95, "yellow"),
+                                              (105, "red")])),
+    big_dial(typed_meter("Oil Pressure", flux("engine", "oil_pressure", last=True),
+                         12, 0, 6, 8, "oil", "kPa", decimals=0, sub="OIL kPa",
+                         preview=340,
+                         fallback_thresholds=[(None, "red"), (150, "yellow"),
+                                              (250, OK)])),
+    big_dial(typed_meter("Boost", flux("engine", "intake_manifold_pressure",
+                                       last=True),
+                         18, 0, 6, 8, "boost", "kPa", decimals=0,
+                         sub="INTAKE kPa", preview=162,
+                         fallback_thresholds=[(None, OK), (250, "yellow"),
+                                              (280, "red")])),
+    stat("Oil Temp", flux("engine", "oil_temp", last=True), 0, 8, 3, 2,
+         unit="celsius", decimals=0,
+         thresholds=[(None, OK), (110, "yellow"), (125, "red")]),
+    stat("Fuel Rate", flux("engine", "fuel_rate", last=True), 3, 8, 3, 2,
+         unit="litreh", decimals=1, graph_mode="area"),
+    stat("Engine Load", flux("engine", "percent_load", last=True), 6, 8, 3, 2,
+         unit="percent", decimals=0, graph_mode="area"),
+    stat("Torque", flux("engine", "percent_torque", last=True), 9, 8, 3, 2,
+         unit="percent", decimals=0),
+    stat("Engine Hours", flux("engine", "runtime_h", last=True), 12, 8, 3, 2,
+         unit="h", decimals=1),
+    stat("Fuel Level", flux("engine", "fuel_level", last=True), 15, 8, 3, 2,
+         unit="percent", decimals=0,
+         thresholds=[(None, "red"), (15, "yellow"), (30, OK)]),
+    stat("Fault Lamps", LAMPS_QUERY, 18, 8, 3, 2, string_value=True,
+         mappings=LAMPS_MAPPINGS, text_mode="value", color_mode="background"),
+    stat("Active Faults", flux("engine", "active_dtcs", last=True), 21, 8, 3, 2,
+         mappings=FAULTS_MAPPINGS, text_mode="value", color_mode="background"),
+    # Every active fault (engine.dtc_text, "NONE" when clear) across the width.
+    stat("Fault Codes", last_str("engine", "dtc_text"), 0, 10, 24, 2,
+         string_value=True, mappings=DTC_TEXT_MAPPINGS,
+         text_mode="value", color_mode="background"),
+    ts("Engine RPM", [target(flux("engine", "rpm"), "RPM")], 0, 12, 8, 5,
+       unit="rotrpm"),
+    ts("Coolant / Oil Temperature",
+       [target(flux("engine", "coolant_temp"), "coolant °C"),
+        target(flux("engine", "oil_temp"), "oil °C", ref="B")],
+       8, 12, 8, 5, unit="celsius"),
+    ts("Oil Pressure / Boost",
+       [target(flux("engine", "oil_pressure"), "oil kPa"),
+        target(flux("engine", "intake_manifold_pressure"), "boost kPa",
+               ref="B")],
+       16, 12, 8, 5, unit="pressurekpa"),
+], ["health"], refresh="1s", time_from="now-15m")
+for _i, _p in enumerate(_ENGINE["panels"]):
+    _p["id"] = 9401 + _i
+_id[0] = _id_before_engine
 # Appended last (just before main) for the same reason: the header band
 # ids are handed out in DASHBOARDS order.
 
@@ -1376,26 +1579,21 @@ for _d in DASHBOARDS:
 # ---------------------------------------------------------- FR-4 Vessel Health
 DASHBOARDS.append(dashboard("usv-health", "Vessel Health", [
     # Instrument cluster: the six primary machinery/electrical meters.
-    meter("Tachometer", flux("engine", "rpm", last=True), 0, 0, 4, 6,
-          0, 6000, "rpm",
-          zones=[(4500, ZGREEN), (5500, ZYELLOW), (6000, ZRED)],
-          decimals=0, split=6, sub="×1000 RPM",
-          label_js="(x) => (x / 1000).toFixed(0)", preview=2547,
-          preview_labels={i * 1000: str(i) for i in range(7)},
-          fallback_thresholds=[(None, OK), (4500, "yellow"),
-                               (5500, "red")]),
-    meter("Coolant", flux("engine", "coolant_temp", last=True), 4, 0, 4, 6,
-          40, 120, "°C",
-          zones=[(95, ZGREEN), (105, ZYELLOW), (120, ZRED)],
-          decimals=0, split=4, sub="TEMP °C", preview=85,
-          fallback_thresholds=[(None, OK), (95, "yellow"),
-                               (105, "red")]),
-    meter("Oil Pressure", flux("engine", "oil_pressure", last=True),
-          8, 0, 4, 6, 0, 600, "kPa",
-          zones=[(150, ZRED), (250, ZYELLOW), (520, ZGREEN), (600, ZYELLOW)],
-          decimals=0, split=6, sub="OIL kPa", preview=402,
-          fallback_thresholds=[(None, "red"), (150, "yellow"),
-                               (250, OK)]),
+    # Tachometer, Coolant and Oil Pressure take their scale from the
+    # vessel's engine type (ENGINE_TYPES / typed_meter).
+    typed_meter("Tachometer", flux("engine", "rpm", last=True), 0, 0, 4, 6,
+                "tach", "rpm", decimals=0, sub="×1000 RPM",
+                label_js="(x) => (x / 1000).toFixed(0)", preview=2547,
+                fallback_thresholds=[(None, OK), (4500, "yellow"),
+                                     (5500, "red")]),
+    typed_meter("Coolant", flux("engine", "coolant_temp", last=True), 4, 0, 4, 6,
+                "coolant", "°C", decimals=0, sub="TEMP °C", preview=85,
+                fallback_thresholds=[(None, OK), (95, "yellow"),
+                                     (105, "red")]),
+    typed_meter("Oil Pressure", flux("engine", "oil_pressure", last=True),
+                8, 0, 4, 6, "oil", "kPa", decimals=0, sub="OIL kPa", preview=402,
+                fallback_thresholds=[(None, "red"), (150, "yellow"),
+                                     (250, OK)]),
     meter("Fuel", flux("engine", "fuel_level", last=True), 12, 0, 4, 6,
           0, 100, "%",
           zones=[(15, ZRED), (30, ZYELLOW), (100, ZGREEN)],
@@ -1436,8 +1634,12 @@ DASHBOARDS.append(dashboard("usv-health", "Vessel Health", [
              "charging": {"text": "CHARGING", "color": TILE_OK, "index": 0},
              "discharging": {"text": "DISCHARGING", "color": "yellow",
                              "index": 1}}}]),
-    stat("Alternator", flux("electrical", "alternator_voltage", last=True),
-         18, 6, 3, 3, unit="volt", decimals=1),
+    # Boost (intake manifold pressure, J1939 IC1) replaces the Alternator
+    # tile: no hull publishes an alternator voltage (the Victron shunt reads
+    # the battery, the N2K mapping puts the engine's alternator under
+    # propulsion.*), while the diesel reports boost at 2 Hz.
+    stat("Boost", flux("engine", "intake_manifold_pressure", last=True),
+         18, 6, 3, 3, unit="pressurekpa", decimals=0, graph_mode="area"),
     stat("Total Power", flux("power", "total_power", last=True), 21, 6, 3, 3,
          unit="watt", decimals=0, graph_mode="area"),
     # Trends: two rows of three.
@@ -2390,6 +2592,22 @@ fleet_map_query = (
     '  |> keep(columns: ["vessel", "lat", "lon", "heading"])\n')
 
 
+# One line per vessel: "<engine type>  <rpm> rpm" from the latest engine.rpm
+# point (the engine_type tag is written by every engine producer; "engine"
+# when a vessel has no ENGINE_TYPE yet).
+fleet_engine_query = (
+    'from(bucket: "telemetry")\n'
+    '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+    '  |> filter(fn: (r) => r._measurement == "engine" and r._field == "rpm")\n'
+    '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+    '  |> last()\n'
+    '  |> group()\n'
+    '  |> last()\n'
+    '  |> map(fn: (r) => ({_time: r._time, _value: '
+    '(if exists r.engine_type then r.engine_type else "engine") + "  " + '
+    'string(v: int(v: r._value)) + " rpm"}))\n')
+
+
 fleet_panels = [
     panel("geomap", "Fleet Map — last known positions",
           [target(fleet_map_query)], 0, 0, 24, 10,
@@ -2430,14 +2648,18 @@ fleet_panels = [
     fleet_link(stat("SOG", fleet_last("nav", "sog"), 16, 11, 8, 3,
                     unit="velocityknot", decimals=1, no_value="—")),
     fleet_link(stat("Mission Progress", fleet_last("mission", "progress_pct"),
-                    0, 14, 8, 3, unit="percent", decimals=0,
+                    0, 14, 6, 3, unit="percent", decimals=0,
                     no_value="No mission")),
     fleet_link(stat("Signal K", fleet_last("comms", "signalk_ws_up"),
-                    8, 14, 8, 3, mappings=updown_map("DOWN", "UP"),
+                    6, 14, 6, 3, mappings=updown_map("DOWN", "UP"),
                     text_mode="value", color_mode="background")),
     fleet_link(stat("MOOS", fleet_last("comms", "moos_connected"),
-                    16, 14, 8, 3, mappings=updown_map("DOWN", "UP"),
+                    12, 14, 6, 3, mappings=updown_map("DOWN", "UP"),
                     text_mode="value", color_mode="background")),
+    # Engine type (the engine_type tag) and the last RPM of the vessel.
+    fleet_link(stat("Engine", fleet_engine_query, 18, 14, 6, 3,
+                    text_mode="value", string_value=True,
+                    no_value="No engine data")),
 ]
 DASHBOARDS.append(dashboard("usv-fleet", "Fleet", fleet_panels,
                             ["fleet"], fleet=True))
@@ -2536,7 +2758,7 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms", [
 BRAND_H = 2
 
 
-def brand_panel(title):
+def brand_panel(title, fleet=False):
     # Markdown mode: Grafana 13's HTML sanitizer strips <img>, Markdown images
     # are supported. The chip is pre-sized (44 px high) for the band.
     return {
@@ -2545,7 +2767,11 @@ def brand_panel(title):
         "options": {"mode": "markdown", "content": (
             f"![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) "
             f"&nbsp;&nbsp; **{title.upper()}** &nbsp;&nbsp;&middot;&nbsp;&nbsp; "
-            f"Vessel **$vessel**")},
+            f"Vessel **$vessel**"
+            # Engine chip (the engine_type variable; blank until the vessel
+            # writes the tag). The Fleet page has no single vessel.
+            + ("" if fleet else
+               " &nbsp;&nbsp;&middot;&nbsp;&nbsp; Engine **${engine_type}**"))},
     }
 
 
@@ -2580,7 +2806,7 @@ def add_header_band(d):
     compact_rows(d)
     for p in d["panels"]:
         p["gridPos"]["y"] += BRAND_H
-    d["panels"].insert(0, brand_panel(d["title"]))
+    d["panels"].insert(0, brand_panel(d["title"], fleet=d["uid"] == "usv-fleet"))
     return d
 
 
@@ -2713,6 +2939,17 @@ def check_titles(d):
 
 
 DASHBOARDS.append(_LIVE)  # last: see the Autopilot Live section
+DASHBOARDS.append(_ENGINE)  # same reason: own id range 9401+
+# Vessel Health engine dials link to the Engine page (the Health page is
+# defined after the Engine section, so the links are added here).
+ENGINE_LINK = {"title": "Open Engine (large dials, 1 s)",
+               "url": "/d/usv-engine?var-vessel=${vessel}",
+               "targetBlank": False}
+for _d in DASHBOARDS:
+    if _d["uid"] == "usv-health":
+        for _p in _d["panels"]:
+            if _p.get("title") in ("Tachometer", "Coolant", "Oil Pressure"):
+                _p.setdefault("links", []).append(dict(ENGINE_LINK))
 
 
 LIVE_REFRESH_INTERVALS = ["1s", "2s", "5s", "10s", "30s", "1m", "5m",

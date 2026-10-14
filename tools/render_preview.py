@@ -479,44 +479,72 @@ def svg_traffic(w, h):
             f'<text x="{w - 8}" y="{h - 6}" fill="{RED}" font-size="11" font-weight="600" text-anchor="end">TGT-27  CPA 82 m · TCPA 1:42</text></svg>')
 
 
+def _dial_face(cx, cy, r):
+    """Radial-gradient dial face shared by the needle instruments."""
+    _grad_id[0] += 1
+    gid = f"face{_grad_id[0]}"
+    dark = BG == "#111217"
+    c0, c1 = ("#1c2634", "#0a0e14") if dark else ("#f7f8fa", "#d9dee5")
+    return (f'<defs><radialGradient id="{gid}" cx="50%" cy="50%" r="50%">'
+            f'<stop offset="0%" stop-color="{c0}"/>'
+            f'<stop offset="100%" stop-color="{c1}"/>'
+            f'</radialGradient></defs>'
+            f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.1f}" fill="url(#{gid})"/>')
+
+
 def svg_meter_analog(meta, w, h):
-    """240° needle meter mirroring the ECharts instrument styling."""
+    """240° meter mirroring the ECharts instrument: dial face, glowing arc
+    filled to the value over a faint rail, alarm bands as a thin outer
+    ring, ticks and numerals inside, hairline needle, digital readout."""
     mn, mx = meta["min"], meta["max"]
     v = max(mn, min(mx, meta.get("preview", mn)))
     zones = meta.get("zones") or []
     unit, dec = meta.get("unit", ""), meta.get("decimals", 0)
     split = meta.get("split", 6)
     labels = meta.get("labels")
+    dark = BG == "#111217"
     a_start, sweep = 210.0, 240.0
     ang = lambda x: a_start - sweep * (x - mn) / (mx - mn)
-    cx, cy = w / 2, h * 0.56
-    r = min(w * 0.44, h * 0.42)
-    p = [f'<svg width="{w}" height="{h}">']
-    if zones:
-        prev = mn
+    cx, cy = w / 2, h / 2
+    rf = min(w, h) / 2 * 0.84            # face
+    r = min(w, h) / 2 * 0.78 - 6         # rail centre line (12 px wide)
+    rr = min(w, h) / 2 * 0.86 - 2        # alarm ring (4 px wide)
+    p = [f'<svg width="{w}" height="{h}">', _dial_face(cx, cy, rf)]
+    prev = mn
+    if meta.get("rail_zones"):
+        # Rudder: the coloured halves are the rail itself, no fill arc.
         for hi, colz in zones:
-            p.append(_arc(cx, cy, r, ang(prev), ang(hi), colz, 9))
+            p.append(_arc(cx, cy, r, ang(prev), ang(hi), colz, 12))
             prev = hi
     else:
-        p.append(_arc(cx, cy, r, a_start, a_start - sweep,
-                      "#1c2a3d" if BG == "#111217"
-                      else "rgba(36,41,46,0.10)", 9))
+        for hi, colz in zones:
+            p.append(_arc(cx, cy, rr, ang(prev), ang(hi), colz, 4))
+            prev = hi
+        rail = "rgba(124,156,176,0.16)" if dark else "rgba(36,41,46,0.10)"
+        p.append(_arc(cx, cy, r, a_start, a_start - sweep, rail, 12)
+                 .replace('stroke-linecap="butt"', 'stroke-linecap="round"'))
+    if not (mn < 0 < mx):
         _grad_id[0] += 1
         gid = f"mg{_grad_id[0]}"
         p.append(f'<defs><linearGradient id="{gid}" x1="0" y1="0" '
                  f'x2="1" y2="0">'
-                 f'<stop offset="0%" stop-color="#00bcd4"/>'
-                 f'<stop offset="100%" stop-color="#42a5f5"/>'
+                 f'<stop offset="0%" stop-color="#42a5f5"/>'
+                 f'<stop offset="100%" stop-color="#00bcd4"/>'
                  f'</linearGradient></defs>')
-        p.append(_arc(cx, cy, r, a_start, ang(v), f"url(#{gid})", 9))
+        p.append(_arc(cx, cy, r, a_start, ang(v), f"url(#{gid})", 12)
+                 .replace('stroke-linecap="butt"',
+                          'stroke-linecap="round" '
+                          'filter="drop-shadow(0 0 6px rgba(0,188,212,0.55))"'))
+    tick = "#e6ecf2" if dark else "#2b3138"
+    lab = "#d2dbe4" if dark else "#3b4249"
     for i in range(split + 1):
         val = mn + (mx - mn) * i / split
         a = ang(val)
-        x0, y0 = _pol(cx, cy, r - 13, a)
-        x1, y1 = _pol(cx, cy, r - 5, a)
+        x0, y0 = _pol(cx, cy, r - 12, a)
+        x1, y1 = _pol(cx, cy, r - 7, a)
         p.append(f'<line x1="{x0:.1f}" y1="{y0:.1f}" x2="{x1:.1f}" '
-                 f'y2="{y1:.1f}" stroke="{FAINT}" stroke-width="2"/>')
-        lx, ly = _pol(cx, cy, r - 24, a)
+                 f'y2="{y1:.1f}" stroke="{tick}" stroke-width="2"/>')
+        lx, ly = _pol(cx, cy, r - 22, a)
         if labels is not None:
             lbl = ""
             for k in (val, int(val), str(int(val)), f"{val:g}"):
@@ -529,20 +557,27 @@ def svg_meter_analog(meta, w, h):
         else:
             lbl = f"{val:g}"
         if lbl != "":
-            p.append(f'<text x="{lx:.1f}" y="{ly+3.5:.1f}" fill="{DIM}" '
+            p.append(f'<text x="{lx:.1f}" y="{ly+3.5:.1f}" fill="{lab}" '
                      f'font-size="10" text-anchor="middle">{lbl}</text>')
-    needle_c = "#e8ebee" if BG == "#111217" else "#24292e"
-    p.append(_needle(cx, cy, ang(v), r - 22, needle_c))
-    p.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="6" fill="{TEAL}" '
-             f'stroke="{needle_c}" stroke-width="2"/>')
-    txt = meta.get("value_text") or f"{v:.{dec}f} {unit}"
-    vcol = "#ffffff" if BG == "#111217" else TEXT
-    p.append(f'<text x="{cx:.1f}" y="{cy + r*0.52:.1f}" fill="{vcol}" '
-             f'font-size="16" font-weight="600" '
-             f'text-anchor="middle">{txt}</text>')
+    needle_c = "#ffffff" if dark else "#1f2429"
+    p.append(_needle(cx, cy, ang(v), r * 0.66, needle_c, width=2))
+    p.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="6" '
+             f'fill="{"#0a0e14" if dark else "#d9dee5"}" '
+             f'stroke="{TEAL}" stroke-width="2"/>')
+    vcol = "#ffffff" if dark else TEXT
+    txt = meta.get("value_text")
+    if txt:
+        p.append(f'<text x="{cx:.1f}" y="{cy + r*0.70 + 8:.1f}" fill="{vcol}" '
+                 f'font-size="22" font-weight="700" '
+                 f'text-anchor="middle">{txt}</text>')
+    else:
+        p.append(f'<text x="{cx:.1f}" y="{cy + r*0.70 + 8:.1f}" fill="{vcol}" '
+                 f'font-size="22" font-weight="700" text-anchor="middle">'
+                 f'{v:.{dec}f}<tspan fill="{lab}" font-size="11" '
+                 f'font-weight="600"> {unit}</tspan></text>')
     if meta.get("sub"):
-        p.append(f'<text x="{cx:.1f}" y="{cy + r*0.52 + 15:.1f}" '
-                 f'fill="{TEAL}" font-size="9" letter-spacing="1" '
+        p.append(f'<text x="{cx:.1f}" y="{cy + r*0.93 + 4:.1f}" '
+                 f'fill="{TEAL}" font-size="10" font-weight="700" '
                  f'text-anchor="middle">{meta["sub"]}</text>')
     p.append("</svg>")
     return "".join(p)
@@ -598,7 +633,7 @@ def svg_rudder(meta, w, h):
               "unit": "°", "decimals": 0, "split": 7,
               "labels": {-35: "35", -25: "25", -15: "15", -5: "5",
                          5: "5", 15: "15", 25: "25", 35: "35"},
-              "sub": "PORT ‹ RUDDER › STBD",
+              "sub": "PORT ‹ RUDDER › STBD", "rail_zones": True,
               "value_text": f"{side}{abs(v):.0f}°"})
     return svg_meter_analog(m, w, h)
 
@@ -719,7 +754,11 @@ def render_panel(uid, p):
                     f'<img src="data:image/png;base64,{data}" height="30">'
                     f'<b style="font-size:15px;letter-spacing:.04em">{band_title}</b>'
                     f'<span style="color:{DIM}">&middot;</span>'
-                    f'<span style="color:{DIM}">Vessel <b>alpha</b></span></div>')
+                    f'<span style="color:{DIM}">Vessel <b>alpha</b></span>'
+                    + (f'<span style="color:{DIM}">&middot;</span>'
+                       f'<span style="color:{DIM}">Engine <b>yamaha_outboard</b></span>'
+                       if "${engine_type}" in content else "")
+                    + '</div>')
         else:
             body = f'<div class="ptext">{content}</div>'
     elif ptype == "alertlist":
