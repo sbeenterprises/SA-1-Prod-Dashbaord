@@ -3,6 +3,71 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.28] - 2026-10-15 (Engine data from the CAN bus on usv-725, dial fix)
+
+can_bridge, dashboards, installer. Update with `bash deploy/update.sh
+v1.2.28`, then Ctrl+F5. No mission restart is needed for the dashboard;
+on usv-725 change usv.env first (below) and restart usv-can-bridge and
+the mission so grafana_bridge stops writing engine fields.
+
+usv-722: no usv.env change. Its can_bridge output is line-for-line the
+v1.2.27 output (smoke test replays usv-722 bus traffic and compares 9211
+lines); the only visible change is the dial fix.
+
+usv-725, `/etc/usv/usv.env`:
+```
+ENGINE_SOURCE=can
+HELM_PROFILE=usv725
+```
+
+### Added
+- can_bridge reads the J1939 engine ECU itself when `ENGINE_SOURCE=can`
+  (ingestion/can-cpp/j1939_engine.hpp): rpm, actual and demand torque,
+  load, pedal, coolant / fuel / oil temperature (oil as the 16-bit value),
+  oil level and pressure, fuel rate, boost, intake manifold and exhaust
+  temperature, barometric pressure, air inlet temperature, ECU voltage,
+  water in fuel, engine hours, and the engine's own DM1 (single frame and
+  BAM: lamps, SPN / FMI / count, fault text with the Mercury J codes).
+  Engine address `J1939_ENGINE_SA` (0). Not-available codes are never
+  published, so a missing value reads N/A. The engine data no longer
+  depends on any MOOS application (iCANRec).
+- Fuel level on usv-725 from the NMEA 2000 tank sender (Maretron TLM100,
+  PGN 127505) through can_bridge.
+- `HELM_PROFILE=usv725` (usv725_can.hpp): wheel command and actuator
+  position from the two 0x210 frame kinds (byte 5 = 00 / 64), 10 / 511 /
+  1022 counts and 17 degrees at full lock; lever thrust and gear (also the
+  Gear and Engine Thrust tiles: usv-725 has no control processor between
+  lever and engine), trim switch (0CFF08D0), key panel (00FF0F10 /
+  0CFF0F10), and the engine speed request from the controller at address
+  23 (engine.speed_request, 700 to 4200 rpm). J1939 frames are matched on
+  PGN and source address at any priority.
+- can_bridge logs a warning when the bus it hears belongs to the other
+  hull's profile (usv-725 0x210 command frames, usv-722 control processor
+  226), and the installer warns when HELM_PROFILE does not fit ENGINE_TYPE:
+  the wrong profile shows the rudder on the wrong scale and no trim.
+- `CAN_ENGINE_HOURS_REQUEST=1` (off by default): can_bridge asks the engine
+  for PGN 65253 every 5 s from address `J1939_REQUEST_SA` (249); the
+  Mercury ECU sends its hours only on request.
+- `CAN_REPLAY=<candump -l log>`: can_bridge decodes a recorded log and
+  exits. The smoke test replays usv-722 and usv-725 recordings
+  (tools/fixtures) and checks every rudder, thrust, gear, trim, key and
+  engine value on both hulls.
+
+### Fixed
+- Dials crashed with "ECharts Execution Error: Cannot read properties of
+  undefined (reading '0')" when a refresh with no data was followed by one
+  with data (Boost and Oil Pressure on usv-725; any dial on page load). The
+  fill arc is now always drawn and made transparent when there is nothing
+  to fill. tools/check_echarts_panels.js renders every instrument through
+  ECharts 5.6 across refreshes (set ECHARTS_MODULE) and found the same
+  fault on 26 instrument and engine-type combinations, all fixed.
+- can_bridge PGN 127505: fluid type is the high nibble of byte 0 (the
+  instance the low one); only fuel tank 0 is read.
+
+### Changed
+- `ENGINE_SOURCE=can` turns off the Glendinning DM1 (address 210) as an
+  engine fault source: the engine's own DM1 owns the fault fields.
+
 ## [1.2.27] - 2026-10-14 (Min CPA ignores far closing ships)
 
 grafana_bridge only. Update with `bash deploy/update.sh v1.2.27`, then

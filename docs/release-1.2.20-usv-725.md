@@ -79,22 +79,29 @@ VESSEL_ID=usv-725
 ENGINE_TYPE=mercury_diesel
 ENGINE_MODEL="Mercury Diesel 2.0L"
 NAV_SPEED_UNITS=knots
-ENGINE_SOURCE=moos
-HELM_PROFILE=none
+ENGINE_SOURCE=can
+HELM_PROFILE=usv725
 CAN_INTERFACE=slcan0
 SIGNALK_URL=ws://localhost:3000/signalk/v1/stream?subscribe=self
 SIGNALK_BATTERY=<the Victron battery id from B.1, e.g. House>
 ```
 
-What the engine lines do: `ENGINE_SOURCE=moos` makes grafana_bridge the
-only writer of the engine fields (signalk_bridge ignores `propulsion.*`,
-can_bridge ignores the N2K engine PGNs and the J1939 DM1 message, which
-iCANRec reports instead); `ENGINE_TYPE=mercury_diesel` tags every engine
-point, scales the tachometer to 0 to 5000 rpm with the green band to 4000
-and the oil pressure dial to 800 kPa, and names faults with the Mercury J
-codes; `HELM_PROFILE=none` keeps can_bridge to bus statistics only (no
-helm frames from this hull have been captured yet, so the gear, throttle,
-key and trim tiles read N/A).
+What the engine lines do: `ENGINE_SOURCE=can` makes can_bridge the only
+writer of the engine fields: it reads the Mercury J1939 engine ECU
+(address 0) on slcan0 directly, and the fuel level from the NMEA 2000 tank
+sender; signalk_bridge ignores `propulsion.*` and grafana_bridge ignores
+the MOOS `ENGINE_*` variables, so no MOOS application is involved in the
+engine data. `ENGINE_TYPE=mercury_diesel` tags every engine point, scales
+the tachometer to 0 to 5000 rpm with the green band to 4000 and the oil
+pressure dial to 800 kPa, and names faults with the Mercury J codes.
+`HELM_PROFILE=usv725` decodes this hull's helm and drive frames: rudder
+(wheel and actuator, 17 degrees at full lock), lever thrust and gear, trim
+switch, key panel and the engine speed request. It must be usv725 on this
+hull: the usv722 decoder reads the rudder on the wrong scale and misses
+the trim, and can_bridge logs a warning if the profile does not match the
+bus (`journalctl -u usv-can-bridge`). Engine hours: the ECU sends them only
+when asked; add `CAN_ENGINE_HOURS_REQUEST=1` to let can_bridge ask every
+5 s (the only frame the dashboard transmits).
 
 Keep `usv.env` root-only (`chmod 600`, the installer sets it) and never
 commit it.
@@ -225,7 +232,7 @@ mission-file block and the capture from A-1.
 | A-2 | The `influx query` from part C, grouped by instance and field | One series per field, instance 0, engine_type mercury_diesel; nothing from signalk_bridge or can_bridge for RPM, coolant, oil, fuel, load or faults |
 | A-3 | Dials against the engine's own display at idle, 1500 and 3000 rpm, 5 minutes each, Vessel Health and Engine page | RPM within 1 %, coolant within 2 °C, oil pressure within 10 kPa, fuel rate within 5 %, load within 5 %, boost within 10 kPa. Oil temperature and hours are expected to fail until the iCANRec change (record the values anyway) |
 | A-4 | `engine.ecu_voltage` against a meter at the engine battery | Expected to fail until the iCANRec change; record both values |
-| A-5 | Gear neutral, forward, neutral, reverse | With HELM_PROFILE=none the gear tiles read N/A: record as not applicable |
+| A-5 | Gear neutral, forward, neutral, reverse | Gear tile follows the lever (engine running; with the engine off the helm reports neutral) |
 | A-6 | Disconnect one sensor the engine monitors, restore it | Active Faults, lamps and Fault Codes within 5 s; the Engine Fault alert fires. Clearing within 5 s of restore will fail with today's iCANRec (record it) |
 | A-7 | Two faults at once | Both listed in Fault Codes (BAM reassembly): expected to fail until the iCANRec change |
 | A-8 | Engine off | Engine dials and tiles N/A; no engine alert; Readiness engine row FAIL "no engine data" |

@@ -587,8 +587,15 @@ def meter_js(min_, max_, unit, zones=None, decimals=0, split=6, sub="",
     A centre-zero scale (min < 0 < max, heading error) keeps the needle
     and the ring but not the fill, which would start at the negative end.
     detail_js replaces the readout formatter (plain text, no rich spans)."""
-    fill = (f"!nodata && v > {min_ + (max_ - min_) * 0.004:g}"
-            if not (min_ < 0 < max_) else "false")
+    # The fill arc is always drawn (show is a constant per scale) and made
+    # transparent when there is nothing to fill. Toggling progress.show
+    # between refreshes crashes ECharts 5.6 (GaugeView reads the previous
+    # arc, which was never created: "Cannot read properties of undefined
+    # (reading '0')"), e.g. no data then data, or 0 rpm then the engine
+    # starting. A centre-zero scale never draws it.
+    has_fill = "false" if (min_ < 0 < max_) else "true"
+    fill_on = (f"!nodata && v > {min_ + (max_ - min_) * 0.004:g}"
+               if not (min_ < 0 < max_) else "false")
     ring = ""
     if zones:
         ring = f"""\
@@ -629,10 +636,11 @@ return {{
     startAngle: 210, endAngle: -30,
     center: ['50%', '50%'], radius: '78%', z: 2,
     axisLine: {{ roundCap: true, lineStyle: {{ width: 12 * G, color: [[1, C.mrail]] }} }},
-    progress: {{ show: {fill}, width: 12 * G, roundCap: true,
+    progress: {{ show: {has_fill}, width: 12 * G, roundCap: true,
                 itemStyle: {{ color: {{ type: 'linear', x: 0, y: 0, x2: 1, y2: 0,
                                       colorStops: [{{ offset: 0, color: C.accent2 }},
                                                    {{ offset: 1, color: C.accent }}] }},
+                             opacity: ({fill_on}) ? 1 : 0,
                              shadowColor: C.glow, shadowBlur: 12 * G }} }},
     splitNumber: {split},
     // Major ticks just inside the rail, numerals clear of them (a tick

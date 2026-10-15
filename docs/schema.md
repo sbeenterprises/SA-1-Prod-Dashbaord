@@ -169,6 +169,13 @@ rudder_actuator_cmd (deg, command the actuator is following), helm_rudder
 (1 = PC / autopilot steering, 0 = helm). Scale 0 / 511 / 1012 raw = full
 port / centre / full starboard, x STEER_MAX_DEG (50).
 
+usv-725 CAN (can_bridge, usv725_can.hpp, HELM_PROFILE=usv725): the same
+fields from the two 0x210 frame kinds: byte 5 = 00 is the wheel command
+(helm_rudder), byte 5 = 64 the actuator status (rudder_actual,
+rudder_actuator_cmd, steer_drive_pct). Scale 10 / 511 / 1022 raw = full
+port / centre / full starboard, x STEER_MAX_DEG (17). steer_pc_control is
+not written (no "who it follows" byte on this actuator).
+
 ### engine (FR-4) — sources: MOOS bridge (iCANRec ENGINE_*, SAE J1939 on
 slcan0), CAN bridge (N2K PGN 127488/127505 if an N2K bus exists), Signal K
 One writer per vessel: `ENGINE_SOURCE` in /etc/usv/usv.env (signalk | moos |
@@ -219,6 +226,26 @@ cpp-common/j1939_faults.hpp, 61 SPN / FMI pairs from the Mercury
 specification) or the J1939 failure-mode wording elsewhere. The instance
 tag comes from the variable suffix (ENGINE_SPEED instance 0, ENGINE_SPEED_1
 instance 1). ENGINE_BATTERY_VOLTAGE no longer feeds electrical or power.
+J1939 engine ECU (can_bridge, j1939_engine.hpp; ENGINE_SOURCE=can, engine
+at J1939_ENGINE_SA, 0 on usv-725 Mercury): rpm, percent_torque (actual),
+demand_torque (%), percent_load, pedal_position, coolant_temp, fuel_temp,
+oil_temp (16-bit SPN 175), oil_level (%), oil_pressure, fuel_rate,
+intake_manifold_pressure, intake_manifold_temp, exhaust_temp (°C),
+baro_pressure (kPa), air_inlet_temp (°C), ecu_voltage (V), water_in_fuel
+(0/1), runtime_h (only when CAN_ENGINE_HOURS_REQUEST=1, the ECU sends it on
+request), and from the engine's DM1 (single frame or BAM) active_dtcs,
+fault_lamps, lamp_protect / lamp_amber / lamp_red / lamp_mil, dtc_spn /
+dtc_fmi / dtc_oc and dtc_text (Mercury J codes on a mercury_diesel hull).
+fuel_level from the NMEA 2000 tank sender (PGN 127505, fuel tank 0). Values
+in the J1939 not-available range are not written. Each value is written on
+change and at least every 0.5 s (10 Hz at most).
+usv-725 helm (can_bridge, usv725_can.hpp, HELM_PROFILE=usv725):
+throttle_helm_pct and throttle_pct (EEC2 from 208, the lever; usv-725 has
+no control processor, so the lever is also what the engine controller
+acts on), gear_helm and gear (ETC2 from 208), trim_switch (PGN 65288 from
+208), key_state (PGN 65295 from 16, any priority), speed_request (rpm, TSC1
+from the controller at 23 to the engine: 700 at idle to 4200 at full
+lever).
 usv-722 CAN (can_bridge, usv722_can.hpp; RPM and temperatures are not on
 its bus): key_state (0 off, 1 run, 2 start), gear and gear_helm (-1 reverse,
 0 neutral, 1 forward; to the engine / at the lever), throttle_pct and

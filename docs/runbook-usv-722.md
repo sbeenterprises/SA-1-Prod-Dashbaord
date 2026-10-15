@@ -10,7 +10,7 @@ on the boat needs.
 |---|---|
 | Onboard computer | OnLogic K800, Ubuntu 22.04.5, hostname `usv-722`, user `douglas` |
 | Repo checkout | `~/Documents/SA-1-Prod-Dashbaord` (GitHub `sbeenterprises/SA-1-Prod-Dashbaord`, install from a tag, never from `main`) |
-| Installed release | v1.2.23, updated 2026-10-13/14 from v1.2.19 through v1.2.20, v1.2.21 and v1.2.22 (see `git -C ~/Documents/SA-1-Prod-Dashbaord describe --tags`); configuration backup from before the engine profile in `/etc/usv/usv.env.bak-2026-10-13` |
+| Installed release | v1.2.27, verified 2026-10-14 (grafana_bridge restarted 01:07 boat time), updated 2026-10-13/14 from v1.2.19 through v1.2.20 to v1.2.27 (see `git -C ~/Documents/SA-1-Prod-Dashbaord describe --tags`); configuration backup from before the engine profile in `/etc/usv/usv.env.bak-2026-10-13` |
 | Configuration | `/etc/usv/usv.env` (root only): `VESSEL_ID=usv-722`, `GRAFANA_PORT=3100`, `CAN_INTERFACE=slcan0`, `ECHARTS_PANEL_VERSION=7.2.5`, SMTP not yet set; engine profile `ENGINE_TYPE=yamaha_outboard`, `ENGINE_MODEL="Yamaha Outboard Engine F115 B 4-Stroke"`, `ENGINE_SOURCE=signalk`, `HELM_PROFILE=usv722`; `SIGNALK_FUEL_TANK=none` and `SIGNALK_BATTERY_CURRENT_SIGN=-1` (see Known gaps); `NAV_SPEED_UNITS=knots` (v1.2.23) |
 | Grafana | `http://<obc-ip>:3100`, user `admin`, password in `usv.env`; folder "Swift Autonomous Dashboard", home page Readiness |
 | InfluxDB | localhost:8086, org `usv`, buckets `telemetry` (30 d), `events` and `telemetry_1m` (365 d) |
@@ -126,7 +126,7 @@ All are enabled at boot. `usv-simulator` must stay disabled on the vessel
 Tags only. One command, from the repo checkout:
 
 ```bash
-cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.23
+cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.28
 ```
 
 It fetches the tag, re-runs the installer (rebuilds and restarts the
@@ -219,7 +219,7 @@ retention (`du -sh /var/lib/influxdb`).
 | Electrical / Power panels No data | `curl -s localhost:3000/signalk/v1/api/vessels/self/electrical`: battery instance name; set SIGNALK_BATTERY if it is not the first one |
 | AIS contacts thousands of km away, Rel. Bearing wrong | MOOS NAV_LAT/NAV_LONG = 0 (no RMC/HDT reaching iDivisorNMEA); the dashboard falls back to Signal K and logs one "traffic" warning; fix on the mission side |
 
-## Known gaps on this hull (as of v1.2.23)
+## Known gaps on this hull (as of v1.2.28)
 
 - Own-ship navigation in MOOS: iDivisorNMEA posts NAV_LAT/NAV_LONG/
   NAV_HEADING = 0 because its UDP feed (port 10111) carries only AIS; the
@@ -239,6 +239,12 @@ retention (`du -sh /var/lib/influxdb`).
   live tank sender is on the bus. `SIGNALK_FUEL_TANK=none` keeps it off
   the Fuel dial, the Low Fuel alert and Readiness. When a sender is
   fitted, delete that line and `sudo systemctl restart usv-signalk-bridge`.
+  The drive bus itself (slcan0) does carry a fuel level: the 9 Oct 2026
+  capture shows an NMEA 2000 tank sender at address 112 (PGN 127505,
+  19F21170) reading 22 to 24 %. can_bridge reads it only with
+  `CAN_N2K_ENGINE=1` in usv.env (not set on this hull; check the reading
+  against the tank before enabling it, then `sudo systemctl restart
+  usv-can-bridge`).
 - Signal K reports its own vessel as `vessels.undefined` (no MMSI / UUID
   set in Server > Settings > Vessel). Own-ship data is unaffected; set
   the MMSI when convenient so AIS targets are told apart by context.

@@ -105,5 +105,46 @@ function checkTraffic(o, name, dark) {
   ok(`Traffic View symbols, vectors, pin, CPA line and avoidance rings (${tag})`);
 }
 
+// Refresh sequences through the real ECharts library (the one the panel
+// plugin bundles; set ECHARTS_MODULE to its path, e.g. a local
+// `npm i echarts@5.6.0`). Each instrument is rendered on ONE chart instance
+// across successive refreshes, as the panel does: no data then data, data
+// then no data, zero then a value, empty frames. A gauge whose fill arc was
+// hidden on one refresh and shown on the next crashed ECharts 5.6 with
+// "Cannot read properties of undefined (reading '0')" (v1.2.28 fix).
+let echarts = null;
+try { echarts = require(process.env.ECHARTS_MODULE || 'echarts'); } catch (e) { echarts = null; }
+if (!echarts) {
+  console.log('  [SKIP] ECharts refresh sequences (echarts module not found; set ECHARTS_MODULE)');
+} else {
+  const one = (r, v) => ({ refId: r, fields: [{ name: '_value', type: 'number', values: { toArray: () => v } }] });
+  const all = (v) => 'ABCDEFGH'.split('').map((r) => one(r, v));
+  const seqs = { 'no data then data': [[], all([100])], 'data then no data': [all([100]), []],
+                 'zero then value': [all([0]), all([100])], 'empty frame then data': [all([]), all([50])],
+                 'negative then positive': [all([-20]), all([20])] };
+  let seqFail = 0, seqRuns = 0;
+  for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.json'))) {
+    const d = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+    for (const p of d.panels || []) {
+      if (p.type !== 'volkovlabs-echarts-panel') continue;
+      for (const et of ['mercury_diesel', 'yamaha_outboard']) {
+        for (const [name, seq] of Object.entries(seqs)) {
+          const chart = echarts.init(null, null, { renderer: 'svg', ssr: true, width: 400, height: 300 });
+          seqRuns++;
+          try {
+            for (const series of seq) {
+              const ctx = { grafana: { theme: { isDark: true }, replaceVariables: () => et },
+                            panel: { data: { series }, chart: { getHeight: () => 300, getWidth: () => 400 } } };
+              chart.setOption(new Function('context', p.options.getOption)(ctx));
+            }
+          } catch (e) { seqFail++; bad(`${f} / ${p.title} (${et}) ${name}: ${e.message}`); }
+          chart.dispose();
+        }
+      }
+    }
+  }
+  if (!seqFail) ok(`ECharts ${echarts.version}: ${seqRuns} refresh sequences render on every instrument`);
+}
+
 console.log(`  echarts panels: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

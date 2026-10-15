@@ -383,7 +383,7 @@ never in the dashboards:
 | Hull | Engine | Engine data path | usv.env |
 |---|---|---|---|
 | usv-722 | Yamaha Outboard Engine F115 B 4-Stroke | NMEA 2000 (Yamaha Command Link gateway, on order) -> Signal K `propulsion.*` -> signalk_bridge | `ENGINE_TYPE=yamaha_outboard` `ENGINE_MODEL="Yamaha Outboard Engine F115 B 4-Stroke"` `ENGINE_SOURCE=signalk` `HELM_PROFILE=usv722` |
-| usv-725 | Mercury Diesel 2.0L sterndrive | SAE J1939 on slcan0 -> iCANRec `ENGINE_*` -> grafana_bridge | `ENGINE_TYPE=mercury_diesel` `ENGINE_MODEL="Mercury Diesel 2.0L"` `ENGINE_SOURCE=moos` `HELM_PROFILE=none` (until its helm frames are captured) |
+| usv-725 | Mercury Diesel 2.0L sterndrive | SAE J1939 engine ECU (address 0) and N2K tank sender on slcan0 -> can_bridge | `ENGINE_TYPE=mercury_diesel` `ENGINE_MODEL="Mercury Diesel 2.0L"` `ENGINE_SOURCE=can` `HELM_PROFILE=usv725` |
 
 `ENGINE_SOURCE` names the one producer of the `engine` fields; the other
 bridges leave them alone (docs/schema.md, "engine"). `ENGINE_TYPE` becomes

@@ -53,9 +53,22 @@ case "$ENGINE_SOURCE" in
 esac
 case "$ENGINE_COUNT" in 1|2) ;; *) echo "ENGINE_COUNT=$ENGINE_COUNT in $ENV_FILE: use 1 or 2"; exit 1 ;; esac
 case "$HELM_PROFILE" in
-  usv722|none) ;;
+  usv722|usv725|none) ;;
   *) echo "WARNING: HELM_PROFILE=$HELM_PROFILE has no decoder in this release; helm tiles will read N/A" ;;
 esac
+# The two hulls encode rudder, gear and trim differently (usv-722 Yamaha:
+# helm wheel 18FF11D0, 50 degrees; usv-725 Mercury: wheel in 0x210, 17
+# degrees, trim / key at other priorities). A helm decoder for the other hull
+# shows wrong rudder angles and no trim. can_bridge also warns in its log
+# when the bus it hears belongs to the other profile.
+if [[ $ENGINE_TYPE == mercury_diesel && $HELM_PROFILE == usv722 ]]; then
+  echo "WARNING: ENGINE_TYPE=mercury_diesel with HELM_PROFILE=usv722 (the default when"
+  echo "         unset). On usv-725 set HELM_PROFILE=usv725 in $ENV_FILE."
+fi
+if [[ $ENGINE_TYPE == yamaha_outboard && $HELM_PROFILE == usv725 ]]; then
+  echo "WARNING: ENGINE_TYPE=yamaha_outboard with HELM_PROFILE=usv725. On usv-722 set"
+  echo "         HELM_PROFILE=usv722 in $ENV_FILE."
+fi
 if [[ -z $ENGINE_SOURCE ]]; then
   echo "NOTE: ENGINE_SOURCE is not set in $ENV_FILE: every bridge keeps writing engine"
   echo "      fields (pre-v1.2.20 behaviour). Set signalk, moos or can so each engine"
@@ -459,6 +472,14 @@ fi
 
 say "Done. Grafana: http://$(hostname -I | awk '{print $1}'):${GRAFANA_PORT:-3001} (folder 'Swift Autonomous Dashboard')"
 say "Reminder: merge ingestion/moos-cpp/example.moos into your mission file."
+if [[ $ENGINE_SOURCE == can ]]; then
+  cat <<EOF
+Engine data on this vessel is read from the CAN bus by can_bridge (J1939 engine
+ECU at address ${J1939_ENGINE_SA:-0}, fuel level from the NMEA 2000 tank sender).
+grafana_bridge does not write engine fields (MOOS_ENGINE off), so the mission
+file needs no engine settings. Check: journalctl -u usv-can-bridge -n 20
+EOF
+fi
 if [[ $ENGINE_SOURCE == moos ]]; then
   cat <<EOF
 Engine data on this vessel comes from MOOS (iCANRec, J1939). grafana_bridge

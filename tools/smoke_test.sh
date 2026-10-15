@@ -62,7 +62,9 @@ export INFLUX_URL=http://127.0.0.1:8086 INFLUX_TOKEN=smoke-token \
 : > "$TMP/usv.env"
 export USV_ENV_FILE="$TMP/usv.env"
 unset ENGINE_TYPE ENGINE_SOURCE ENGINE_COUNT ENGINE_INSTANCES HELM_PROFILE \
-      SIGNALK_ENGINE CAN_N2K_ENGINE CAN_DM1 MOOS_ENGINE SIGNALK_BATTERY SIGNALK_FUEL_TANK
+      SIGNALK_ENGINE CAN_N2K_ENGINE CAN_DM1 MOOS_ENGINE SIGNALK_BATTERY SIGNALK_FUEL_TANK \
+      CAN_J1939_ENGINE J1939_ENGINE_SA CAN_ENGINE_HOURS_REQUEST J1939_REQUEST_SA \
+      STEER_MAX_DEG STEER_RAW_PORT STEER_RAW_CENTER STEER_RAW_STBD CAN_REPLAY
 
 # measurement,field pairs seen in the captured line protocol
 seen() { grep -oE '^[a-z_]+,[^ ]* [a-z_]+' "$LINES" | sed 's/,[^ ]* / /' | sort -u; }
@@ -92,9 +94,10 @@ else
   bad "mission_logic_test failed"; echo "$OUT" | tail -5
 fi
 
-hdr "Bridge logic unit tests (radar targets, cameras, usv-722 CAN, engine profile, J1939 faults, Signal K engine paths)"
+hdr "Bridge logic unit tests (radar targets, cameras, usv-722 / usv-725 CAN, J1939 engine, engine profile, J1939 faults, Signal K engine paths)"
 for t in ingestion/moos-cpp/build/mayara_logic_test ingestion/moos-cpp/build-tests/mayara_logic_test \
          ingestion/frigate-cpp/build/frigate_logic_test ingestion/can-cpp/build/usv722_can_test \
+         ingestion/can-cpp/build/j1939_engine_test \
          ingestion/can-cpp/build/engine_profile_test ingestion/can-cpp/build/j1939_faults_test \
          ingestion/signalk-cpp/build/signalk_engine_test; do
   [[ -x "$REPO/$t" ]] || continue
@@ -103,6 +106,7 @@ for t in ingestion/moos-cpp/build/mayara_logic_test ingestion/moos-cpp/build-tes
 done
 [[ -x "$REPO/ingestion/frigate-cpp/build/frigate_logic_test" ]] || bad "frigate_logic_test not built"
 [[ -x "$REPO/ingestion/can-cpp/build/usv722_can_test" ]] || bad "usv722_can_test not built"
+[[ -x "$REPO/ingestion/can-cpp/build/j1939_engine_test" ]] || bad "j1939_engine_test not built"
 [[ -x "$REPO/ingestion/can-cpp/build/engine_profile_test" ]] || bad "engine_profile_test not built"
 [[ -x "$REPO/ingestion/can-cpp/build/j1939_faults_test" ]] || bad "j1939_faults_test not built"
 [[ -x "$REPO/ingestion/signalk-cpp/build/signalk_engine_test" ]] || bad "signalk_engine_test not built"
@@ -643,6 +647,78 @@ else
   grep -q "interface_up=0" "$LINES" \
       && ok "canbus.interface_up=0 published while down" \
       || bad "no interface_up=0 signal while CAN is down"
+fi
+
+hdr "CAN bridge replay of recorded buses (usv-722 unchanged, usv-725 engine from J1939)"
+# can_bridge CAN_REPLAY=<candump log> decodes a recorded log through the same
+# code as the live bus. Fixtures (tools/fixtures): usv-722 traffic rebuilt
+# from the 9 Oct 2026 captures with its v1.2.27 output, and excerpts of the
+# usv-725 captures of 15 Oct 2026 (engine off).
+FX="$REPO/tools/fixtures"
+can_replay() {   # can_replay <env file> <vessel> <gz log> -> $LINES, stderr in $TMP/replay.err
+  zcat "$3" > "$TMP/replay.log"
+  start_stub
+  USV_ENV_FILE="$1" VESSEL_ID="$2" CAN_REPLAY="$TMP/replay.log" \
+    timeout 60 "$REPO/ingestion/can-cpp/build/can_bridge" >/dev/null 2>"$TMP/replay.err"
+  sleep 0.5; stop_stub
+}
+lp_has() { grep -E "$1" "$LINES" >/dev/null; }
+if [[ -x "$REPO/ingestion/can-cpp/build/can_bridge" && -f "$FX/can-usv722.log.gz" ]]; then
+  # 1. usv-722 settings on usv-722 traffic: line-for-line the v1.2.27 output.
+  can_replay "$FX/usv722.env.txt" usv-722 "$FX/can-usv722.log.gz"
+  if diff <(grep -v '^$' "$LINES") <(zcat "$FX/can-usv722.expected.lp.gz") >/dev/null; then
+    ok "usv-722 replay: $(zcat "$FX/can-usv722.expected.lp.gz" | wc -l) lines identical to v1.2.27 (rudder, thrust, gear, trim, key, DM1)"
+  else
+    bad "usv-722 replay differs from v1.2.27"
+    diff <(grep -v '^$' "$LINES") <(zcat "$FX/can-usv722.expected.lp.gz") | head -5
+  fi
+  grep -q "WARNING" "$TMP/replay.err" && bad "profile warning on the usv-722 bus" || ok "usv-722 bus, HELM_PROFILE=usv722: no profile warning"
+  lp_has 'helm_rudder=-50( |$)' && lp_has 'helm_rudder=50( |$)' \
+    && ok "usv-722 wheel 0 / 1012 -> -50 / +50 degrees" || bad "usv-722 wheel scale wrong"
+  ! lp_has 'engine,vessel=usv-722.* (rpm|coolant_temp|oil_temp|speed_request)=' \
+    && ok "usv-722: no J1939 engine fields from can_bridge (ENGINE_SOURCE=signalk)" || bad "usv-722 got engine fields from can_bridge"
+
+  # 2. usv-725 settings on usv-725 traffic.
+  can_replay "$FX/usv725.env.txt" usv-725 "$FX/can-usv725.log.gz"
+  grep -q "WARNING" "$TMP/replay.err" && bad "profile warning on the usv-725 bus" || ok "usv-725 bus, HELM_PROFILE=usv725: no profile warning"
+  lp_has 'engine,vessel=usv-725,instance=0,engine_type=mercury_diesel.* rpm=0' \
+    && ok "usv-725 engine rpm from EEC1, tagged mercury_diesel" || bad "usv-725 rpm missing"
+  lp_has ' coolant_temp=3[0-9]( |$)' && lp_has ' oil_temp=3[0-9]\.' \
+    && ok "usv-725 coolant and oil temperature from ET1 (oil 16-bit, about 33 C)" || bad "usv-725 ET1 temperatures wrong"
+  lp_has ' oil_pressure=100( |$)' && lp_has ' intake_manifold_pressure=100( |$)' \
+    && ok "usv-725 oil pressure and boost 100 kPa (engine off)" || bad "usv-725 oil pressure / boost missing"
+  lp_has ' fuel_level=99\.4' && ok "usv-725 fuel level 99.5 % from the N2K tank sender (127505)" || bad "usv-725 fuel level missing"
+  lp_has ' ecu_voltage=11\.' && lp_has ' percent_load=0' && lp_has ' fuel_rate=0' \
+    && ok "usv-725 ECU voltage, load and fuel rate" || bad "usv-725 VEP1 / EEC2 / LFE missing"
+  lp_has 'dtc_text="SPN 639 FMI 9' && lp_has ' lamp_protect=1' && lp_has ' active_dtcs=1' \
+    && ok "usv-725 engine DM1: protect lamp, SPN 639 FMI 9" || bad "usv-725 DM1 missing"
+  lp_has 'helm_rudder=-17( |$)' && lp_has 'helm_rudder=17( |$)' \
+    && ok "usv-725 wheel 10 / 1022 -> -17 / +17 degrees" || bad "usv-725 wheel scale wrong"
+  lp_has 'rudder_actual=-16\.[6-9]' && lp_has 'rudder_actual=16\.[6-9]' \
+    && ok "usv-725 actuator position reaches both locks (0x210, byte 5 = 64)" || bad "usv-725 actuator position wrong"
+  lp_has ' throttle_pct=100( |$)' && lp_has ' speed_request=4200( |$)' \
+    && ok "usv-725 full lever: thrust 100 %, speed request 4200 rpm" || bad "usv-725 thrust / speed request wrong"
+  lp_has ' trim_switch=1( |$)' && lp_has ' key_state=1( |$)' && lp_has ' gear=0( |$)' \
+    && ok "usv-725 trim up (0CFF08D0), key RUN (00FF0F10), gear neutral" || bad "usv-725 trim / key / gear missing"
+  # A fault from the Glendinning device (address 210) must not reach the
+  # engine fault fields on usv-725 (the engine's own DM1 owns them).
+  zcat "$FX/can-usv725.log.gz" > "$TMP/inj.log"
+  LAST=$(grep -o '^([0-9.]*' "$TMP/inj.log" | tail -1 | tr -d '(')
+  python3 -c "print('(%.6f) slcan0 0CFECAD2#04FF6E000302FFFF' % ($LAST + 0.5))" >> "$TMP/inj.log"
+  gzip -c "$TMP/inj.log" > "$TMP/inj.log.gz"
+  can_replay "$FX/usv725.env.txt" usv-725 "$TMP/inj.log.gz"
+  ! lp_has 'SPN 110 FMI 3' && lp_has 'dtc_text="SPN 639 FMI 9' \
+    && ok "usv-725: a fault from address 210 does not overwrite the engine's DM1" || bad "usv-725 DM1 overwritten by address 210"
+
+  # 3. Wrong profile for the bus: logged, so it is caught on the boat.
+  can_replay "$FX/usv722.env.txt" usv-725 "$FX/can-usv725.log.gz"
+  grep -q "WARNING: this CAN bus carries usv-725 frames" "$TMP/replay.err" \
+    && ok "usv-725 bus with HELM_PROFILE=usv722: warning logged" || bad "no warning for usv-725 bus on usv722 profile"
+  can_replay "$FX/usv725.env.txt" usv-722 "$FX/can-usv722.log.gz"
+  grep -q "WARNING: this CAN bus carries usv-722 frames" "$TMP/replay.err" \
+    && ok "usv-722 bus with HELM_PROFILE=usv725: warning logged" || bad "no warning for usv-722 bus on usv725 profile"
+else
+  skip "CAN replay (can_bridge or fixtures missing)"
 fi
 
 hdr "Resilience: InfluxDB down"

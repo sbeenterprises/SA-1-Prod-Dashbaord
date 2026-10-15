@@ -15,7 +15,8 @@ static int fails = 0, checks = 0;
 static void clear_env() {
     for (const char* k : {"ENGINE_TYPE", "ENGINE_SOURCE", "ENGINE_COUNT", "ENGINE_INSTANCES",
                           "HELM_PROFILE", "SIGNALK_ENGINE", "CAN_N2K_ENGINE", "CAN_DM1",
-                          "MOOS_ENGINE", "USV_ENV_FILE", "ENGINE_MODEL"})
+                          "MOOS_ENGINE", "USV_ENV_FILE", "ENGINE_MODEL", "CAN_J1939_ENGINE",
+                          "J1939_ENGINE_SA"})
         unsetenv(k);
 }
 
@@ -127,6 +128,49 @@ int main() {
         clear_env();
         auto q = usv::EngineProfile::FromEnv(write_file("ENGINE_SOURCE=moos\n"));
         CHECK(q.model.empty() && q.Tags("instance=0") == "instance=0");   // no type, no tags
+    }
+    // 10. The usv-722 usv.env as installed (v1.2.27): every switch keeps the
+    //     value it had before the J1939 engine decoder existed.
+    {
+        clear_env();
+        auto p = usv::EngineProfile::FromEnv(write_file(
+            "VESSEL_ID=usv-722\nGRAFANA_PORT=3100\nCAN_INTERFACE=slcan0\n"
+            "ENGINE_TYPE=yamaha_outboard\n"
+            "ENGINE_MODEL=\"Yamaha Outboard Engine F115 B 4-Stroke\"\n"
+            "ENGINE_SOURCE=signalk\nHELM_PROFILE=usv722\nSIGNALK_FUEL_TANK=none\n"
+            "SIGNALK_BATTERY_CURRENT_SIGN=-1\nNAV_SPEED_UNITS=knots\n"));
+        CHECK(p.source == "signalk" && p.helm_profile == "usv722");
+        CHECK(p.signalk_engine && !p.moos_engine && !p.can_n2k_engine && p.can_dm1);
+        CHECK(!p.can_j1939_engine);           // new decoder stays off on usv-722
+        CHECK(p.j1939_engine_sa == 0);
+    }
+    // 11. usv-725 with the engine read from the bus by can_bridge.
+    {
+        clear_env();
+        auto p = usv::EngineProfile::FromEnv(write_file(
+            "VESSEL_ID=usv-725\nENGINE_TYPE=mercury_diesel\n"
+            "ENGINE_MODEL=\"Mercury Diesel 2.0L\"\nENGINE_SOURCE=can\nHELM_PROFILE=usv725\n"));
+        CHECK(p.source == "can" && p.helm_profile == "usv725");
+        CHECK(p.can_j1939_engine && p.can_n2k_engine);
+        CHECK(!p.can_dm1);                    // the engine's own DM1 owns the fault fields
+        CHECK(!p.moos_engine && !p.signalk_engine);
+        CHECK(p.j1939_engine_sa == 0);
+        CHECK(p.Describe().find("can_j1939_engine=1 (engine SA 0)") != std::string::npos);
+    }
+    // 12. J1939_ENGINE_SA in decimal or hex; out of range ignored; the
+    //     decoder never turns on without ENGINE_SOURCE=can or the override.
+    {
+        clear_env();
+        auto a = usv::EngineProfile::FromEnv(write_file("ENGINE_SOURCE=can\nJ1939_ENGINE_SA=0x01\n"));
+        CHECK(a.j1939_engine_sa == 1);
+        auto b = usv::EngineProfile::FromEnv(write_file("ENGINE_SOURCE=can\nJ1939_ENGINE_SA=300\n"));
+        CHECK(b.j1939_engine_sa == 0);
+        auto c = usv::EngineProfile::FromEnv(write_file("J1939_ENGINE_SA=0\n"));
+        CHECK(!c.can_j1939_engine);           // ENGINE_SOURCE unset
+        auto d = usv::EngineProfile::FromEnv(write_file("ENGINE_SOURCE=moos\n"));
+        CHECK(!d.can_j1939_engine);
+        auto e = usv::EngineProfile::FromEnv(write_file("ENGINE_SOURCE=signalk\nCAN_J1939_ENGINE=1\n"));
+        CHECK(e.can_j1939_engine);            // explicit override only
     }
     // 8. ENGINE_* instance suffix (REC-7): ENGINE_SPEED_1 is instance 1.
     {

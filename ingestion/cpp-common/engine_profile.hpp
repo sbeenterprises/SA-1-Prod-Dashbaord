@@ -7,8 +7,11 @@
 //   ENGINE_COUNT     1 | 2
 //   ENGINE_INSTANCES 0 | 0,1
 //   HELM_PROFILE     usv722 | usv725 | none   -> can_bridge helm / drive decoder
-//   SIGNALK_ENGINE, CAN_N2K_ENGINE, CAN_DM1   -> explicit 0/1 overrides of the
-//                    switches derived from ENGINE_SOURCE (normally unset)
+//   J1939_ENGINE_SA  source address of the J1939 engine ECU (0, the Mercury
+//                    ECU on usv-725) read by can_bridge when ENGINE_SOURCE=can
+//   SIGNALK_ENGINE, CAN_N2K_ENGINE, CAN_DM1, CAN_J1939_ENGINE -> explicit 0/1
+//                    overrides of the switches derived from ENGINE_SOURCE
+//                    (normally unset)
 //
 // The systemd units pass usv.env as EnvironmentFile. grafana_bridge runs
 // under pAntler without it, so a key missing from the environment is read
@@ -81,7 +84,11 @@ struct EngineProfile {
     bool signalk_engine = true;  // signalk_bridge writes engine fields
     bool moos_engine = true;     // grafana_bridge passes ENGINE_* through
     bool can_n2k_engine = true;  // can_bridge decodes N2K 127488 / 127505
-    bool can_dm1 = true;         // can_bridge decodes J1939 DM1 faults
+    bool can_dm1 = true;         // can_bridge decodes the Glendinning (address
+                                 // 210) J1939 DM1 into the engine fault fields
+    bool can_j1939_engine = false;  // can_bridge decodes the J1939 engine ECU
+                                    // itself (EEC1, ET1, DM1 ...): ENGINE_SOURCE=can
+    int j1939_engine_sa = 0;     // J1939_ENGINE_SA, the engine ECU's address
 
     // Reads the process environment first, then the env file for keys the
     // environment does not have.
@@ -113,14 +120,27 @@ struct EngineProfile {
             p.signalk_engine = p.source == "signalk";
             p.moos_engine = p.source == "moos";
             p.can_n2k_engine = p.source == "can";
-            // The Glendinning DM1 on the drive bus is the fault source unless
-            // the engine itself reports faults through MOOS (iCANRec).
-            p.can_dm1 = p.source != "moos";
+            // ENGINE_SOURCE=can: can_bridge reads the J1939 engine ECU on
+            // the bus directly (usv-725, Mercury). The engine's own DM1 is
+            // then the fault source, so the Glendinning DM1 (address 210)
+            // must not write the same fault fields.
+            p.can_j1939_engine = p.source == "can";
+            // Otherwise the Glendinning DM1 on the drive bus is the fault
+            // source unless the engine reports faults through MOOS (iCANRec).
+            p.can_dm1 = p.source != "moos" && p.source != "can";
         }
         Override(get("SIGNALK_ENGINE"), &p.signalk_engine);
         Override(get("CAN_N2K_ENGINE"), &p.can_n2k_engine);
         Override(get("CAN_DM1"), &p.can_dm1);
+        Override(get("CAN_J1939_ENGINE"), &p.can_j1939_engine);
         Override(get("MOOS_ENGINE"), &p.moos_engine);
+        const std::string sa = Trim(get("J1939_ENGINE_SA"));
+        if (!sa.empty()) {
+            try {
+                const int v = std::stoi(sa, nullptr, 0);   // 0, 0x00, 23 ...
+                if (v >= 0 && v <= 253) p.j1939_engine_sa = v;
+            } catch (...) {}
+        }
         return p;
     }
 
@@ -163,7 +183,9 @@ struct EngineProfile {
                " signalk_engine=" + (signalk_engine ? "1" : "0") +
                " moos_engine=" + (moos_engine ? "1" : "0") +
                " can_n2k_engine=" + (can_n2k_engine ? "1" : "0") +
-               " can_dm1=" + (can_dm1 ? "1" : "0");
+               " can_dm1=" + (can_dm1 ? "1" : "0") +
+               " can_j1939_engine=" + (can_j1939_engine ? "1 (engine SA " +
+                                       std::to_string(j1939_engine_sa) + ")" : std::string("0"));
     }
 
 private:
