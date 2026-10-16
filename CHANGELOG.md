@@ -3,6 +3,28 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.29] - 2026-10-15 (Engine hours answered, grafana_bridge reads usv.env)
+
+can_bridge, grafana_bridge, installer. Update with `bash deploy/update.sh
+v1.2.29`, then restart the mission on both boats (grafana_bridge must
+re-read usv.env). Ctrl+F5.
+
+### Fixed
+- grafana_bridge could not read `/etc/usv/usv.env`: the installer made the
+  file root-only (mode 600) and grafana_bridge runs as the mission user under
+  pAntler, so it saw no ENGINE_SOURCE and fell back to the default profile.
+  On usv-725 with v1.2.28 it kept passing iCANRec's engine values through
+  next to can_bridge's (Oil Temp showed iCANRec's 177 C alternating with the
+  ECU's 30 C); on usv-722 NAV_SPEED_UNITS=knots was not read either. The
+  installer now gives the file to the group of the user who ran it (mode
+  640), and the profile line of every bridge ends with "WARNING: cannot read
+  /etc/usv/usv.env" when the file cannot be opened. Already fixed by hand on
+  usv-725 (chgrp douglas, chmod 640).
+- Engine hours: the Mercury ECU answers the PGN 59904 request only when it
+  is sent to the global address (18EAFFF9), never when addressed to the
+  engine (18EA00F9). can_bridge now sends the global form; the usv-725 ECU
+  replied 30.75 h (CAN_ENGINE_HOURS_REQUEST=1).
+
 ## [1.2.28] - 2026-10-15 (Engine data from the CAN bus on usv-725, dial fix)
 
 can_bridge, dashboards, installer. Update with `bash deploy/update.sh

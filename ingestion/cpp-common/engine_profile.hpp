@@ -15,7 +15,11 @@
 //
 // The systemd units pass usv.env as EnvironmentFile. grafana_bridge runs
 // under pAntler without it, so a key missing from the environment is read
-// from /etc/usv/usv.env directly (USV_ENV_FILE overrides the path).
+// from /etc/usv/usv.env directly (USV_ENV_FILE overrides the path). That
+// needs the file to be readable by the mission user: the installer sets
+// group ownership to the user who ran it with mode 640. When the file
+// cannot be opened, env_file_readable is false and Describe() says so, since
+// the profile is then the default (every producer writes the engine fields).
 //
 // With ENGINE_SOURCE unset every producer keeps writing, as before this
 // profile existed; a set value turns the others off so each engine field has
@@ -89,6 +93,9 @@ struct EngineProfile {
     bool can_j1939_engine = false;  // can_bridge decodes the J1939 engine ECU
                                     // itself (EEC1, ET1, DM1 ...): ENGINE_SOURCE=can
     int j1939_engine_sa = 0;     // J1939_ENGINE_SA, the engine ECU's address
+    std::string env_file;        // the file consulted for keys not in the environment
+    bool env_file_readable = true;  // false: it could not be opened (missing
+                                    // or, for grafana_bridge, a mode 600 root file)
 
     // Reads the process environment first, then the env file for keys the
     // environment does not have.
@@ -97,13 +104,18 @@ struct EngineProfile {
         const std::string path = !file.empty() ? file : (f ? f : "/etc/usv/usv.env");
         std::map<std::string, std::string> fromfile;
         bool loaded = false;
+        EngineProfile p;
+        p.env_file = path;
         auto get = [&](const char* key) -> std::string {
             if (const char* v = std::getenv(key)) return v;
-            if (!loaded) { fromfile = ReadEnvFile(path); loaded = true; }
+            if (!loaded) {
+                p.env_file_readable = static_cast<bool>(std::ifstream(path));
+                fromfile = ReadEnvFile(path);
+                loaded = true;
+            }
             auto it = fromfile.find(key);
             return it == fromfile.end() ? "" : it->second;
         };
-        EngineProfile p;
         p.type = Slug(get("ENGINE_TYPE"));
         p.model = Trim(get("ENGINE_MODEL"));
         if (p.model.empty()) p.model = DefaultModel(p.type);
@@ -185,7 +197,10 @@ struct EngineProfile {
                " can_n2k_engine=" + (can_n2k_engine ? "1" : "0") +
                " can_dm1=" + (can_dm1 ? "1" : "0") +
                " can_j1939_engine=" + (can_j1939_engine ? "1 (engine SA " +
-                                       std::to_string(j1939_engine_sa) + ")" : std::string("0"));
+                                       std::to_string(j1939_engine_sa) + ")" : std::string("0")) +
+               (env_file_readable ? std::string()
+                                  : " WARNING: cannot read " + env_file +
+                                        " (default profile; make it readable by this user)");
     }
 
 private:

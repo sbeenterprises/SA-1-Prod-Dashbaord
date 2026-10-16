@@ -172,6 +172,24 @@ int main() {
         auto e = usv::EngineProfile::FromEnv(write_file("ENGINE_SOURCE=signalk\nCAN_J1939_ENGINE=1\n"));
         CHECK(e.can_j1939_engine);            // explicit override only
     }
+    // 13. An env file that cannot be opened (missing here; a mode 600 root
+    //     file for grafana_bridge on the boats, v1.2.28 on usv-725) gives the
+    //     default profile and says so in Describe(); a readable one does not.
+    {
+        clear_env();
+        auto a = usv::EngineProfile::FromEnv("/nonexistent/usv.env");
+        CHECK(!a.env_file_readable && a.env_file == "/nonexistent/usv.env");
+        CHECK(a.source.empty() && a.moos_engine && a.signalk_engine);
+        CHECK(a.Describe().find("WARNING: cannot read /nonexistent/usv.env") != std::string::npos);
+        auto b = usv::EngineProfile::FromEnv(write_file("ENGINE_SOURCE=can\n"));
+        CHECK(b.env_file_readable && b.Describe().find("WARNING") == std::string::npos);
+        // Keys from the environment never touch the file: no warning either.
+        setenv("ENGINE_SOURCE", "can", 1);
+        setenv("ENGINE_TYPE", "mercury_diesel", 1);
+        auto c = usv::EngineProfile::FromEnv("/nonexistent/usv.env");
+        CHECK(c.source == "can");
+        clear_env();
+    }
     // 8. ENGINE_* instance suffix (REC-7): ENGINE_SPEED_1 is instance 1.
     {
         int inst = 9;

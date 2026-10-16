@@ -115,6 +115,8 @@ int main() {
     CHECK(Near(Engine(dec, 0x18FEF700, "FFFFFFFFF900F900")["engine.ecu_voltage"], 12.45));
     // HOURS (on request): 0x00003A98 x 0.05 = 750 h.
     CHECK(Near(Engine(dec, 0x18FEE500, "983A0000FFFFFFFF")["engine.runtime_h"], 750.0));
+    // The usv-725 ECU's reply on 15 Oct 2026: 615 x 0.05 = 30.75 h (bytes 4-7 revolutions).
+    CHECK(Near(Engine(dec, 0x18FEE500, "67020000DC030000")["engine.runtime_h"], 30.75));
     // WFI: FC = no water, FD = water.
     CHECK(Near(Engine(dec, 0x18FEFF00, "FCDFFFFFFFFFFFFF")["engine.water_in_fuel"], 0.0));
     CHECK(Near(Engine(dec, 0x18FEFF00, "FDDFFFFFFFFFFFFF")["engine.water_in_fuel"], 1.0));
@@ -161,7 +163,7 @@ int main() {
         CHECK(usv::usv722::Dm1Text(dm, true).find("J143") != std::string::npos);
     }
     // Hours request: 18EA00F9 E5 FE 00.
-    CHECK(dec.HoursRequestId(249) == 0x18EA00F9u);
+    CHECK(dec.HoursRequestId(249) == 0x18EAFFF9u);   // global request: the ECU ignores 18EA00F9
     CHECK(usv::j1939engine::Decoder::kHoursRequest[0] == 0xE5 &&
           usv::j1939engine::Decoder::kHoursRequest[1] == 0xFE &&
           usv::j1939engine::Decoder::kHoursRequest[2] == 0x00);

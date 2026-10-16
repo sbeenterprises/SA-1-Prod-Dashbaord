@@ -37,6 +37,19 @@ source $ENV_FILE
 if [[ $INFLUX_TOKEN == CHANGE_ME* || $INFLUX_PASSWORD == CHANGE_ME* ]]; then
   echo "Edit $ENV_FILE first (CHANGE_ME values present)."; exit 1
 fi
+# grafana_bridge runs under pAntler as the mission user (the user who runs
+# this installer with sudo) and reads usv.env itself for ENGINE_SOURCE,
+# NAV_SPEED_UNITS and the other profile keys. A root-only file (mode 600)
+# makes it fall back to the default profile: every producer writes the
+# engine fields and speeds show in m/s. Group-readable by that user, nobody
+# else.
+if [[ -n ${SUDO_USER:-} && $SUDO_USER != root ]]; then
+  chgrp "$SUDO_USER" $ENV_FILE && chmod 640 $ENV_FILE
+  say "$ENV_FILE readable by $SUDO_USER (group, mode 640) for grafana_bridge"
+else
+  echo "WARNING: not run through sudo from the mission user; make sure $ENV_FILE"
+  echo "         is readable by the user that runs pAntler (chgrp <user>; chmod 640)."
+fi
 
 # ---------------------------------------------------------------- engine profile
 # One release serves every hull; usv.env says where this vessel's engine

@@ -145,11 +145,14 @@ public:
         return out;
     }
 
-    // PGN 59904 request for PGN 65253 (engine hours), addressed to the
-    // engine, from `requester` (an address no device on the bus uses; 249
-    // is reserved by J1939 for off-board diagnostic tools). Data E5 FE 00.
+    // PGN 59904 request for PGN 65253 (engine hours) from `requester` (an
+    // address no device on the bus uses; 249 is reserved by J1939 for
+    // off-board diagnostic tools). Data E5 FE 00. Sent to the global address
+    // (255): the Mercury ECU answers the global request and ignores one
+    // addressed to it (usv-725, 15 Oct 2026: 18EAFFF9 answered with
+    // 18FEE500, 18EA00F9 never answered).
     uint32_t HoursRequestId(uint8_t requester) const {
-        return 0x18EA0000u | (static_cast<uint32_t>(sa_) << 8) | requester;
+        return 0x18EAFF00u | requester;
     }
     static constexpr uint8_t kHoursRequest[3] = {0xE5, 0xFE, 0x00};
 

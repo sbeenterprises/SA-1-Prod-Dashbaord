@@ -398,10 +398,15 @@ is not quoted, because the file is read by bash. `ENGINE_COUNT` /
 with `SIGNALK_ENGINE`, `CAN_N2K_ENGINE`, `CAN_DM1` and `MOOS_ENGINE` (0/1).
 
 The systemd bridges receive the keys from usv.env directly. grafana_bridge
-runs under pAntler and reads `/etc/usv/usv.env` itself at start (a
-`USV_ENV_FILE` environment variable points elsewhere); `engine_passthrough`
-and `engine_type` in its ProcessConfig block override the file. install.sh
-prints the resolved profile and, for `moos`, the mission-file block.
+runs under pAntler as the mission user and reads `/etc/usv/usv.env` itself
+at start (a `USV_ENV_FILE` environment variable points elsewhere);
+`engine_passthrough` and `engine_type` in its ProcessConfig block override
+the file. The file must therefore be readable by that user: install.sh,
+run with sudo from the mission user, sets its group to that user with mode
+640. A file grafana_bridge cannot open gives the default profile (every
+producer writes, speeds in m/s) and its startup line in the pAntler output
+ends with `WARNING: cannot read /etc/usv/usv.env`. install.sh prints the
+resolved profile and, for `moos`, the mission-file block.
 
 Leaving `ENGINE_SOURCE` empty keeps the pre-v1.2.20 behaviour: every
 producer writes, which is only right while one of them has data.
@@ -491,6 +496,7 @@ Administration -> Users.
 | Stock Grafana logo / "Welcome to Grafana" | Browser cache of Grafana's immutable assets: Ctrl+F5 once; `sudo bash deploy/brand.sh` re-applies after an upgrade |
 | Light theme chip "does nothing" | It opens a new tab (Grafana reads ?theme only on page load); press `c` then `t` to switch in place |
 | grafana_bridge missing under pAntler (`Failed exec - not good`) | set MOOS_ANTLER_UNIT in usv.env and re-run install.sh (PATH drop-in) |
+| Two values alternate on an engine tile or trend (one of them iCANRec's), or Autopilot speed is in m/s on a boat | grafana_bridge cannot read usv.env (its pAntler output says `WARNING: cannot read /etc/usv/usv.env`): `sudo chgrp <mission user> /etc/usv/usv.env && sudo chmod 640 /etc/usv/usv.env`, restart the mission. Re-running install.sh with sudo from that user does the same |
 | Route tile shows a short id | Signal K unreachable from grafana_bridge: check `signalk_http` in the ProcessConfig |
 | No MOOS data | grafana_bridge in pAntler list? `umm --spy` shows the vars? token/org in ProcessConfig correct? |
 | No CAN data | `candump can0`; `journalctl -u usv-can-bridge -f` |

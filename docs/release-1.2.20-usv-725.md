@@ -100,11 +100,17 @@ switch, key panel and the engine speed request. It must be usv725 on this
 hull: the usv722 decoder reads the rudder on the wrong scale and misses
 the trim, and can_bridge logs a warning if the profile does not match the
 bus (`journalctl -u usv-can-bridge`). Engine hours: the ECU sends them only
-when asked; add `CAN_ENGINE_HOURS_REQUEST=1` to let can_bridge ask every
-5 s (the only frame the dashboard transmits).
+when asked; set `CAN_ENGINE_HOURS_REQUEST=1` so that can_bridge asks every
+5 s with a global request (the only frame the dashboard transmits; the ECU
+ignores a request addressed to it). On this hull the ECU answered 30.75 h
+on 15 Oct 2026.
 
-Keep `usv.env` root-only (`chmod 600`, the installer sets it) and never
-commit it.
+Never commit `usv.env`. The installer, run with sudo from the mission user
+(douglas), makes it group-readable by that user (mode 640): grafana_bridge
+runs under pAntler as that user and reads the file itself. If it cannot,
+its startup line in the pAntler output ends with `WARNING: cannot read
+/etc/usv/usv.env` and iCANRec's engine values are written next to
+can_bridge's.
 
 ### B.5 Second installer run: installs and starts everything
 
