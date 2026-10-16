@@ -75,6 +75,13 @@ mode too). Grafana OSS has no white-label setting, so these are file
 overwrites under `/usr/share/grafana/public`; originals are kept as
 `*.grafana-orig` and `sudo bash deploy/brand.sh --restore` puts them back.
 
+The same `index.html` script fits every dashboard to the screen: the pages
+are laid out to 19 grid rows (`SCREEN_ROWS` in tools/gen_dashboards.py; a
+shorter page is padded to it), and the script zooms the whole page so the
+grid's bottom edge meets the bottom of the window, on any display from a
+laptop to a wall screen, re-evaluated on resize. `?fit=0` on the dashboard
+URL turns it off for that tab (for example to inspect a panel at 100 %).
+
 Grafana serves its hashed build assets (logo, login artwork, JS chunks)
 with a one-year immutable cache, so a browser that saw stock Grafana once
 would keep showing it after the files are overwritten. The login look is
@@ -471,7 +478,7 @@ emails while it runs; always stop it before real operations.
 | Fleet instances | VESSELS in usv.env |
 | Firewall sources for Grafana | GRAFANA_ALLOW_FROM in usv.env (CIDR list; unset = LAN subnet + 100.64.0.0/10; `none` = leave ufw alone) |
 | Alert recipients | grafana/provisioning/alerting/contact-points.yml |
-| Dashboard refresh | per dashboard, default 5 s; Autopilot, Autopilot Live and Traffic 1 s (1–5 s per SRS; Grafana floor `GRAFANA_MIN_REFRESH`, default 1 s) |
+| Dashboard refresh | 1 s on every live page (Replay: none); the time picker changes it per page for the session. Grafana floor `GRAFANA_MIN_REFRESH` in usv.env, default 1 s (`500ms` allows faster at double the query load; `2s` eases a slow computer) |
 
 ## Roles (Operator / Engineer / Administrator)
 Grafana OSS: Administrator -> Grafana Admin, Engineer -> Editor,

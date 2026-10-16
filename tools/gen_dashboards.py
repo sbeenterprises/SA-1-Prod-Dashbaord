@@ -902,7 +902,8 @@ TAB_ORDER = [
 ]
 
 
-def dashboard(uid, title, panels, tags, refresh="5s", time_from="now-30m",
+# Every live page refreshes once a second (Replay has no auto refresh).
+def dashboard(uid, title, panels, tags, refresh="1s", time_from="now-30m",
               fleet=False):
     """fleet=True makes the vessel variable multi-select with "All" so rows
     can repeat per vessel (Fleet Overview)."""
@@ -1534,7 +1535,7 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
                        "text": "ACTIVE", "color": "red", "index": 1}}}]),
     # G — helm trim switch (fault lamps and codes are on the CAN Bus page).
     trim_tile(0, 17, 24),
-], ["autopilot"], refresh="1s"))
+], ["autopilot"]))
 # The trim tile gets its own id and the shared counter is put back, so
 # adding it does not renumber panels on other pages.
 _ap = DASHBOARDS[-1]["panels"][-1:]
@@ -1638,7 +1639,7 @@ _LIVE = dashboard("usv-autopilot-live", "Autopilot Live", [
        [target(flux("autopilot", ["desired_speed", "speed_cap", "cmd_speed",
                                   "actual_speed"]))],
        16, 11, 8, 6, unit="velocityknot"),
-], ["autopilot"], refresh="1s", time_from="now-5m")
+], ["autopilot"], time_from="now-5m")
 # Own id range for this page, and the shared counter put back, so adding
 # the page does not renumber panels on every other dashboard.
 for _i, _p in enumerate(_LIVE["panels"]):
@@ -1708,7 +1709,7 @@ _ENGINE = dashboard("usv-engine", "Engine", [
         target(flux("engine", "intake_manifold_pressure"), "boost kPa",
                ref="B")],
        16, 12, 8, 5, unit="pressurekpa"),
-], ["health"], refresh="1s", time_from="now-15m")
+], ["health"], time_from="now-15m")
 for _i, _p in enumerate(_ENGINE["panels"]):
     _p["id"] = 9401 + _i
 _id[0] = _id_before_engine
@@ -2453,7 +2454,7 @@ DASHBOARDS.append(dashboard("usv-traffic", "Traffic", [
                                   {"id": "custom.axisPlacement", "value": "right"},
                                   {"id": "displayName", "value": "TCPA"},
                                   {"id": "color", "value": {"mode": "fixed", "fixedColor": "#ff9830"}}]}]),
-], ["traffic"], refresh="1s"))
+], ["traffic"]))
 
 # Helm Avoiding (v1.2.24) takes its own id and the shared counter is put
 # back, so adding it does not renumber the panels of the later dashboards.
@@ -3139,6 +3140,23 @@ def fit_to_screen(d, rows=SCREEN_ROWS):
         g["y"], g["h"] = y0, y1 - y0
 
 
+def pad_to_screen(d, rows=SCREEN_ROWS):
+    """A page shorter than `rows` (Alarms, 18) is stretched: the panels on
+    its bottom edge grow by the difference, so every page ends on the same
+    line and the auto-fit zoom (deploy/brand.sh) gives the same scale on
+    each page."""
+    panels = list(d["panels"])
+    for p in d["panels"]:
+        if p.get("type") == "row":
+            panels.extend(p.get("panels", []))
+    bottom = max(p["gridPos"]["y"] + p["gridPos"]["h"] for p in panels)
+    if bottom >= rows:
+        return
+    for p in panels:
+        if p["gridPos"]["y"] + p["gridPos"]["h"] == bottom:
+            p["gridPos"]["h"] += rows - bottom
+
+
 SCREEN_PX = 1532      # operator browser width the layout is checked at
 CHAR_EM = 0.6         # average glyph width / font size (Inter, bold caps)
 
@@ -3239,6 +3257,7 @@ def main():
             d["timepicker"] = {"refresh_intervals": LIVE_REFRESH_INTERVALS}
         add_header_band(d)
         fit_to_screen(d)
+        pad_to_screen(d)
         size_compact_tiles(d)
         check_titles(d)
         if d["uid"] == "usv-traffic":

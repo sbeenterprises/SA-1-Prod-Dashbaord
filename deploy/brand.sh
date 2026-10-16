@@ -151,9 +151,37 @@ if(n.nodeType!==1||n.tagName==="SCRIPT"||n.tagName==="STYLE")return;for(var c=n.
 new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var m=ms[i];if(m.type==="characterData")fix(m.target);else for(var j=0;j<m.addedNodes.length;j++)fix(m.addedNodes[j])}})
 .observe(document.documentElement,{childList:true,subtree:true,characterData:true});})();
 </script>
+<script id="swiftships-fit-js">
+/* Fit every dashboard to the screen (no scrolling) on any display: the
+   pages are laid out to 19 grid rows for a 1080p console; here the whole
+   page is zoomed so the grid's bottom edge meets the bottom of the window,
+   up on a large screen, down on a laptop. Width follows automatically
+   (Grafana re-flows its 24 columns to the zoomed width). Re-evaluated on
+   resize and when the dashboard changes; off with ?fit=0 in the URL. */
+(function(){
+if(/[?&]fit=0(&|$)/.test(location.search))return;
+var PAD=8,MIN=0.5,MAX=3,t=null,last=0;
+function grid(){return document.querySelector('.react-grid-layout');}
+function fit(){
+  var g=grid(),b=document.body;
+  if(!g){if(last){b.style.zoom='';last=0;}return;}
+  var h=parseFloat(g.style.height)||g.offsetHeight,top=0,e=g;
+  while(e){top+=e.offsetTop;e=e.offsetParent;}
+  if(!h||!top)return;
+  var z=window.innerHeight/(top+h+PAD);
+  z=Math.max(MIN,Math.min(MAX,z));
+  if(Math.abs(z-last)<0.01)return;
+  last=z;b.style.zoom=z.toFixed(3);
+}
+function sched(){clearTimeout(t);t=setTimeout(fit,200);}
+window.addEventListener('resize',sched);
+new MutationObserver(sched).observe(document.documentElement,{childList:true,subtree:true});
+sched();
+})();
+</script>
 CSS
 # Replace any previous block, then insert before </head>.
-perl -0pi -e 's|<style id="swiftships-brand">.*?</style>\n?||s; s|<script id="swiftships-brand-js">.*?</script>\n?||s' "$IDX"
+perl -0pi -e 's|<style id="swiftships-brand">.*?</style>\n?||s; s|<script id="swiftships-brand-js">.*?</script>\n?||s; s|<script id="swiftships-fit-js">.*?</script>\n?||s' "$IDX"
 CSS_FILE="$CSS_FILE" perl -0pi -e 'BEGIN{local $/; open(F, "<", $ENV{CSS_FILE}) or die; $css=<F>; close F} s|</head>|$css</head>|' "$IDX"
 rm -f "$CSS_FILE"
 

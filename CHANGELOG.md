@@ -3,6 +3,26 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.31] - 2026-10-16 (Live refresh, every page fits every screen)
+
+Dashboards and deploy/brand.sh. Update with `bash deploy/update.sh v1.2.31`,
+then Ctrl+F5.
+
+### Changed
+- Every page fits the screen without scrolling on any display. The pages
+  are laid out to 19 grid rows (Alarms was 18, now padded so all pages end
+  on the same line); brand.sh adds a script to Grafana's page that zooms
+  the whole page so the grid's bottom edge meets the bottom of the window:
+  down on a laptop (about 0.73 at 1366 x 768), up on a large screen
+  (about 2.2 on a 4K display at 100 %). Width follows, since Grafana
+  re-flows its 24 columns to the zoomed width. Re-evaluated on resize;
+  `?fit=0` on the URL turns it off for that tab.
+- Every live page refreshes once a second (Readiness, Mission, Navigation,
+  CAN Bus, Comms, System, Cameras, Alarms, Fleet and Vessel Health were 5 s;
+  Autopilot, Engine and Traffic already 1 s). Replay keeps no auto refresh.
+  The bridges write at up to 10 Hz, so a change on the bus shows within
+  about a second. `GRAFANA_MIN_REFRESH` in usv.env still sets the floor.
+
 ## [1.2.30] - 2026-10-15 (Engine page readouts, repeated DM1 entries)
 
 can_bridge, dashboards. Update with `bash deploy/update.sh v1.2.30`, then
