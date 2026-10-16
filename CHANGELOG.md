@@ -3,6 +3,24 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.30] - 2026-10-15 (Engine page readouts, repeated DM1 entries)
+
+can_bridge, dashboards. Update with `bash deploy/update.sh v1.2.30`, then
+Ctrl+F5. No usv.env change, no mission restart.
+
+### Fixed
+- Engine Hours read "1.3 days": Grafana's hours unit rescales past 24 h.
+  The tile now always shows hours (30.8 h).
+- A dial readout was clamped to its scale: coolant at 31 C on the 40 to
+  120 scale read "40 C". The needle still rests at the end of the scale;
+  the number is the measured value. Applies to every dial with a non-zero
+  minimum.
+- Fault text listed the same SPN / FMI several times when the ECU's DM1
+  does (the usv-725 Mercury ECU reports SPN 639 FMI 9, J1939 message
+  missing, once per message it waits for: x75, x1, x77). The entries are
+  folded into one, "SPN 639 FMI 9 ... (x75, x1, x77)", in the order of
+  first appearance; engine.active_dtcs stays the ECU's count (5).
+
 ## [1.2.29] - 2026-10-15 (Engine hours answered, grafana_bridge reads usv.env)
 
 can_bridge, grafana_bridge, installer. Update with `bash deploy/update.sh

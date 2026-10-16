@@ -614,11 +614,11 @@ def meter_js(min_, max_, unit, zones=None, decimals=0, split=6, sub="",
     if detail_js:
         detail = (f"detail: {{ valueAnimation: true, color: C.text, "
                   f"fontSize: F(22, 13), fontWeight: 700, offsetCenter: [0, '70%'], "
-                  f"formatter: nodata ? (() => 'N/A') : ({detail_js}) }}")
+                  f"formatter: nodata ? (() => 'N/A') : (() => ({detail_js})(raw)) }}")
     else:
         detail = (f"detail: {{ valueAnimation: true, offsetCenter: [0, '70%'],\n"
                   f"              formatter: nodata ? (() => '{{v|N/A}}')\n"
-                  f"                : ((x) => '{{v|' + x.toFixed({decimals}) + "
+                  f"                : (() => '{{v|' + raw.toFixed({decimals}) + "
                   f"'}}{{u| {unit}}}'),\n"
                   f"              rich: {{ v: {{ color: C.text, fontSize: F(22, 13), "
                   f"fontWeight: 700 }},\n"
@@ -628,6 +628,9 @@ def meter_js(min_, max_, unit, zones=None, decimals=0, split=6, sub="",
 let v = val();
 const nodata = (v === null || isNaN(v));
 if (nodata) {{ v = {min_}; }}
+// The needle stays on the scale; the readout shows the measured value (a
+// coolant of 31 C on a 40 to 120 scale reads 31, the needle rests at 40).
+const raw = v;
 v = Math.max({min_}, Math.min({max_}, v));
 return {{
   series: [face('84%'),
@@ -1680,8 +1683,9 @@ _ENGINE = dashboard("usv-engine", "Engine", [
          unit="percent", decimals=0, graph_mode="area"),
     stat("Torque", flux("engine", "percent_torque", last=True), 9, 8, 3, 2,
          unit="percent", decimals=0),
+    # "suffix: h", not Grafana's "h" unit, which rescales 30.75 h to "1.3 days".
     stat("Engine Hours", flux("engine", "runtime_h", last=True), 12, 8, 3, 2,
-         unit="h", decimals=1),
+         unit="suffix: h", decimals=1),
     stat("Fuel Level", flux("engine", "fuel_level", last=True), 15, 8, 3, 2,
          unit="percent", decimals=0,
          thresholds=[(None, "red"), (15, "yellow"), (30, OK)]),

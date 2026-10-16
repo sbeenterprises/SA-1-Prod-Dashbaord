@@ -3,6 +3,7 @@
 // PC steering tests of the same night.
 //   g++ -std=c++17 -Wall -Wextra j1939_engine_test.cpp -o j1939_engine_test
 #include <cmath>
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <map>
@@ -148,6 +149,35 @@ int main() {
             auto m = Engine(dec, 0x18EBFF00, p, &dm, &got);
             CHECK(!got && m.empty());
         }
+    }
+    // The usv-725 ECU's five-entry DM1 as captured on 15 Oct 2026 (22 bytes,
+    // four packets): red stop + amber + protect, SPN 639 FMI 9 three times
+    // (x75, x1, x77), SPN 629 FMI 12 x10, SPN 1485 FMI 7 x4. The text folds
+    // the repeated pair; the count stays the ECU's.
+    {
+        usv::j1939engine::Decoder d3(0);
+        usv::usv722::Dm1 dm;
+        bool got = false;
+        Engine(d3, 0x18ECFF00, "20160004FFCAFE00", &dm, &got);
+        CHECK(!got);
+        for (const char* p : {"0115FF7F02094B7F", "02020901 75020C0A", "037F02094DCD0507"}) {
+            std::string hex(p);
+            hex.erase(std::remove(hex.begin(), hex.end(), ' '), hex.end());
+            Engine(d3, 0x18EBFF00, hex.c_str(), &dm, &got);
+            CHECK(!got);
+        }
+        Engine(d3, 0x18EBFF00, "0404FFFFFFFFFFFF", &dm, &got);
+        CHECK(got && dm.lamps == 0x15 && dm.faults.size() == 5);
+        CHECK(dm.faults[0].oc == 75 && dm.faults[1].oc == 1 && dm.faults[3].oc == 77);
+        CHECK(dm.faults[2].spn == 629 && dm.faults[2].fmi == 12 && dm.faults[2].oc == 10);
+        CHECK(dm.faults[4].spn == 1485 && dm.faults[4].fmi == 7 && dm.faults[4].oc == 4);
+        const std::string text = usv::usv722::Dm1Text(dm, true);
+        CHECK(text.find("SPN 639 FMI 9") == 0 && text.find("(x75, x1, x77)") != std::string::npos);
+        CHECK(text.find("SPN 629 FMI 12") != std::string::npos && text.find("SPN 1485 FMI 7") != std::string::npos);
+        CHECK(text.find("SPN 639", 10) == std::string::npos);   // listed once
+        CHECK(text.find("(x4)") == text.size() - 4);
+        const auto vals = usv::usv722::Dm1Values(dm);
+        for (const auto& v : vals) if (std::string(v.field) == "active_dtcs") CHECK(v.value == 5.0);
     }
     // DM1 with two faults as a BAM from the engine (built from the same
     // layout): SPN 639 FMI 9 x1 and SPN 100 FMI 18 x2 (J143 Oil_Press_Low).

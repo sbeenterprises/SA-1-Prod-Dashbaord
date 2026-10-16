@@ -139,14 +139,27 @@ inline const Value kDm1TextField = {"engine", "dtc_text", 0.0};
 
 // "NONE", or "SPN 110 FMI 3 voltage high / short to high (x1); SPN ...";
 // with mercury = true the Mercury Diesel fault names ("SPN 100 FMI 18 J143
-// Oil_Press_Low (x1)") from cpp-common/j1939_faults.hpp.
+// Oil_Press_Low (x1)") from cpp-common/j1939_faults.hpp. A DM1 may list
+// the same SPN / FMI more than once with its own occurrence count (the
+// usv-725 ECU lists SPN 639 FMI 9, J1939 message missing, once per message
+// it waits for); those entries are folded into one, "(x75, x1, x77)", in
+// the order of first appearance, so the text reads as the distinct faults.
 inline std::string Dm1Text(const Dm1& m, bool mercury = false) {
     if (!m.codes_available) return "N/A";
     if (m.faults.empty()) return "NONE";
     std::string s;
-    for (const auto& f : m.faults) {
+    for (size_t i = 0; i < m.faults.size(); ++i) {
+        const auto& f = m.faults[i];
+        bool seen = false;
+        for (size_t j = 0; j < i && !seen; ++j)
+            seen = m.faults[j].spn == f.spn && m.faults[j].fmi == f.fmi;
+        if (seen) continue;
+        std::string entry = usv::j1939::FaultText(f.spn, f.fmi, f.oc, mercury);
+        for (size_t j = i + 1; j < m.faults.size(); ++j)
+            if (m.faults[j].spn == f.spn && m.faults[j].fmi == f.fmi)
+                entry.insert(entry.size() - 1, ", x" + std::to_string(m.faults[j].oc));
         if (!s.empty()) s += "; ";
-        s += usv::j1939::FaultText(f.spn, f.fmi, f.oc, mercury);
+        s += entry;
     }
     return s;
 }

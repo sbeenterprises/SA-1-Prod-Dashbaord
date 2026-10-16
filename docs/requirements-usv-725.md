@@ -90,7 +90,7 @@ Out of scope
 | DM-11 | `ENGINE_ACTIVE_DTCS` | PGN 65226 DM1 | `engine.active_dtcs` | count | Partly: single frame only, faults never cleared (REC-4, REC-5) |
 | DM-12 | `ENGINE_HOURS` | PGN 65253 HOURS, bytes 1-4, 0.05 h/bit (Mercury lists it as SPN 246; SAE J1939-71 names bytes 1-4 of this PGN SPN 247; same field) | `engine.runtime_h` | h | Not decoded (REC-6); the engine sends it only on request (PGN 59904), so iCANRec must request it every 1 to 5 s |
 | DM-13 | `ENGINE_FUEL_LEVEL` | PGN 65276 DD, SPN 96, byte 2, 0.4 %/bit | `engine.fuel_level` | % | Not sent by the Mercury 2.0L; decoded (REC-6) only for a tank sender that publishes the PGN |
-| DM-14 | `ENGINE_DTC_TEXT` | PGN 65226 DM1, every active fault as "SPN n FMI m (xk)" joined with "; ", "NONE" when empty | `engine.dtc_text` | text | New (REC-5). `grafana_bridge` adds the Mercury J code and fault name after each pair ("SPN 100 FMI 18 J143 Oil_Press_Low (x1)") from the table in `ingestion/cpp-common/j1939_faults.hpp`, so iCANRec publishes the plain form |
+| DM-14 | `ENGINE_DTC_TEXT` | PGN 65226 DM1, every active fault as "SPN n FMI m (xk)" joined with "; ", "NONE" when empty; an SPN / FMI the DM1 lists more than once appears once with all its counts, "(x75, x1, x77)" | `engine.dtc_text` | text | New (REC-5). `grafana_bridge` adds the Mercury J code and fault name after each pair ("SPN 100 FMI 18 J143 Oil_Press_Low (x1)") from the table in `ingestion/cpp-common/j1939_faults.hpp`, so iCANRec publishes the plain form |
 | DM-15 | `ENGINE_LAMPS` | PGN 65226 DM1, byte 1 lamp status | `engine.fault_lamps`, `engine.lamp_red`, `engine.lamp_amber`, `engine.lamp_protect`, `engine.lamp_mil` | 0/1 | New (REC-5) |
 
 Rules
