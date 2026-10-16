@@ -3,6 +3,19 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.32] - 2026-10-16 (Fit-to-screen fix)
+
+deploy/brand.sh only. Update with `bash deploy/update.sh v1.2.32`, then
+Ctrl+F5 (and drop any `?fit=0` from the URL).
+
+### Fixed
+- The fit-to-screen script of v1.2.31 could measure the page before
+  Grafana had laid out the grid, zoom far too much, and push Grafana into
+  its narrow one-column layout (links on three rows, panels stacked). It
+  now waits for the laid-out grid, measures at zoom 1, re-fits only when
+  the window size or the dashboard changes, and caps the zoom so Grafana
+  always sees a layout at least 1300 px wide.
+
 ## [1.2.31] - 2026-10-16 (Live refresh, every page fits every screen)
 
 Dashboards and deploy/brand.sh. Update with `bash deploy/update.sh v1.2.31`,

@@ -155,25 +155,30 @@ new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var m=ms[i];if(m.
 /* Fit every dashboard to the screen (no scrolling) on any display: the
    pages are laid out to 19 grid rows for a 1080p console; here the whole
    page is zoomed so the grid's bottom edge meets the bottom of the window,
-   up on a large screen, down on a laptop. Width follows automatically
-   (Grafana re-flows its 24 columns to the zoomed width). Re-evaluated on
-   resize and when the dashboard changes; off with ?fit=0 in the URL. */
+   down on a laptop, up on a large screen. The zoom is capped so Grafana
+   always sees a layout at least 1300 px wide (zooming further would make
+   it switch to its narrow one-column layout, which then no longer fits).
+   Measured at zoom 1, re-evaluated only when the window size or the
+   dashboard changes; off with ?fit=0 in the URL. */
 (function(){
 if(/[?&]fit=0(&|$)/.test(location.search))return;
-var PAD=8,MIN=0.5,MAX=3,t=null,last=0;
+var PAD=8,MIN=0.6,MINW=1300,t=null,key='';
 function grid(){return document.querySelector('.react-grid-layout');}
+function scrollOf(e){var s=0;for(e=e.parentNode;e&&e.nodeType===1;e=e.parentNode)s+=e.scrollTop||0;return s;}
 function fit(){
   var g=grid(),b=document.body;
-  if(!g){if(last){b.style.zoom='';last=0;}return;}
-  var h=parseFloat(g.style.height)||g.offsetHeight,top=0,e=g;
-  while(e){top+=e.offsetTop;e=e.offsetParent;}
-  if(!h||!top)return;
+  if(!g){b.style.zoom='';key='';return;}
+  var k=window.innerWidth+'x'+window.innerHeight+'|'+g.style.height+'|'+location.pathname;
+  if(k===key)return;
+  var prev=b.style.zoom;
+  b.style.zoom='1';
+  var r=g.getBoundingClientRect(),top=r.top+scrollOf(g),h=parseFloat(g.style.height)||r.height;
+  if(!(h>200)||!(top>0)){b.style.zoom=prev;return;}
   var z=window.innerHeight/(top+h+PAD);
-  z=Math.max(MIN,Math.min(MAX,z));
-  if(Math.abs(z-last)<0.01)return;
-  last=z;b.style.zoom=z.toFixed(3);
+  z=Math.min(Math.max(1,window.innerWidth/MINW),Math.max(MIN,z));
+  b.style.zoom=z.toFixed(3);key=k;
 }
-function sched(){clearTimeout(t);t=setTimeout(fit,200);}
+function sched(){clearTimeout(t);t=setTimeout(fit,250);}
 window.addEventListener('resize',sched);
 new MutationObserver(sched).observe(document.documentElement,{childList:true,subtree:true});
 sched();
