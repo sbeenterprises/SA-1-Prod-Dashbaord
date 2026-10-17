@@ -919,10 +919,9 @@ THEME_VAR = {
 
 
 def dashboard(uid, title, panels, tags, refresh="1s", time_from="now-30m",
-              fleet=False, extra_vars=None):
+              fleet=False):
     """fleet=True makes the vessel variable multi-select with "All" so rows
-    can repeat per vessel (Fleet Overview). extra_vars: more template
-    variables for this one dashboard (the Readiness particulars card)."""
+    can repeat per vessel (Fleet Overview)."""
     vessel_var = {
         "name": "vessel", "label": "Vessel", "type": "query",
         "datasource": DS,
@@ -1002,8 +1001,6 @@ def dashboard(uid, title, panels, tags, refresh="1s", time_from="now-30m",
         "includeAll": False, "multi": False,
     }
     variables = [vessel_var, THEME_VAR] if fleet else [vessel_var, THEME_VAR, engine_var, model_var, class_var]
-    if extra_vars:
-        variables += extra_vars
     return {
         "uid": uid, "title": title, "tags": ["usv"] + tags,
         "timezone": "browser", "schemaVersion": 39, "version": 1,
@@ -3162,7 +3159,7 @@ def brand_panel(title, fleet=False):
             f"&nbsp;&nbsp; **{title.upper()}** &nbsp;&nbsp;&middot;&nbsp;&nbsp; "
             # Class name (VESSEL_CLASS in usv.env) before the vessel id.
             + ("" if fleet else "${vessel_class} &nbsp;&nbsp;&middot;&nbsp;&nbsp; ")
-            + f"Vessel **$vessel**"
+            + "Vessel **$vessel**"
             # Engine chip (the engine_model variable; blank until the vessel
             # writes the tag). The Fleet page has no single vessel.
             + ("" if fleet else

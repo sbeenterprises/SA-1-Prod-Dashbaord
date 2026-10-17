@@ -6,9 +6,10 @@ a vessel, 3300 on the simulation host), log in on the Swiftships login
 page, open folder **Swift Autonomous Dashboard**. The chips across the top
 of every dashboard switch between the fourteen dashboards in the tab row and
 keep the time range and vessel selection (Autopilot Live is the fifteenth,
-opened from the dials of the Autopilot page). All dashboards refresh every
-5 s (the Autopilot pages, Engine and Traffic every 1 s; 1 to 5 s
-selectable) and fit one 1080p screen without scrolling. The **Vessel**
+opened from the dials of the Autopilot page). Every live page refreshes
+once a second (Replay does not auto-refresh) and fits the screen without
+scrolling on a laptop, a monitor or a large display: the page is zoomed to
+the window (add `?fit=0` to the URL to turn that off for one tab). The **Vessel**
 dropdown selects the vessel; the **Fleet** dashboard shows all of them. The
 tab row keeps the same order on every dashboard: Readiness, Mission,
 Navigation, Autopilot, Vessel Health, Engine, CAN Bus, Traffic, Cameras,
@@ -18,21 +19,31 @@ Units are nautical throughout: knots, nautical miles for long distances,
 fixed metres for short ranges (approach distance, cross-track error).
 
 ## Themes
-Dashboards work in Grafana's dark and light themes. The ☀ Light / ☾ Dark
-chips open the current dashboard in a new tab in that theme (Grafana only
-reads the theme on page load). To switch the tab you are in, press `c`
-then `t`. Set your lasting default under Profile -> Preferences ->
-Interface theme.
+Pick the theme with **Theme** at the top of every page: **Dark** (Grafana's
+dark theme), **Navy** (the dark theme in the Swiftships navy) or **Light**.
+The page reloads once and every page keeps the choice in that browser. The
+☀ Light / ☾ Dark chips at the end of the tab row open the current page in a
+new tab in that theme. The server-side default for your account is under
+Profile -> Preferences -> Interface theme.
+
+## Vessel particulars
+The header band of every page shows the hull's class (S2 Sea-Striker on
+usv-722, S3 Swift Sea-Stalker on usv-725) before the vessel name. The
+Readiness page lists the particulars from the general arrangement drawing:
+dimensions, payload, fuel capacity, range and maximum speed, propulsion,
+navigation, cameras and communications, ride control. They come from the
+`VESSEL_*` settings of that boat's installation; a boat without them shows
+"no particulars".
 
 ## Dashboards
 | Dashboard | What you watch |
 |---|---|
 | Mission | Status wall (mission state, helm, armed, operator link, geofence, all-stop, arrival, obstacles), readouts (mission, route name, elapsed, ETA, waypoint n of m, remaining, distance to waypoint, distance traveled in nm), progress bar, approach profile, autonomy flags, state timeline, mission events |
-| Readiness | Pre-departure verdict (READY / NOT READY) with pass / fail / N/A / console counts, mission state, route and operator link; the automatic checks table (GPS fix, course planning incl. route inside the region, chart/ENC, autonomy stack, MOOS apps running, steering, operator link and comms, CAN bus, engine incl. DTCs, electrical, endurance against the route, AIS/radar, cameras, onboard computer, safety flags, console checklist) with the evidence behind each verdict; the console checklist mirror (every item with its description, ticked or pending, who ticked, count). Decided onboard every 5 s; the Mission Events list records when the boat became ready and what blocked it |
+| Readiness | Pre-departure verdict (READY / NOT READY) with passed / failed counts, mission state and operator link; the 17 automatic checks (GPS fix, course planning incl. route inside the region, chart/ENC, autonomy stack, MOOS apps running, steering, operator link and comms, CAN bus, engine incl. DTCs, electrical, endurance against the route in litres and hours, speed cap against the hull's maximum speed, AIS/radar, cameras, onboard computer, safety flags, console checklist) with the evidence behind each verdict; the vessel particulars card; the console checklist mirror (every item with its description, ticked or pending, who ticked, count). Decided onboard every 5 s; the Mission Events list records when the boat became ready and what blocked it |
 | Navigation | Live map (operating region in cyan, planned route with numbered waypoints in green, track in red, vessel as a red heading arrow with a lime 6-minute speed vector along its course), compass (HDG/COG needles), speed meter, GPS fix and satellites, lat/lon, KPI strip (SOG, COG, heading, XTE, distance to WP, HDOP, depth, roll/pitch), trends |
 | Autopilot | Helm state, all-stop, station keeping, entry gate, re-arm hold, remote control, corridor, crash stop; active behaviors, heading/speed error, rudder/throttle commands, speed cap, next turn; rudder (actual angle from the steering actuator, or the command labelled COMMAND when there is no CAN feedback) / throttle / heading-error instruments; rudder trend (actuator command and actual in degrees, PID output in % on the right axis); CAN row (rudder actual, helm wheel, steering drive, helm / autopilot control, gear, thrust to engine, key switch, engine faults); trim switch (UP / DOWN / IDLE: the helm button, not the trim position); desired vs actual heading; speed governor (desired / cap / commanded / actual) |
 | Autopilot Live | Large rudder / throttle / heading-error dials for sea trials and troubleshooting, helm state, steering mode, gear, engine thrust, trim switch, engine faults, speed error and XTE tiles, heading / rudder / speed trends over 5 min; 1 s refresh. Open it from the link icon on any dial of the Autopilot page |
-| Vessel Health | Whole-vessel summary: instrument cluster (tachometer, coolant, oil pressure, fuel, battery volts, SOC), Engine Faults, battery current, charging state, total power, system voltage, alternator and ECU supply tiles, battery / power / SOC / fuel trends. The engine dial scales follow the vessel's engine type; the three engine dials and the Engine Faults tile open the Engine page, where all engine detail lives |
+| Vessel Health | Whole-vessel summary: instrument cluster (tachometer, coolant, oil pressure, fuel, battery volts, SOC), Engine Faults, battery current, charging state, Fuel Remaining (litres), Range Left (nm at the current fuel burn and speed; N/A when stopped), Time Left (hours at the current burn), system voltage and ECU supply tiles; battery voltage / alternator / current, power / system voltage, SOC and fuel remaining / consumption (litres, L/h) trends. The engine dial scales follow the vessel's engine type; the three engine dials and the Engine Faults tile open the Engine page, where all engine detail lives |
 | Engine | Large machinery dials at 1 s for sea trials and troubleshooting: tachometer, coolant, oil pressure, boost (intake manifold pressure); oil temp, fuel rate, engine load, torque, engine hours, fuel level, fault lamps and active fault count; every active fault code across the width; RPM, coolant / oil temperature and oil pressure / boost trends over 15 min. A value the hull's engine does not report reads N/A |
 | CAN Bus | Utilization, msgs/s, error/dropped frames, PGN table; trim switch, active fault count, fault lamps (OFF, or the lamps on, most severe first: RED STOP, MIL, AMBER, PROTECT) and fault codes (first active fault as SPN / FMI with its meaning and occurrence count, "+N more" when several) |
 | Traffic | Collision avoidance picture: risk level, avoidance state, contact counts by source, closest range and CPA; heading-up polar traffic view with range rings, own ship as a red pin at the centre, contacts as hulls turned to their heading (green report / AIS, amber radar, red HIGH risk) with 6-minute speed vectors, and a CPA line to the riskiest contact (zoom with the **+ / − / A** buttons in its top-right corner or the **Traffic range** selector: 0.25 to 24 nm, A = auto; contacts outside a zoomed range are counted as "+N beyond"); highest-risk contact card (CPA, TCPA, range, bearings, relative speed, type, encounter); MOOS action (planned vs commanded course, actual heading, speed command vs SOG, avoidance behavior, reason); contact table, Helm Avoiding (COLREGS) table and CPA/TCPA trend |
@@ -71,7 +82,7 @@ no data shows no needle and no fill and reads N/A. The compass shows the
 heading needle (teal) with a thinner COG needle (blue); the rudder
 indicator follows marine convention (red to port, green to starboard) and
 the heading-error meter, whose scale is centre-zero, has the needle and the
-bands without a fill. All instruments follow the dark/light theme toggle.
+bands without a fill. All instruments follow the Theme picker.
 
 ## Pre-departure readiness (Readiness dashboard)
 Readiness is the first tab and the page Grafana opens on (a user can

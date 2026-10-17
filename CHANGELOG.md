@@ -3,6 +3,28 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [Unreleased] (Repository housekeeping, no change on the boats)
+
+Tooling and documents only; boats stay on v1.2.34.
+
+### Changed
+- `tools/gen_alerts.py` defaults to the vessel profile (what the boats
+  run and what is committed); simulation hosts pass `--profile sim`.
+  Before, running it without arguments silently produced the simulation
+  rules.
+- `tools/smoke_test.sh` checks that the committed dashboards and alert
+  rules equal the generators' output.
+- Lint clean: pyflakes on tools/*.py, shellcheck (warnings) on deploy/ and
+  tools/ scripts; an unused generator parameter removed.
+- Documents brought up to date for new installations: README (pages,
+  per-hull settings, smoke-test requirements, current release),
+  DEPLOYMENT-NOTE (dashboard and alert counts, CAN interface, engine and
+  vessel settings, usv.env permissions, Theme picker, rollback list), user
+  guide (1 s refresh, fit-to-screen, Theme picker, vessel particulars,
+  Readiness and Vessel Health contents), deployment guide (CAN interface,
+  troubleshooting), traceability (17 checks), the USV-722 runbook
+  (installed state) and a validation section for v1.2.28 to v1.2.34.
+
 ## [1.2.34] - 2026-10-17 (Fix: Grafana pages empty after v1.2.33)
 
 deploy/brand.sh and the Readiness dashboard. Update with

@@ -10,3 +10,5 @@ usv.env
 .DS_Store
 *.swp
 __pycache__/
+# local working notes and patches kept next to the checkout
+Claude outputs/

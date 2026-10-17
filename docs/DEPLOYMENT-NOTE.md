@@ -3,8 +3,10 @@
 Field reference for installing the **Swift Autonomous Dashboard** (Grafana \+
 InfluxDB monitoring stack) on the USV onboard computer. Native deployment,
 no Docker. All vessel\-side code is C\+\+. The Grafana workspace presents as
-"Swift Autonomous Dashboard" with the Swiftships logo top\-left and 13
-tab\-navigable single\-screen dashboards. Companion docs: `deployment.md` (full guide),
+"Swift Autonomous Dashboard" with the Swiftships logo top\-left, 14
+tab\-navigable single\-screen dashboards and the Autopilot Live drill\-down.
+One release serves every hull: what differs per boat (engine, drive bus,
+vessel particulars) is set in `/etc/usv/usv.env`. Companion docs: `deployment.md` (full guide),
 `schema.md`, `traceability.md`, `alpha-mission-integration.md` (the Alpha
 mission variable map, derived state machine and design rationale).
 
@@ -20,12 +22,13 @@ mission variable map, derived state machine and design rationale).
  │                                                              │ │
  │  systemd services                                            │ │
  │    signalk_bridge  ◄── Signal K server (ws :3000)      ──────┼─┤
- │    can_bridge      ◄── SocketCAN can0 (NMEA 2000 250k) ──────┼─┤
+ │    can_bridge      ◄── SocketCAN (CAN_INTERFACE, 250k) ──────┼─┤
+ │    mayara_bridge / frigate_bridge (radar, cameras; optional) ┼─┤
  │    telegraf        ◄── host metrics, ping, systemd units ────┼─┤
  │                                                              │ ▼
  │    InfluxDB 2.x (:8086)  buckets: telemetry / events /       │
  │                          telemetry_1m (downsampled)          │
- │    Grafana (:GRAFANA_PORT) 13 dashboards + 20 alert rules    │
+ │    Grafana (:GRAFANA_PORT) 15 dashboards + 24 alert rules    │
  └──────────────────────────────────────────────────────────────┘
       Operator access: http://<obc>:<GRAFANA_PORT> (3001 vessel / 3300 sim)
 ```
@@ -48,9 +51,15 @@ Confirm before starting; each item is required.
 - [ ] MOOS\-IvP built on the OBC; note the path to `MOOSConfig.cmake`
   (source tree: `~/moos-ivp/build/MOOS/MOOSCore`)
 - [ ] Signal K server running; confirm `ws://localhost:3000/signalk/v1/stream`
-- [ ] CAN interface present: `ip link show can0`. Bring up with
-  `sudo ip link set can0 up type can bitrate 250000` and persist it
+- [ ] CAN interface present: `ip link show <iface>` (both hulls use the
+  serial\-line adapter `slcan0`; `CAN_INTERFACE` in usv.env). A native
+  interface is brought up with
+  `sudo ip link set can0 up type can bitrate 250000` and persisted
   (systemd\-networkd or /etc/network/interfaces)
+- [ ] The hull's engine and particulars at hand: engine type and model,
+  drive bus (`HELM_PROFILE`), and the general arrangement drawing (class,
+  dimensions, payload, fuel capacity, range, maximum speed, equipment).
+  Both existing hulls' values are in `deploy/usv.env.example`
 - [ ] \~2 GB free disk for packages \+ \~100 MB/day telemetry growth budget
 - [ ] Clock sane (NTP or GPS time) — InfluxDB timestamps depend on it
 
@@ -66,13 +75,21 @@ sudo bash deploy/install.sh            # creates /etc/usv/usv.env, exits
 
 # 2. Edit secrets. Generate a token first:
 openssl rand -hex 32
-sudo nano /etc/usv/usv.env        # INFLUX_TOKEN, both passwords, VESSEL_ID
+sudo nano /etc/usv/usv.env        # INFLUX_TOKEN, both passwords, VESSEL_ID,
+                                  # GRAFANA_PORT, CAN_INTERFACE, engine profile
+                                  # (ENGINE_TYPE/MODEL/SOURCE, HELM_PROFILE) and
+                                  # VESSEL_* particulars; quote values with spaces
 
 # 3. Run the installer for real:
 sudo bash deploy/install.sh
 #    If MOOS isn't auto-found:
 sudo MOOS_DIR=$HOME/moos-ivp/build/MOOS/MOOSCore deploy/install.sh
 ```
+
+Run the installer with sudo from the user that runs the mission (pAntler):
+it gives `/etc/usv/usv.env` to that user's group with mode 640, because
+`grafana_bridge` reads the file itself. Updates of an installed boat use
+`bash deploy/update.sh <tag>` from the repo checkout (tags only).
 
 The installer is idempotent. Re\-run it after editing `/etc/usv/usv.env`,
 regenerating dashboards, changing alert rules, replacing the logo, or any
@@ -115,21 +132,25 @@ installer re\-applies the Swiftships branding).
 | Item | Location |
 | --- | --- |
 | Secrets, vessel id, retention | `/etc/usv/usv.env` (then re\-run install.sh) |
+| Engine profile (dial scales, engine data source, drive bus) | `ENGINE_*`, `HELM_PROFILE` in `/etc/usv/usv.env` (deployment.md, Engine profile) |
+| Vessel particulars (class name, card, fuel litres, speed cap) | `VESSEL_*` in `/etc/usv/usv.env`; restart the mission afterwards |
 | MOOS variable map | `ingestion/moos-cpp/moos_bridge.cpp` |
 | Signal K path map | `ingestion/signalk-cpp/signalk_bridge.cpp` (kPaths) |
 | NMEA 2000 PGN decoders | `ingestion/can-cpp/main.cpp` (decode\_pgn) |
-| Alert thresholds | `tools/gen_alerts.py` → regenerate → re\-run install.sh |
+| Alert thresholds | `tools/gen_alerts.py` (vessel profile by default; `--profile sim` on a simulation host) → regenerate → re\-run install.sh |
 | Alert email recipients | `grafana/provisioning/alerting/contact-points.yml` |
 | Series colors / panels / tabs | `tools/gen_dashboards.py` → regenerate |
 | Analog instruments on/off | `tools/gen_dashboards.py` (default) vs `--classic` (plugin\-free) |
 | Instruments plugin version pin | `ECHARTS_PANEL_VERSION` in `/etc/usv/usv.env` |
 | Swiftships logo | `deploy/branding/swiftships_logo.svg` → re\-run install.sh |
+| Theme picker, fit\-to\-screen, nav title | `deploy/brand.sh` (scripts injected into Grafana's index.html; never two square brackets in a row, Grafana parses the file as a template) |
 | Workspace (folder) name | `grafana/provisioning/dashboards/dashboards.yml` |
 | Telegraf inputs | `telegraf/telegraf.conf` (template; installer fills tokens) |
 
 Dev\-side regeneration (workstation, Python 3):
-`python3 tools/gen_dashboards.py && python3 tools/gen_alerts.py`, copy the
-repo to the OBC, re\-run install.sh.
+`python3 tools/gen_dashboards.py && python3 tools/gen_alerts.py`, run
+`tools/smoke_test.sh` (FAIL: 0), commit, tag, then `bash deploy/update.sh
+<tag>` on the OBC.
 
 ## 6\. Commissioning checklist (in order)
 
@@ -138,18 +159,18 @@ repo to the OBC, re\-run install.sh.
 | 1 | Services up | `systemctl status influxdb grafana-server telegraf usv-signalk-bridge usv-can-bridge` (plus `usv-mayara-bridge` / `usv-frigate-bridge` where configured) | all `active (running)` |
 | 2 | DB reachable | `influx ping` | `OK` |
 | 3 | Bench data (no vessel) | `sudo systemctl start usv-simulator` | dashboards populate in \~10 s; the scripted Alpha scenario cycles all mission states and fires the geofence/comms alerts once per \~25 min loop (that IS the alert bench test) |
-| 4 | Grafana login | browse `http://<obc>:<GRAFANA_PORT>` | Swiftships login page; lands on the Readiness dashboard; folder "Swift Autonomous Dashboard", 13 dashboards; Swiftships logo and "SA-1 Dashboard" (BRAND_APP_TITLE) in the navigation menu |
+| 4 | Grafana login | browse `http://<obc>:<GRAFANA_PORT>` | Swiftships login page; lands on the Readiness dashboard; folder "Swift Autonomous Dashboard", 15 dashboards; Swiftships logo and "SA-1 Dashboard" (BRAND_APP_TITLE) in the navigation menu; header band shows the class name (VESSEL_CLASS) and engine |
 | 5 | Tab navigation | open any dashboard; click the link chips across the top | one click switches dashboard; time range and vessel selection carry over |
-| 6 | Theme toggle | click the "☀ Light" / "☾ Dark" chips at the end of the tab row | dashboard re\-opens in that theme, time range kept |
+| 6 | Theme picker | Theme at the top: Dark, Navy, Light | page reloads once in that theme and keeps it on every page; Navy is the dark theme in the Swiftships navy |
 | 7 | Tablet check | open any dashboard on a tablet (landscape) | grid scales; below \~768 px panels stack single\-column |
-| 8 | Alert rules loaded | Grafana → Alerting → Alert rules | 20 rules, folder "Swift Autonomous Dashboard" |
+| 8 | Alert rules loaded | Grafana → Alerting → Alert rules | 24 rules, folder "Swift Autonomous Dashboard" |
 | 9 | Stop simulator | `sudo systemctl stop usv-simulator` | required before real ops |
 | 10 | MOOS feed | launch mission with grafana\_bridge; watch Autopilot dashboard | desired/actual heading move |
-| 10a | Readiness evaluation | Readiness dashboard within 15 s of the community start | 16 rows with evidence; "MOOS apps N / N running"; `readiness_profile = vessel` in the ProcessConfig on a real vessel (missing sensors FAIL) |
+| 10a | Readiness evaluation | Readiness dashboard within 15 s of the community start | 17 rows with evidence; Vessel particulars card filled; "MOOS apps N / N running"; `readiness_profile = vessel` in the ProcessConfig on a real vessel (missing sensors FAIL) |
 | 10b | Console mirrors | tick items in the console, select a chart; or `/usr/local/bin/moos_poke 'CHECKLIST_STATUS=done=11,total=11,pending=,by=ops' ENC_STATUS=selected:test` | Console tile 0, checklist table lists every item, ENC row PASS |
-| 10c | Route plausibility | start a mission with a route and region | Course planning shows route, waypoints, length, region, "route inside region"; Endurance shows fuel / battery hours when the vessel constants are set |
+| 10c | Route plausibility | start a mission with a route and region | Course planning shows route, waypoints, length, region, "route inside region"; Endurance shows the litres (VESSEL_FUEL_L) and fuel / battery hours when the vessel constants are set; Speed cap compares SPEED_CAP with VESSEL_MAX_SPEED_KN |
 | 11 | Signal K feed | Navigation \+ Vessel Health dashboards | position, engine, battery live |
-| 12 | CAN feed | `candump can0` shows frames; CAN Bus dashboard | msg rate \> 0, interface UP |
+| 12 | CAN feed | `candump <CAN_INTERFACE>` shows frames; CAN Bus dashboard | msg rate \> 0, interface UP |
 | 13 | Alert fire test | unplug GPS antenna (or stop Signal K) for 1 min | alarm appears on Alarms dashboard \+ email |
 | 14 | Reboot test | `sudo reboot` | everything returns without manual action |
 
@@ -159,8 +180,10 @@ and the grafana\_bridge console output under pAntler.
 
 ## 7\. Security notes
 
-- `/etc/usv/usv.env` is root\-only (600). The Influx token also sits in your
-  mission file's ProcessConfig — keep mission files off public repos.
+- `/etc/usv/usv.env` is readable by root and by the group of the mission
+  user only (640; grafana\_bridge reads it under pAntler). The Influx token
+  also sits in your mission file's ProcessConfig: keep mission files off
+  public repos.
 - Bind exposure: Grafana (GRAFANA_PORT) and InfluxDB (8086) listen on all
   interfaces by default. When ufw is active, install.sh allows GRAFANA_PORT/tcp
   only from the LAN subnet of the default-route interface and the Tailscale
@@ -195,7 +218,7 @@ and the grafana\_bridge console output under pAntler.
    WireGuard unit is active on the OBC (usv-722: `twingate-connector`), and
    reads N/A when the VPN terminates on the router.
 6. **Alert rule provisioning is Grafana\-version\-sensitive.** Validated as
-   YAML; confirm the 20 rules appear in the UI on your installed Grafana
+   YAML; confirm the 24 rules appear in the UI on your installed Grafana
    version during commissioning step 8 (verified on Grafana 13.2.1).
 7. **Mission replay** is Grafana\-native time\-range scrubbing, not a
    play/pause button.
@@ -204,9 +227,8 @@ and the grafana\_bridge console output under pAntler.
 9. **Branding is an asset overwrite, not a supported OSS feature.** Grafana
    OSS has no white\-label config, so the installer overwrites the shipped
    nav logo and favicon. An `apt upgrade grafana` restores the stock logo
-   until the installer is re\-run. The browser tab title still reads
-   "Grafana" (changing it requires Grafana Enterprise); irrelevant on
-   kiosk\-mode wall displays where the chrome is hidden.
+   until the installer is re\-run. The browser tab title and the name next
+   to the logo come from `BRAND_TITLE` / `BRAND_APP_TITLE` in usv.env.
 10. **Logo assets are the official Swiftships mark.**
     `deploy/branding/swiftships_logo.svg` (nav icon, vessel mark) and
     `swiftships_wordmark.png` (full horizontal logo) are built from the
@@ -220,12 +242,12 @@ and the grafana\_bridge console output under pAntler.
     `usv`; a new dashboard saved with that tag automatically appears as a
     tab on all dashboards. The current dashboard is not highlighted in the
     row (Grafana OSS renders all chips identically).
-12. **Theme toggle is per\-view.** The ☀/☾ chips use Grafana's `?theme=`
-    URL override; navigating on via the tab chips returns to the user's
-    default theme. Set the lasting default per user (Profile → Theme:
-    light / dark / system) — e.g. dark for night ops accounts, light for
-    a daylight tablet account. The series palette is validated for both
-    themes.
+12. **Theme picker is per browser.** The Theme variable at the top (Dark,
+    Navy, Light) is remembered in the browser and carried between pages;
+    Grafana picks Light or Dark when it serves a page, so a change reloads
+    once. The ☀/☾ chips still open a page in a new tab in that theme. The
+    server default per user stays Profile → Preferences → Interface theme.
+    The series palette is validated for the dark and light themes.
 13. **Analog instruments need the Business Charts plugin.** The compass,
     speed, rudder, throttle, heading\-error and machinery meters render
     through `volkovlabs-echarts-panel` (signed, React\-based, safe on
@@ -243,10 +265,11 @@ and the grafana\_bridge console output under pAntler.
 ## 9\. Rollback / uninstall
 
 ```bash
-sudo systemctl disable --now usv-signalk-bridge usv-can-bridge usv-simulator
+sudo systemctl disable --now usv-signalk-bridge usv-can-bridge usv-mayara-bridge usv-frigate-bridge usv-simulator
 sudo rm /etc/systemd/system/usv-*.service && sudo systemctl daemon-reload
 sudo apt remove influxdb2 grafana telegraf     # add --purge to drop data
-sudo rm -rf /etc/usv /usr/local/bin/{can_bridge,signalk_bridge,usv_simulator,moos_bridge}
+sudo bash deploy/brand.sh --restore            # Grafana's own logo and page back
+sudo rm -rf /etc/usv /usr/local/bin/{can_bridge,signalk_bridge,frigate_bridge,mayara_bridge,usv_simulator,moos_bridge,grafana_bridge,moos_poke,usv_gpu_probe}
 # and remove the grafana_bridge lines from your mission file
 ```
 
@@ -256,11 +279,11 @@ Data lives in /var/lib/influxdb and /var/lib/grafana — back up before purge:
 ## 10\. Quick command reference
 
 ```bash
-journalctl -u usv-can-bridge -f            # bridge logs
+sudo journalctl -u usv-can-bridge -f       # bridge logs (sudo: the mission user is not in systemd-journal)
 systemctl restart usv-signalk-bridge       # restart a bridge
 influx query 'from(bucket:"telemetry") |> range(start:-1m) |> count()' \
   --org usv --token $INFLUX_TOKEN          # is data arriving?
-candump can0 | head                        # raw CAN sanity
+candump slcan0 | head                      # raw CAN sanity (CAN_INTERFACE)
 umm --spy                                  # live MOOS variables
 du -sh /var/lib/influxdb                   # disk growth
 ```

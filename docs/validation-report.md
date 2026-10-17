@@ -453,3 +453,46 @@ and the ECU voltage are the values iCANRec publishes today (wrong until
 REC-1 and REC-3 land in the MOOS repo), Engine Hours and Fuel Level read
 N/A until REC-6, the Fault Codes tile reads NONE or the J-coded text, and
 the Readiness engine row passes with the engine running above 700 rpm.
+
+## 11. Releases v1.2.28 to v1.2.34 (2026-10-15 to 2026-10-17)
+
+Scope: can_bridge reading the Mercury ECU directly (v1.2.28 to v1.2.30),
+1 s refresh and fit-to-screen (v1.2.31, v1.2.32), vessel particulars,
+fuel in litres, the Speed cap check and the Theme picker (v1.2.33), and
+the fix for the empty Grafana pages v1.2.33 caused (v1.2.34).
+
+Environment: as section 10, plus Go 1.24 for the template parse, run as
+root. Every release ran `tools/smoke_test.sh` in full with 1 SKIP (CAN
+live capture, no vcan module): v1.2.28 159 PASS, v1.2.29 and v1.2.30 158,
+v1.2.33 162, v1.2.34 164; 0 FAIL each time. The CAN replays of both hulls'
+recorded traffic (tools/fixtures) are part of every run.
+
+Verified on the boats:
+1. USV-725 (v1.2.30, engine off on the hard): engine values from the ECU,
+   hours 30.75 h after the request went to the global address, the DM1
+   with five entries folded to "(x75, x1, x77)", Readiness restored once
+   the mission file's merge conflict was resolved.
+2. USV-722 (v1.2.33): header band with the class name; the page itself
+   came back empty (below).
+
+Defect found on the boat, not by the smoke test: v1.2.33's theme script
+contained two square brackets in a row. Grafana parses
+`views/index.html` as a Go template with those delimiters, so the parse
+failed and every page came back empty (ERR_EMPTY_RESPONSE). The smoke test
+did not run `deploy/brand.sh` at all then. Since v1.2.34 it runs brand.sh
+on a stand-in Grafana page, fails on the delimiters in any injected
+block, and parses the result with Go's `html/template` exactly as Grafana
+does; the check was confirmed to fail on the v1.2.33 script. v1.2.34 also
+checks that the committed dashboards and alert rules equal the generators'
+output, and `gen_alerts.py` now defaults to the vessel profile the boats
+run. The Readiness particulars card of v1.2.33 showed raw HTML (Grafana
+escapes variable values in an HTML text panel); v1.2.34 makes it a table.
+The Navy colour remap was verified in Chromium against a stand-in page
+(page, panel and border colours, the choice remembered across pages,
+Light and Dark reloads), not yet against Grafana itself.
+
+To verify on the target: v1.2.34 on both boats (USV-725 straight from
+v1.2.30), the particulars card as a table, Fuel Remaining / Range Left /
+Time Left with a fuel reading, the Speed cap row with SPEED_CAP
+published, the Navy theme on a real Grafana page, and fit-to-screen on
+USV-722's own display.

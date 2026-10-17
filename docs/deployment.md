@@ -14,9 +14,11 @@ systemd services.
 - Simulation host with several MOOS communities / Signal K instances: set
   `VESSELS="alpha:3000 bravo:3001 ..."` in usv.env; the installer runs one
   `usv-signalk-bridge@<vessel>` per entry (`/etc/usv/vessels/<vessel>.env`).
-- SocketCAN interface up for NMEA 2000:
-  `ip link set can0 up type can bitrate 250000` (persist via systemd-networkd
-  or /etc/network/interfaces).
+- SocketCAN interface up at 250 kbit/s, named in `CAN_INTERFACE` (usv.env).
+  Both hulls use a serial-line adapter brought up at boot with
+  `slcand -o -c -F -s5 <serial device> slcan0` then `ip link set slcan0 up`; a
+  native interface uses `ip link set can0 up type can bitrate 250000`
+  (persist via systemd-networkd or /etc/network/interfaces).
 
 ## Install
 ```bash
@@ -546,6 +548,6 @@ Administration -> Users.
 | Two values alternate on an engine tile or trend (one of them iCANRec's), or Autopilot speed is in m/s on a boat | grafana_bridge cannot read usv.env (its pAntler output says `WARNING: cannot read /etc/usv/usv.env`): `sudo chgrp <mission user> /etc/usv/usv.env && sudo chmod 640 /etc/usv/usv.env`, restart the mission. Re-running install.sh with sudo from that user does the same |
 | Route tile shows a short id | Signal K unreachable from grafana_bridge: check `signalk_http` in the ProcessConfig |
 | No MOOS data | grafana_bridge in pAntler list? `umm --spy` shows the vars? token/org in ProcessConfig correct? |
-| No CAN data | `candump can0`; `journalctl -u usv-can-bridge -f` |
+| No CAN data | `candump <CAN_INTERFACE>` (slcan0 on both hulls); `sudo journalctl -u usv-can-bridge -f` |
 | Signal K panel red | Signal K on :3000? URL in /etc/usv/usv.env correct? |
 | Alerts not firing | Grafana -> Alerting -> Rules; datasource health |

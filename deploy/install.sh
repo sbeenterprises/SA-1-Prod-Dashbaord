@@ -131,7 +131,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
 # ---------------------------------------------------------------- influxdb
 say "Starting InfluxDB and creating org/buckets/token"
 systemctl enable --now influxdb
-for i in $(seq 1 30); do influx ping &>/dev/null && break; sleep 1; done
+for _ in $(seq 1 30); do influx ping &>/dev/null && break; sleep 1; done
 
 if ! influx auth list --token "$INFLUX_TOKEN" &>/dev/null; then
   influx setup --skip-verify --force \

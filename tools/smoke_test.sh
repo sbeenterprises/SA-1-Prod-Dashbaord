@@ -206,6 +206,24 @@ case $? in
   *) bad "Flux type check" ;;
 esac
 
+hdr "Generated files match their generators"
+# grafana/dashboards/*.json and alerts.yml are generated: a hand edit, or a
+# generator change committed without regenerating, ships something the
+# next regeneration silently undoes. Regenerate in place, compare with the
+# committed files, then put the committed files back.
+GEN_SNAP="$TMP/gen-snapshot"; mkdir -p "$GEN_SNAP"
+cp -a "$REPO/grafana/dashboards" "$GEN_SNAP/dashboards"
+cp -a "$REPO/grafana/provisioning/alerting/alerts.yml" "$GEN_SNAP/alerts.yml"
+if python3 "$REPO/tools/gen_dashboards.py" >/dev/null 2>"$TMP/gen.err" \
+   && python3 "$REPO/tools/gen_alerts.py" >/dev/null 2>>"$TMP/gen.err"; then
+  if diff -rq "$GEN_SNAP/dashboards" "$REPO/grafana/dashboards" >"$TMP/gen.diff" \
+     && diff -q "$GEN_SNAP/alerts.yml" "$REPO/grafana/provisioning/alerting/alerts.yml" >>"$TMP/gen.diff"; then
+    ok "committed dashboards and alert rules equal the generator output (vessel profile)"
+  else bad "committed dashboards / alerts.yml differ from the generators: run tools/gen_dashboards.py and tools/gen_alerts.py"; sed 's/^/      /' "$TMP/gen.diff"; fi
+else bad "a generator failed"; tail -5 "$TMP/gen.err"; fi
+rm -rf "$REPO/grafana/dashboards" && cp -a "$GEN_SNAP/dashboards" "$REPO/grafana/dashboards"
+cp -a "$GEN_SNAP/alerts.yml" "$REPO/grafana/provisioning/alerting/alerts.yml"
+
 hdr "Branding script against Grafana's page template"
 # deploy/brand.sh injects style and script blocks into Grafana's
 # views/index.html, which Grafana parses as a Go template with [[ ]]
@@ -811,4 +829,4 @@ rc=$?
 hdr "Summary"
 echo "  PASS: $PASS   FAIL: $FAIL   SKIP: $SKIP"
 [ "$FAIL" -eq 0 ] && echo "  RESULT: SMOKE TEST PASSED" || echo "  RESULT: SMOKE TEST FAILED"
-exit $([ "$FAIL" -eq 0 ] && echo 0 || echo 1)
+[ "$FAIL" -eq 0 ]

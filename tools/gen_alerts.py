@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """Generate Grafana unified-alerting provisioning (FR-11).
 
-Run:  python3 tools/gen_alerts.py [--profile sim|vessel]   (committed: vessel)
+Run:  python3 tools/gen_alerts.py [--profile vessel|sim]   (default and committed: vessel)
 Output: grafana/provisioning/alerting/alerts.yml
 
 Each rule: Flux query (A) -> reduce last (B) -> threshold (C).
 
 Profiles decide what "no data" means for the sensor-backed rules:
-  sim     (default) the simulation community has no CAN bus, engine, GPS
+  sim     the simulation community has no CAN bus, engine, GPS
           quality, battery or fuel sensors, so those rules must NOT page on
           missing data; they still fire if a value crosses the threshold.
-  vessel  the position and CAN rules page on missing data (no position for
+  vessel  (default) the position and CAN rules page on missing data (no position for
           two minutes, CAN interface gone). Engine and battery rules do
           not: a boat alongside with the engine off would page for hours
           (seen on usv-722); the Readiness dashboard reports those silent
@@ -228,7 +228,7 @@ def apply_profile(rules, profile):
 
 
 def main():
-    profile = "sim"
+    profile = "vessel"   # what the boats run; simulation hosts pass --profile sim
     if "--profile" in sys.argv:
         profile = sys.argv[sys.argv.index("--profile") + 1]
     if profile not in ("sim", "vessel"):
