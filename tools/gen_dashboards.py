@@ -2075,6 +2075,35 @@ def particulars_query():
             'end: strings.strlen(v: r._field)), value: r._value}))\n')
 
 
+def readiness_counts_panel(x, y, w, h):
+    """The four readiness counts as one stat panel: one query per count, so
+    they keep their order (Passed, Failed, N/A, Console), each named and
+    coloured by its own override (Failed red from 1, Console orange from 1,
+    N/A grey, Passed cyan)."""
+    counts = [("A", "passed", "Passed", [(None, OK)]),
+              ("B", "failed", "Failed", [(None, OK), (1, "red")]),
+              ("C", "na", "N/A", [(None, "#8e9299")]),
+              ("D", "console", "Console", [(None, "#8e9299"), (1, "orange")])]
+    p = panel("stat", "Checks",
+              [target(flux("readiness_summary", f, last=True), ref=r) for r, f, _, _ in counts],
+              x, y, w, h, decimals=0, thresholds=[(None, OK)],
+              overrides=[{"matcher": {"id": "byFrameRefID", "options": r},
+                          "properties": [{"id": "displayName", "value": name},
+                                         {"id": "thresholds", "value": _thresholds(thr)},
+                                         {"id": "color", "value": {"mode": "thresholds"}}]}
+                         for r, _, name, thr in counts],
+              options={"reduceOptions": {"calcs": ["lastNotNull"]},
+                       "textMode": "value_and_name", "graphMode": "none",
+                       "colorMode": "value", "justifyMode": "center",
+                       "orientation": "vertical",
+                       "text": {"valueSize": 24, "titleSize": 12}})
+    p["description"] = ("Automatic checks by result. N/A: sensor not fitted or not "
+                        "reporting (FAIL under readiness_profile = vessel). Console: "
+                        "waiting on the operator console (ENC selection, checklist); "
+                        "it holds the verdict at NOT READY.")
+    return p
+
+
 def particulars_panel(x, y, w, h):
     p = panel("table", "Vessel particulars — ${vessel_class}, hull ${vessel}",
               [target(particulars_query())], x, y, w, h,
@@ -2096,23 +2125,24 @@ def particulars_panel(x, y, w, h):
 
 
 # One screen, no scrolling: the 17 automatic checks need the full page
-# height (36 px rows, no column header), so the verdict, counts, mission
-# state and the vessel particulars card stack in a column on the right,
-# above the console checklist. The N/A and CONSOLE counts and the route
-# name left this column in v1.2.33 for the particulars card: both are in
-# the table itself (status column, Course planning evidence).
+# height (36 px rows, no column header), so the verdict, the four counts,
+# mission state / operator link / route and the vessel particulars card
+# stack in a column on the right, above the console checklist.
 DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
     # A — verdict and counts (right column, x 16..24)
     stat("Readiness", flux("readiness_summary", "ready", last=True), 16, 0, 8, 3,
          mappings=ready_mappings, text_mode="value", color_mode="background",
          no_value="NO BRIDGE"),
-    stat("Passed", flux("readiness_summary", "passed", last=True), 16, 3, 4, 2, decimals=0),
-    stat("Failed", flux("readiness_summary", "failed", last=True), 20, 3, 4, 2, decimals=0,
-         thresholds=[(None, OK), (1, "red")]),
-    stat("Mission State", last_str("mission_state", "state"), 16, 5, 4, 2,
+    # Passed / Failed / N/A / Console in one panel, side by side, each with
+    # its own colour: four 2-column tiles would cut their titles, and two
+    # rows of 4-column tiles leave no room for the particulars card.
+    readiness_counts_panel(16, 3, 8, 2),
+    stat("Mission State", last_str("mission_state", "state"), 16, 5, 3, 2,
          mappings=mission_state_mappings, text_mode="value", color_mode="background"),
-    stat("Operator Link", flux("autonomy", "operator_link", last=True), 20, 5, 4, 2,
+    stat("Operator Link", flux("autonomy", "operator_link", last=True), 19, 5, 3, 2,
          mappings=operator_link_mappings, text_mode="value", color_mode="background"),
+    stat("Route", last_str("mission_state", "route_name"), 22, 5, 2, 2, text_mode="value",
+         no_value="no route"),
     particulars_panel(16, 7, 8, 6),
     # B — the two lists
     status_table("Automatic checks — verified onboard from live telemetry",

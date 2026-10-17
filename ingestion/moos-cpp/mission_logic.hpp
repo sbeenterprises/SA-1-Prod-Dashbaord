@@ -1306,7 +1306,7 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         const Sample* allstop = num("autonomy", "allstop", 10.0);
         std::string ev;
         bool ok = rate && rate->num >= 1.0;
-        ev = rate ? "MOOS " + fmt0(rate->num) + " msg/s" : "no MOOS traffic";
+        ev = rate ? fmt0(rate->num) + " msg/s" : "no autonomy traffic";
         if (helm) { ev += " · helm " + helm->str; ok = ok && helm->str != "MALCONFIG"; }
         else { ev += " · helm state unknown"; ok = false; }
         if (allstop && allstop->num != 0.0) { ev += " · ALL-STOP"; ok = false; }
@@ -1317,9 +1317,9 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
     {
         const Sample* clients = num("moos", "clients", 30.0);
         if (cfg.required_apps.empty())
-            add("apps", "MOOS apps", "no app list (Antler block / required_apps)", READY_NA);
+            add("apps", "Apps", "no app list (Antler block / required_apps)", READY_NA);
         else if (!clients)
-            add("apps", "MOOS apps", "DB_CLIENTS not received", READY_FAIL);
+            add("apps", "Apps", "DB_CLIENTS not received", READY_FAIL);
         else {
             std::vector<std::string> must, opt_missing;
             for (const auto& a : cfg.required_apps) {
@@ -1339,7 +1339,7 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
                 ev += " · optional not running: ";
                 for (size_t i = 0; i < opt_missing.size(); ++i) ev += (i ? ", " : "") + opt_missing[i];
             }
-            add("apps", "MOOS apps", ev, missing.empty() ? READY_PASS : READY_FAIL);
+            add("apps", "Apps", ev, missing.empty() ? READY_PASS : READY_FAIL);
         }
     }
     // 6 Steering / actuators: rudder feedback (ANGULO_LEME) and command
@@ -1460,7 +1460,7 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             const std::string l = litres();
             add("endurance", "Endurance",
                 l.empty() ? "no vessel constants (fuel_tank_l / battery_kwh)"
-                          : l + " · no cruise_fuel_lph in real.moos for hours", READY_NA);
+                          : l + " · set cruise_fuel_lph for hours", READY_NA);
         } else if (!have_route)
             add("endurance", "Endurance",
                 (litres().empty() ? "" : litres() + " · ") + "no route to plan against",

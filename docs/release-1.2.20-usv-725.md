@@ -2,7 +2,7 @@
 
 > **Status (2026-10-17).** USV-725 was installed with this procedure on
 > 2026-10-15 and is now updated like USV-722: `bash deploy/update.sh <tag>`
-> from its checkout, latest tag v1.2.34 (never v1.2.33). For a new hull,
+> from its checkout, latest tag v1.2.35 (never v1.2.33). For a new hull,
 > follow part B with the latest tag in place of `v1.2.20` in B.2, and add
 > the hull's `VESSEL_*` lines (B.x) before running the installer. Parts A
 > and E are the record of the v1.2.20 rollout.

@@ -377,7 +377,7 @@
     {
       "id": 99,
       "type": "stat",
-      "title": "Passed",
+      "title": "Checks",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -385,7 +385,7 @@
       "gridPos": {
         "x": 16,
         "y": 5,
-        "w": 4,
+        "w": 8,
         "h": 2
       },
       "targets": [
@@ -396,64 +396,30 @@
           },
           "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"readiness_summary\" and (r._field == \"passed\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
           "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#00bcd4",
-                "value": null
-              }
-            ]
-          }
         },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto",
-        "graphMode": "none",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 20,
-          "titleSize": 12
-        }
-      }
-    },
-    {
-      "id": 100,
-      "type": "stat",
-      "title": "Failed",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "influxdb-usv"
-      },
-      "gridPos": {
-        "x": 20,
-        "y": 5,
-        "w": 4,
-        "h": 2
-      },
-      "targets": [
         {
           "datasource": {
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
           "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"readiness_summary\" and (r._field == \"failed\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
-          "refId": "A"
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"readiness_summary\" and (r._field == \"na\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"readiness_summary\" and (r._field == \"console\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
+          "refId": "D"
         }
       ],
       "fieldConfig": {
@@ -468,15 +434,140 @@
               {
                 "color": "#00bcd4",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
               }
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Passed"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#00bcd4",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Failed"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#00bcd4",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "N/A"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#8e9299",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Console"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#8e9299",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "reduceOptions": {
@@ -484,18 +575,20 @@
             "lastNotNull"
           ]
         },
-        "textMode": "auto",
+        "textMode": "value_and_name",
         "graphMode": "none",
         "colorMode": "value",
-        "justifyMode": "auto",
+        "justifyMode": "center",
+        "orientation": "vertical",
         "text": {
           "valueSize": 20,
           "titleSize": 12
         }
-      }
+      },
+      "description": "Automatic checks by result. N/A: sensor not fitted or not reporting (FAIL under readiness_profile = vessel). Console: waiting on the operator console (ENC selection, checklist); it holds the verdict at NOT READY."
     },
     {
-      "id": 101,
+      "id": 100,
       "type": "stat",
       "title": "Mission State",
       "datasource": {
@@ -505,7 +598,7 @@
       "gridPos": {
         "x": 16,
         "y": 7,
-        "w": 4,
+        "w": 3,
         "h": 2
       },
       "targets": [
@@ -626,7 +719,7 @@
       }
     },
     {
-      "id": 102,
+      "id": 101,
       "type": "stat",
       "title": "Operator Link",
       "datasource": {
@@ -634,9 +727,9 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 20,
+        "x": 19,
         "y": 7,
-        "w": 4,
+        "w": 3,
         "h": 2
       },
       "targets": [
@@ -715,7 +808,66 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 20,
+          "valueSize": 18,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 102,
+      "type": "stat",
+      "title": "Route",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 22,
+        "y": 7,
+        "w": 2,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"route_name\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "no route",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 18,
           "titleSize": 12
         }
       }

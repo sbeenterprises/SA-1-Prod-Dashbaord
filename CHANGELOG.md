@@ -3,11 +3,27 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
-## [Unreleased] (Repository housekeeping, no change on the boats)
+## [1.2.35] - 2026-10-17 (Readiness counts back, repository housekeeping)
 
-Tooling and documents only; boats stay on v1.2.34.
+grafana_bridge, Readiness dashboard, tooling and documents. Update with
+`bash deploy/update.sh v1.2.35`, restart the mission (grafana_bridge
+writes the check names), then Ctrl+F5.
+
+### Fixed
+- Readiness: the N/A and Console counts and the Route tile are back (v1.2.33
+  removed them to make room for the vessel particulars card). The four
+  counts now share one panel, side by side, each in its own colour (Failed
+  red from 1, Console orange from 1, N/A grey); Route sits next to Mission
+  State and Operator Link. The particulars card and the console checklist
+  keep their size.
 
 ### Changed
+- Readiness wording without the platform name: the "MOOS apps" check is
+  "Apps", the Autonomy stack evidence reads "61 msg/s · helm PARK" (was
+  "MOOS 61 msg/s ...", "no autonomy traffic" when silent), and Endurance
+  without a cruise fuel rate reads "set cruise_fuel_lph for hours".
+
+### Housekeeping
 - `tools/gen_alerts.py` defaults to the vessel profile (what the boats
   run and what is committed); simulation hosts pass `--profile sim`.
   Before, running it without arguments silently produced the simulation

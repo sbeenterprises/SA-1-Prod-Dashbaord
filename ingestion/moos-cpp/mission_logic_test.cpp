@@ -545,7 +545,7 @@ static void test_readiness() {
     CHECK(find_check(v, "course").status == READY_PASS);
     CHECK(find_check(v, "enc").status == READY_CONSOLE);
     CHECK(find_check(v, "autonomy").status == READY_PASS);
-    CHECK_EQ_STR(find_check(v, "autonomy").evidence, "MOOS 61 msg/s · helm PARK");
+    CHECK_EQ_STR(find_check(v, "autonomy").evidence, "61 msg/s · helm PARK");
     CHECK(find_check(v, "steering").status == READY_NA);
     CHECK(find_check(v, "comms").status == READY_PASS);
     CHECK_EQ_STR(find_check(v, "comms").evidence, "Signal K UP · Internet UP · 38 ms");
@@ -617,7 +617,7 @@ static void test_readiness() {
         c2.cruise_fuel_lph = 0; c2.battery_kwh = 0;
         auto e = find_check(EvaluateReadiness(s, now, true, c2), "endurance");
         CHECK(e.status == READY_NA);
-        CHECK_EQ_STR(e.evidence, "fuel 82 % = 931 L of 1,135 L · no cruise_fuel_lph in real.moos for hours");
+        CHECK_EQ_STR(e.evidence, "fuel 82 % = 931 L of 1,135 L · set cruise_fuel_lph for hours");
         c2.vessel_max_speed_kn = 30;
         auto sc = find_check(EvaluateReadiness(s, now, true, c2), "speed_cap");
         CHECK(sc.status == READY_NA);
@@ -729,7 +729,7 @@ static void test_readiness() {
     CHECK_EQ_STR(find_check(y, "gps").evidence, "no position");
     ReadinessSummary ry = SummarizeReadiness(y);
     CHECK(!ry.ready && ry.failed == 7);
-    CHECK_EQ_STR(ry.blocking, "GPS position fix; Course planning; MOOS apps; Steering / actuators; Engine pre-start; Safety flags; Console checklist");
+    CHECK_EQ_STR(ry.blocking, "GPS position fix; Course planning; Apps; Steering / actuators; Engine pre-start; Safety flags; Console checklist");
 
     // GPS via Signal K: VectorNav INS mode mapped to fix_type by signalk_bridge
     // (position polled back from InfluxDB). Only "INS tracking" is a fix.

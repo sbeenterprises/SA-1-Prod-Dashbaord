@@ -684,7 +684,7 @@ EOF
     grep -q 'checklist,vessel=usv-moos,seq=001 description="Current and forecast weather acceptable"' "$LINES" \
       && ok "checklist item description from checklist_items" || bad "checklist description missing"
     grep -q 'checklist,vessel=usv-moos,seq=002 state="PENDING"' "$LINES" && ok "pending checklist items written as rows" || bad "checklist item rows missing"
-    grep -q 'check=apps evidence="1 / 2 running · missing: pHelmIvP"' "$LINES" && ok "MOOS apps check against DB_CLIENTS" || bad "apps check missing"
+    grep -q 'check=apps evidence="1 / 2 running · missing: pHelmIvP"' "$LINES" && ok "Apps check against DB_CLIENTS" || bad "apps check missing"
     grep -q '_measurement=\\"readiness\\" AND vessel=\\"usv-moos\\"' "$TMP/deletes.txt" 2>/dev/null \
       && ok "stale readiness rows erased at bridge start" || bad "readiness erase at start missing"
     grep -q 'mission,vessel=usv-moos route_length_m=2800' "$LINES" && ok "route length from VIEW_SEGLIST (2800 m)" || bad "route length missing"

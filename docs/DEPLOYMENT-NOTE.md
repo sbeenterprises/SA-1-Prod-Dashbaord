@@ -166,7 +166,7 @@ Dev\-side regeneration (workstation, Python 3):
 | 8 | Alert rules loaded | Grafana → Alerting → Alert rules | 24 rules, folder "Swift Autonomous Dashboard" |
 | 9 | Stop simulator | `sudo systemctl stop usv-simulator` | required before real ops |
 | 10 | MOOS feed | launch mission with grafana\_bridge; watch Autopilot dashboard | desired/actual heading move |
-| 10a | Readiness evaluation | Readiness dashboard within 15 s of the community start | 17 rows with evidence; Vessel particulars card filled; "MOOS apps N / N running"; `readiness_profile = vessel` in the ProcessConfig on a real vessel (missing sensors FAIL) |
+| 10a | Readiness evaluation | Readiness dashboard within 15 s of the community start | 17 rows with evidence; Vessel particulars card filled; "Apps N / N running"; `readiness_profile = vessel` in the ProcessConfig on a real vessel (missing sensors FAIL) |
 | 10b | Console mirrors | tick items in the console, select a chart; or `/usr/local/bin/moos_poke 'CHECKLIST_STATUS=done=11,total=11,pending=,by=ops' ENC_STATUS=selected:test` | Console tile 0, checklist table lists every item, ENC row PASS |
 | 10c | Route plausibility | start a mission with a route and region | Course planning shows route, waypoints, length, region, "route inside region"; Endurance shows the litres (VESSEL_FUEL_L) and fuel / battery hours when the vessel constants are set; Speed cap compares SPEED_CAP with VESSEL_MAX_SPEED_KN |
 | 11 | Signal K feed | Navigation \+ Vessel Health dashboards | position, engine, battery live |
