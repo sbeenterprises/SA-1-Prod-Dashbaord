@@ -3,7 +3,34 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.34] - 2026-10-17 (Fix: Grafana pages empty after v1.2.33)
+
+deploy/brand.sh and the Readiness dashboard. Update with
+`bash deploy/update.sh v1.2.34`, then Ctrl+F5. Install this instead of
+v1.2.33 on a boat still on v1.2.32 or older.
+
+### Fixed
+- Every Grafana page came back empty (browser: ERR_EMPTY_RESPONSE) after
+  v1.2.33. Grafana reads its index.html as a Go template whose delimiters
+  are two square brackets, and the v1.2.33 theme script contained two in a
+  row (a nested array), so Grafana could no longer build the page. The
+  script is rewritten without them. A boat on v1.2.33 recovers with this
+  update; the stop-gap used on usv-722 (deleting the swiftships-theme-js
+  block from index.html and restarting grafana-server) is undone by it.
+- The Vessel particulars card on Readiness showed raw HTML tags: Grafana
+  escapes variable values in an HTML text panel. The card is now a
+  two-column table read straight from the `vessel` measurement.
+
+### Added
+- tools/smoke_test.sh runs brand.sh on a stand-in Grafana public directory
+  and fails when an injected block contains the template delimiters, or
+  (with Go installed) when the branded index.html no longer parses as a Go
+  template the way Grafana parses it.
+
 ## [1.2.33] - 2026-10-16 (Vessel particulars, fuel in litres, Navy theme)
+
+**Do not install: every Grafana page is empty with this release (fixed in
+v1.2.34).**
 
 Bridges, grafana_bridge, dashboards and deploy/brand.sh. Add the hull's
 `VESSEL_*` lines to /etc/usv/usv.env (deploy/usv.env.example has both

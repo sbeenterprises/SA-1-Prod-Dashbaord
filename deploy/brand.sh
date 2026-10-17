@@ -140,10 +140,6 @@ body.login-page button[type="submit"]{background:#1e6692!important;border-color:
 body.login-page button[type="submit"]:hover{background:#00bcd4!important;border-color:#00bcd4!important;color:#04121f!important}
 body.login-page input:focus,body.login-page input:focus-visible{box-shadow:0 0 0 2px #00bcd4!important;outline:none!important}
 body.login-page a{color:#5fc9dd!important}
-/* Readiness page: vessel particulars card (text panel, v1.2.33) */
-.sw-particulars{width:100%;border-collapse:collapse;font-size:13px;line-height:1.35}
-.sw-particulars td{padding:3px 6px;border-bottom:1px solid rgba(128,128,150,.18);vertical-align:top}
-.sw-particulars td:first-child{color:#8e9299;white-space:nowrap;width:40%}
 /* Navy theme: page background before Grafana has drawn (swiftships-theme-js) */
 html.sw-navy,html.sw-navy body{background:#13203B!important}
 </style>
@@ -214,12 +210,16 @@ if(/^\/d\//.test(u.pathname)&&vt!==want){q.set('var-theme',want);history.replace
 var applied=want;
 if(want==='navy'){
   document.documentElement.classList.add('sw-navy');
-  var MAP=[[/#111217/gi,'#13203B'],[/rgb\(17, ?18, ?23\)/g,'rgb(19, 32, 59)'],
-    [/#181b1f/gi,'#1B2B4B'],[/rgb\(24, ?27, ?31\)/g,'rgb(27, 43, 75)'],
-    [/#22252b/gi,'#22355A'],[/rgb\(34, ?37, ?43\)/g,'rgb(34, 53, 90)'],
-    [/rgba\(204, ?204, ?220, ?0\.12\)/g,'#2B3F66'],
-    [/rgba\(204, ?204, ?220, ?0\.2\)/g,'#35507F']];
-  function navy(t){if(typeof t!=='string')return t;for(var i=0;i<MAP.length;i++)t=t.replace(MAP[i][0],MAP[i][1]);return t;}
+  /* Pairs of (dark theme colour, navy colour). Grafana's index.html is a
+     Go template whose delimiters are two opening or two closing square
+     brackets: never write two in a row in any injected block (v1.2.33 did,
+     and Grafana sent an empty page; tools/smoke_test.sh checks for it). */
+  var FROM=[/#111217/gi,/rgb\(17, ?18, ?23\)/g,/#181b1f/gi,/rgb\(24, ?27, ?31\)/g,
+    /#22252b/gi,/rgb\(34, ?37, ?43\)/g,/rgba\(204, ?204, ?220, ?0\.12\)/g,
+    /rgba\(204, ?204, ?220, ?0\.2\)/g];
+  var TO=['#13203B','rgb(19, 32, 59)','#1B2B4B','rgb(27, 43, 75)',
+    '#22355A','rgb(34, 53, 90)','#2B3F66','#35507F'];
+  function navy(t){if(typeof t!=='string')return t;for(var i=0;i<FROM.length;i++)t=t.replace(FROM[i],TO[i]);return t;}
   var ins=CSSStyleSheet.prototype.insertRule;
   CSSStyleSheet.prototype.insertRule=function(r,i){return ins.call(this,navy(r),i);};
   /* Style elements written as text (theme CSS, development builds). */

@@ -2058,52 +2058,44 @@ def status_table(title, query, x, y, w, h, status_col, mappings, name_col,
     return p
 
 
-# Vessel particulars card (v1.2.33): the rows signalk_bridge writes from
-# VESSEL_* in usv.env as string fields "01 Length x beam x height" ... of
-# the `vessel` measurement, rendered by a hidden variable as HTML table
-# rows (brand.sh styles .sw-particulars) so the card lists whatever the
-# hull's usv.env defines, in order, without a per-row panel.
-PARTICULARS_VAR = {
-    "name": "vessel_particulars", "label": "Vessel particulars", "type": "query",
-    "datasource": DS, "hide": 2,
-    "query": ('import "array"\n'
-              'import "strings"\n'
-              'rows = from(bucket: "telemetry")\n'
-              '  |> range(start: -2h)\n'
-              '  |> filter(fn: (r) => r._measurement == "vessel" and r.vessel == "${vessel}")\n'
-              '  |> filter(fn: (r) => r._field =~ /^[0-9][0-9] /)\n'
-              '  |> last()\n'
-              '  |> keep(columns: ["_field", "_value"])\n'
-              '  |> group()\n'
-              '  |> sort(columns: ["_field"])\n'
-              '  |> reduce(fn: (r, accumulator) => ({html: accumulator.html + "<tr><td>" + '
-              'strings.substring(v: r._field, start: 3, end: strings.strlen(v: r._field)) + '
-              '"</td><td>" + r._value + "</td></tr>"}), identity: {html: ""})\n'
-              '  |> map(fn: (r) => ({rank: 0, _value: r.html}))\n'
-              'none = array.from(rows: [{rank: 1, _value: "<tr><td colspan=2>'
-              'no particulars: set VESSEL_CLASS, VESSEL_LOA_M, VESSEL_FUEL_L ... in '
-              '/etc/usv/usv.env (deploy/usv.env.example) and restart the bridges</td></tr>"}])\n'
-              'union(tables: [rows, none])\n'
-              '  |> sort(columns: ["rank"])\n'
-              '  |> limit(n: 1)\n'
-              '  |> keep(columns: ["_value"])\n'),
-    "refresh": 2, "current": {"text": "", "value": ""},
-    "includeAll": False, "multi": False,
-}
+# Vessel particulars card: the rows signalk_bridge writes from VESSEL_* in
+# usv.env as string fields "01 Length x beam x height" ... of the `vessel`
+# measurement, one table row per field in field order, so the card lists
+# whatever the hull's usv.env defines without a panel per row. (v1.2.33
+# built HTML in a hidden variable; Grafana escapes variable values in an
+# HTML text panel, so the card showed the raw tags.)
+def particulars_query():
+    return ('import "strings"\n'
+            'from(bucket: "telemetry")\n'
+            '  |> range(start: -1d)\n'
+            '  |> filter(fn: (r) => r._measurement == "vessel" and r.vessel == "${vessel}")\n'
+            '  |> filter(fn: (r) => r._field =~ /^[0-9][0-9] /)\n'
+            '  |> last()\n'
+            '  |> keep(columns: ["_field", "_value"])\n'
+            '  |> group()\n'
+            '  |> sort(columns: ["_field"])\n'
+            '  |> map(fn: (r) => ({particular: strings.substring(v: r._field, start: 3, '
+            'end: strings.strlen(v: r._field)), value: r._value}))\n')
 
 
 def particulars_panel(x, y, w, h):
-    return {
-        "id": nid(), "type": "text",
-        "title": "Vessel particulars — ${vessel_class}, hull ${vessel}",
-        "description": ("From the general arrangement drawing, as VESSEL_* in "
+    p = panel("table", "Vessel particulars — ${vessel_class}, hull ${vessel}",
+              [target(particulars_query())], x, y, w, h,
+              options={"showHeader": False, "cellHeight": "sm"},
+              no_value="no particulars: set VESSEL_* in /etc/usv/usv.env (deploy/usv.env.example)",
+              overrides=[{"matcher": {"id": "byName", "options": "particular"},
+                          "properties": [{"id": "custom.width", "value": 170},
+                                         {"id": "color", "value": {"mode": "fixed", "fixedColor": "#8e9299"}},
+                                         {"id": "custom.cellOptions", "value": {"type": "color-text"}}]},
+                         {"matcher": {"id": "byName", "options": "value"},
+                          "properties": [{"id": "custom.cellOptions", "value": {"type": "auto", "wrapText": True}}]}])
+    p["transformations"] = [{"id": "organize", "options": {
+        "indexByName": {"particular": 0, "value": 1}}}]
+    p["description"] = ("From the general arrangement drawing, as VESSEL_* in "
                         "/etc/usv/usv.env (deploy/usv.env.example). Fuel capacity "
                         "gives the litres on the Vessel Health page and the "
-                        "Endurance check; max speed gives the Speed cap check."),
-        "gridPos": {"x": x, "y": y, "w": w, "h": h},
-        "options": {"mode": "html",
-                    "content": '<table class="sw-particulars">${vessel_particulars}</table>'},
-    }
+                        "Endurance check; max speed gives the Speed cap check.")
+    return p
 
 
 # One screen, no scrolling: the 17 automatic checks need the full page
@@ -2151,7 +2143,7 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
                      "Swiftships-UI; Grafana shows every item with its state, who ticked "
                      "and the count. Item names and descriptions come from the console "
                      "(items=) or from checklist_items in the bridge ProcessConfig.")),
-], ["readiness"], extra_vars=[PARTICULARS_VAR]))
+], ["readiness"]))
 
 # ------------------------------------------------ FR-6 Traffic (collision avoidance)
 # Contacts come from grafana_bridge: NODE_REPORT / AIS-style reports and

@@ -206,6 +206,73 @@ case $? in
   *) bad "Flux type check" ;;
 esac
 
+hdr "Branding script against Grafana's page template"
+# deploy/brand.sh injects style and script blocks into Grafana's
+# views/index.html, which Grafana parses as a Go template with [[ ]]
+# delimiters at start-up. Two square brackets in a row inside an injected
+# block make that parse fail and Grafana answers every page with an empty
+# response (v1.2.33 on usv-722). Run brand.sh on a stand-in public dir and
+# check the injected blocks, and the whole file with Go's parser when go is
+# installed.
+if [[ $EUID -ne 0 ]]; then
+  skip "brand.sh template check (needs root: brand.sh refuses to run otherwise)"
+else
+  BT="$TMP/brandpub"; mkdir -p "$BT/img" "$BT/views" "$BT/build"
+  cat > "$BT/views/index.html" <<'HTML'
+<!doctype html><html lang="[[.User.Locale]]"><head><title>[[.AppTitle]]</title>
+<base href="[[.AppSubUrl]]/" /><link rel="icon" href="[[.FavIcon]]" />
+</head><body class="theme-[[ .ThemeType ]]"><div class="preloader">Loading Grafana</div>
+<script nonce="[[.Nonce]]">window.grafanaBootData = { user: [[.User]], settings: [[.Settings]] };</script>
+[[range $asset := .Assets.JSFiles]]<script src="[[$asset.FilePath]]"></script>[[end]]
+</body></html>
+HTML
+  if GPUB="$BT" GPUB_NO_RESTART=1 bash "$REPO/deploy/brand.sh" >"$TMP/brand.log" 2>&1 \
+     && GPUB="$BT" GPUB_NO_RESTART=1 bash "$REPO/deploy/brand.sh" >>"$TMP/brand.log" 2>&1; then
+    python3 - "$BT/views/index.html" <<'PY' && ok "injected blocks: no template delimiters, each block once" || bad "brand.sh injected blocks break Grafana's index.html template"
+import re, sys
+h = open(sys.argv[1]).read()
+bad = 0
+for bid in ("swiftships-brand", "swiftships-brand-js", "swiftships-fit-js", "swiftships-theme-js"):
+    blocks = re.findall(r'<(style|script) id="%s">(.*?)</\1>' % bid, h, re.S)
+    if len(blocks) != 1:
+        print(f"    {bid}: found {len(blocks)} times (expected 1)"); bad = 1; continue
+    body = blocks[0][1]
+    for d in ("[" "[", "]" "]"):
+        if d in body:
+            n = body.count(d); print(f"    {bid}: contains {d!r} x{n}"); bad = 1
+sys.exit(bad)
+PY
+    if command -v go >/dev/null 2>&1; then
+      mkdir -p "$TMP/tplchk" && cat > "$TMP/tplchk/main.go" <<'GO'
+package main
+
+import (
+	"fmt"
+	"html/template"
+	"os"
+)
+
+func main() {
+	b, err := os.ReadFile(os.Args[1])
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	if _, err := template.New("index").Delims("[[", "]]").Parse(string(b)); err != nil {
+		fmt.Println("    ", err)
+		os.Exit(1)
+	}
+}
+GO
+      if (cd "$TMP/tplchk" && GOFLAGS=-mod=mod GO111MODULE=off go run main.go "$BT/views/index.html"); then
+        ok "branded index.html parses as a Go template (as Grafana loads it)"
+      else bad "branded index.html no longer parses as a Go template (Grafana would serve empty pages)"; fi
+    else skip "Go template parse of the branded index.html (go not installed)"; fi
+  else
+    bad "brand.sh failed on a stand-in Grafana public dir"; tail -5 "$TMP/brand.log"
+  fi
+fi
+
 hdr "Map vessel marker and speed vector"
 python3 - "$REPO" <<'PY'
 import json, glob, sys

@@ -105,7 +105,10 @@ and carried from page to page. Grafana chooses Light or Dark when it serves
 the page, so changing the picker reloads the page once. Navy is applied by
 a script brand.sh adds to Grafana's page (`swiftships-theme-js`), which
 recolours the dark theme as Grafana draws it; re-run `deploy/brand.sh`
-(install.sh and update.sh do) after a Grafana upgrade.
+(install.sh and update.sh do) after a Grafana upgrade. Grafana reads
+`views/index.html` as a Go template whose delimiters are two square
+brackets: anything brand.sh injects must never contain two in a row, or
+every page comes back empty (tools/smoke_test.sh checks this).
 
 The ☀ Light / ☾ Dark chips in the tab row still open the page in a new tab
 in that theme. To switch in place without the picker press `c` then `t`;
@@ -534,6 +537,8 @@ Administration -> Users.
 | Symptom | Check |
 |---|---|
 | Empty dashboards | `systemctl status usv-*` ; Influx Data Explorer at :8086 |
+| Every page "didn't send any data" (ERR_EMPTY_RESPONSE), `/api/health` fine | Grafana cannot parse `views/index.html` (a block brand.sh injected contains two square brackets in a row): `sudo bash deploy/brand.sh --restore && sudo systemctl restart grafana-server` brings the stock page back (header logo missing until brand.sh runs again); then update to a fixed release |
+| Readiness "NO BRIDGE", Mission State and Operator Link N/A | grafana_bridge is not writing: it runs under pAntler, so restart the mission after an update and read its start line in the pAntler output |
 | Dashboard hangs on a dark screen from another PC, but `curl http://localhost:<GRAFANA_PORT>/api/health` returns 200 on the OBC | ufw is dropping the port: `sudo ufw status \| grep <GRAFANA_PORT>`. Re-run install.sh (opens it to the LAN and the tailnet, see GRAFANA_ALLOW_FROM in usv.env) or `sudo ufw allow from <lan-cidr> to any port <GRAFANA_PORT> proto tcp` |
 | Stock Grafana logo / "Welcome to Grafana" | Browser cache of Grafana's immutable assets: Ctrl+F5 once; `sudo bash deploy/brand.sh` re-applies after an upgrade |
 | Light theme chip "does nothing" | It opens a new tab (Grafana reads ?theme only on page load); press `c` then `t` to switch in place |
