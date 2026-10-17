@@ -126,7 +126,7 @@ All are enabled at boot. `usv-simulator` must stay disabled on the vessel
 Tags only. One command, from the repo checkout:
 
 ```bash
-cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.32
+cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.33
 ```
 
 It fetches the tag, re-runs the installer (rebuilds and restarts the
@@ -161,6 +161,7 @@ Rollback: `git checkout <previous tag>` and the same install command.
 | Secrets, port, vessel id, SMTP, plugin pin | `/etc/usv/usv.env` | `sudo bash deploy/install.sh` |
 | Radar targets on/off, radar id (MAYARA_URL, MAYARA_RADAR) | `/etc/usv/usv.env` | `sudo bash deploy/install.sh` |
 | Camera status on/off (FRIGATE_URL), charted battery (SIGNALK_BATTERY) | `/etc/usv/usv.env` | `sudo bash deploy/install.sh` |
+| Vessel particulars: class name, card, fuel capacity, max speed (VESSEL_*, v1.2.33; values for this hull in deploy/usv.env.example) | `/etc/usv/usv.env` | `sudo bash deploy/install.sh`, then restart the mission (grafana_bridge reads them at start) |
 | Which cameras count for Readiness | Frigate: enable / disable the camera (Configuration Editor, Save & Restart) | nothing; picked up within 60 s |
 | Bridge options, readiness profile, vessel constants, ENC / checklist flags | `real.moos` grafana_bridge block | restart the community |
 | Alert recipients | `grafana/provisioning/alerting/contact-points.yml` in the repo | commit, tag, install |
@@ -219,7 +220,7 @@ retention (`du -sh /var/lib/influxdb`).
 | Electrical / Power panels No data | `curl -s localhost:3000/signalk/v1/api/vessels/self/electrical`: battery instance name; set SIGNALK_BATTERY if it is not the first one |
 | AIS contacts thousands of km away, Rel. Bearing wrong | MOOS NAV_LAT/NAV_LONG = 0 (no RMC/HDT reaching iDivisorNMEA); the dashboard falls back to Signal K and logs one "traffic" warning; fix on the mission side |
 
-## Known gaps on this hull (as of v1.2.32)
+## Known gaps on this hull (as of v1.2.33)
 
 - Own-ship navigation in MOOS: iDivisorNMEA posts NAV_LAT/NAV_LONG/
   NAV_HEADING = 0 because its UDP feed (port 10111) carries only AIS; the

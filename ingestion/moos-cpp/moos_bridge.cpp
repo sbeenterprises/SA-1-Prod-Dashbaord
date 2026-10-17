@@ -37,6 +37,7 @@
 #include <vector>
 
 #include "../cpp-common/engine_profile.hpp"
+#include "../cpp-common/vessel_profile.hpp"
 #include "../cpp-common/j1939_faults.hpp"
 #include "../cpp-common/http_get.hpp"
 #include "../cpp-common/influx_query.hpp"
@@ -356,6 +357,14 @@ protected:
         m_MissionReader.GetConfigurationParam("battery_kwh", readiness_cfg_.battery_kwh);
         m_MissionReader.GetConfigurationParam("cruise_power_kw", readiness_cfg_.cruise_power_kw);
         m_MissionReader.GetConfigurationParam("endurance_margin", readiness_cfg_.endurance_margin);
+        // Hull particulars from usv.env (v1.2.33): tank size for Endurance
+        // when real.moos has no fuel_tank_l, maximum speed for Speed cap.
+        {
+            const usv::VesselProfile vp = usv::VesselProfile::FromEnv();
+            readiness_cfg_.vessel_fuel_l = vp.fuel_l;
+            readiness_cfg_.vessel_max_speed_kn = vp.max_speed_kn;
+            MOOSTrace("grafana_bridge: %s\n", vp.Describe().c_str());
+        }
         if (m_MissionReader.GetConfigurationParam("required_apps", v))
             for (const auto& a : usv::SplitCsv(v)) readiness_cfg_.required_apps.push_back(usv::trim(a));
         else {

@@ -903,10 +903,26 @@ TAB_ORDER = [
 
 
 # Every live page refreshes once a second (Replay has no auto refresh).
+# Theme picker at the top of every dashboard (v1.2.33). The brand.sh script
+# in index.html reads the var-theme URL parameter: Light and Dark are
+# Grafana's own themes, Navy restyles the dark theme in the Swiftships navy
+# (deploy/brand.sh, swiftships-theme-js). The choice is remembered per
+# browser and carried between tabs with the other variables.
+THEME_VAR = {
+    "name": "theme", "label": "Theme", "type": "custom",
+    "query": "Dark : dark,Navy : navy,Light : light",
+    "current": {"text": "Dark", "value": "dark"},
+    "options": [{"text": t, "value": v, "selected": v == "dark"} for t, v in [
+        ("Dark", "dark"), ("Navy", "navy"), ("Light", "light")]],
+    "hide": 0, "includeAll": False, "multi": False,
+}
+
+
 def dashboard(uid, title, panels, tags, refresh="1s", time_from="now-30m",
-              fleet=False):
+              fleet=False, extra_vars=None):
     """fleet=True makes the vessel variable multi-select with "All" so rows
-    can repeat per vessel (Fleet Overview)."""
+    can repeat per vessel (Fleet Overview). extra_vars: more template
+    variables for this one dashboard (the Readiness particulars card)."""
     vessel_var = {
         "name": "vessel", "label": "Vessel", "type": "query",
         "datasource": DS,
@@ -963,7 +979,31 @@ def dashboard(uid, title, panels, tags, refresh="1s", time_from="now-30m",
         "refresh": 2, "current": {"text": "", "value": ""},
         "includeAll": False, "multi": False,
     }
-    variables = [vessel_var] if fleet else [vessel_var, engine_var, model_var]
+    # Vessel class for the header band: VESSEL_CLASS in usv.env, written by
+    # signalk_bridge as the vessel_class tag of the `vessel` measurement
+    # (v1.2.33). "Swiftships USV" until the vessel has written one.
+    class_var = {
+        "name": "vessel_class", "label": "Vessel class", "type": "query",
+        "datasource": DS, "hide": 2,
+        "query": ('import "array"\n'
+                  'named = from(bucket: "telemetry")\n'
+                  '  |> range(start: -30d)\n'
+                  '  |> filter(fn: (r) => r._measurement == "vessel" and r.vessel == "${vessel}")\n'
+                  '  |> filter(fn: (r) => r._field == "class_name" and exists r.vessel_class)\n'
+                  '  |> last()\n'
+                  '  |> map(fn: (r) => ({_time: r._time, _value: r.vessel_class}))\n'
+                  '  |> group()\n'
+                  'none = array.from(rows: [{_time: 1970-01-01T00:00:00Z, _value: "Swiftships USV"}])\n'
+                  'union(tables: [named, none])\n'
+                  '  |> sort(columns: ["_time"], desc: true)\n'
+                  '  |> limit(n: 1)\n'
+                  '  |> keep(columns: ["_value"])\n'),
+        "refresh": 2, "current": {"text": "", "value": ""},
+        "includeAll": False, "multi": False,
+    }
+    variables = [vessel_var, THEME_VAR] if fleet else [vessel_var, THEME_VAR, engine_var, model_var, class_var]
+    if extra_vars:
+        variables += extra_vars
     return {
         "uid": uid, "title": title, "tags": ["usv"] + tags,
         "timezone": "browser", "schemaVersion": 39, "version": 1,
@@ -1729,6 +1769,30 @@ for _d in DASHBOARDS:
                 _p.setdefault("links", []).append(dict(LIVE_LINK))
 
 # ---------------------------------------------------------- FR-4 Vessel Health
+def burn_query(kind):
+    """Range (nm) or time (h) at the current burn from the last fuel
+    litres, fuel rate and SOG of the past two minutes. No row (the stat
+    shows N/A) when any input is missing, the rate is under 0.1 L/h or the
+    boat is not under way (range only)."""
+    expr = ("r.fuel_remaining_l / r.fuel_rate * r.sog" if kind == "range"
+            else "r.fuel_remaining_l / r.fuel_rate")
+    cond = ("exists r.fuel_remaining_l and exists r.fuel_rate and r.fuel_rate >= 0.1"
+            + (" and exists r.sog and r.sog >= 0.5" if kind == "range" else ""))
+    return ('from(bucket: "telemetry")\n'
+            '  |> range(start: -2m)\n'
+            '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+            '  |> filter(fn: (r) => (r._measurement == "engine" and '
+            '(r._field == "fuel_remaining_l" or r._field == "fuel_rate")) or '
+            '(r._measurement == "nav" and r._field == "sog"))\n'
+            '  |> last()\n'
+            '  |> keep(columns: ["_field", "_value"])\n'
+            '  |> group()\n'
+            '  |> map(fn: (r) => ({r with k: 0}))\n'
+            '  |> pivot(rowKey: ["k"], columnKey: ["_field"], valueColumn: "_value")\n'
+            f'  |> filter(fn: (r) => {cond})\n'
+            f'  |> map(fn: (r) => ({{_value: {expr}}}))\n')
+
+
 DASHBOARDS.append(dashboard("usv-health", "Vessel Health", [
     # Instrument cluster: the six primary machinery/electrical meters.
     # Tachometer, Coolant and Oil Pressure take their scale from the
@@ -1771,27 +1835,38 @@ DASHBOARDS.append(dashboard("usv-health", "Vessel Health", [
     # Secondary tiles. Engine detail (fuel rate, hours, oil temperature,
     # load, boost, trends) lives on the Engine page; this page keeps the
     # vessel picture: engine fault summary, electrical and power.
-    stat("Engine Faults", flux("engine", "active_dtcs", last=True), 0, 6, 4, 3,
+    stat("Engine Faults", flux("engine", "active_dtcs", last=True), 0, 6, 3, 3,
          mappings=FAULTS_MAPPINGS, text_mode="value", color_mode="background"),
     stat("Battery Current", flux("electrical", "battery_current", last=True),
-         4, 6, 3, 3, unit="amp", decimals=1, graph_mode="area"),
+         3, 6, 3, 3, unit="amp", decimals=1, graph_mode="area"),
     stat("Charging", last_str("electrical", "charging_status"),
-         7, 6, 3, 3, text_mode="value", color_mode="background",
+         6, 6, 3, 3, text_mode="value", color_mode="background",
          mappings=CHARGING_MAPPINGS),
-    stat("Total Power", flux("power", "total_power", last=True), 10, 6, 3, 3,
-         unit="watt", decimals=0, graph_mode="area"),
-    stat("System Voltage", flux("power", "system_voltage", last=True),
-         13, 6, 4, 3, unit="volt", decimals=2, graph_mode="area"),
-    # Alternator: Signal K electrical.alternators.0.voltage or the engine's
-    # own alternatorVoltage (Yamaha gateway). ECU supply: J1939 VEP1 from
-    # iCANRec on the Mercury diesel.
-    stat("Alternator", flux("electrical", "alternator_voltage", last=True),
-         17, 6, 4, 3, unit="volt", decimals=1),
+    # Fuel in litres and what it buys (v1.2.33): engine.fuel_remaining_l is
+    # the tank % x VESSEL_FUEL_L (usv.env), written by the bridge that
+    # writes fuel_level. Range and time at the current burn divide it by the
+    # live fuel rate (and multiply by SOG for range): N/A while the engine
+    # is stopped, the boat is not under way (SOG < 0.5 kn) or the vessel
+    # has no fuel rate or capacity.
+    stat("Fuel Remaining", flux("engine", "fuel_remaining_l", last=True),
+         9, 6, 3, 3, unit="litre", decimals=0, graph_mode="area",
+         no_value="N/A"),
+    stat("Range Left", burn_query("range"), 12, 6, 3, 3,
+         unit=UNIT_NM, decimals=0, no_value="N/A"),
+    stat("Time Left", burn_query("time"), 15, 6, 3, 3,
+         unit="suffix: h", decimals=1, no_value="N/A"),
+    stat("Sys Voltage", flux("power", "system_voltage", last=True),
+         18, 6, 3, 3, unit="volt", decimals=2, graph_mode="area"),
+    # ECU supply: J1939 VEP1 from iCANRec on the Mercury diesel. Total
+    # power stays in the Power / System Voltage trend; the alternator
+    # (Signal K electrical.alternators.0.voltage or the Yamaha gateway's
+    # alternatorVoltage) joined the Battery Voltage / Current trend.
     stat("ECU Supply", flux("engine", "ecu_voltage", last=True),
          21, 6, 3, 3, unit="volt", decimals=1),
     # Trends: two rows of two.
     ts("Battery Voltage / Current",
        [target(flux("electrical", ["battery_voltage"]), "voltage"),
+        target(flux("electrical", ["alternator_voltage"]), "alternator", ref="C"),
         target(flux("electrical", ["battery_current"]), "current", ref="B")],
        0, 9, 12, 6, unit="volt",
        overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
@@ -1808,14 +1883,22 @@ DASHBOARDS.append(dashboard("usv-health", "Vessel Health", [
                                    "value": "right"}]}]),
     ts("State of Charge", [target(flux("electrical", "soc"), "SOC")],
        0, 15, 12, 6, unit="percent", min_=0, max_=100),
-    ts("Fuel Level / Consumption",
-       [target(flux("engine", "fuel_level"), "level %"),
+    # Litres on the left axis when the vessel has a fuel capacity, the
+    # tank % as well (same axis range 0..100 reads oddly next to litres, so
+    # the % line is hidden from the axis and kept in the tooltip / legend).
+    ts("Fuel Remaining / Consumption",
+       [target(flux("engine", "fuel_remaining_l"), "remaining L"),
+        target(flux("engine", "fuel_level"), "level %", ref="C"),
         target(flux("engine", "fuel_rate"), "rate L/h", ref="B")],
-       12, 15, 12, 6, unit="percent",
+       12, 15, 12, 6, unit="litre",
        overrides=[{"matcher": {"id": "byFrameRefID", "options": "B"},
                    "properties": [{"id": "unit", "value": "litreh"},
                                   {"id": "custom.axisPlacement",
-                                   "value": "right"}]}]),
+                                   "value": "right"}]},
+                  {"matcher": {"id": "byFrameRefID", "options": "C"},
+                   "properties": [{"id": "unit", "value": "percent"},
+                                  {"id": "custom.axisPlacement",
+                                   "value": "hidden"}]}]),
 ], ["health"]))
 
 # ------------------------------------------------------------- FR-5 CAN Bus
@@ -1975,29 +2058,73 @@ def status_table(title, query, x, y, w, h, status_col, mappings, name_col,
     return p
 
 
-# One screen, no scrolling: the 16 automatic checks need the full page
-# height (36 px rows, no column header), so the verdict and counts stack in
-# a column on the right, above the console checklist.
+# Vessel particulars card (v1.2.33): the rows signalk_bridge writes from
+# VESSEL_* in usv.env as string fields "01 Length x beam x height" ... of
+# the `vessel` measurement, rendered by a hidden variable as HTML table
+# rows (brand.sh styles .sw-particulars) so the card lists whatever the
+# hull's usv.env defines, in order, without a per-row panel.
+PARTICULARS_VAR = {
+    "name": "vessel_particulars", "label": "Vessel particulars", "type": "query",
+    "datasource": DS, "hide": 2,
+    "query": ('import "array"\n'
+              'import "strings"\n'
+              'rows = from(bucket: "telemetry")\n'
+              '  |> range(start: -2h)\n'
+              '  |> filter(fn: (r) => r._measurement == "vessel" and r.vessel == "${vessel}")\n'
+              '  |> filter(fn: (r) => r._field =~ /^[0-9][0-9] /)\n'
+              '  |> last()\n'
+              '  |> keep(columns: ["_field", "_value"])\n'
+              '  |> group()\n'
+              '  |> sort(columns: ["_field"])\n'
+              '  |> reduce(fn: (r, accumulator) => ({html: accumulator.html + "<tr><td>" + '
+              'strings.substring(v: r._field, start: 3, end: strings.strlen(v: r._field)) + '
+              '"</td><td>" + r._value + "</td></tr>"}), identity: {html: ""})\n'
+              '  |> map(fn: (r) => ({rank: 0, _value: r.html}))\n'
+              'none = array.from(rows: [{rank: 1, _value: "<tr><td colspan=2>'
+              'no particulars: set VESSEL_CLASS, VESSEL_LOA_M, VESSEL_FUEL_L ... in '
+              '/etc/usv/usv.env (deploy/usv.env.example) and restart the bridges</td></tr>"}])\n'
+              'union(tables: [rows, none])\n'
+              '  |> sort(columns: ["rank"])\n'
+              '  |> limit(n: 1)\n'
+              '  |> keep(columns: ["_value"])\n'),
+    "refresh": 2, "current": {"text": "", "value": ""},
+    "includeAll": False, "multi": False,
+}
+
+
+def particulars_panel(x, y, w, h):
+    return {
+        "id": nid(), "type": "text",
+        "title": "Vessel particulars — ${vessel_class}, hull ${vessel}",
+        "description": ("From the general arrangement drawing, as VESSEL_* in "
+                        "/etc/usv/usv.env (deploy/usv.env.example). Fuel capacity "
+                        "gives the litres on the Vessel Health page and the "
+                        "Endurance check; max speed gives the Speed cap check."),
+        "gridPos": {"x": x, "y": y, "w": w, "h": h},
+        "options": {"mode": "html",
+                    "content": '<table class="sw-particulars">${vessel_particulars}</table>'},
+    }
+
+
+# One screen, no scrolling: the 17 automatic checks need the full page
+# height (36 px rows, no column header), so the verdict, counts, mission
+# state and the vessel particulars card stack in a column on the right,
+# above the console checklist. The N/A and CONSOLE counts and the route
+# name left this column in v1.2.33 for the particulars card: both are in
+# the table itself (status column, Course planning evidence).
 DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
     # A — verdict and counts (right column, x 16..24)
     stat("Readiness", flux("readiness_summary", "ready", last=True), 16, 0, 8, 3,
          mappings=ready_mappings, text_mode="value", color_mode="background",
          no_value="NO BRIDGE"),
-    # Counts two per row: a 2-column tile has no room for "Passed" or
-    # "Console" in the panel header (measured on usv-722, 1532 px).
     stat("Passed", flux("readiness_summary", "passed", last=True), 16, 3, 4, 2, decimals=0),
     stat("Failed", flux("readiness_summary", "failed", last=True), 20, 3, 4, 2, decimals=0,
          thresholds=[(None, OK), (1, "red")]),
-    stat("N/A", flux("readiness_summary", "na", last=True), 16, 5, 4, 2, decimals=0,
-         thresholds=[(None, "#8e9299")]),
-    stat("Console", flux("readiness_summary", "console", last=True), 20, 5, 4, 2, decimals=0,
-         thresholds=[(None, "#8e9299"), (1, "orange")]),
-    stat("Mission State", last_str("mission_state", "state"), 16, 7, 4, 3,
+    stat("Mission State", last_str("mission_state", "state"), 16, 5, 4, 2,
          mappings=mission_state_mappings, text_mode="value", color_mode="background"),
-    stat("Operator Link", flux("autonomy", "operator_link", last=True), 20, 7, 4, 3,
+    stat("Operator Link", flux("autonomy", "operator_link", last=True), 20, 5, 4, 2,
          mappings=operator_link_mappings, text_mode="value", color_mode="background"),
-    stat("Route", last_str("mission_state", "route_name"), 16, 10, 8, 2, text_mode="value",
-         no_value="no route"),
+    particulars_panel(16, 7, 8, 6),
     # B — the two lists
     status_table("Automatic checks — verified onboard from live telemetry",
                  readiness_query(), 0, 0, 16, 17, "status", status_mappings, "name",
@@ -2008,13 +2135,14 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
                      "(GPS ≥ 6 satellites and HDOP ≤ 2.5, route inside the region, every "
                      "Antler app connected, rudder within ±35° and following the command, "
                      "coolant < 105 °C, fuel > 15 %, no active DTC, SOC ≥ 30 %, fuel and "
-                     "battery hours ≥ route time x margin, host load < 90 %). N/A = sensor "
+                     "battery hours ≥ route time x margin, helm speed cap within the hull "
+                     "maximum, host load < 90 %). N/A = sensor "
                      "not fitted or no data; under "
                      "readiness_profile = vessel it counts as FAIL. CONSOLE = the "
                      "operator console has not published it (ENC selection, checklist). "
                      "READY needs no FAIL and no CONSOLE item.")),
     status_table("Console checklist — manual items ticked in Swiftships-UI",
-                 checklist_query(), 16, 12, 8, 5, "state", checklist_state_mappings, "item",
+                 checklist_query(), 16, 13, 8, 4, "state", checklist_state_mappings, "item",
                  ["item", "description", "state"],
                  no_value="console not publishing CHECKLIST_STATUS (docs/deployment.md, Console checklist)",
                  description=(
@@ -2023,7 +2151,7 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
                      "Swiftships-UI; Grafana shows every item with its state, who ticked "
                      "and the count. Item names and descriptions come from the console "
                      "(items=) or from checklist_items in the bridge ProcessConfig.")),
-], ["readiness"]))
+], ["readiness"], extra_vars=[PARTICULARS_VAR]))
 
 # ------------------------------------------------ FR-6 Traffic (collision avoidance)
 # Contacts come from grafana_bridge: NODE_REPORT / AIS-style reports and
@@ -3040,7 +3168,9 @@ def brand_panel(title, fleet=False):
         "options": {"mode": "markdown", "content": (
             f"![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) "
             f"&nbsp;&nbsp; **{title.upper()}** &nbsp;&nbsp;&middot;&nbsp;&nbsp; "
-            f"Vessel **$vessel**"
+            # Class name (VESSEL_CLASS in usv.env) before the vessel id.
+            + ("" if fleet else "${vessel_class} &nbsp;&nbsp;&middot;&nbsp;&nbsp; ")
+            + f"Vessel **$vessel**"
             # Engine chip (the engine_model variable; blank until the vessel
             # writes the tag). The Fleet page has no single vessel.
             + ("" if fleet else

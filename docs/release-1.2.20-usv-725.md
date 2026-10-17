@@ -189,6 +189,34 @@ is turned: if the value follows the rudder, add the line).
    `/usr/local/bin`: the installer prints the fix for the systemd unit
    case.
 
+### B.x Vessel particulars (v1.2.33 and later)
+
+Add the hull's GA values to `/etc/usv/usv.env` (all quoted values as shown),
+then `sudo bash deploy/install.sh` and restart the mission:
+
+```bash
+sudo tee -a /etc/usv/usv.env >/dev/null <<'ENV'
+VESSEL_CLASS="S3 Swift Sea-Stalker"
+VESSEL_LOA_M=5.9
+VESSEL_BEAM_M=1.8
+VESSEL_HEIGHT_M=2.5
+VESSEL_PAYLOAD_KG=454
+VESSEL_FUEL_L=1135
+VESSEL_RANGE_NM=1000
+VESSEL_MAX_SPEED_KN=30
+VESSEL_PROPULSION="Mercury Diesel 2.0L, Bravo 3 sterndrive"
+VESSEL_NAVIGATION="Simrad HALO 24 radar, VN-300 INS"
+VESSEL_CAMERAS="FLIR M364 thermal, bullet"
+VESSEL_COMMS="Starlink BLOS"
+VESSEL_RIDE_CONTROL="Seakeeper Ride 450"
+ENV
+```
+
+Within a minute the header band reads "S3 Swift Sea-Stalker · Vessel
+usv-725", the Readiness page shows the particulars card, and Vessel Health
+shows Fuel Remaining in litres. `sudo journalctl -u usv-signalk-bridge -n 5`
+shows `vessel_class="S3 Swift Sea-Stalker" fuel_l=1,135 ...` at start.
+
 ## C. Check that data flows (10 minutes, engine running)
 
 ```bash

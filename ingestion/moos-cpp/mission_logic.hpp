@@ -1116,6 +1116,14 @@ inline std::string fmt1(double v) {
     std::snprintf(b, sizeof b, "%.1f", v);
     return b;
 }
+// "1,067" for the litres in the readiness evidence.
+inline std::string fmt_thousands(double v) {
+    char b[32];
+    std::snprintf(b, sizeof b, "%.0f", v);
+    std::string s(b);
+    for (int i = static_cast<int>(s.size()) - 3; i > 0; i -= 3) s.insert(i, ",");
+    return s;
+}
 inline std::string fmt0(double v) {
     char b[32];
     std::snprintf(b, sizeof b, "%.0f", v);
@@ -1198,6 +1206,11 @@ struct ReadinessConfig {
     double battery_kwh = 0.0;       // usable battery energy
     double cruise_power_kw = 0.0;   // electrical load under way
     double endurance_margin = 1.5;  // required = route time x margin (return leg, weather)
+    // From VESSEL_* in /etc/usv/usv.env (cpp-common/vessel_profile.hpp):
+    // the tank size when real.moos has no fuel_tank_l, and the hull's
+    // maximum speed for the Speed cap check (0 = not configured).
+    double vessel_fuel_l = 0.0;
+    double vessel_max_speed_kn = 0.0;
     std::vector<std::string> required_apps;   // MOOS apps that must be connected
     std::vector<std::string> optional_apps;   // reported when absent, never a fault (GUI viewers)
     std::vector<ChecklistItem> checklist_items;
@@ -1433,12 +1446,25 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         const Sample* fuel = num("engine", "fuel_level", 120.0);
         const Sample* soc = num("electrical", "soc", 120.0);
         const bool have_route = len && len->num > 0.0 && cfg.cruise_speed_kn > 0.0;
-        const bool fuel_cfg = cfg.fuel_tank_l > 0.0 && cfg.cruise_fuel_lph > 0.0;
+        // Tank size: fuel_tank_l in real.moos, else VESSEL_FUEL_L in usv.env.
+        const double tank_l = cfg.fuel_tank_l > 0.0 ? cfg.fuel_tank_l : cfg.vessel_fuel_l;
+        const bool fuel_cfg = tank_l > 0.0 && cfg.cruise_fuel_lph > 0.0;
         const bool batt_cfg = cfg.battery_kwh > 0.0 && cfg.cruise_power_kw > 0.0;
-        if (!fuel_cfg && !batt_cfg)
-            add("endurance", "Endurance", "no vessel constants (fuel_tank_l / battery_kwh)", READY_NA);
-        else if (!have_route)
-            add("endurance", "Endurance", "no route to plan against", strict ? READY_FAIL : READY_NA);
+        // "fuel 94 % = 1,067 L of 1,135 L" whenever the tank size is known.
+        auto litres = [&]() -> std::string {
+            if (!fuel || tank_l <= 0.0) return "";
+            return "fuel " + fmt0(fuel->num) + " % = " + fmt_thousands(fuel->num / 100.0 * tank_l) +
+                   " L of " + fmt_thousands(tank_l) + " L";
+        };
+        if (!fuel_cfg && !batt_cfg) {
+            const std::string l = litres();
+            add("endurance", "Endurance",
+                l.empty() ? "no vessel constants (fuel_tank_l / battery_kwh)"
+                          : l + " · no cruise_fuel_lph in real.moos for hours", READY_NA);
+        } else if (!have_route)
+            add("endurance", "Endurance",
+                (litres().empty() ? "" : litres() + " · ") + "no route to plan against",
+                strict ? READY_FAIL : READY_NA);
         else {
             const double need_h = (len->num / 1852.0) / cfg.cruise_speed_kn * cfg.endurance_margin;
             std::string ev = "route " + fmt1(len->num / 1852.0) + " nm needs " + fmt1(need_h) +
@@ -1446,8 +1472,8 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             bool ok = true, any = false;
             if (fuel_cfg) {
                 if (fuel) {
-                    const double h = fuel->num / 100.0 * cfg.fuel_tank_l / cfg.cruise_fuel_lph;
-                    ev += " · fuel " + fmt1(h) + " h"; ok = ok && h >= need_h; any = true;
+                    const double h = fuel->num / 100.0 * tank_l / cfg.cruise_fuel_lph;
+                    ev += " · " + litres() + " = " + fmt1(h) + " h"; ok = ok && h >= need_h; any = true;
                 } else ev += " · no fuel level";
             }
             if (batt_cfg) {
@@ -1459,7 +1485,26 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             add("endurance", "Endurance", ev, !any ? missing : (ok ? READY_PASS : READY_FAIL));
         }
     }
-    // 12 AIS / radar. An empty harbour gives zero reports, so a zero is
+    // 12 Speed cap: the helm's SPEED_CAP against the hull's maximum
+    // (VESSEL_MAX_SPEED_KN in usv.env, from the GA drawing). A cap above
+    // the hull maximum means the helm may command a speed the boat cannot
+    // make. N/A without a configured maximum or a published cap.
+    {
+        const Sample* cap = num("autopilot", "speed_cap", 120.0);
+        if (cfg.vessel_max_speed_kn <= 0.0)
+            add("speed_cap", "Speed cap", "no VESSEL_MAX_SPEED_KN in usv.env", READY_NA);
+        else if (!cap)
+            add("speed_cap", "Speed cap",
+                "no SPEED_CAP published · hull max " + fmt0(cfg.vessel_max_speed_kn) + " kn", READY_NA);
+        else {
+            const std::string ev = "cap " + fmt1(cap->num) + " kn set · hull max " +
+                                   fmt0(cfg.vessel_max_speed_kn) + " kn";
+            if (cap->num <= 0.0) add("speed_cap", "Speed cap", ev + " · CAP IS ZERO", READY_FAIL);
+            else add("speed_cap", "Speed cap", ev,
+                     cap->num <= cfg.vessel_max_speed_kn ? READY_PASS : READY_FAIL);
+        }
+    }
+    // 13 AIS / radar. An empty harbour gives zero reports, so a zero is
     // "nothing to verify", never a fault; an offline radar is.
     {
         const Sample* rep = num("traffic", "reports", 300.0);
@@ -1472,7 +1517,7 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         else { ev += " · RADAR OFFLINE"; st = READY_FAIL; }
         add("ais", "AIS / radar", ev, st);
     }
-    // 13 Cameras: frigate_bridge's summary of the cameras ENABLED in the
+    // 14 Cameras: frigate_bridge's summary of the cameras ENABLED in the
     // Frigate NVR (configured-but-unpowered cameras are disabled there and
     // do not count); a single camera.connected flag as the fallback.
     {
@@ -1493,7 +1538,7 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         else add("cameras", "Cameras", con->num == 1.0 ? "connected" : "DISCONNECTED",
                  con->num == 1.0 ? READY_PASS : READY_FAIL);
     }
-    // 14 Onboard computer (Telegraf host metrics)
+    // 15 Onboard computer (Telegraf host metrics)
     {
         const Sample* cpu = num("cpu", "usage_user", 60.0);
         const Sample* mem = num("mem", "used_percent", 60.0);
@@ -1508,7 +1553,7 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             add("obc", "Onboard computer", ev, ok ? READY_PASS : READY_FAIL);
         }
     }
-    // 15 Safety flags
+    // 16 Safety flags
     {
         const Sample* geo = num("autonomy", "geofence_breached", 10.0);
         const Sample* risk = num("traffic", "risk_level", 10.0);
@@ -1521,7 +1566,7 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             ev.empty() ? "no geofence breach, no HIGH collision risk, no crash stop" : ev,
             ev.empty() ? READY_PASS : READY_FAIL);
     }
-    // 16 Console checklist (manual items ticked in Swiftships-UI)
+    // 17 Console checklist (manual items ticked in Swiftships-UI)
     {
         const Sample* done = num("mission_state", "checklist_done", 1e9);
         const Sample* total = num("mission_state", "checklist_total", 1e9);

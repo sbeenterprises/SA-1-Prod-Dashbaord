@@ -99,6 +99,7 @@ for t in ingestion/moos-cpp/build/mayara_logic_test ingestion/moos-cpp/build-tes
          ingestion/frigate-cpp/build/frigate_logic_test ingestion/can-cpp/build/usv722_can_test \
          ingestion/can-cpp/build/j1939_engine_test \
          ingestion/can-cpp/build/engine_profile_test ingestion/can-cpp/build/j1939_faults_test \
+         ingestion/can-cpp/build/vessel_profile_test \
          ingestion/signalk-cpp/build/signalk_engine_test; do
   [[ -x "$REPO/$t" ]] || continue
   if OUT=$("$REPO/$t" 2>&1); then ok "$(basename "$t"): $(echo "$OUT" | tail -1)"
@@ -108,6 +109,7 @@ done
 [[ -x "$REPO/ingestion/can-cpp/build/usv722_can_test" ]] || bad "usv722_can_test not built"
 [[ -x "$REPO/ingestion/can-cpp/build/j1939_engine_test" ]] || bad "j1939_engine_test not built"
 [[ -x "$REPO/ingestion/can-cpp/build/engine_profile_test" ]] || bad "engine_profile_test not built"
+[[ -x "$REPO/ingestion/can-cpp/build/vessel_profile_test" ]] || bad "vessel_profile_test not built"
 [[ -x "$REPO/ingestion/can-cpp/build/j1939_faults_test" ]] || bad "j1939_faults_test not built"
 [[ -x "$REPO/ingestion/signalk-cpp/build/signalk_engine_test" ]] || bad "signalk_engine_test not built"
 
@@ -166,6 +168,9 @@ src = open(f"{repo}/ingestion/moos-cpp/moos_bridge.cpp").read()
 # Other C++ writers that the simulator does not exercise (Frigate cameras).
 src += open(f"{repo}/ingestion/frigate-cpp/frigate_bridge.cpp").read()
 src += open(f"{repo}/ingestion/can-cpp/usv722_can.hpp").read()
+# Fields only the CAN and Signal K bridges write (engine.fuel_remaining_l).
+src += open(f"{repo}/ingestion/can-cpp/main.cpp").read()
+src += open(f"{repo}/ingestion/signalk-cpp/signalk_bridge.cpp").read()
 moos = set(re.findall(r'\{"(\w+)",\s*"(\w+)"(?:,|\})', src))
 moos |= set(re.findall(r'(?:str_)?field\("(\w+)",\s*[^,]+,\s*"(\w+)"', src))
 external = {"cpu","mem","disk","diskio","net","temp","system","gpu","ping","net_response","systemd_units","canbus_pgn"}
@@ -311,8 +316,16 @@ EOF
   sleep 1
   SIGNALK_URL=ws://127.0.0.1:3111/signalk/v1/stream ENGINE_TYPE=yamaha_outboard \
     ENGINE_MODEL="Yamaha Outboard Engine F115 B 4-Stroke" \
+    VESSEL_CLASS="S2 Sea-Striker" VESSEL_LOA_M=4.76 VESSEL_BEAM_M=1.68 VESSEL_FUEL_L=265 \
+    VESSEL_RANGE_NM=320 VESSEL_MAX_SPEED_KN=30 \
     timeout 6 "$REPO/ingestion/signalk-cpp/build/signalk_bridge" >/dev/null 2>&1
   kill $SK 2>/dev/null; stop_stub
+  # Vessel particulars heartbeat (VESSEL_* in usv.env, v1.2.33)
+  grep -q 'vessel,vessel=[^ ]*vessel_class=S2\\ Sea-Striker .*01\\ Length\\ x\\ beam\\ x\\ height="4.8 m x 1.7 m"' "$LINES" \
+    && ok "vessel particulars heartbeat (class tag, card rows)" || bad "vessel particulars heartbeat missing"
+  grep -q "vessel,.* fuel_l=265" "$LINES" && ok "vessel fuel_l written" || bad "vessel fuel_l missing"
+  grep -q "engine,.* fuel_remaining_l=241.15" "$LINES" && ok "fuel_remaining_l = 91 % of 265 L" \
+    || bad "fuel_remaining_l missing or wrong"
   grep -q "nav,.* sog=" "$LINES"           && ok "SOG written"           || bad "SOG missing"
   grep -q "nav,.* lat=" "$LINES"           && ok "position decoded"      || bad "position missing"
   grep -q "engine,.* rpm=" "$LINES"        && ok "engine RPM decoded"    || bad "RPM missing"

@@ -195,12 +195,42 @@
         },
         "includeAll": true,
         "multi": true
+      },
+      {
+        "name": "theme",
+        "label": "Theme",
+        "type": "custom",
+        "query": "Dark : dark,Navy : navy,Light : light",
+        "current": {
+          "text": "Dark",
+          "value": "dark"
+        },
+        "options": [
+          {
+            "text": "Dark",
+            "value": "dark",
+            "selected": true
+          },
+          {
+            "text": "Navy",
+            "value": "navy",
+            "selected": false
+          },
+          {
+            "text": "Light",
+            "value": "light",
+            "selected": false
+          }
+        ],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
       }
     ]
   },
   "panels": [
     {
-      "id": 221,
+      "id": 220,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -216,7 +246,7 @@
       }
     },
     {
-      "id": 178,
+      "id": 177,
       "type": "geomap",
       "title": "Fleet Map \u2014 last known positions",
       "datasource": {
@@ -308,7 +338,7 @@
       }
     },
     {
-      "id": 179,
+      "id": 178,
       "type": "row",
       "title": "Vessel: $fleet_vessel",
       "repeat": "fleet_vessel",
@@ -322,7 +352,7 @@
       "panels": []
     },
     {
-      "id": 180,
+      "id": 179,
       "type": "stat",
       "title": "Mission State",
       "datasource": {
@@ -459,7 +489,7 @@
       }
     },
     {
-      "id": 181,
+      "id": 180,
       "type": "stat",
       "title": "Helm",
       "datasource": {
@@ -556,7 +586,7 @@
       }
     },
     {
-      "id": 182,
+      "id": 181,
       "type": "stat",
       "title": "Armed",
       "datasource": {
@@ -637,7 +667,7 @@
       }
     },
     {
-      "id": 183,
+      "id": 182,
       "type": "stat",
       "title": "Operator Link",
       "datasource": {
@@ -738,7 +768,7 @@
       }
     },
     {
-      "id": 184,
+      "id": 183,
       "type": "stat",
       "title": "Geofence",
       "datasource": {
@@ -824,7 +854,7 @@
       }
     },
     {
-      "id": 185,
+      "id": 184,
       "type": "stat",
       "title": "SOG",
       "datasource": {
@@ -890,7 +920,7 @@
       }
     },
     {
-      "id": 186,
+      "id": 185,
       "type": "stat",
       "title": "Mission Progress",
       "datasource": {
@@ -956,7 +986,7 @@
       }
     },
     {
-      "id": 187,
+      "id": 186,
       "type": "stat",
       "title": "Signal K",
       "datasource": {
@@ -1037,7 +1067,7 @@
       }
     },
     {
-      "id": 188,
+      "id": 187,
       "type": "stat",
       "title": "MOOS",
       "datasource": {
@@ -1118,7 +1148,7 @@
       }
     },
     {
-      "id": 189,
+      "id": 188,
       "type": "stat",
       "title": "Engine",
       "datasource": {

@@ -535,7 +535,9 @@ static void test_readiness() {
     s.put("radar", "online", 1, now - 2);
 
     auto v = EvaluateReadiness(s, now, false);
-    CHECK(v.size() == 16);
+    CHECK(v.size() == 17);
+    CHECK(find_check(v, "speed_cap").status == READY_NA);     // no VESSEL_MAX_SPEED_KN
+    CHECK_EQ_STR(find_check(v, "speed_cap").evidence, "no VESSEL_MAX_SPEED_KN in usv.env");
     CHECK(find_check(v, "apps").status == READY_NA);          // no app list configured
     CHECK(find_check(v, "endurance").status == READY_NA);     // no vessel constants
     CHECK(find_check(v, "gps").status == READY_PASS);      // no quality data, sim
@@ -560,7 +562,7 @@ static void test_readiness() {
     CHECK(find_check(v, "safety").status == READY_PASS);
     CHECK(find_check(v, "checklist").status == READY_CONSOLE);
     ReadinessSummary r = SummarizeReadiness(v);
-    CHECK(!r.ready && r.failed == 0 && r.console == 2 && r.na == 7 && r.passed == 7);
+    CHECK(!r.ready && r.failed == 0 && r.console == 2 && r.na == 8 && r.passed == 7);   // N/A 8: speed cap (v1.2.33)
     CHECK(r.blocking.empty());
 
     // Strict (vessel) profile: missing sensors fail and GPS quality is required.
@@ -604,7 +606,34 @@ static void test_readiness() {
     CHECK(rx.ready && rx.failed == 0 && rx.console == 0);
     CHECK_EQ_STR(find_check(x, "apps").evidence, "4 / 4 running");
     CHECK_EQ_STR(find_check(x, "endurance").evidence,
-                 "route 3.2 nm needs 0.8 h (x1.5) · fuel 13.7 h · battery 5.3 h");
+                 "route 3.2 nm needs 0.8 h (x1.5) · fuel 82 % = 164 L of 200 L = 13.7 h · battery 5.3 h");
+    // v1.2.33: tank size from usv.env when real.moos has no fuel_tank_l;
+    // litres shown even when the hours cannot be computed; Speed cap check.
+    {
+        ReadinessConfig c2 = cfg;
+        c2.fuel_tank_l = 0; c2.vessel_fuel_l = 1135;
+        CHECK_EQ_STR(find_check(EvaluateReadiness(s, now, true, c2), "endurance").evidence,
+                     "route 3.2 nm needs 0.8 h (x1.5) · fuel 82 % = 931 L of 1,135 L = 77.6 h · battery 5.3 h");
+        c2.cruise_fuel_lph = 0; c2.battery_kwh = 0;
+        auto e = find_check(EvaluateReadiness(s, now, true, c2), "endurance");
+        CHECK(e.status == READY_NA);
+        CHECK_EQ_STR(e.evidence, "fuel 82 % = 931 L of 1,135 L · no cruise_fuel_lph in real.moos for hours");
+        c2.vessel_max_speed_kn = 30;
+        auto sc = find_check(EvaluateReadiness(s, now, true, c2), "speed_cap");
+        CHECK(sc.status == READY_NA);
+        CHECK_EQ_STR(sc.evidence, "no SPEED_CAP published · hull max 30 kn");
+        s.put("autopilot", "speed_cap", 12, now);
+        sc = find_check(EvaluateReadiness(s, now, true, c2), "speed_cap");
+        CHECK(sc.status == READY_PASS);
+        CHECK_EQ_STR(sc.evidence, "cap 12.0 kn set · hull max 30 kn");
+        s.put("autopilot", "speed_cap", 31.5, now);
+        sc = find_check(EvaluateReadiness(s, now, true, c2), "speed_cap");
+        CHECK(sc.status == READY_FAIL);
+        CHECK_EQ_STR(sc.evidence, "cap 31.5 kn set · hull max 30 kn");
+        s.put("autopilot", "speed_cap", 0, now);
+        CHECK(find_check(EvaluateReadiness(s, now, true, c2), "speed_cap").status == READY_FAIL);
+        s.put("autopilot", "speed_cap", 12, now);
+    }
     CHECK_EQ_STR(find_check(x, "course").evidence,
                  "Som Rt0 · 4 waypoints · 3.2 nm · region 5 vertices · route inside region");
     CHECK(find_check(x, "engine").evidence.find("no DTC") != std::string::npos);

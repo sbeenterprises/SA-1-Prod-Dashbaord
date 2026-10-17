@@ -46,6 +46,7 @@
 #include <string>
 
 #include "../cpp-common/engine_profile.hpp"
+#include "../cpp-common/vessel_profile.hpp"
 #include "../cpp-common/influx_writer.hpp"
 #include "j1939_engine.hpp"
 #include "usv722_can.hpp"
@@ -61,6 +62,12 @@ namespace {
 const usv::EngineProfile& profile() {
     static const usv::EngineProfile p = usv::EngineProfile::FromEnv();
     return p;
+}
+
+// Fuel capacity (VESSEL_FUEL_L) for engine.fuel_remaining_l next to the %.
+const usv::VesselProfile& vessel() {
+    static const usv::VesselProfile v = usv::VesselProfile::FromEnv();
+    return v;
 }
 
 volatile std::sig_atomic_t g_stop = 0;
@@ -152,9 +159,13 @@ void decode_pgn(InfluxWriter& w, uint32_t pgn, const uint8_t* d, uint8_t len) {
             // B0: low nibble instance, high nibble fluid type (0 = fuel).
             const uint8_t instance = d[0] & 0x0F, type = d[0] >> 4;
             int16_t level_raw = s16(d + 1);
-            if (type == 0 && instance == 0 && level_raw != 0x7FFF)
-                w.field("engine", profile().Tags("instance=0"), "fuel_level",
-                        level_raw * 0.004);
+            if (type == 0 && instance == 0 && level_raw != 0x7FFF) {
+                const double pct = level_raw * 0.004;
+                w.field("engine", profile().Tags("instance=0"), "fuel_level", pct);
+                if (vessel().fuel_l > 0)
+                    w.field("engine", profile().Tags("instance=0"), "fuel_remaining_l",
+                            vessel().fuel_l * pct / 100.0);
+            }
             break;
         }
         default:

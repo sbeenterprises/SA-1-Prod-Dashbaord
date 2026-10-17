@@ -197,6 +197,36 @@
         "multi": false
       },
       {
+        "name": "theme",
+        "label": "Theme",
+        "type": "custom",
+        "query": "Dark : dark,Navy : navy,Light : light",
+        "current": {
+          "text": "Dark",
+          "value": "dark"
+        },
+        "options": [
+          {
+            "text": "Dark",
+            "value": "dark",
+            "selected": true
+          },
+          {
+            "text": "Navy",
+            "value": "navy",
+            "selected": false
+          },
+          {
+            "text": "Light",
+            "value": "light",
+            "selected": false
+          }
+        ],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
         "name": "engine_type",
         "label": "Engine",
         "type": "query",
@@ -231,12 +261,30 @@
         },
         "includeAll": false,
         "multi": false
+      },
+      {
+        "name": "vessel_class",
+        "label": "Vessel class",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "influxdb-usv"
+        },
+        "hide": 2,
+        "query": "import \"array\"\nnamed = from(bucket: \"telemetry\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"vessel\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"class_name\" and exists r.vessel_class)\n  |> last()\n  |> map(fn: (r) => ({_time: r._time, _value: r.vessel_class}))\n  |> group()\nnone = array.from(rows: [{_time: 1970-01-01T00:00:00Z, _value: \"Swiftships USV\"}])\nunion(tables: [named, none])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)\n  |> keep(columns: [\"_value\"])\n",
+        "refresh": 2,
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "includeAll": false,
+        "multi": false
       }
     ]
   },
   "panels": [
     {
-      "id": 218,
+      "id": 217,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -248,11 +296,11 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **COMMS** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Engine **${engine_model}**"
+        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **COMMS** &nbsp;&nbsp;&middot;&nbsp;&nbsp; ${vessel_class} &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Engine **${engine_model}**"
       }
     },
     {
-      "id": 144,
+      "id": 143,
       "type": "stat",
       "title": "Internet",
       "datasource": {
@@ -334,7 +382,7 @@
       }
     },
     {
-      "id": 145,
+      "id": 144,
       "type": "stat",
       "title": "Starlink",
       "datasource": {
@@ -416,7 +464,7 @@
       }
     },
     {
-      "id": 146,
+      "id": 145,
       "type": "stat",
       "title": "VPN (Twingate)",
       "datasource": {
@@ -498,7 +546,7 @@
       }
     },
     {
-      "id": 147,
+      "id": 146,
       "type": "stat",
       "title": "Signal K WebSocket",
       "datasource": {
@@ -573,7 +621,7 @@
       }
     },
     {
-      "id": 148,
+      "id": 147,
       "type": "stat",
       "title": "Latency",
       "datasource": {
@@ -640,7 +688,7 @@
       }
     },
     {
-      "id": 149,
+      "id": 148,
       "type": "stat",
       "title": "Packet Loss",
       "datasource": {
@@ -707,7 +755,7 @@
       }
     },
     {
-      "id": 150,
+      "id": 149,
       "type": "timeseries",
       "title": "Latency",
       "datasource": {
@@ -777,7 +825,7 @@
       }
     },
     {
-      "id": 151,
+      "id": 150,
       "type": "timeseries",
       "title": "Packet Loss",
       "datasource": {
@@ -848,7 +896,7 @@
       }
     },
     {
-      "id": 152,
+      "id": 151,
       "type": "timeseries",
       "title": "Bandwidth (3 busiest links)",
       "datasource": {
@@ -942,7 +990,7 @@
       }
     },
     {
-      "id": 153,
+      "id": 152,
       "type": "timeseries",
       "title": "Telemetry Message Rates",
       "datasource": {

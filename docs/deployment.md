@@ -97,13 +97,44 @@ required because Grafana parses `index.html` once at startup and serves it
 from memory.
 
 ## Themes
-Dashboards are designed for both Grafana themes. Grafana applies the
-`?theme=` URL parameter only on a full page load, and its click
-interceptor turns same-window links into in-app navigation, so the ☀ Light
-/ ☾ Dark chips open the dashboard in a new tab; that tab then stays in the
-chosen theme. To switch in place press `c` then `t`; the lasting default is
-Profile -> Preferences -> Interface theme (or Administration -> Default
-preferences for every user).
+Every dashboard has a **Theme** picker at the top, next to Vessel:
+**Dark** (Grafana's dark theme, the default), **Navy** (the dark theme in
+the Swiftships navy: page #13203B, panels #1B2B4B, borders #2B3F66) and
+**Light** (Grafana's light theme). The choice is remembered in that browser
+and carried from page to page. Grafana chooses Light or Dark when it serves
+the page, so changing the picker reloads the page once. Navy is applied by
+a script brand.sh adds to Grafana's page (`swiftships-theme-js`), which
+recolours the dark theme as Grafana draws it; re-run `deploy/brand.sh`
+(install.sh and update.sh do) after a Grafana upgrade.
+
+The ☀ Light / ☾ Dark chips in the tab row still open the page in a new tab
+in that theme. To switch in place without the picker press `c` then `t`;
+the lasting server default is Profile -> Preferences -> Interface theme (or
+Administration -> Default preferences for every user).
+
+## Vessel particulars (class name, card, fuel in litres)
+The `VESSEL_*` keys in `/etc/usv/usv.env` (deploy/usv.env.example has both
+hulls' values from their GA drawings) describe the hull: class name, main
+dimensions, payload, fuel capacity, range, maximum speed and fitted
+equipment. signalk_bridge writes them every 60 s as the `vessel`
+measurement (`vessel_class` tag, one string field per card row, numeric
+`fuel_l`, `max_speed_kn`, `range_nm`, `loa_m`). They appear as:
+
+- the class name in the header band of every page ("READINESS · S3 Swift
+  Sea-Stalker · Vessel usv-725 · Engine Mercury Diesel 2.0L");
+- the **Vessel particulars** card on the Readiness page;
+- `engine.fuel_remaining_l` (tank % x `VESSEL_FUEL_L`, written by the bridge
+  that writes the fuel level) and, on Vessel Health, the **Fuel Remaining**
+  (L), **Range Left** (nm at the current fuel rate and SOG; N/A below 0.5 kn
+  or with no fuel rate) and **Time Left** (h at the current fuel rate)
+  tiles and the Fuel Remaining / Consumption trend;
+- the Readiness **Endurance** row, which uses `VESSEL_FUEL_L` when the
+  mission file has no `fuel_tank_l` and shows the litres ("fuel 94 % =
+  1,067 L of 1,135 L"), and the **Speed cap** row (SPEED_CAP against
+  `VESSEL_MAX_SPEED_KN`).
+
+A hull without the keys shows "no particulars" on the card and N/A on the
+litre tiles and the Speed cap row; nothing else changes.
 
 ## Map overlays
 The Navigation and Replay maps draw the operating region (cyan outline),
@@ -146,7 +177,11 @@ and "GNSS lost" fail). Optional vessel
 constants in the same block sharpen three checks: `fuel_tank_l`,
 `cruise_fuel_lph`, `cruise_speed_kn`, `battery_kwh`, `cruise_power_kw`
 and `endurance_margin` (default 1.5) turn the Endurance row from N/A into
-"route 3.2 nm needs 0.8 h · fuel 13.7 h · battery 5.3 h"; `required_apps`
+"route 3.2 nm needs 0.8 h · fuel 82 % = 164 L of 200 L = 13.7 h · battery
+5.3 h" (`fuel_tank_l` falls back to `VESSEL_FUEL_L` in usv.env); the Speed
+cap row compares the helm's SPEED_CAP with `VESSEL_MAX_SPEED_KN` in
+usv.env (FAIL above the hull maximum or at zero, N/A when either is
+missing); `required_apps`
 lists the MOOS apps that must be connected (default: every `Run =` line
 of the mission file's Antler block, checked against DB_CLIENTS) and
 `optional_apps` those that are only reported when absent (default

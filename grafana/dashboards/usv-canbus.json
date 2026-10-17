@@ -197,6 +197,36 @@
         "multi": false
       },
       {
+        "name": "theme",
+        "label": "Theme",
+        "type": "custom",
+        "query": "Dark : dark,Navy : navy,Light : light",
+        "current": {
+          "text": "Dark",
+          "value": "dark"
+        },
+        "options": [
+          {
+            "text": "Dark",
+            "value": "dark",
+            "selected": true
+          },
+          {
+            "text": "Navy",
+            "value": "navy",
+            "selected": false
+          },
+          {
+            "text": "Light",
+            "value": "light",
+            "selected": false
+          }
+        ],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
         "name": "engine_type",
         "label": "Engine",
         "type": "query",
@@ -231,12 +261,30 @@
         },
         "includeAll": false,
         "multi": false
+      },
+      {
+        "name": "vessel_class",
+        "label": "Vessel class",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "influxdb-usv"
+        },
+        "hide": 2,
+        "query": "import \"array\"\nnamed = from(bucket: \"telemetry\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"vessel\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"class_name\" and exists r.vessel_class)\n  |> last()\n  |> map(fn: (r) => ({_time: r._time, _value: r.vessel_class}))\n  |> group()\nnone = array.from(rows: [{_time: 1970-01-01T00:00:00Z, _value: \"Swiftships USV\"}])\nunion(tables: [named, none])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)\n  |> keep(columns: [\"_value\"])\n",
+        "refresh": 2,
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "includeAll": false,
+        "multi": false
       }
     ]
   },
   "panels": [
     {
-      "id": 214,
+      "id": 213,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -248,11 +296,11 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **CAN BUS** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Engine **${engine_model}**"
+        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **CAN BUS** &nbsp;&nbsp;&middot;&nbsp;&nbsp; ${vessel_class} &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Engine **${engine_model}**"
       }
     },
     {
-      "id": 87,
+      "id": 88,
       "type": "stat",
       "title": "Interface",
       "datasource": {
@@ -327,7 +375,7 @@
       }
     },
     {
-      "id": 88,
+      "id": 89,
       "type": "gauge",
       "title": "Bus Utilization",
       "datasource": {
@@ -387,7 +435,7 @@
       }
     },
     {
-      "id": 89,
+      "id": 90,
       "type": "stat",
       "title": "Messages / s",
       "datasource": {
@@ -445,7 +493,7 @@
       }
     },
     {
-      "id": 90,
+      "id": 91,
       "type": "stat",
       "title": "Error Frames (5s)",
       "datasource": {
@@ -511,7 +559,7 @@
       }
     },
     {
-      "id": 91,
+      "id": 92,
       "type": "stat",
       "title": "Dropped Frames",
       "datasource": {
@@ -574,7 +622,7 @@
       }
     },
     {
-      "id": 92,
+      "id": 93,
       "type": "stat",
       "title": "Active PGNs",
       "datasource": {
@@ -971,7 +1019,7 @@
       }
     },
     {
-      "id": 93,
+      "id": 94,
       "type": "timeseries",
       "title": "Message Rate",
       "datasource": {
@@ -1040,7 +1088,7 @@
       }
     },
     {
-      "id": 94,
+      "id": 95,
       "type": "timeseries",
       "title": "Bus Utilization",
       "datasource": {
@@ -1112,7 +1160,7 @@
       }
     },
     {
-      "id": 95,
+      "id": 96,
       "type": "timeseries",
       "title": "Error / Dropped Frames",
       "datasource": {
@@ -1195,7 +1243,7 @@
       }
     },
     {
-      "id": 96,
+      "id": 97,
       "type": "table",
       "title": "PGN Frequency (msgs/s)",
       "datasource": {

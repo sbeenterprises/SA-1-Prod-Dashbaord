@@ -197,6 +197,36 @@
         "multi": false
       },
       {
+        "name": "theme",
+        "label": "Theme",
+        "type": "custom",
+        "query": "Dark : dark,Navy : navy,Light : light",
+        "current": {
+          "text": "Dark",
+          "value": "dark"
+        },
+        "options": [
+          {
+            "text": "Dark",
+            "value": "dark",
+            "selected": true
+          },
+          {
+            "text": "Navy",
+            "value": "navy",
+            "selected": false
+          },
+          {
+            "text": "Light",
+            "value": "light",
+            "selected": false
+          }
+        ],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
         "name": "engine_type",
         "label": "Engine",
         "type": "query",
@@ -224,6 +254,24 @@
         },
         "hide": 2,
         "query": "import \"array\"\nnamed = from(bucket: \"telemetry\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"engine\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => exists r.engine_model or exists r.engine_type)\n  |> last()\n  |> map(fn: (r) => ({_time: r._time, _value: if exists r.engine_model then r.engine_model else r.engine_type}))\n  |> group()\nnone = array.from(rows: [{_time: 1970-01-01T00:00:00Z, _value: \"not reported\"}])\nunion(tables: [named, none])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)\n  |> keep(columns: [\"_value\"])\n",
+        "refresh": 2,
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "vessel_class",
+        "label": "Vessel class",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "influxdb-usv"
+        },
+        "hide": 2,
+        "query": "import \"array\"\nnamed = from(bucket: \"telemetry\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"vessel\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"class_name\" and exists r.vessel_class)\n  |> last()\n  |> map(fn: (r) => ({_time: r._time, _value: r.vessel_class}))\n  |> group()\nnone = array.from(rows: [{_time: 1970-01-01T00:00:00Z, _value: \"Swiftships USV\"}])\nunion(tables: [named, none])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)\n  |> keep(columns: [\"_value\"])\n",
         "refresh": 2,
         "current": {
           "text": "",
@@ -296,7 +344,7 @@
   },
   "panels": [
     {
-      "id": 216,
+      "id": 215,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -308,11 +356,11 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **TRAFFIC** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Engine **${engine_model}**"
+        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **TRAFFIC** &nbsp;&nbsp;&middot;&nbsp;&nbsp; ${vessel_class} &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Engine **${engine_model}**"
       }
     },
     {
-      "id": 107,
+      "id": 106,
       "type": "stat",
       "title": "Collision Risk",
       "datasource": {
@@ -392,7 +440,7 @@
       }
     },
     {
-      "id": 108,
+      "id": 107,
       "type": "stat",
       "title": "Avoidance",
       "datasource": {
@@ -472,7 +520,7 @@
       }
     },
     {
-      "id": 109,
+      "id": 108,
       "type": "stat",
       "title": "Contacts",
       "datasource": {
@@ -530,7 +578,7 @@
       }
     },
     {
-      "id": 110,
+      "id": 109,
       "type": "stat",
       "title": "Reports / AIS",
       "datasource": {
@@ -588,7 +636,7 @@
       }
     },
     {
-      "id": 111,
+      "id": 110,
       "type": "stat",
       "title": "Radar Only",
       "datasource": {
@@ -646,7 +694,7 @@
       }
     },
     {
-      "id": 112,
+      "id": 111,
       "type": "stat",
       "title": "High Risk",
       "datasource": {
@@ -708,7 +756,7 @@
       }
     },
     {
-      "id": 113,
+      "id": 112,
       "type": "stat",
       "title": "Closest Range",
       "datasource": {
@@ -794,7 +842,7 @@
       }
     },
     {
-      "id": 114,
+      "id": 113,
       "type": "stat",
       "title": "Min CPA",
       "datasource": {
@@ -880,7 +928,7 @@
       }
     },
     {
-      "id": 115,
+      "id": 114,
       "type": "volkovlabs-echarts-panel",
       "title": "Traffic View",
       "datasource": {
@@ -940,7 +988,7 @@
       }
     },
     {
-      "id": 116,
+      "id": 115,
       "type": "stat",
       "title": "Highest-Risk Contact",
       "datasource": {
@@ -999,7 +1047,7 @@
       }
     },
     {
-      "id": 117,
+      "id": 116,
       "type": "stat",
       "title": "CPA",
       "datasource": {
@@ -1071,7 +1119,7 @@
       }
     },
     {
-      "id": 118,
+      "id": 117,
       "type": "stat",
       "title": "TCPA",
       "datasource": {
@@ -1155,7 +1203,7 @@
       }
     },
     {
-      "id": 119,
+      "id": 118,
       "type": "stat",
       "title": "Range",
       "datasource": {
@@ -1215,7 +1263,7 @@
       }
     },
     {
-      "id": 120,
+      "id": 119,
       "type": "stat",
       "title": "Bearing",
       "datasource": {
@@ -1275,7 +1323,7 @@
       }
     },
     {
-      "id": 121,
+      "id": 120,
       "type": "stat",
       "title": "Rel. Bearing",
       "datasource": {
@@ -1335,7 +1383,7 @@
       }
     },
     {
-      "id": 122,
+      "id": 121,
       "type": "stat",
       "title": "Rel. Speed",
       "datasource": {
@@ -1395,7 +1443,7 @@
       }
     },
     {
-      "id": 123,
+      "id": 122,
       "type": "stat",
       "title": "Type",
       "datasource": {
@@ -1454,7 +1502,7 @@
       }
     },
     {
-      "id": 124,
+      "id": 123,
       "type": "stat",
       "title": "Encounter",
       "datasource": {
@@ -1540,7 +1588,7 @@
       }
     },
     {
-      "id": 125,
+      "id": 124,
       "type": "stat",
       "title": "Planned Course",
       "datasource": {
@@ -1614,7 +1662,7 @@
       }
     },
     {
-      "id": 126,
+      "id": 125,
       "type": "stat",
       "title": "Cmd Course",
       "datasource": {
@@ -1674,7 +1722,7 @@
       }
     },
     {
-      "id": 127,
+      "id": 126,
       "type": "stat",
       "title": "Actual Heading",
       "datasource": {
@@ -1734,7 +1782,7 @@
       }
     },
     {
-      "id": 128,
+      "id": 127,
       "type": "stat",
       "title": "Deviation",
       "datasource": {
@@ -1816,7 +1864,7 @@
       }
     },
     {
-      "id": 129,
+      "id": 128,
       "type": "stat",
       "title": "Speed Command",
       "datasource": {
@@ -1876,7 +1924,7 @@
       }
     },
     {
-      "id": 130,
+      "id": 129,
       "type": "stat",
       "title": "Actual SOG",
       "datasource": {
@@ -1936,7 +1984,7 @@
       }
     },
     {
-      "id": 131,
+      "id": 130,
       "type": "stat",
       "title": "Avoidance Behavior",
       "datasource": {
@@ -1995,7 +2043,7 @@
       }
     },
     {
-      "id": 132,
+      "id": 131,
       "type": "stat",
       "title": "Reason",
       "datasource": {
@@ -2053,7 +2101,7 @@
       }
     },
     {
-      "id": 133,
+      "id": 132,
       "type": "table",
       "title": "Contacts \u2014 riskiest first",
       "datasource": {
@@ -2581,7 +2629,7 @@
       ]
     },
     {
-      "id": 134,
+      "id": 133,
       "type": "timeseries",
       "title": "Closest CPA / TCPA",
       "datasource": {

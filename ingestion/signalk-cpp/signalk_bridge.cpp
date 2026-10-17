@@ -38,6 +38,7 @@
 #include <thread>
 
 #include "../cpp-common/engine_profile.hpp"
+#include "../cpp-common/vessel_profile.hpp"
 #include "../cpp-common/influx_writer.hpp"
 #include "signalk_engine.hpp"
 
@@ -160,6 +161,16 @@ public:
         if (!profile_.type.empty() && now - last_profile_ >= 60.0) {
             writer_.field("engine", profile_.Tags("instance=0"), "profile", 1);
             last_profile_ = now;
+        }
+        // Vessel particulars heartbeat (VESSEL_* in usv.env): the `vessel`
+        // measurement every 60 s with the class name as a tag (header band),
+        // the particulars card rows as string fields "01 Length x beam x
+        // height" ... (Readiness page) and the numbers the fuel tiles and
+        // the readiness checks use. Static facts, rewritten so a fresh
+        // InfluxDB has them within a minute.
+        if (!vessel_.empty() && now - last_vessel_ >= 60.0) {
+            write_vessel();
+            last_vessel_ = now;
         }
         writer_.flush();
     }
@@ -298,9 +309,29 @@ private:
                       << "' (set SIGNALK_FUEL_TANK to choose another)\n";
         }
         if (id != fuel_tank_id_) return true;
-        writer_.field("engine", profile_.Tags("instance=0"), "fuel_level",
-                      value.get<double>() * 100.0);
+        const double pct = value.get<double>() * 100.0;
+        writer_.field("engine", profile_.Tags("instance=0"), "fuel_level", pct);
+        if (vessel_.fuel_l > 0)   // litres remaining, from VESSEL_FUEL_L
+            writer_.field("engine", profile_.Tags("instance=0"), "fuel_remaining_l",
+                          vessel_.fuel_l * pct / 100.0);
         return true;
+    }
+
+    void write_vessel() {
+        const std::string tags = vessel_.cls.empty()
+            ? std::string() : "vessel_class=" + usv::EngineProfile::EscapeTag(vessel_.cls);
+        writer_.str_field("vessel", tags, "class_name", vessel_.cls);
+        int n = 0;
+        for (const auto& row : vessel_.CardRows()) {
+            char num[16];
+            std::snprintf(num, sizeof(num), "%02d ", ++n);
+            // field keys follow the tag escaping rules (spaces, commas, "=")
+            writer_.str_field("vessel", tags, usv::EngineProfile::EscapeTag(num + row.first), row.second);
+        }
+        if (vessel_.fuel_l > 0) writer_.field("vessel", tags, "fuel_l", vessel_.fuel_l);
+        if (vessel_.max_speed_kn > 0) writer_.field("vessel", tags, "max_speed_kn", vessel_.max_speed_kn);
+        if (vessel_.range_nm > 0) writer_.field("vessel", tags, "range_nm", vessel_.range_nm);
+        if (vessel_.loa_m > 0) writer_.field("vessel", tags, "loa_m", vessel_.loa_m);
     }
 
     // notifications.propulsion.<id>.<name>: value {state, message} or null.
@@ -386,10 +417,12 @@ private:
 
 public:
     const usv::EngineProfile& profile() const { return profile_; }
+    const usv::VesselProfile& vessel() const { return vessel_; }
 
 private:
     std::mutex mu_;
     usv::EngineProfile profile_ = usv::EngineProfile::FromEnv();
+    usv::VesselProfile vessel_ = usv::VesselProfile::FromEnv();
     usv::InfluxWriter writer_{"telemetry"};
     uint64_t msg_count_ = 0;
     std::string self_;            // own vessel context from the hello message
@@ -397,6 +430,7 @@ private:
     bool other_logged_ = false;
     double last_emit_ = 0.0;
     double last_profile_ = -1e18;   // engine profile heartbeat, first at start
+    double last_vessel_ = -1e18;    // vessel particulars heartbeat
     bool up_ = false;
 };
 
@@ -414,6 +448,7 @@ int main() {
     std::cerr << "signalk_bridge: " << bridge.profile().Describe()
               << (bridge.profile().signalk_engine
                       ? "\n" : " (engine paths ignored on this vessel)\n");
+    std::cerr << "signalk_bridge: " << bridge.vessel().Describe() << "\n";
     ix::WebSocket ws;
     ws.setUrl(url);
     ws.setPingInterval(20);

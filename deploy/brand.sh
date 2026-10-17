@@ -140,6 +140,12 @@ body.login-page button[type="submit"]{background:#1e6692!important;border-color:
 body.login-page button[type="submit"]:hover{background:#00bcd4!important;border-color:#00bcd4!important;color:#04121f!important}
 body.login-page input:focus,body.login-page input:focus-visible{box-shadow:0 0 0 2px #00bcd4!important;outline:none!important}
 body.login-page a{color:#5fc9dd!important}
+/* Readiness page: vessel particulars card (text panel, v1.2.33) */
+.sw-particulars{width:100%;border-collapse:collapse;font-size:13px;line-height:1.35}
+.sw-particulars td{padding:3px 6px;border-bottom:1px solid rgba(128,128,150,.18);vertical-align:top}
+.sw-particulars td:first-child{color:#8e9299;white-space:nowrap;width:40%}
+/* Navy theme: page background before Grafana has drawn (swiftships-theme-js) */
+html.sw-navy,html.sw-navy body{background:#13203B!important}
 </style>
 <script id="swiftships-brand-js">
 /* The navigation menu header shows the product name "Grafana" next to the
@@ -185,8 +191,61 @@ sched();
 })();
 </script>
 CSS
+cat >> "$CSS_FILE" <<'THEME'
+<script id="swiftships-theme-js">
+/* Theme picker (the "Theme" variable at the top of every dashboard,
+   v1.2.33): Dark and Light are Grafana's own themes; Navy is the dark
+   theme with the Swiftships navy page, panel and border colours. The
+   choice is remembered in this browser and carried between tabs as
+   var-theme. Grafana picks Light or Dark when the page is served, so a
+   change reloads the page once. Navy rewrites the dark theme's colour
+   literals as Grafana inserts its style rules, before anything is drawn. */
+(function(){
+var K='swiftships-theme',V=['dark','navy','light'];
+function get(){try{return localStorage.getItem(K)||'';}catch(e){return '';}}
+function put(v){try{localStorage.setItem(K,v);}catch(e){}}
+function valid(v){return V.indexOf(v)>=0;}
+var u=new URL(location.href),q=u.searchParams,tp=q.get('theme')||'',vt=q.get('var-theme')||'';
+var want=valid(vt)?vt:(valid(get())?get():'dark');
+/* The Light / Dark chips (?theme=) win over a stale var-theme. */
+if(tp==='light')want='light';else if(tp==='dark'&&want==='light')want='dark';
+put(want);
+if(/^\/d\//.test(u.pathname)&&vt!==want){q.set('var-theme',want);history.replaceState(history.state,'',u.toString());}
+var applied=want;
+if(want==='navy'){
+  document.documentElement.classList.add('sw-navy');
+  var MAP=[[/#111217/gi,'#13203B'],[/rgb\(17, ?18, ?23\)/g,'rgb(19, 32, 59)'],
+    [/#181b1f/gi,'#1B2B4B'],[/rgb\(24, ?27, ?31\)/g,'rgb(27, 43, 75)'],
+    [/#22252b/gi,'#22355A'],[/rgb\(34, ?37, ?43\)/g,'rgb(34, 53, 90)'],
+    [/rgba\(204, ?204, ?220, ?0\.12\)/g,'#2B3F66'],
+    [/rgba\(204, ?204, ?220, ?0\.2\)/g,'#35507F']];
+  function navy(t){if(typeof t!=='string')return t;for(var i=0;i<MAP.length;i++)t=t.replace(MAP[i][0],MAP[i][1]);return t;}
+  var ins=CSSStyleSheet.prototype.insertRule;
+  CSSStyleSheet.prototype.insertRule=function(r,i){return ins.call(this,navy(r),i);};
+  /* Style elements written as text (theme CSS, development builds). */
+  new MutationObserver(function(ms){for(var a=0;a<ms.length;a++)for(var b=0;b<ms[a].addedNodes.length;b++){
+    var n=ms[a].addedNodes[b];if(n.nodeType===1&&n.tagName==='STYLE'&&!n.id){var t=navy(n.textContent);if(t!==n.textContent)n.textContent=t;}}})
+  .observe(document.documentElement,{childList:true,subtree:true});
+}
+function bootLight(){var b=window.grafanaBootData;
+  if(b&&b.user)return !!(b.user.lightTheme||b.user.theme==='light');
+  return !!(document.body&&document.body.classList.contains('theme-light'));}
+function go(v){var x=new URL(location.href);x.searchParams.set('var-theme',v);
+  x.searchParams.set('theme',v==='light'?'light':'dark');
+  var n=0;try{n=+sessionStorage.getItem(K+'-n')||0;sessionStorage.setItem(K+'-n',n+1);}catch(e){}
+  if(n<3)location.replace(x.toString());}
+/* Served in the wrong Grafana theme for the choice: reload once. */
+document.addEventListener('DOMContentLoaded',function(){
+  if((want==='light')!==bootLight())go(want);
+  else try{sessionStorage.removeItem(K+'-n');}catch(e){}});
+/* Choice changed in the dropdown: Grafana updates var-theme in the URL. */
+setInterval(function(){var v=new URL(location.href).searchParams.get('var-theme');
+  if(valid(v)&&v!==applied){applied=v;put(v);try{sessionStorage.removeItem(K+'-n');}catch(e){}go(v);}},400);
+})();
+</script>
+THEME
 # Replace any previous block, then insert before </head>.
-perl -0pi -e 's|<style id="swiftships-brand">.*?</style>\n?||s; s|<script id="swiftships-brand-js">.*?</script>\n?||s; s|<script id="swiftships-fit-js">.*?</script>\n?||s' "$IDX"
+perl -0pi -e 's|<style id="swiftships-brand">.*?</style>\n?||s; s|<script id="swiftships-brand-js">.*?</script>\n?||s; s|<script id="swiftships-fit-js">.*?</script>\n?||s; s|<script id="swiftships-theme-js">.*?</script>\n?||s' "$IDX"
 CSS_FILE="$CSS_FILE" perl -0pi -e 'BEGIN{local $/; open(F, "<", $ENV{CSS_FILE}) or die; $css=<F>; close F} s|</head>|$css</head>|' "$IDX"
 rm -f "$CSS_FILE"
 

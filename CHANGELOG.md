@@ -3,6 +3,42 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.33] - 2026-10-16 (Vessel particulars, fuel in litres, Navy theme)
+
+Bridges, grafana_bridge, dashboards and deploy/brand.sh. Add the hull's
+`VESSEL_*` lines to /etc/usv/usv.env (deploy/usv.env.example has both
+hulls' values), update with `bash deploy/update.sh v1.2.33`, restart the
+mission (grafana_bridge), then Ctrl+F5.
+
+### Added
+- Vessel particulars from the general arrangement drawings, as `VESSEL_*`
+  keys in usv.env (class, dimensions, payload, fuel capacity, range, max
+  speed, propulsion, navigation, cameras, comms, ride control).
+  signalk_bridge writes them every 60 s as the `vessel` measurement.
+- The class name in the header band of every page ("S3 Swift Sea-Stalker ·
+  Vessel usv-725").
+- Readiness page: a Vessel particulars card (right column). The N/A and
+  Console count tiles and the Route tile made room for it; both remain
+  visible in the checks table.
+- Readiness check 12, **Speed cap**: the helm's SPEED_CAP against the hull
+  maximum (`VESSEL_MAX_SPEED_KN`); FAIL above it or at zero, N/A without
+  either value. Readiness now has 17 automatic checks.
+- `engine.fuel_remaining_l` (tank % x `VESSEL_FUEL_L`) from can_bridge and
+  signalk_bridge. Vessel Health: Fuel Remaining (L), Range Left (nm at the
+  current fuel rate and speed) and Time Left (h) tiles; the fuel trend is
+  now Fuel Remaining / Consumption in litres and L/h.
+- **Theme** picker at the top of every page: Dark (as before), Navy (new,
+  Swiftships navy) and Light (as before). Remembered per browser and
+  carried between pages; a change reloads the page once.
+
+### Changed
+- Endurance takes the tank size from `VESSEL_FUEL_L` when the mission file
+  has no `fuel_tank_l`, and shows the litres ("fuel 94 % = 1,067 L of
+  1,135 L").
+- Vessel Health tiles: Total Power and Alternator tiles removed (power stays
+  in the Power / System Voltage trend, the alternator joined the Battery
+  Voltage / Current trend); System Voltage is titled Sys Voltage.
+
 ## [1.2.32] - 2026-10-16 (Fit-to-screen fix)
 
 deploy/brand.sh only. Update with `bash deploy/update.sh v1.2.32`, then

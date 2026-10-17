@@ -109,8 +109,8 @@ iWebSocket that posted it has stopped).
 
 ### readiness / readiness_summary (FR-12) — source: MOOS bridge, every readiness_period_s (5 s)
 readiness, tag `check` (gps | course | enc | autonomy | apps | steering |
-comms | can | engine | electrical | endurance | ais | cameras | obc |
-safety | checklist): seq (display order), status (0 PASS, 1 FAIL, 2 N/A, 3
+comms | can | engine | electrical | endurance | speed_cap | ais | cameras |
+obc | safety | checklist): seq (display order), status (0 PASS, 1 FAIL, 2 N/A, 3
 CONSOLE), name (string, operator wording), evidence (string, what was
 seen). readiness_summary: ready (0/1), passed, failed, na, console,
 checks, blocking (string, "; "-separated names of the failed checks, "-"
@@ -190,7 +190,8 @@ Vessel Health and Engine dial scales) and `engine_model` (ENGINE_MODEL, e.g.
 `engine_model` variable shows the most recent one in the header chip, and
 the Fleet engine tile prints it). Fields: rpm,
 coolant_temp, oil_temp (°C), oil_pressure, intake_manifold_pressure (kPa),
-fuel_level (%), fuel_rate (L/h), runtime_h (h), percent_load,
+fuel_level (%), fuel_remaining_l (L, fuel_level x VESSEL_FUEL_L, only when
+usv.env sets the capacity), fuel_rate (L/h), runtime_h (h), percent_load,
 percent_torque, pedal_position, trim_position (%), active_dtcs (count),
 profile (1, written every 60 s by signalk_bridge on every vessel with the
 engine_type and engine_model tags of its usv.env, so the dashboards name the
@@ -267,6 +268,17 @@ charging_status (string), alternator_voltage (V)
 
 ### power (FR-4) — source: Signal K
 total_power (W), system_voltage (V), distribution_ok (0/1)
+
+### vessel — source: signalk_bridge, every 60 s (VESSEL_* in usv.env)
+Static hull particulars from the general arrangement drawing. Tag
+`vessel_class` (VESSEL_CLASS). Fields: class_name (string); one string field
+per particulars-card row, named "<nn> <label>" in display order ("01 Length
+x beam x height" = "5.9 m x 1.8 m x 2.5 m", "02 Payload", "03 Fuel
+capacity", ...; rows without data are not written); fuel_l (L),
+max_speed_kn (kn), range_nm (nm), loa_m (m). Written only when at least one
+VESSEL_* key is set. Used by the header band (vessel_class), the Readiness
+particulars card and nothing else; grafana_bridge reads the same keys from
+usv.env for the Endurance and Speed cap checks.
 
 ### canbus (FR-5) — source: C++ CAN bridge
 msg_rate (msgs/s), utilization_pct (%), error_frames, dropped_frames,
