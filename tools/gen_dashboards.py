@@ -381,7 +381,7 @@ def neutral_base(thresholds, floor=0):
 def stat(title, query, x, y, w=4, h=4, unit=None, thresholds=None,
          mappings=None, text_mode="auto", decimals=None,
          color_mode="value", graph_mode="none", string_value=False,
-         no_value=None):
+         no_value=None, value_size=None):
     """color_mode='background' renders a solid status tile (ops wall look);
     graph_mode='area' adds a trend sparkline behind numeric values;
     no_value replaces Grafana's "No data" (e.g. "N/A" for hardware that is
@@ -416,8 +416,8 @@ def stat(title, query, x, y, w=4, h=4, unit=None, thresholds=None,
                           "textMode": text_mode, "graphMode": graph_mode,
                           "colorMode": color_mode,
                           "justifyMode": "auto",
-                          "text": {"valueSize": (22 if is_str else 26)
-                                   if h <= 3 else 34,
+                          "text": {"valueSize": value_size or ((22 if is_str else 26)
+                                                 if h <= 3 else 34),
                                    "titleSize": 12}},
                  no_value=no_value)
 
@@ -461,6 +461,7 @@ STATE_LABELS = {
     "StationKeeping": "Station Keeping", "ReturnToBase": "Return to Base",
     "EnteringRegion": "Entering Region", "AwaitingRearm": "Awaiting Re-arm",
     "CommsLost": "Comms Lost", "HoldingAtBase": "Holding at Base",
+    "RegionHold": "Region Hold",
     # value written by bridges before v1.0.1 (historical data / replay)
     "ReturnToHome": "Return to Base",
 }
@@ -1063,6 +1064,7 @@ mission_state_mappings = state_map([
     ("EnteringRegion", "super-light-blue"), ("AwaitingRearm", "orange"),
     ("CommsLost", "red"), ("Parked", "#6e7680"), ("Completed", "purple"),
     ("HoldingAtBase", "orange"),
+    ("Following", ACCENT), ("RegionHold", "super-light-blue"),
 ])
 helm_state_mappings = state_map([
     ("DRIVE", TILE_OK), ("PARK", "#6e7680"), ("STANDBY", "yellow"),
@@ -2141,8 +2143,9 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
          mappings=mission_state_mappings, text_mode="value", color_mode="background"),
     stat("Operator Link", flux("autonomy", "operator_link", last=True), 19, 5, 3, 2,
          mappings=operator_link_mappings, text_mode="value", color_mode="background"),
+    # Narrow tile: smaller text so "10-19-2026 (safe)" reads on two lines.
     stat("Route", last_str("mission_state", "route_name"), 22, 5, 2, 2, text_mode="value",
-         no_value="no route"),
+         no_value="no route", value_size=14),
     particulars_panel(16, 7, 8, 6),
     # B — the two lists
     status_table("Automatic checks — verified onboard from live telemetry",

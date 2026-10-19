@@ -2,7 +2,7 @@
 
 | Req | Delivered by | Status / notes |
 |---|---|---|
-| FR-1 Mission | `usv-mission.json` (single-screen status wall + readouts); mission/mission_state/autonomy measurements; derived Alpha state machine incl. Remote (unit-tested); route name from Signal K; events bucket timeline | Complete — variable map aligned with alpha.bhv (see docs/alpha-mission-integration.md) |
+| FR-1 Mission | `usv-mission.json` (single-screen status wall + readouts); mission/mission_state/autonomy measurements; derived Alpha state machine incl. Remote (REMOTE_CONTROL, or under way with no autonomy mode), Following and Region Hold (unit-tested); route name from Signal K; events bucket timeline | Complete — variable map aligned with alpha.bhv (see docs/alpha-mission-integration.md) |
 | FR-2 Navigation | `usv-navigation.json`; geomap live track; nav measurement | Complete |
 | FR-3 Autopilot | `usv-autopilot.json`; helm/safety tiles (helm state, all-stop, station keeping, entry gate, re-arm hold, remote control, corridor, crash stop), command readouts, instruments, desired vs actual, speed governor; planchaPID outputs mapped (SPEED_CAP, CMD_SPEED, XTE_NOW, NEXT_TURN_ANGLE) | Complete |
 | FR-4 Vessel Health | `usv-health.json` (engine, electrical, power rows) | Complete |

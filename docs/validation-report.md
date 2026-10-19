@@ -518,3 +518,31 @@ and the safe route.
 To verify on the target: on USV-722 with a safe route loaded, Course
 planning PASS with "checked safe on ENC" and Chart / ENC PASS with "ENC
 in use · route checked safe on chart".
+
+## 13. Release v1.2.37 (2026-10-19)
+
+Scope: mission state Remote whenever the boat is under way with no
+autonomy mode (or with the helm parked), new states Following (TRAILING)
+and Region Hold (REGION), the Readiness Route tile text size, and the
+update script's tag fetch.
+
+Reason: on USV-722 the operator drove the boat from Swiftships-UI and the
+Mission State tile read Idle. The production iWebSocket (checked in the
+mission repository) sends DESIRED_THRUST / DESIRED_RUDDER / DESIRED_GEAR
+straight from the console and never posts REMOTE_CONTROL; planchaPID
+publishes DESIRED_THRUST only under WAYPOINT, TRAILING, STATIONING or
+REGION, so a throttle command outside those modes is the operator's.
+
+Environment: as section 11. `tools/smoke_test.sh` in full: 169 PASS,
+0 FAIL, 1 SKIP (CAN live capture, no vcan module). New checks: TRAILING
+gives Following, REGION gives Region Hold, DESIRED_THRUST=25 with no
+autonomy mode gives Remote and the Remote Control tile on. Unit tests
+(mission_logic_test, 447 checks) cover every autonomy mode against a
+moving boat, the parked helm, comms loss outranking Remote, and the
+motion latch (throttle ahead and astern, speed alone, the 10 s hold, the
+30 s coast grace after a mission, speed test off).
+
+To verify on the target: drive USV-722 from Swiftships-UI with no
+mission: Mission State Remote within a second of the throttle, back to
+Idle about 10 s after the throttle returns to zero and the boat slows
+below 1 kn; Follow and Region from the UI show Following and Region Hold.

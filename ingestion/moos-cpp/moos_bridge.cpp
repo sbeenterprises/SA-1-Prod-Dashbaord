@@ -9,10 +9,12 @@
 // publishes commands to the MOOSDB.
 //
 // What it does beyond 1:1 passthrough:
-//  - Derives the operational mission state (Idle / Autonomous / Paused /
-//    StationKeeping / ReturnToBase / EnteringRegion / AwaitingRearm /
-//    CommsLost / Parked / Completed) from the mode flags the Alpha mission
-//    actually publishes (nothing on the vessel publishes MISSION_STATE).
+//  - Derives the operational mission state (Idle / Autonomous / Remote /
+//    Paused / StationKeeping / ReturnToBase / HoldingAtBase / Following /
+//    RegionHold / EnteringRegion / AwaitingRearm / CommsLost / Parked /
+//    Completed) from the mode flags the Alpha mission actually publishes
+//    (nothing on the vessel publishes MISSION_STATE). Remote also when the
+//    boat is under way (thrust commanded or moving) with no autonomy mode.
 //  - Parses the active behavior set out of IVPHELM_SUMMARY.
 //  - Computes progress / waypoint total (VIEW_SEGLIST), ETA and distance
 //    traveled — yielding to any external publisher of the legacy variables.
@@ -184,6 +186,9 @@ const std::set<std::string> kFlagVars = {
     "REMOTE_CONTROL", "CRASH_STOP",
     // Production iWebSocket comms-loss failsafe (return to base and hold).
     "COMMS_LOSS", "RETURN_HOLD",
+    // Follow an AIS contact (BHV_Trail) and the operator region hold
+    // (BHV_OpRegionV24), both started from Swiftships-UI.
+    "TRAILING", "REGION",
 };
 
 // Everything else we subscribe to.
@@ -208,7 +213,7 @@ const std::set<std::string> kSpecialVars = {
 // and speed error), so they are cached before the rate limiter runs.
 const std::set<std::string> kCachedVars = {
     "NAV_SPEED", "NAV_X", "NAV_Y", "NAV_HEADING",
-    "DESIRED_HEADING", "DESIRED_SPEED",
+    "DESIRED_HEADING", "DESIRED_SPEED", "DESIRED_THRUST",
 };
 
 double EpochMs() {
@@ -272,6 +277,9 @@ protected:
         //   radar_cpa_alert_m = 500       // HIGH collision risk: CPA below this ...
         //   tcpa_alert_s   = 300          // ... within this many seconds
         //   contact_ttl_s  = 10           // contact expiry without an update
+        //   remote_thrust_pct = 1         // Remote state with no autonomy mode:
+        //   remote_speed_kn   = 1         //   |DESIRED_THRUST| >= this % or SOG >=
+        //   remote_hold_s     = 10        //   this (0 = thrust only), held this long
         //   signalk_http   = localhost:3000  // route-name lookup (ID_ROUTE ->
         //                                   // /signalk/v{2,1}/api/resources/routes/<id>);
         //                                   // empty disables the lookup
@@ -323,6 +331,10 @@ protected:
         if (!m_MissionReader.GetConfigurationParam("mission_name", mission_name_))
             m_MissionReader.GetValue("Community", mission_name_);
         m_MissionReader.GetConfigurationParam("radar_cpa_alert_m", radar_cpa_alert_m_);
+        // Remote state when under way without autonomy (usv::MotionLatch).
+        m_MissionReader.GetConfigurationParam("remote_thrust_pct", motion_.thrust_pct);
+        m_MissionReader.GetConfigurationParam("remote_speed_kn", motion_.speed_kn);
+        m_MissionReader.GetConfigurationParam("remote_hold_s", motion_.hold_s);
         m_MissionReader.GetConfigurationParam("tcpa_alert_s", tcpa_alert_s_);
         m_MissionReader.GetValue("Community", own_name_);
         double ttl = 10.0;
@@ -503,6 +515,8 @@ protected:
         if (!telemetry_) return true;
         const double now = MonoSeconds();
         FlushBehaviorEvent(now);
+        // The Remote hold expires without new mail (usv::MotionLatch).
+        RefreshDerivedState(now);
 
         // 1 Hz: autonomy snapshot + derived mission quantities. Periodic
         // (not just on-change) so stat panels stay fresh, the state
@@ -811,6 +825,8 @@ private:
         else if (key == "CRASH_STOP")           slot = &flags_.crash_stop;
         else if (key == "COMMS_LOSS")           slot = &flags_.comms_loss;
         else if (key == "RETURN_HOLD")          slot = &flags_.return_hold;
+        else if (key == "TRAILING")             slot = &flags_.trailing;
+        else if (key == "REGION")               slot = &flags_.region;
         if (!slot || *slot == val) return;
         *slot = val;
 
@@ -947,7 +963,11 @@ private:
 
     // Derived-quantity inputs, updated from every sample (before limiting).
     void CacheSample(const std::string& key, double v, double now) {
-        if (key == "NAV_SPEED") last_speed_mps_ = v * helm_speed_to_mps_;
+        if (key == "NAV_SPEED") {
+            last_speed_mps_ = v * helm_speed_to_mps_;
+            motion_.set_speed(last_speed_mps_ * MS_TO_KN, now);
+        }
+        else if (key == "DESIRED_THRUST") motion_.set_thrust(v, now);
         else if (key == "NAV_X") { nav_x_ = v; have_x_ = true; }
         else if (key == "NAV_Y") {
             nav_y_ = v; have_y_ = true;
@@ -1533,13 +1553,19 @@ private:
 
     // ------------------------------------------------- derived state
     void RefreshDerivedState(double now) {
+        // Remote when under way without autonomy (usv::MotionLatch): the
+        // boat coasts after a mission ends, so the speed test waits.
+        const bool autonomy = usv::autonomy_mode(flags_);
+        if (last_autonomy_ && !autonomy) motion_.autonomy_ended(now);
+        last_autonomy_ = autonomy;
+        motion_.update(now);
+        flags_.under_way = motion_.active(now);
         const std::string state = usv::DeriveMissionState(flags_);
         if (state != last_state_) {
             last_state_ = state;
             telemetry_->str_field("mission_state", "", "state", state);
             Event("state_change", "info", "Mission state: " + state);
         }
-        (void)now;
     }
 
     void WriteSnapshot(double now) {
@@ -1588,8 +1614,11 @@ private:
                           obstacles_.active(now));
         telemetry_->field("autonomy", "", "comms_phase",
                           usv::comms_phase(flags_.comms_lost));
+        // Remote Control tile: REMOTE_CONTROL, or the operator driving from
+        // Swiftships-UI without an autonomy mode (derived state Remote).
         telemetry_->field("autonomy", "", "remote_control",
-                          b(flags_.remote_control));
+                          b(flags_.remote_control || last_state_ == "Remote"));
+        telemetry_->field("autonomy", "", "under_way", b(flags_.under_way));
         telemetry_->field("autonomy", "", "crash_stop", b(flags_.crash_stop));
         // Operator link for both iWebSocket variants (usv::operator_link):
         // the tiles read this; comms_phase / comms_lost keep their meaning.
@@ -1702,6 +1731,8 @@ private:
     int survey_wpt_total_ = 0;
     double last_dist_ = 0.0, last_dist_time_ = -1e18;
     double last_speed_mps_ = 0.0;
+    usv::MotionLatch motion_;              // thrust / speed for the Remote state
+    bool last_autonomy_ = false;
     double helm_speed_to_kn_ = MS_TO_KN;   // nav_speed_units: mps (default) or knots
     double helm_speed_to_mps_ = 1.0;
     double base_lat_ = 0.0, base_lon_ = 0.0;   // BASE_COORDS

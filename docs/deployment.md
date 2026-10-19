@@ -337,12 +337,19 @@ The equivalent manual fix is a file
 `/etc/systemd/system/moos-antler.service.d/10-usv-path.conf` with
 `[Service]` / `Environment=PATH=<existing PATH>:/usr/local/bin:/usr/bin:/bin`,
 then `systemctl daemon-reload && systemctl restart moos-antler`. The variable map is **pre-aligned with the Alpha mission**
-(`alpha.bhv`): mode flags (WAYPOINT/RETURN/STATIONING/PAUSE), the comms
+(`alpha.bhv`): mode flags (WAYPOINT/RETURN/STATIONING/PAUSE/TRAILING/REGION), the comms
 failsafe (COMMS_LOST + MISSION_ARMED re-arm latch), SURVEY_ENTRY_GATE,
 DIST_TO_NEXT_WPT / WPT_INDEX / VIEW_SEGLIST, geofence (OPR_BREACHED),
 obstacle alerts and helm health (IVPHELM_*) are all subscribed, and the
 operational mission state is derived onboard (unit-tested in
-`mission_logic_test`; see docs/alpha-mission-integration.md). Legacy
+`mission_logic_test`; see docs/alpha-mission-integration.md). The state
+reads Remote whenever the boat is under way with no autonomy mode running
+(or with the helm parked): the operator is driving from Swiftships-UI.
+Under way means DESIRED_THRUST at or above 1 % (either direction) or speed
+over ground at or above 1 kn, held 10 s; tune with `remote_thrust_pct`,
+`remote_speed_kn` (0 = thrust only, for a river current that would carry a
+drifting boat above the speed) and `remote_hold_s` in the grafana_bridge
+block. Legacy
 generic variables (WPT_DIST, MISSION_PROGRESS, ...) still work and take
 precedence if something publishes them. To extend the map, edit
 `ingestion/moos-cpp/moos_bridge.cpp`, then rebuild:

@@ -1382,6 +1382,16 @@
                   "text": "Holding at Base",
                   "color": "orange",
                   "index": 12
+                },
+                "Following": {
+                  "text": "Following",
+                  "color": "#00bcd4",
+                  "index": 13
+                },
+                "RegionHold": {
+                  "text": "Region Hold",
+                  "color": "super-light-blue",
+                  "index": 14
                 }
               }
             }

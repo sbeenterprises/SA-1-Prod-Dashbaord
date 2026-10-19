@@ -3,6 +3,37 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.37] - 2026-10-19 (Remote whenever the operator drives; update script fetch fix)
+
+grafana_bridge, dashboards, update script and documents. Update with
+`bash deploy/update.sh v1.2.37`, restart the mission (grafana_bridge
+derives the mission state), then Ctrl+F5.
+
+### Changed
+- Mission state Remote whenever the boat is under way with no autonomy
+  mode running, or with the helm parked: the operator is driving from
+  Swiftships-UI (the boats' iWebSocket sends throttle and rudder straight
+  from the console and never posts REMOTE_CONTROL, so the state read Idle
+  while the boat moved). Under way = throttle commanded at 1 % or more
+  (ahead or astern) or speed over ground at 1 kn or more, held 10 s. For
+  30 s after a mission ends only the throttle counts, so a coasting boat
+  does not flash Remote. Tunable per mission file: `remote_thrust_pct`,
+  `remote_speed_kn` (0 = throttle only), `remote_hold_s`. The Mission
+  page's Remote Control tile reads MANUAL at the same time; new field
+  `autonomy.under_way`.
+- New mission states Following (TRAILING: following an AIS contact) and
+  Region Hold (REGION: operator region hold), both started from
+  Swiftships-UI. They count as autonomy, so a moving boat in these modes
+  is not Remote.
+- Readiness Route tile: smaller text, so a route name with "(safe)" fits
+  the narrow tile.
+
+### Fixed
+- `deploy/update.sh` stopped silently after "Fetching releases" when the
+  boat held a local tag that differed from GitHub's ("would clobber
+  existing tag"). It now fetches tags with `--force` and prints any fetch
+  error.
+
 ## [1.2.36] - 2026-10-19 (Readiness: safe route on the ENC counts as the region)
 
 grafana_bridge and documents. Update with `bash deploy/update.sh v1.2.36`,

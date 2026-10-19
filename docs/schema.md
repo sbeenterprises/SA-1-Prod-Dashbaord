@@ -46,8 +46,9 @@ and yield automatically to any external publisher of the legacy
 
 ### mission_state (FR-1/FR-3) — source: MOOS bridge (strings)
 mission_name, mission_id, route_name, state (derived: Idle | Autonomous |
-Remote | Paused | StationKeeping | ReturnToBase | EnteringRegion |
-AwaitingRearm | CommsLost | Parked | Completed), state_external (a
+Remote | Paused | HoldingAtBase | StationKeeping | ReturnToBase | Following |
+RegionHold | EnteringRegion | AwaitingRearm | CommsLost | Parked |
+Completed; Remote also when under way with no autonomy mode), state_external (a
 MISSION_STATE published by another app, if any), active_behavior (parsed
 from IVPHELM_SUMMARY: the helm's running behavior set; the per-iteration
 active set only on helm builds that do not report running_bhvs), station_keep,
@@ -143,7 +144,9 @@ geofence_breached (0 ok | 1 breach | 2 recovering; decays to 0 after 30 s
 without an OPR_BREACHED post), obstacle_alerts (count, 120 s TTL),
 comms_phase (0 link ok | 1 grace, mission continues | 2 failsafe hold |
 3 return to base; the simulation iWebSocket's COMMS_LOST phases),
-remote_control (REMOTE_CONTROL), crash_stop (CRASH_STOP), comms_loss
+remote_control (1 with REMOTE_CONTROL or while the derived state is Remote),
+under_way (1 while thrust is commanded or the boat moves, see the Remote
+state), crash_stop (CRASH_STOP), comms_loss
 (COMMS_LOSS from the boats' iWebSocket: no frame from any Swiftships-UI for
 comms_loss_timeout s), return_hold (RETURN_HOLD: holding station on the
 base), comms_return (1 while the link is lost and the boat returns to or

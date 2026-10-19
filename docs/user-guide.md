@@ -108,7 +108,9 @@ used by alerts and queries:
 | State | Meaning |
 |---|---|
 | Autonomous | Survey running (waypt_survey driving) |
-| Remote | Operator driving the boat through remote control (REMOTE_CONTROL); autonomy is not in charge |
+| Remote | Operator driving the boat; autonomy is not in charge. Shown whenever the boat is under way (throttle commanded, or moving at 1 kn or more) with no autonomy mode running or with the helm parked, and when the console sets remote control. The Remote Control tile on the Mission page reads MANUAL at the same time |
+| Following (shown "Following") | Following an AIS contact at the range and angle chosen in Swiftships-UI |
+| RegionHold (shown "Region Hold") | Holding inside the operating region chosen in Swiftships-UI |
 | Paused | Operator pause — boat holds at zero speed |
 | StationKeeping | Holding a station point (operator request or station waypoint) |
 | ReturnToBase (shown "Return to Base") | Driving back to the base/return point (operator command, or the comms-loss failsafe: the events say which) |
@@ -118,7 +120,7 @@ used by alerts and queries:
 | CommsLost | Simulation iWebSocket only: operator-link failsafe in force (action shown in the events table); boat holds at the loss position |
 | Parked | Helm parked (manual override) — thrust actively zeroed. All-Stop shows PARKED / IDLE in grey for these benign causes; only unexpected all-stops are red |
 | Completed | Survey finished; boat stopped at the final waypoint / parked |
-| Idle | No mission requested |
+| Idle | Boat at rest, no mission requested |
 
 `AwaitingRearm` and `CommsLost` are the two states that need operator
 action — both also raise alerts.

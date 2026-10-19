@@ -579,6 +579,15 @@ EOF
       'NODE_REPORT=NAME=near_open,TYPE=ship,TIME=1,X=0,Y=1500,SPD=3,HDG=0' \
       'NODE_REPORT=NAME=far_close,TYPE=ship,TIME=1,X=40000,Y=60000,SPD=5,HDG=180'
     sleep 2
+    # Swiftships-UI modes: follow an AIS contact, region hold, then the
+    # operator driving with no autonomy mode (DESIRED_THRUST from the
+    # console, no REMOTE_CONTROL on the production iWebSocket) -> Remote.
+    P RETURN_HOLD=false WAYPOINT=false TRAILING=true
+    sleep 2
+    P TRAILING=false REGION=true
+    sleep 2
+    P REGION=false DESIRED_THRUST=25
+    sleep 2
   fi
   kill $DB 2>/dev/null; pkill -f moos_bridge 2>/dev/null; stop_stub
 
@@ -642,6 +651,11 @@ EOF
     grep -q "autonomy,.* comms_return=1" "$LINES"      && ok "autonomy.comms_return during the failsafe return" || bad "comms_return missing"
     grep -q "autonomy,.* operator_link=5" "$LINES"     && ok "operator_link 5 holding at base after comms loss" || bad "operator_link hold code missing"
     grep -q 'state="HoldingAtBase"' "$LINES"           && ok "RETURN_HOLD -> state HoldingAtBase"      || bad "HoldingAtBase state missing"
+    grep -q 'state="Following"' "$LINES"               && ok "TRAILING -> state Following"             || bad "Following state missing"
+    grep -q 'state="RegionHold"' "$LINES"              && ok "REGION -> state RegionHold"              || bad "RegionHold state missing"
+    grep -o 'Mission state: [A-Za-z]*' "$LINES" | tail -1 | grep -q 'Remote$' \
+      && ok "thrust without autonomy -> state Remote" || bad "Remote (under way) state missing"
+    grep -q "autonomy,.* remote_control=1" "$LINES"    && ok "Remote Control tile on while the operator drives" || bad "remote_control not derived"
     grep -q 'colav,vessel=usv-moos,contact=contato_7.*situation="Give-way, crossing astern"' "$LINES" \
       && ok "COLAV_ALERTS -> colav row with the COLREGS situation" || bad "colav situation missing"
     grep -q 'colav,vessel=usv-moos,contact=contato_7.*rule="Rule 16"' "$LINES" \

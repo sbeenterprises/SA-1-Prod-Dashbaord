@@ -17,7 +17,9 @@ git diff --quiet && git diff --cached --quiet \
   || die "local changes in $(pwd): commit or 'git stash' them first"
 
 say "Fetching releases"
-git fetch --tags --quiet origin
+# --force: a local tag that differs from GitHub's (one made by hand on the
+# boat) is replaced instead of failing the fetch; errors are shown.
+git fetch --tags --force origin || die "git fetch failed (message above): check the network and GitHub access"
 REF="${1:-$(git tag --list 'v*' --sort=-v:refname | head -1)}"
 [[ -n "$REF" ]] || die "no release tags found; pass a tag or 'main'"
 OLD="$(git describe --tags --always)"
