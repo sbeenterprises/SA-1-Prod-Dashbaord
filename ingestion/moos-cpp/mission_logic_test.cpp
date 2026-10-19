@@ -766,6 +766,44 @@ static void test_readiness() {
         CHECK(find_check(v3, "checklist").status == READY_CONSOLE);
     }
 
+    // A route planned safe on the ENC (Swiftships-UI saves it as
+    // "<name> (safe)") stands in for the operating region and shows an ENC
+    // chart is in use; "(unsafe)" fails the Course row.
+    {
+        ReadinessConfig nc;
+        nc.enc_fitted = false;
+        LatestStore r;
+        r.put_str("mission_state", "route_name", "10-19-2026 (safe)", now - 5);
+        r.put("mission", "waypoints_total", 6, now - 5);
+        r.put("mission", "route_length_m", 0.6 * 1852.0, now - 5);
+        auto a = EvaluateReadiness(r, now, true, nc);
+        CHECK(find_check(a, "course").status == READY_PASS);
+        CHECK_EQ_STR(find_check(a, "course").evidence,
+                     "10-19-2026 (safe) · 6 waypoints · 0.6 nm · checked safe on ENC");
+        CHECK(find_check(a, "enc").status == READY_PASS);
+        CHECK_EQ_STR(find_check(a, "enc").evidence, "ENC in use · route checked safe on chart");
+        // Console ENC_STATUS still wins when it is published.
+        r.put_str("mission_state", "enc_status", "none", now);
+        CHECK(find_check(EvaluateReadiness(r, now, true), "enc").status == READY_FAIL);
+        // Plain route name, no region: FAIL with the reason.
+        LatestStore p;
+        p.put_str("mission_state", "route_name", "testgps", now - 5);
+        p.put("mission", "waypoints_total", 6, now - 5);
+        auto b = EvaluateReadiness(p, now, true, nc);
+        CHECK(find_check(b, "course").status == READY_FAIL);
+        CHECK_EQ_STR(find_check(b, "course").evidence,
+                     "testgps · 6 waypoints · no operating region or ENC safe route");
+        CHECK(find_check(b, "enc").status == READY_NA);
+        // Route that failed the ENC check: FAIL even with a region.
+        p.put_str("mission_state", "route_name", "testgps (unsafe)", now - 5);
+        p.put("mission", "region_vertices", 4, now - 5);
+        auto c = EvaluateReadiness(p, now, true, nc);
+        CHECK(find_check(c, "course").status == READY_FAIL);
+        CHECK_EQ_STR(find_check(c, "course").evidence,
+                     "testgps (unsafe) · 6 waypoints · region 4 vertices · ROUTE NOT SAFE ON ENC");
+        CHECK(find_check(c, "enc").status == READY_NA);
+    }
+
     // Course planning falls back to the last known route (flagged after 10 min)
     s.put_str("mission_state", "route_name", "Rt WP Alpha", now - 1200);
     CHECK_EQ_STR(find_check(EvaluateReadiness(s, now, true), "course").evidence,

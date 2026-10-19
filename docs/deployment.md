@@ -201,6 +201,18 @@ blocks READY because it is undecided). The course row
 also reports the route length and fails when any waypoint lies outside
 the operating region; the engine row fails on any active J1939 DTC.
 
+A route planned with the Swiftships-UI safe-route tool is checked against
+the ENC (depth, land, hazards) and saved with "(safe)" in its name, for
+example `10-19-2026 (safe)`. Such a route counts as the operating region:
+the course row passes with "checked safe on ENC" when the route has
+waypoints, even without an operating region polygon. When both exist the
+region rules apply as well (route inside the region). A route whose name
+carries "(unsafe)" fails the course row. A safe route also shows that an
+ENC chart is in use, so the Chart / ENC row passes with "ENC in use ·
+route checked safe on chart" while the console does not publish
+ENC_STATUS, even with `enc_fitted = false`; a published ENC_STATUS always
+decides that row.
+
 ### Console checklist and ENC selection
 The manual pre-departure checklist lives in the operator console
 (Swiftships-UI). For Grafana to mirror it, the console publishes two MOOS

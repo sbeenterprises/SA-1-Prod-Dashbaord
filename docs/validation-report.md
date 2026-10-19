@@ -496,3 +496,25 @@ v1.2.30), the particulars card as a table, Fuel Remaining / Range Left /
 Time Left with a fuel reading, the Speed cap row with SPEED_CAP
 published, the Navy theme on a real Grafana page, and fit-to-screen on
 USV-722's own display.
+
+## 12. Release v1.2.36 (2026-10-19)
+
+Scope: the Readiness Course planning row accepts a route planned safe on
+the ENC (Swiftships-UI saves it with "(safe)" in its name) in place of an
+operating region, and fails a route named "(unsafe)"; the Chart / ENC row
+passes on such a route while the console does not publish ENC_STATUS.
+
+Environment: as section 11. `tools/smoke_test.sh` in full: 165 PASS,
+0 FAIL, 1 SKIP (CAN live capture, no vcan module). The readiness unit
+tests (mission_logic_test, 417 checks) cover the safe route without a
+region, a plain route without a region, an "(unsafe)" route with a region,
+and a published ENC_STATUS taking precedence over the safe route.
+
+Observed on USV-722 before the release (2026-10-19): Course planning
+FAIL with route "10-19-2026 (safe) · 6 waypoints · 0.6 nm · no operating
+region" and Chart / ENC N/A, while Swiftships-UI showed the ENC chart
+and the safe route.
+
+To verify on the target: on USV-722 with a safe route loaded, Course
+planning PASS with "checked safe on ENC" and Chart / ENC PASS with "ENC
+in use · route checked safe on chart".

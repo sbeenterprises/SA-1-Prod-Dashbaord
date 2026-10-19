@@ -1267,14 +1267,23 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         }
         add("gps", "GPS position fix", ev, st);
     }
-    // 2 Course planning: route, waypoints, operating region
+    // A route planned with Swiftships-UI's safe-route tool is checked
+    // against the ENC (depth, land, hazards) and saved with "(safe)" in its
+    // name; "(unsafe)" marks one that failed the check. A safe route stands
+    // in for the operating region on the Course row, and shows that an ENC
+    // chart is in use on the Chart / ENC row.
+    const Sample* route = num("mission_state", "route_name", 1e9);
+    const bool have_route = route && !route->str.empty() && route->str != "-";
+    const std::string route_lc = have_route ? lower(route->str) : "";
+    const bool route_enc_safe = route_lc.find("(safe)") != std::string::npos;
+    const bool route_enc_unsafe = route_lc.find("(unsafe)") != std::string::npos;
+    // 2 Course planning: route, waypoints, operating region (or a route
+    // checked safe on the ENC)
     {
         // Last known (also read back from InfluxDB after a community
         // restart, like the Route tile); flagged when older than 10 min.
-        const Sample* route = num("mission_state", "route_name", 1e9);
         const Sample* wpts = num("mission", "waypoints_total", 1e9);
         const Sample* region = num("mission", "region_vertices", 1e9);
-        const bool have_route = route && !route->str.empty() && route->str != "-";
         const bool have_wpts = wpts && wpts->num > 0.0;
         const bool have_region = region && region->num >= 3.0;
         const Sample* inside = num("mission", "route_in_region", 1e9);
@@ -1283,18 +1292,24 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         if (have_route && now - route->t > 600.0) ev += " (last known)";
         ev += have_wpts ? " · " + fmt0(wpts->num) + " waypoints" : " · no waypoints";
         if (len && len->num > 0.0) ev += " · " + fmt1(len->num / 1852.0) + " nm";
-        ev += have_region ? " · region " + fmt0(region->num) + " vertices" : " · no operating region";
-        bool ok = have_route && have_wpts && have_region;
-        if (ok && inside) {
+        if (have_region) ev += " · region " + fmt0(region->num) + " vertices";
+        else if (route_enc_safe) ev += " · checked safe on ENC";
+        else ev += " · no operating region or ENC safe route";
+        bool ok = have_route && have_wpts && (have_region || route_enc_safe);
+        if (ok && have_region && inside) {
             if (inside->num == 1.0) ev += " · route inside region";
             else { ev += " · ROUTE OUTSIDE REGION"; ok = false; }
         }
+        if (route_enc_unsafe) { ev += " · ROUTE NOT SAFE ON ENC"; ok = false; }
         add("course", "Course planning", ev, ok ? READY_PASS : READY_FAIL);
     }
-    // 3 Chart / ENC selected (console publishes ENC_STATUS)
+    // 3 Chart / ENC selected (console publishes ENC_STATUS; a route checked
+    // safe on the ENC also shows a chart is in use)
     {
         const Sample* enc = num("mission_state", "enc_status", 1e9);
-        if (!cfg.enc_fitted) add("enc", "Chart / ENC selected", "no ENC chart system on this vessel", READY_NA);
+        if (!enc && route_enc_safe)
+            add("enc", "Chart / ENC selected", "ENC in use · route checked safe on chart", READY_PASS);
+        else if (!cfg.enc_fitted) add("enc", "Chart / ENC selected", "no ENC chart system on this vessel", READY_NA);
         else if (!enc) add("enc", "Chart / ENC selected", "console not publishing ENC_STATUS", READY_CONSOLE);
         else add("enc", "Chart / ENC selected", enc->str,
                  enc->str.rfind("selected", 0) == 0 ? READY_PASS : READY_FAIL);

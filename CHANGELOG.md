@@ -3,9 +3,25 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
-## [Unreleased] (documents only, no change on the boats)
+## [1.2.36] - 2026-10-19 (Readiness: safe route on the ENC counts as the region)
+
+grafana_bridge and documents. Update with `bash deploy/update.sh v1.2.36`,
+then restart the mission (grafana_bridge evaluates the checks).
 
 ### Changed
+- Readiness, Course planning: a route planned with the Swiftships-UI
+  safe-route tool (checked against the ENC and saved with "(safe)" in its
+  name) counts as the operating region. The row passes with "checked safe
+  on ENC" when the route has waypoints; without a region or a safe route it
+  fails with "no operating region or ENC safe route". A route named
+  "(unsafe)" fails the row. When an operating region is also set, the
+  route must still lie inside it.
+- Readiness, Chart / ENC selected: a route checked safe on the ENC shows a
+  chart is in use, so the row passes with "ENC in use · route checked safe
+  on chart" while the console does not publish ENC_STATUS (also with
+  `enc_fitted = false`). A published ENC_STATUS still decides the row.
+
+### Documents
 - Deployment guide: radar server requirements (MarineYachtRadar
   mayara-server d4deea0 with the Signal K v2 radar API, Rust 1.90+, the
   navigation feed `-n tcp:127.0.0.1:8375`), the radar network rules (one

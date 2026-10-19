@@ -79,7 +79,7 @@ What each non-default line does:
 | `ignore_vars = NAV_YAW` | `iDivisorNMEA` publishes the rudder angle as NAV_YAW on this hull; without this the heading tiles would show rudder angle. |
 | `readiness_profile = vessel` | A check with no sensor data FAILS (on the simulation host it reads N/A). |
 | `optional_apps` | GUI viewer and the test-contact injector: reported if absent, never a readiness fault. |
-| `enc_fitted = false` | No ENC chart system yet. Delete this line when the ENC is installed and the console publishes `ENC_STATUS`. |
+| `enc_fitted = false` | The console does not publish `ENC_STATUS`. With no route the Chart / ENC row reads N/A; with a route planned safe on the ENC (name ends in "(safe)") it passes. Delete this line once the console publishes `ENC_STATUS`. |
 | `console_checklist = false` | The Swiftships UI keeps its pre-departure checklist local (not published). Delete when the UI publishes `CHECKLIST_STATUS`. |
 
 Optional lines to add once the numbers are known (turn the Endurance row
