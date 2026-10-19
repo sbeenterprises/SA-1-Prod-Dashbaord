@@ -1065,6 +1065,7 @@ mission_state_mappings = state_map([
     ("CommsLost", "red"), ("Parked", "#6e7680"), ("Completed", "purple"),
     ("HoldingAtBase", "orange"),
     ("Following", ACCENT), ("RegionHold", "super-light-blue"),
+    ("Moving", "light-yellow"),
 ])
 helm_state_mappings = state_map([
     ("DRIVE", TILE_OK), ("PARK", "#6e7680"), ("STANDBY", "yellow"),

@@ -129,77 +129,81 @@ static void test_state_machine() {
     f.remote_control = false;
 }
 
-// Operator driving from Swiftships-UI without an autonomy mode (no
-// REMOTE_CONTROL on the production iWebSocket: DESIRED_THRUST / RUDDER come
-// straight from the console): Remote while under way, Idle / Parked at rest.
-static void test_remote_when_under_way() {
+// Outside autonomy: a throttle or rudder command from Swiftships-UI is
+// Remote (the boats' iWebSocket never posts REMOTE_CONTROL), drifting with
+// no command is Moving, at rest Idle / Parked. Autonomy driving wins.
+static void test_remote_and_moving() {
     MissionFlags f;
     CHECK_EQ_STR(DeriveMissionState(f), "Idle");
-    f.under_way = true;
+    f.commanded = true;
     CHECK_EQ_STR(DeriveMissionState(f), "Remote");
-    f.manual_override = true;                       // CONTROLE_MANUAL parks the helm
+    f.moving = true;                                // driving and moving: Remote
     CHECK_EQ_STR(DeriveMissionState(f), "Remote");
-    f.under_way = false;
-    CHECK_EQ_STR(DeriveMissionState(f), "Parked");
+    f.commanded = false;                            // drifting, no command
+    CHECK_EQ_STR(DeriveMissionState(f), "Moving");
+    f.moving = false;
+    CHECK_EQ_STR(DeriveMissionState(f), "Idle");
+    // Helm parked (CONTROLE_MANUAL): console commands Remote, drift Moving,
+    // at rest Parked; with the survey loaded too (mission on, not started).
+    f.manual_override = true; f.waypoint = true;
+    CHECK(!autonomy_driving(f));
+    f.commanded = true;  CHECK_EQ_STR(DeriveMissionState(f), "Remote");
+    f.commanded = false; f.moving = true; CHECK_EQ_STR(DeriveMissionState(f), "Moving");
+    f.moving = false;    CHECK_EQ_STR(DeriveMissionState(f), "Parked");
     f.manual_override = false;
-    // Autonomy modes drive the boat themselves: not Remote.
-    f.under_way = true;
-    f.waypoint = true;  CHECK_EQ_STR(DeriveMissionState(f), "Autonomous");  f.waypoint = false;
+    // Autonomy driving: its own commands and motion never read Remote / Moving.
+    f.commanded = true; f.moving = true;
+    CHECK(autonomy_driving(f));
+    CHECK_EQ_STR(DeriveMissionState(f), "Autonomous");  f.waypoint = false;
     f.returning = true; CHECK_EQ_STR(DeriveMissionState(f), "ReturnToBase"); f.returning = false;
     f.stationing = true; CHECK_EQ_STR(DeriveMissionState(f), "StationKeeping"); f.stationing = false;
     f.trailing = true;  CHECK_EQ_STR(DeriveMissionState(f), "Following");   f.trailing = false;
     f.region = true;    CHECK_EQ_STR(DeriveMissionState(f), "RegionHold");  f.region = false;
     f.pause = true;     CHECK_EQ_STR(DeriveMissionState(f), "Paused");      f.pause = false;
-    // Survey with the helm parked and the operator driving: Remote.
-    f.waypoint = true; f.manual_override = true;
-    CHECK_EQ_STR(DeriveMissionState(f), "Remote");
-    f.waypoint = false; f.manual_override = false;
-    // Comms loss still dominates.
-    f.comms_lost = "loiter";
-    CHECK_EQ_STR(DeriveMissionState(f), "CommsLost");
-    f.comms_lost = "false";
-    f.under_way = false;
-    // Following / region hold at rest.
-    f.trailing = true;  CHECK_EQ_STR(DeriveMissionState(f), "Following");  f.trailing = false;
-    f.region = true;    CHECK_EQ_STR(DeriveMissionState(f), "RegionHold"); f.region = false;
+    f.return_hold = true; CHECK_EQ_STR(DeriveMissionState(f), "HoldingAtBase"); f.return_hold = false;
+    // Comms loss and REMOTE_CONTROL keep their places.
+    f.comms_lost = "loiter"; CHECK_EQ_STR(DeriveMissionState(f), "CommsLost"); f.comms_lost = "false";
+    f.commanded = false; f.moving = false;
+    f.remote_control = true; CHECK_EQ_STR(DeriveMissionState(f), "Remote"); f.remote_control = false;
     CHECK(!autonomy_mode(f));
-    f.return_hold = true; CHECK(autonomy_mode(f)); f.return_hold = false;
 }
 
 static void test_motion_latch() {
-    MotionLatch m;                                  // 1 %, 1 kn, hold 10 s, grace 30 s
-    CHECK(!m.active(0.0));
-    m.set_speed(0.4, 1.0);                          // drifting at the dock
-    CHECK(!m.active(1.0));
+    MotionLatch m;                                  // 1 %, rudder 1, 0.5 kn, hold 10 s
+    CHECK(!m.commanded(0.0) && !m.moving(0.0));
+    m.set_speed(0.3, 1.0);                          // GPS noise at the dock
+    CHECK(!m.moving(1.0));
     m.set_thrust(20.0, 2.0);                        // operator throttle
-    CHECK(m.active(2.0));
+    CHECK(m.commanded(2.0));
     m.set_thrust(0.0, 3.0);
-    CHECK(m.active(11.9));                          // held 10 s after the last sign (t=2)
-    CHECK(!m.active(12.1));
-    m.set_thrust(-15.0, 20.0);                      // astern counts too
-    CHECK(m.active(20.0));
-    m.set_thrust(0.0, 21.0);
-    m.set_speed(3.2, 40.0);                         // moving on speed alone
-    CHECK(m.active(40.0));
-    m.set_speed(0.2, 41.0);
-    CHECK(!m.active(51.5));
-    // Mission ends while the boat coasts: speed ignored for 30 s, thrust not.
-    m.autonomy_ended(100.0);
-    m.set_speed(4.0, 101.0);
-    CHECK(!m.active(101.0));
-    m.set_speed(1.5, 129.0);
-    CHECK(!m.active(129.0));
-    m.set_speed(1.5, 131.0);                        // still moving after the grace
-    CHECK(m.active(131.0));
-    m.autonomy_ended(200.0);
-    m.set_thrust(30.0, 201.0);
-    CHECK(m.active(201.0));
-    // speed_kn = 0: thrust only.
-    MotionLatch t; t.speed_kn = 0.0;
+    CHECK(m.commanded(11.9));                       // held 10 s after the last sign (t=2)
+    CHECK(!m.commanded(12.1));
+    m.set_rudder(-12.0, 20.0);                      // rudder alone counts
+    CHECK(m.commanded(20.0));
+    m.set_rudder(0.4, 21.0);                        // below 1: not a command
+    CHECK(!m.commanded(31.5));
+    m.set_thrust(-15.0, 40.0);                      // astern counts
+    CHECK(m.commanded(40.0));
+    m.set_thrust(0.0, 41.0);
+    m.set_speed(1.8, 60.0);                         // drifting on the current
+    CHECK(m.moving(60.0) && !m.commanded(60.0));
+    m.update(65.0);                                 // still drifting (no new fix)
+    CHECK(m.moving(74.0));
+    m.set_speed(0.2, 80.0);
+    CHECK(!m.moving(90.5));
+    // Autonomy ends: the autopilot's last outputs are dropped.
+    m.set_thrust(35.0, 100.0); m.set_rudder(8.0, 100.0);
+    CHECK(m.commanded(100.0));
+    m.autonomy_ended();
+    CHECK(!m.commanded(100.0));
+    m.update(101.0);
+    CHECK(!m.commanded(101.0));
+    m.set_thrust(10.0, 102.0);                      // a new console command counts
+    CHECK(m.commanded(102.0));
+    // moving_kn = 0: no Moving state.
+    MotionLatch t; t.moving_kn = 0.0;
     t.set_speed(5.0, 1.0);
-    CHECK(!t.active(1.0));
-    t.update(1.0);
-    CHECK(!t.active(1.0));
+    CHECK(!t.moving(1.0));
 }
 
 static void test_helm_behaviors_fallback() {
@@ -1091,7 +1095,7 @@ static void test_colav_alerts() {
 }
 
 int main() {
-    test_remote_when_under_way();
+    test_remote_and_moving();
     test_motion_latch();
     test_flag_parsing();
     test_allstop_classification();

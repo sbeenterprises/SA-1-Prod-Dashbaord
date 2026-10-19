@@ -48,7 +48,8 @@ and yield automatically to any external publisher of the legacy
 mission_name, mission_id, route_name, state (derived: Idle | Autonomous |
 Remote | Paused | HoldingAtBase | StationKeeping | ReturnToBase | Following |
 RegionHold | EnteringRegion | AwaitingRearm | CommsLost | Parked |
-Completed; Remote also when under way with no autonomy mode), state_external (a
+Completed | Moving; outside autonomy Remote while throttle or rudder is
+commanded, Moving while drifting with no command), state_external (a
 MISSION_STATE published by another app, if any), active_behavior (parsed
 from IVPHELM_SUMMARY: the helm's running behavior set; the per-iteration
 active set only on helm builds that do not report running_bhvs), station_keep,
@@ -145,8 +146,8 @@ without an OPR_BREACHED post), obstacle_alerts (count, 120 s TTL),
 comms_phase (0 link ok | 1 grace, mission continues | 2 failsafe hold |
 3 return to base; the simulation iWebSocket's COMMS_LOST phases),
 remote_control (1 with REMOTE_CONTROL or while the derived state is Remote),
-under_way (1 while thrust is commanded or the boat moves, see the Remote
-state), crash_stop (CRASH_STOP), comms_loss
+operator_cmd (1 while a throttle or rudder command is in force outside
+autonomy), drifting (1 while the derived state is Moving), crash_stop (CRASH_STOP), comms_loss
 (COMMS_LOSS from the boats' iWebSocket: no frame from any Swiftships-UI for
 comms_loss_timeout s), return_hold (RETURN_HOLD: holding station on the
 base), comms_return (1 while the link is lost and the boat returns to or

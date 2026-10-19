@@ -3,6 +3,29 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.38] - 2026-10-19 (Remote on commands, Moving when drifting)
+
+grafana_bridge, dashboards and documents. Update with
+`bash deploy/update.sh v1.2.38`, restart the mission, then Ctrl+F5.
+
+### Changed
+- Mission state outside autonomy (no autonomous mode started, or the helm
+  parked), replacing the v1.2.37 rule:
+  - Remote while Swiftships-UI commands throttle or rudder (|throttle| at
+    1 % or more, or |rudder| at 1 or more), held 10 s after the last
+    command. Speed alone no longer makes the state Remote.
+  - New state Moving: the boat moves at 0.5 kn or more with no command
+    from the system or the operator (drifting on current or wind).
+  - Idle / Parked at rest.
+  When an autonomous mode stops driving, the autopilot's last throttle and
+  rudder are dropped, so only a new console command reads Remote (no
+  Remote flash at the end of a mission; a coasting boat reads Moving).
+  Mission-file settings: `remote_thrust_pct`, `remote_rudder`,
+  `moving_speed_kn` (0 = no Moving state), `remote_hold_s`;
+  `remote_speed_kn` from v1.2.37 is gone (remove it if added).
+  Fields: `autonomy.operator_cmd` and `autonomy.drifting` replace
+  `autonomy.under_way`.
+
 ## [1.2.37] - 2026-10-19 (Remote whenever the operator drives; update script fetch fix)
 
 grafana_bridge, dashboards, update script and documents. Update with

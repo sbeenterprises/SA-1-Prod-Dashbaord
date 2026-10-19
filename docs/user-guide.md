@@ -108,7 +108,8 @@ used by alerts and queries:
 | State | Meaning |
 |---|---|
 | Autonomous | Survey running (waypt_survey driving) |
-| Remote | Operator driving the boat; autonomy is not in charge. Shown whenever the boat is under way (throttle commanded, or moving at 1 kn or more) with no autonomy mode running or with the helm parked, and when the console sets remote control. The Remote Control tile on the Mission page reads MANUAL at the same time |
+| Remote | Operator driving the boat from Swiftships-UI; autonomy is not in charge. Shown while a throttle or rudder command is in force and no autonomous mode has been started (a mission loaded but not started counts as not started), and for 10 s after the last command. The Remote Control tile on the Mission page reads MANUAL at the same time |
+| Moving | The boat is moving (0.5 kn or more) with no command from the system or the operator: drifting on current or wind. Check the boat |
 | Following (shown "Following") | Following an AIS contact at the range and angle chosen in Swiftships-UI |
 | RegionHold (shown "Region Hold") | Holding inside the operating region chosen in Swiftships-UI |
 | Paused | Operator pause — boat holds at zero speed |

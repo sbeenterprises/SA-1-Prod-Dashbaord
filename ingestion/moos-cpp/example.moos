@@ -47,13 +47,14 @@ ProcessConfig = grafana_bridge
   radar_cpa_alert_m = 500      // collision risk HIGH: CPA below this ...
   tcpa_alert_s   = 300         // ... within this many seconds (MEDIUM: 2x both)
   contact_ttl_s  = 10          // contact expiry without a NODE_REPORT/RADAR_TARGET
-  // Mission state Remote when the boat is under way with no autonomy mode
-  // (operator driving from Swiftships-UI): thrust commanded at or above
-  // remote_thrust_pct, or speed over ground at or above remote_speed_kn
-  // (0 = thrust only, e.g. a river current that carries a drifting boat),
-  // held remote_hold_s after the last sign.
+  // Outside autonomy (no autonomous mode started, or the helm parked):
+  // mission state Remote while |DESIRED_THRUST| >= remote_thrust_pct or
+  // |DESIRED_RUDDER| >= remote_rudder (operator driving from Swiftships-UI),
+  // Moving while SOG >= moving_speed_kn with no command (drifting; 0 = off),
+  // each held remote_hold_s after its last sign.
   // remote_thrust_pct = 1
-  // remote_speed_kn   = 1
+  // remote_rudder     = 1
+  // moving_speed_kn   = 0.5
   // remote_hold_s     = 10
   signalk_http   = localhost:3000  // ID_ROUTE -> route name lookup
                                // (/signalk/v2 or v1/api/resources/routes/<id>);

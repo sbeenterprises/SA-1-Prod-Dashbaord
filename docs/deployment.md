@@ -342,14 +342,14 @@ failsafe (COMMS_LOST + MISSION_ARMED re-arm latch), SURVEY_ENTRY_GATE,
 DIST_TO_NEXT_WPT / WPT_INDEX / VIEW_SEGLIST, geofence (OPR_BREACHED),
 obstacle alerts and helm health (IVPHELM_*) are all subscribed, and the
 operational mission state is derived onboard (unit-tested in
-`mission_logic_test`; see docs/alpha-mission-integration.md). The state
-reads Remote whenever the boat is under way with no autonomy mode running
-(or with the helm parked): the operator is driving from Swiftships-UI.
-Under way means DESIRED_THRUST at or above 1 % (either direction) or speed
-over ground at or above 1 kn, held 10 s; tune with `remote_thrust_pct`,
-`remote_speed_kn` (0 = thrust only, for a river current that would carry a
-drifting boat above the speed) and `remote_hold_s` in the grafana_bridge
-block. Legacy
+`mission_logic_test`; see docs/alpha-mission-integration.md). When no
+autonomous mode is driving the boat (none started, or the helm parked) the
+state reads Remote while the operator commands throttle or rudder from
+Swiftships-UI (|DESIRED_THRUST| at or above 1 % or |DESIRED_RUDDER| at or
+above 1), Moving while the boat drifts at 0.5 kn or more with no command,
+and Idle / Parked at rest; each is held 10 s after its last sign. Tune with
+`remote_thrust_pct`, `remote_rudder`, `moving_speed_kn` (0 = no Moving
+state) and `remote_hold_s` in the grafana_bridge block. Legacy
 generic variables (WPT_DIST, MISSION_PROGRESS, ...) still work and take
 precedence if something publishes them. To extend the map, edit
 `ingestion/moos-cpp/moos_bridge.cpp`, then rebuild:

@@ -139,7 +139,8 @@ struct MissionFlags {
     bool return_hold = false;          // RETURN_HOLD: holding station on the base
     bool trailing = false;             // TRAILING: following an AIS contact (BHV_Trail)
     bool region = false;               // REGION: operator region hold (BHV_OpRegionV24)
-    bool under_way = false;            // thrust commanded or boat moving (MotionLatch, set by the bridge)
+    bool commanded = false;            // throttle or rudder command in force (MotionLatch, set by the bridge)
+    bool moving = false;               // speed over ground at or above the drift threshold (MotionLatch)
     std::string helm_state;            // IVPHELM_STATE (informational)
     std::string allstop = "clear";     // IVPHELM_ALLSTOP (informational)
 };
@@ -152,19 +153,29 @@ inline bool autonomy_mode(const MissionFlags& f) {
            f.return_hold || f.pause;
 }
 
+// Autonomy is driving the boat: an autonomy mode is requested and the helm
+// is not parked. Outside it, throttle and rudder commands come from the
+// operator's console.
+inline bool autonomy_driving(const MissionFlags& f) {
+    return autonomy_mode(f) && !f.manual_override;
+}
+
 // Operational mission state, priority-ordered (first match wins). Remote
 // (operator driving through REMOTE_CONTROL passthrough) outranks the helm
-// flags it sets underneath (manual override / park). The boat also counts
-// as Remote when it is under way (thrust commanded or moving, see
-// MotionLatch) while no autonomy mode drives it or the helm is parked: the
-// operator is driving from Swiftships-UI (DESIRED_THRUST / DESIRED_RUDDER
-// straight from the console). Helm health is intentionally NOT folded in: a
-// frozen helm while Paused must show as Paused + an all-stop alert, not
-// mask one with the other.
+// flags it sets underneath (manual override / park). Outside autonomy
+// (no autonomy mode, or the helm parked):
+//   - a throttle or rudder command in force means the operator is driving
+//     from Swiftships-UI (DESIRED_THRUST / DESIRED_RUDDER straight from the
+//     console; the boats' iWebSocket never posts REMOTE_CONTROL): Remote;
+//   - moving with no command (drifting on current or wind): Moving;
+//   - at rest: Parked / Completed / Idle as before.
+// Helm health is intentionally NOT folded in: a frozen helm while Paused
+// must show as Paused + an all-stop alert, not mask one with the other.
 inline const char* DeriveMissionState(const MissionFlags& f) {
     if (comms_lost_active(f.comms_lost))         return "CommsLost";
     if (f.remote_control)                        return "Remote";
-    if (f.under_way && (f.manual_override || !autonomy_mode(f))) return "Remote";
+    if (!autonomy_driving(f) && f.commanded)     return "Remote";
+    if (!autonomy_driving(f) && f.moving)        return "Moving";
     if (f.manual_override && f.survey_complete)  return "Completed";
     if (f.manual_override)                       return "Parked";
     if (f.pause)                                 return "Paused";
@@ -180,31 +191,36 @@ inline const char* DeriveMissionState(const MissionFlags& f) {
     return "Idle";
 }
 
-// "Under way" for the Remote state: thrust commanded (|DESIRED_THRUST| at
-// or above thrust_pct) or speed over ground at or above speed_kn (0 turns
-// the speed test off), held for hold_s after the last sign so the state
-// does not flicker at a stop. Right after an autonomy mode ends the boat
-// still coasts, so the speed test waits grace_s before it counts (thrust
-// counts at once).
+// Operator commands and drift, for the Remote and Moving states. A
+// throttle (|DESIRED_THRUST| at or above thrust_pct) or rudder
+// (|DESIRED_RUDDER| at or above rudder) command in force counts as
+// commanded; speed over ground at or above moving_kn counts as moving (0
+// turns it off). Each is held hold_s after its last sign so the state does
+// not flicker at a stop. When autonomy stops driving, the autopilot's last
+// outputs are dropped: only a new console command counts after that.
 struct MotionLatch {
     double thrust_pct = 1.0;
-    double speed_kn = 1.0;
+    double rudder = 1.0;
+    double moving_kn = 0.5;
     double hold_s = 10.0;
-    double grace_s = 30.0;
-    double thrust = 0.0;               // last DESIRED_THRUST (%)
+    double thrust = 0.0;               // last DESIRED_THRUST
+    double rudder_cmd = 0.0;           // last DESIRED_RUDDER
     double sog_kn = 0.0;               // last speed over ground (kn)
-    double last_sign = -1e18;
-    double grace_until = -1e18;
+    double last_cmd = -1e18;
+    double last_move = -1e18;
 
-    void set_thrust(double pct, double now) { thrust = pct; update(now); }
+    void set_thrust(double v, double now) { thrust = v; update(now); }
+    void set_rudder(double v, double now) { rudder_cmd = v; update(now); }
     void set_speed(double kn, double now) { sog_kn = kn; update(now); }
-    void autonomy_ended(double now) { grace_until = now + grace_s; last_sign = -1e18; update(now); }
+    void autonomy_ended() { thrust = 0.0; rudder_cmd = 0.0; last_cmd = -1e18; }
     void update(double now) {
-        const bool thrusting = thrust_pct > 0.0 && std::fabs(thrust) >= thrust_pct;
-        const bool moving = speed_kn > 0.0 && sog_kn >= speed_kn && now >= grace_until;
-        if (thrusting || moving) last_sign = now;
+        const bool thr = thrust_pct > 0.0 && std::fabs(thrust) >= thrust_pct;
+        const bool rud = rudder > 0.0 && std::fabs(rudder_cmd) >= rudder;
+        if (thr || rud) last_cmd = now;
+        if (moving_kn > 0.0 && sog_kn >= moving_kn) last_move = now;
     }
-    bool active(double now) const { return now - last_sign <= hold_s; }
+    bool commanded(double now) const { return now - last_cmd <= hold_s; }
+    bool moving(double now) const { return now - last_move <= hold_s; }
 };
 
 // Operator link as one code for the dashboards (autonomy.operator_link):

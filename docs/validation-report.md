@@ -546,3 +546,25 @@ To verify on the target: drive USV-722 from Swiftships-UI with no
 mission: Mission State Remote within a second of the throttle, back to
 Idle about 10 s after the throttle returns to zero and the boat slows
 below 1 kn; Follow and Region from the UI show Following and Region Hold.
+
+## 14. Release v1.2.38 (2026-10-19)
+
+Scope: the mission state outside autonomy as the operator defined it on
+2026-10-19: autonomous mode running reads its own state; no autonomous
+mode started (mission loaded or not) and Swiftships-UI sending throttle or
+rudder reads Remote; moving with no command from the system or the
+operator reads Moving; at rest Idle / Parked.
+
+Environment: as section 11. `tools/smoke_test.sh` in full: 169 PASS,
+0 FAIL, 1 SKIP (CAN live capture, no vcan module). The smoke scenario now
+ends region hold, commands throttle (Remote), releases it while the boat
+moves (Moving) and stops (Idle), and checks that exact sequence. Unit tests
+(mission_logic_test, 453 checks) cover every autonomy mode against
+commands and motion, the parked helm with a loaded survey, the rudder-only
+command, astern throttle, the 10 s hold, dropping the autopilot's last
+outputs when autonomy stops, and the Moving state switched off.
+
+To verify on the target: with no mission started, throttle or rudder from
+Swiftships-UI reads Remote; releasing both while the boat still moves
+reads Moving after about 10 s, then Idle once it is below 0.5 kn; starting
+a mission reads Autonomous and ending it does not flash Remote.
