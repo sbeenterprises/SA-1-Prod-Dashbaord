@@ -224,6 +224,19 @@ usv-725", the Readiness page shows the particulars card, and Vessel Health
 shows Fuel Remaining in litres. `sudo journalctl -u usv-signalk-bridge -n 5`
 shows `vessel_class="S3 Swift Sea-Stalker" fuel_l=1,135 ...` at start.
 
+### B.y Sensors: AIS, radar, cameras (as set up on 2026-10-18)
+
+| Sensor | Path to the dashboard | Settings on usv-725 |
+|---|---|---|
+| AIS | AIS receiver -> Signal K (`1.AI`, about 35 ships in harbour) -> UDP 10111 -> iDivisorNMEA -> Traffic | nothing in usv.env; Signal K self has no MMSI yet (shows as "undefined") |
+| Radar | Navico HALO24 (169.254.26.20, mayara id `nav3080A`) -> mayara-server -> usv-mayara-bridge -> MOOSDB -> grafana_bridge | radar cable in **enp14s0**: NetworkManager "Wired connection 4" = 169.254.10.11/16 manual; profile `enp11s0` autoconnect off; mayara-server `d4deea0` (`~/Documents/radar/mayara-server`, Rust 1.90+), `mayara.service`: `ExecStartPre=/sbin/ip route replace 224.0.0.0/4 dev enp14s0`, `ExecStart=... -p 3001 -i enp14s0 -n tcp:127.0.0.1:8375`; `MAYARA_URL=http://localhost:3001`; backups `mayara.service.bak-2026-10-18` (original) and `.bak-before-upgrade` |
+| Cameras | Frigate (Docker, API 5000) -> usv-frigate-bridge | `FRIGATE_URL=http://127.0.0.1:5000`; `bullet_camera` streaming, `flir_camera` disabled in Frigate until powered |
+
+Radar targets reach the dashboard only while the radar transmits and the
+mission (pAntler with grafana_bridge) runs. Check with
+`sudo journalctl -a -u usv-mayara-bridge -n 8` (`using radar nav3080A`,
+`power: transmit`, `tracking N target(s)`).
+
 ## C. Check that data flows (10 minutes, engine running)
 
 ```bash

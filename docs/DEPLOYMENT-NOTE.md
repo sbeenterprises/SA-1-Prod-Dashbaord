@@ -278,6 +278,9 @@ Data lives in /var/lib/influxdb and /var/lib/grafana — back up before purge:
 
 ## 10\. Quick command reference
 
+Two hulls share the same user, folders and service names: run `hostname`
+before any command that changes a service or the network.
+
 ```bash
 sudo journalctl -u usv-can-bridge -f       # bridge logs (sudo: the mission user is not in systemd-journal)
 systemctl restart usv-signalk-bridge       # restart a bridge

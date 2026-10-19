@@ -16,6 +16,7 @@ on the boat needs.
 | InfluxDB | localhost:8086, org `usv`, buckets `telemetry` (30 d), `events` and `telemetry_1m` (365 d) |
 | Position source | VectorNav VN-x00 INS through the Signal K plugin `signalk-vectornav-vnins` (no MOOS NAV_LAT) |
 | CAN | `slcan0` on the K800 eMCU, `slcand -s5` (250 kbit/s) at boot |
+| Radar | Navico HALO20 (mayara id `nav6959`, 169.254.42.254) on `enp11s0`; mayara-server `d4deea0` in `~/Documents/radar/mayara-server` (the older checkout in `~/Documents/radar/mayara` is unused), `mayara.service`: `-p 3001 -i enp11s0 -n tcp:127.0.0.1:8375`, ExecStartPre sets 169.254.10.10/16 and the multicast route on enp11s0 |
 | GPU | Intel Arc Pro A60 (`intel_gpu_top` probe, sudoers rule `usv-telegraf-gpu`) |
 | Starlink | dish at 192.168.100.1, probed by Telegraf |
 | VPN | Twingate connector on the OBC (`twingate-connector.service`); Comms tile "VPN (Twingate)" |
@@ -120,6 +121,15 @@ All are enabled at boot. `usv-simulator` must stay disabled on the vessel
 
 **Logs.** `sudo journalctl -u usv-signalk-bridge -u usv-can-bridge -u usv-mayara-bridge -u usv-frigate-bridge -f`;
 `grafana_bridge` prints to the pAntler console.
+
+## Before any command on a boat
+
+Run `hostname` first and read it. Both onboard computers have the same
+user, folders and service names, so a command meant for one boat runs
+without error on the other (2026-10-18: a radar change meant for usv-725
+ran on usv-722 and took its radar off for 8 minutes). For anything that
+changes a service or the network, start the pasted block with
+`[ "$(hostname)" = usv-722 ] || { echo "WRONG BOAT: $(hostname)"; exit 1; }`.
 
 ## Upgrading to a new release
 

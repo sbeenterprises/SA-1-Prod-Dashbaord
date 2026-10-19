@@ -365,6 +365,35 @@ closest approach ahead and within 30 minutes (`MAYARA_CPA_MIN_KN`,
 `MAYARA_CPA_MAX_TCPA_S`): a stationary echo carries about 1 kn of tracker
 jitter, and its CPA would otherwise raise false radar CPA alerts.
 
+**Radar server version.** The bridge needs mayara-server from
+`github.com/MarineYachtRadar/mayara-server` (Signal K v2 radar API; both
+hulls run commit `d4deea0`, which reports API version 3.4.0), built with
+Rust 1.90 or newer (`rustup update stable`, then `cargo build --release`).
+The older `keesverruijt/mayara` builds serve only `/v1/api/radars` and
+have no targets address: the bridge then logs "mayara unreachable" every
+few seconds and never finds the radar. Start it on the radar's network
+port with Signal K's TCP stream as the navigation source (target course and
+speed need own position and heading), in `/etc/systemd/system/mayara.service`:
+```
+ExecStart=/home/douglas/Documents/radar/mayara-server/target/release/mayara-server -p 3001 -i <radar port> -n tcp:127.0.0.1:8375
+```
+**Radar network.** Navico radars (HALO) sit on 169.254.0.0/16 and announce
+themselves by multicast to 236.6.7.x. The computer port the radar is
+cabled to needs a 169.254.x.x address and the multicast route
+`224.0.0.0/4` on that same port, and no other port may hold a 169.254
+route: a dead port with the same network wins the route and the radar
+becomes unreachable. Check the cabling first with
+`sudo timeout 10 tcpdump -i <port> -n 'udp and dst net 236.6.7.0/24'`
+(packets from the radar's 169.254 address = it is on that port).
+
+| Hull | Radar | mayara id | Port | Computer address | Set by |
+|---|---|---|---|---|---|
+| usv-722 | HALO20 | nav6959 | enp11s0 | 169.254.10.10/16 | `ExecStartPre` lines in mayara.service (addr flush/add, link up, `ip route add 224.0.0.0/4 dev enp11s0`) |
+| usv-725 | HALO24 | nav3080A (B = second range) | enp14s0 | 169.254.10.11/16 | NetworkManager profile "Wired connection 4" (manual address); profile `enp11s0` autoconnect off; mayara.service only `ExecStartPre=/sbin/ip route replace 224.0.0.0/4 dev enp14s0` |
+
+The radar server's own web page is `http://<obc>:3001/` (radar picture,
+standby / transmit, target acquisition).
+
 Targets exist only while the radar **transmits** and mayara has acquired
 them (guard zone, click-to-acquire, or Doppler auto track). If
 `iRadarTargets` also publishes RADAR_TARGET on the same vessel, run only
@@ -390,7 +419,18 @@ row (frigate_up, enabled, streaming, connected). Readiness reads
 Frigate (for example not yet powered) is not reported and is not a fault:
 disable or remove it in Frigate (Configuration Editor, Save & Restart)
 until it is cabled. Camera passwords in Frigate's URLs are never logged or
-stored. Check with `journalctl -u usv-frigate-bridge -n 5`.
+stored. Check with `journalctl -u usv-frigate-bridge -n 5`. Frigate's API
+port 5000 must be published to the host (`docker ps` shows
+`0.0.0.0:5000->5000/tcp`); port 8971 needs a login and cannot be used.
+usv-725 (2026-10-18): `FRIGATE_URL=http://127.0.0.1:5000`, cameras
+`bullet_camera` (streaming) and `flir_camera` (disabled in Frigate until
+powered).
+
+Camera clocks: a camera without a time source starts from 1970 after every
+power cycle and stamps that date on its video. Make the onboard computer
+its NTP server (`apt install chrony`, `allow <camera subnet>` in
+`/etc/chrony/conf.d/cameras.conf`, restart chrony) and set the camera's
+Time Settings to NTP with the computer's address on the camera network.
 
 ## Speed units of the helm (MOOS)
 On the boats the helm's speeds are in knots: iDivisorNMEA posts NAV_SPEED
@@ -539,6 +579,7 @@ Administration -> Users.
 | Symptom | Check |
 |---|---|
 | Empty dashboards | `systemctl status usv-*` ; Influx Data Explorer at :8086 |
+| Readiness "no radar data" with the radar on | `journalctl -a -u usv-mayara-bridge -n 10`: "mayara unreachable" every few seconds = old mayara build (see Radar targets, radar server version); "using radar ..." + "power: standby" = switch it to transmit; nothing from the radar on `tcpdump -i <port> 236.6.7.0/24` = cabling or the wrong port in mayara.service (`-i`) |
 | Every page "didn't send any data" (ERR_EMPTY_RESPONSE), `/api/health` fine | Grafana cannot parse `views/index.html` (a block brand.sh injected contains two square brackets in a row): `sudo bash deploy/brand.sh --restore && sudo systemctl restart grafana-server` brings the stock page back (header logo missing until brand.sh runs again); then update to a fixed release |
 | Readiness "NO BRIDGE", Mission State and Operator Link N/A | grafana_bridge is not writing: it runs under pAntler, so restart the mission after an update and read its start line in the pAntler output |
 | Dashboard hangs on a dark screen from another PC, but `curl http://localhost:<GRAFANA_PORT>/api/health` returns 200 on the OBC | ufw is dropping the port: `sudo ufw status \| grep <GRAFANA_PORT>`. Re-run install.sh (opens it to the LAN and the tailnet, see GRAFANA_ALLOW_FROM in usv.env) or `sudo ufw allow from <lan-cidr> to any port <GRAFANA_PORT> proto tcp` |

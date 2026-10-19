@@ -3,6 +3,19 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [Unreleased] (documents only, no change on the boats)
+
+### Changed
+- Deployment guide: radar server requirements (MarineYachtRadar
+  mayara-server d4deea0 with the Signal K v2 radar API, Rust 1.90+, the
+  navigation feed `-n tcp:127.0.0.1:8375`), the radar network rules (one
+  port with the 169.254 route and the multicast route) with a per-hull
+  table, Frigate port 5000 and camera clocks (NTP from the onboard
+  computer), and a troubleshooting row for "no radar data".
+- USV-725 installation record: AIS, radar and camera paths and settings as
+  set up on 2026-10-18. USV-722 runbook: radar row, and a "check
+  `hostname` before any command on a boat" rule.
+
 ## [1.2.35] - 2026-10-17 (Readiness counts back, repository housekeeping)
 
 grafana_bridge, Readiness dashboard, tooling and documents. Update with
