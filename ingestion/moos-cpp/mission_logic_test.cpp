@@ -890,6 +890,46 @@ static void test_readiness() {
         CHECK(find_check(c, "enc").status == READY_NA);
     }
 
+    // ENC cells listed by the onboard chart server (bridge poll of Signal
+    // K -> chart.enc_*): the row passes on the cell covering the boat,
+    // fails when no cell covers it, and the console's ENC_STATUS still
+    // wins. Stale chart fields (poll older than 5 min) fall back.
+    {
+        ReadinessConfig nc;
+        nc.enc_fitted = false;
+        LatestStore k;
+        k.put("chart", "enc_cells", 10, now - 30);
+        k.put("chart", "enc_covers", 1, now - 30);
+        k.put_str("chart", "enc_cell", "US3LA1CB", now - 30);
+        auto a = EvaluateReadiness(k, now, true, nc);
+        CHECK(find_check(a, "enc").status == READY_PASS);
+        CHECK_EQ_STR(find_check(a, "enc").evidence, "ENC US3LA1CB · covers position · 10 cells loaded");
+        k.put("chart", "enc_covers", 0, now - 30);
+        k.put_str("chart", "enc_cell", "", now - 30);
+        auto b = EvaluateReadiness(k, now, true, nc);
+        CHECK(find_check(b, "enc").status == READY_FAIL);
+        CHECK_EQ_STR(find_check(b, "enc").evidence, "ENC 10 cells loaded · NO CELL COVERS POSITION");
+        k.put("chart", "enc_covers", -1, now - 30);
+        auto c = EvaluateReadiness(k, now, true, nc);
+        CHECK(find_check(c, "enc").status == READY_PASS);
+        CHECK_EQ_STR(find_check(c, "enc").evidence, "ENC 10 cells loaded · position unknown");
+        k.put("chart", "enc_cells", 1, now - 30);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(k, now, true, nc), "enc").evidence,
+                     "ENC 1 cell loaded · position unknown");
+        k.put_str("mission_state", "enc_status", "none", now);
+        CHECK(find_check(EvaluateReadiness(k, now, true, nc), "enc").status == READY_FAIL);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(k, now, true, nc), "enc").evidence, "none");
+        LatestStore stale;
+        stale.put("chart", "enc_cells", 10, now - 400);
+        stale.put("chart", "enc_covers", 1, now - 400);
+        stale.put_str("chart", "enc_cell", "US3LA1CB", now - 400);
+        CHECK(find_check(EvaluateReadiness(stale, now, true, nc), "enc").status == READY_NA);
+        LatestStore none;
+        none.put("chart", "enc_cells", 0, now - 30);
+        none.put("chart", "enc_covers", -1, now - 30);
+        CHECK(find_check(EvaluateReadiness(none, now, true, nc), "enc").status == READY_NA);
+    }
+
     // Course planning falls back to the last known route (flagged after 10 min)
     s.put_str("mission_state", "route_name", "Rt WP Alpha", now - 1200);
     CHECK_EQ_STR(find_check(EvaluateReadiness(s, now, true), "course").evidence,
@@ -1103,6 +1143,64 @@ static void test_colav_alerts() {
     CHECK_EQ_STR(ColregsOf("").name, "Avoiding");
 }
 
+// Chart listing of the onboard chart server (Signal K resources/charts,
+// as usv-722 serves it: ten S-57 cells converted from the NOAA ENCs) and
+// the Readiness coverage pick.
+static void test_enc_charts() {
+    const std::string body =
+        "{\"US1GLBCF\":{\"name\":\"US1GLBCF\",\"description\":\"Gulf of America\","
+        "\"bounds\":[-98,17.791496,-76.1,33.6085],\"minzoom\":9,\"maxzoom\":16,\"format\":\"pbf\","
+        "\"type\":\"S-57\",\"scale\":250000,\"identifier\":\"US1GLBCF\","
+        "\"tilemapUrl\":\"/signalk/chart-tiles/US1GLBCF/{z}/{x}/{y}\",\"chartLayers\":[]},"
+        "\"US3LA1CB\":{\"name\":\"US3LA1CB\",\"description\":\"Gulf Intracoastal Waterway - Morgan City to Vermilion Bay and Gulf of America\","
+        "\"bounds\":[-92.4,28.8,-91.2,30],\"minzoom\":9,\"maxzoom\":16,\"format\":\"pbf\",\"type\":\"S-57\","
+        "\"scale\":250000,\"identifier\":\"US3LA1CB\",\"tilemapUrl\":\"/signalk/chart-tiles/US3LA1CB/{z}/{x}/{y}\",\"chartLayers\":[]},"
+        "\"US3LA1CC\":{\"name\":\"US3LA1CC\",\"description\":\"Gulf Intracoastal Waterway - New Orleans to Morgan Ciy and Gulf of America\","
+        "\"bounds\":[-91.2,28.8,-90,30],\"minzoom\":9,\"maxzoom\":16,\"format\":\"pbf\",\"type\":\"S-57\","
+        "\"scale\":250000,\"identifier\":\"US3LA1CC\",\"url\":\"/signalk/chart-tiles/US3LA1CC/{z}/{x}/{y}\",\"layers\":[]},"
+        "\"US5LMOBB\":{\"name\":\"US5LMOBB\",\"description\":\"Gulf of America\","
+        "\"bounds\":[-91.575,29.175,-91.5,29.25],\"minzoom\":9,\"maxzoom\":16,\"format\":\"pbf\",\"type\":\"S-57\","
+        "\"scale\":250000,\"identifier\":\"US5LMOBB\",\"tilemapUrl\":\"/signalk/chart-tiles/US5LMOBB/{z}/{x}/{y}\",\"chartLayers\":[]},"
+        "\"osm\":{\"name\":\"OpenStreetMap\",\"description\":\"Base map\",\"bounds\":[-180,-85,180,85],"
+        "\"type\":\"tilelayer\",\"format\":\"png\",\"identifier\":\"osm\",\"tilemapUrl\":\"https://tile.openstreetmap.org/{z}/{x}/{y}.png\"}}";
+    const auto charts = ParseSignalKCharts(body);
+    CHECK(charts.size() == 5);
+    CHECK_EQ_STR(charts[0].id, "US1GLBCF");
+    CHECK(charts[0].is_enc() && charts[0].has_bounds);
+    CHECK(std::fabs(charts[0].min_lon + 98.0) < 1e-9 && std::fabs(charts[0].max_lat - 33.6085) < 1e-9);
+    CHECK_EQ_STR(charts[1].description, "Gulf Intracoastal Waterway - Morgan City to Vermilion Bay and Gulf of America");
+    CHECK(!charts[4].is_enc());
+    // usv-722 at Berwick (29.7241, -91.2179): US1GLBCF and US3LA1CB cover
+    // it, US3LA1CC starts east of -91.2, the US5 harbour cells lie south;
+    // the smaller US3 cell is the pick. Four ENC cells, the base map not
+    // counted.
+    EncCoverage c = EncCoverageAt(charts, true, 29.724138, -91.217902);
+    CHECK(c.cells == 4);
+    CHECK_EQ_STR(c.cell, "US3LA1CB");
+    // East of -91.2: the neighbouring cell.
+    CHECK_EQ_STR(EncCoverageAt(charts, true, 29.72, -91.10).cell, "US3LA1CC");
+    // Inside the harbour cell: the most detailed pick.
+    CHECK_EQ_STR(EncCoverageAt(charts, true, 29.2, -91.55).cell, "US5LMOBB");
+    // Lumut, Malaysia: nothing covers it.
+    CHECK(EncCoverageAt(charts, true, 4.2245, 100.5868).cell.empty());
+    CHECK(EncCoverageAt(charts, true, 4.2245, 100.5868).cells == 4);
+    // Position unknown: count only.
+    CHECK(EncCoverageAt(charts, false, 0, 0).cell.empty());
+    // Object key as id when identifier and name are absent; bounds in the
+    // wrong order are ignored (no coverage, still a cell).
+    const auto odd = ParseSignalKCharts("{ \"X1\" : { \"type\": \"ENC\", \"bounds\": [10, 5, 1, 2] } }");
+    CHECK(odd.size() == 1);
+    CHECK_EQ_STR(odd[0].id, "X1");
+    CHECK(odd[0].is_enc() && !odd[0].has_bounds);
+    CHECK(EncCoverageAt(odd, true, 3, 5).cells == 1 && EncCoverageAt(odd, true, 3, 5).cell.empty());
+    // Empty, malformed and non-object bodies give no cells.
+    CHECK(ParseSignalKCharts("").empty());
+    CHECK(ParseSignalKCharts("{}").empty());
+    CHECK(ParseSignalKCharts("[]").empty());
+    CHECK(ParseSignalKCharts("{\"A\":{\"type\":\"S-57\"").empty());
+    CHECK(ParseSignalKCharts("<html>502 Bad Gateway</html>").empty());
+}
+
 int main() {
     test_remote_and_moving();
     test_motion_latch();
@@ -1133,6 +1231,7 @@ int main() {
     test_readiness();
     test_camera_readiness();
     test_comms_loss_return();
+    test_enc_charts();
     test_colav_alerts();
     test_min_cpa_pick();
 

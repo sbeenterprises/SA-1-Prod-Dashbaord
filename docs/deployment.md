@@ -227,6 +227,35 @@ route checked safe on chart" while the console does not publish
 ENC_STATUS, even with `enc_fitted = false`; a published ENC_STATUS always
 decides that row.
 
+The Chart / ENC row also reads the chart server itself. The ENC cells the
+console draws are served by Signal K (the ENC upload converts each S-57
+cell to tiles and lists it under `/signalk/v1/api/resources/charts` with
+its bounds). grafana_bridge fetches that listing every `enc_poll_s`
+seconds (default 60; 0 turns it off) from `signalk_http`, the server it
+already uses for route names, counts the cells of type S-57 (base maps
+and raster charts are not ENCs) and picks the most detailed cell whose
+bounds contain the boat's position. The row then reads, in order of
+precedence:
+
+| Row | Source |
+|---|---|
+| `selected:<chart>` PASS / `none` FAIL | the console's ENC_STATUS, whenever it is published |
+| `ENC US3LA1CB · covers position · 10 cells loaded` PASS | chart server listing, a cell covers the position |
+| `ENC 10 cells loaded · NO CELL COVERS POSITION` FAIL | cells loaded, none contains the position (wrong area loaded) |
+| `ENC 10 cells loaded · position unknown` PASS | cells loaded, no position fix to check against |
+| `ENC in use · route checked safe on chart` PASS | no listing (chart server unreachable or without ENC cells), route named "(safe)" |
+| `no ENC chart system on this vessel` N/A | none of the above and `enc_fitted = false` |
+| `console not publishing ENC_STATUS` CONSOLE | none of the above |
+
+A listing older than three poll periods is dropped, so a chart server
+that stops answering takes the row back to the lower sources rather than
+freezing it. Which chart layer the operator has selected in the console
+is client-side state; it reaches the dashboard only through ENC_STATUS.
+The bridge writes what it found to the `chart` measurement (`enc_cells`,
+`enc_cell`, `enc_covers`: 1 covered, 0 not covered, -1 no position) and
+logs "chart server lists N ENC cells" when the count changes. Check the
+listing by hand on the vessel: `curl -s http://localhost:3000/signalk/v1/api/resources/charts | head -c 600`.
+
 ### Console checklist and ENC selection
 The manual pre-departure checklist lives in the operator console
 (Swiftships-UI). For Grafana to mirror it, the console publishes two MOOS
@@ -584,7 +613,7 @@ emails while it runs; always stop it before real operations.
 | Alert thresholds | tools/gen_alerts.py --profile sim\|vessel -> regenerate -> re-run install.sh (vessel profile: GPS Signal Loss and CAN Bus Failure also alert on missing data; engine and battery rules never do, the Readiness dashboard reports silent sensors) |
 | Branding text | BRAND_TITLE / BRAND_WELCOME / BRAND_SUBTITLE / BRAND_APP_TITLE / BRAND_DISCLAIMER in usv.env |
 | Home dashboard | GRAFANA_HOME_DASHBOARD in usv.env (default usv-readiness.json) |
-| Readiness profile, vessel constants, app list, checklist items | grafana_bridge ProcessConfig in the mission file: readiness_profile, readiness_period_s, fuel_tank_l, cruise_fuel_lph, cruise_speed_kn, battery_kwh, cruise_power_kw, endurance_margin, required_apps, optional_apps, checklist_items, enc_fitted, console_checklist (see example.moos) |
+| Readiness profile, vessel constants, app list, checklist items | grafana_bridge ProcessConfig in the mission file: readiness_profile, readiness_period_s, fuel_tank_l, cruise_fuel_lph, cruise_speed_kn, battery_kwh, cruise_power_kw, endurance_margin, required_apps, optional_apps, checklist_items, enc_fitted, console_checklist, enc_poll_s (see example.moos) |
 | Console mirrors | CHECKLIST_STATUS and ENC_STATUS published by the operator console (spec above) |
 | Tab order, tiles, checks table | tools/gen_dashboards.py (TAB_ORDER, usv-readiness section) -> regenerate -> re-run install.sh |
 | Readiness rules | usv::EvaluateReadiness in ingestion/moos-cpp/mission_logic.hpp (unit-tested in mission_logic_test.cpp) |

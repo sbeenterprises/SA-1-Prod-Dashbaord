@@ -287,6 +287,10 @@ protected:
         //                                   // /signalk/v{2,1}/api/resources/routes/<id>);
         //                                   // empty disables the lookup
         //   signalk_token  = <jwt>          // only if Signal K security denies reads
+        //   enc_poll_s     = 60             // Readiness Chart / ENC row: the ENC cells
+        //                                   // the chart server lists (signalk_http
+        //                                   // /signalk/v1/api/resources/charts) against
+        //                                   // the boat's position; 0 = off
         //   readiness_profile = vessel      // pre-departure checks: "vessel" = a
         //                                   // check without sensor data FAILS;
         //                                   // "sim" = it reads N/A (no engine/CAN/
@@ -349,6 +353,7 @@ protected:
         if (!signalk_http_.empty() && signalk_http_.find("://") == std::string::npos)
             signalk_http_ = "http://" + signalk_http_;
         m_MissionReader.GetConfigurationParam("signalk_token", signalk_token_);
+        m_MissionReader.GetConfigurationParam("enc_poll_s", enc_poll_s_);
         // Units of the helm's speeds (NAV_SPEED and the rest): knots on the
         // boats, m/s in the simulator. NAV_SPEED_UNITS in /etc/usv/usv.env,
         // or nav_speed_units in this block (wins); default mps, the units
@@ -547,6 +552,7 @@ protected:
         // Pre-departure readiness, evaluated onboard (mission_logic.hpp).
         if (now - last_readiness_ >= readiness_period_s_) {
             last_readiness_ = now;
+            PollCharts(now);
             WriteReadiness(now);
         }
         telemetry_->flush();
@@ -1502,6 +1508,68 @@ private:
     // summary the tiles read, every readiness_period_s. Values other
     // producers write come from the InfluxDB poller; their age is carried
     // over so a stale series still reads as missing.
+    // ------------------------------------------------- ENC (chart server)
+    // The Readiness Chart / ENC row without a console ENC_STATUS: the ENC
+    // cells the onboard chart server lists (Signal K, the same server the
+    // route names come from) are fetched every enc_poll_s with one bounded
+    // GET on this thread (800 ms worst case, like the route lookup), and
+    // the cell covering the boat's position is re-picked with every
+    // readiness pass so the row follows the boat, not the poll. A poll
+    // that fails leaves the previous list for up to three periods; after
+    // that the row falls back to its other sources.
+    void PollCharts(double now) {
+        if (enc_poll_s_ <= 0.0 || signalk_http_.empty()) return;
+        if (last_chart_poll_ != -1e18 && now - last_chart_poll_ < enc_poll_s_) return;
+        last_chart_poll_ = now;
+        long status = 0;
+        const std::string url = signalk_http_ + "/signalk/v1/api/resources/charts";
+        const std::string body = usv::HttpGet(url, 800, signalk_token_, &status);
+        if (status != 200) {
+            if (chart_poll_status_ != status) {
+                chart_poll_status_ = status;
+                MOOSTrace("grafana_bridge: chart list %s -> HTTP %ld (ENC row from other sources)\n",
+                          url.c_str(), status);
+            }
+            return;
+        }
+        chart_poll_status_ = status;
+        charts_ = usv::ParseSignalKCharts(body);
+        charts_t_ = now;
+        const int n = usv::EncCoverageAt(charts_, false, 0.0, 0.0).cells;
+        if (n != last_enc_cells_) {
+            last_enc_cells_ = n;
+            MOOSTrace("grafana_bridge: chart server lists %d ENC cells (%zu charts)\n",
+                      n, charts_.size());
+        }
+    }
+
+    void UpdateEncCoverage(double now) {
+        if (charts_t_ == -1e18 || now - charts_t_ > 3.0 * std::max(enc_poll_s_, 60.0)) return;
+        const usv::Sample* la = latest_.get("nav", "lat", now, 60.0);
+        const usv::Sample* lo = latest_.get("nav", "lon", now, 60.0);
+        const bool have_pos = la && lo && !la->is_str && !lo->is_str &&
+                              !(la->num == 0.0 && lo->num == 0.0) &&
+                              std::fabs(la->num) <= 90.0 && std::fabs(lo->num) <= 180.0;
+        const usv::EncCoverage c = usv::EncCoverageAt(charts_, have_pos,
+                                                       have_pos ? la->num : 0.0,
+                                                       have_pos ? lo->num : 0.0);
+        // enc_covers: 1 a cell covers the position, 0 none does, -1 no
+        // position (or no cells) to check against.
+        const double covers = (c.cells == 0 || !have_pos) ? -1.0 : (c.cell.empty() ? 0.0 : 1.0);
+        latest_.put("chart", "enc_cells", c.cells, charts_t_);
+        latest_.put("chart", "enc_covers", covers, charts_t_);
+        latest_.put_str("chart", "enc_cell", c.cell, charts_t_);
+        // Written on change only: the chart measurement for a tile and
+        // for the smoke test, not a 5 s heartbeat.
+        const std::string sig = std::to_string(c.cells) + "/" + std::to_string(covers) + "/" + c.cell;
+        if (sig != last_chart_sig_) {
+            last_chart_sig_ = sig;
+            telemetry_->field("chart", "", "enc_cells", c.cells);
+            telemetry_->field("chart", "", "enc_covers", covers);
+            telemetry_->str_field("chart", "", "enc_cell", c.cell.empty() ? "-" : c.cell);
+        }
+    }
+
     void WriteReadiness(double now) {
         for (const auto& [key, lv] : poller_.snapshot()) {
             const size_t dot = key.find('.');
@@ -1514,6 +1582,7 @@ private:
             else latest_.put(m, f, lv.value, now - lv.age_s);
         }
         WriteChecklist();
+        UpdateEncCoverage(now);
         const auto checks = usv::EvaluateReadiness(latest_, now, readiness_strict_, readiness_cfg_);
         const usv::ReadinessSummary sum = usv::SummarizeReadiness(checks);
         for (const auto& c : checks) {
@@ -1816,6 +1885,12 @@ private:
     double lat0_ = 0.0, lon0_ = 0.0;
     std::map<std::string, std::string> last_geometry_;
     std::string signalk_token_;   // optional bearer token when SK security is on
+    double enc_poll_s_ = 60.0;    // chart-server poll for the ENC row (0 = off)
+    double last_chart_poll_ = -1e18, charts_t_ = -1e18;
+    long chart_poll_status_ = -1;
+    int last_enc_cells_ = -1;
+    std::vector<usv::ChartCell> charts_;
+    std::string last_chart_sig_;
 
     // The console starts a mission with ID_ROUTE=<Signal K route uuid>; the
     // operator knows the route by its name, so look it up once per change

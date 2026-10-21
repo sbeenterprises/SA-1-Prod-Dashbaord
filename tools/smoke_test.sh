@@ -48,6 +48,22 @@ class H(BaseHTTPRequestHandler):
         target = "$TMP/deletes.txt" if self.path.startswith("/api/v2/delete") else "$LINES"
         open(target, "a").write(body + "\n")
         self.send_response(204); self.end_headers()
+    def do_GET(self):
+        # Stands in for the onboard chart server too (grafana_bridge
+        # signalk_http): the chart listing with two ENC cells, the smaller
+        # one covering the mission origin, plus a base map that is not an
+        # ENC. Route lookups (resources/routes) get 404 as before.
+        if self.path.startswith("/signalk/v1/api/resources/charts"):
+            data = ('{"US3SMOKE":{"name":"US3SMOKE","description":"Coastal","bounds":[-92,28.8,-90,30],'
+                    '"type":"S-57","format":"pbf","identifier":"US3SMOKE","tilemapUrl":"/t/US3SMOKE/{z}/{x}/{y}","chartLayers":[]},'
+                    '"US5SMOKE":{"name":"US5SMOKE","description":"Harbour","bounds":[-91.2,29.7,-91.1,29.75],'
+                    '"type":"S-57","format":"pbf","identifier":"US5SMOKE","tilemapUrl":"/t/US5SMOKE/{z}/{x}/{y}","chartLayers":[]},'
+                    '"osm":{"name":"OpenStreetMap","bounds":[-180,-85,180,85],"type":"tilelayer","format":"png","identifier":"osm"}}').encode()
+            open("$TMP/gets.txt", "a").write(self.path + "\n")
+            self.send_response(200); self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data))); self.end_headers()
+            self.wfile.write(data); return
+        self.send_response(404); self.end_headers()
     def log_message(self, *a): pass
 HTTPServer(("127.0.0.1", 8086), H).serve_forever()
 EOF
@@ -496,6 +512,8 @@ ProcessConfig = grafana_bridge
   vessel_id     = usv-moos
   readiness_profile = sim
   readiness_period_s = 2
+  signalk_http = 127.0.0.1:8086
+  enc_poll_s = 5
   required_apps = pHelmIvP,grafana_bridge
   fuel_tank_l = 200
   cruise_fuel_lph = 12
@@ -519,6 +537,7 @@ EOF
   if [[ -x $POKE ]]; then
     P() { "$POKE" --port=9010 "$@" >/dev/null 2>&1; }
     P IVPHELM_STATE=DRIVE IVPHELM_ALLSTOP=clear \
+      NAV_LAT=29.71970895 NAV_LONG=-91.14705165 \
       'VIEW_SEGLIST=pts={0,0:800,0:800,800:0,800:0,400},label=alpha_waypt_survey' \
       WAYPOINT=true DEPLOY=true DIST_TO_NEXT_WPT=650 WPT_INDEX=0 \
       'IVPHELM_SUMMARY=iter=10,active_bhvs=waypt_survey$0.6$100$4$0$0/0$1:opr24$0.6$300$5$0$0/0$1,idle_bhvs=station_keep'
@@ -734,6 +753,17 @@ EOF
     grep -q 'check=checklist evidence="9 / 11 ticked · pending: Weather Conditions,Port Clearance"' "$LINES" \
       && ok "console checklist evaluated (pending items listed)" || bad "checklist evaluation missing"
     grep -q 'check=enc status=0' "$LINES"               && ok "ENC selected -> check PASS"                || bad "ENC check not passing"
+    # Chart / ENC row from the chart server before the console spoke: the
+    # bridge polled the listing, counted the two ENC cells (not the base
+    # map) and picked the smaller cell covering the boat.
+    grep -q '/signalk/v1/api/resources/charts' "$TMP/gets.txt" 2>/dev/null \
+      && ok "chart listing polled from signalk_http" || bad "chart listing not polled"
+    grep -q 'chart,vessel=usv-moos enc_cells=2' "$LINES" && grep -q 'chart,vessel=usv-moos enc_cell="US5SMOKE"' "$LINES" \
+      && ok "chart server -> chart.enc_cells=2, covering cell US5SMOKE" || bad "chart fields missing"
+    grep -q 'check=enc evidence="ENC US5SMOKE · covers position · 2 cells loaded"' "$LINES" \
+      && ok "ENC row PASS from the chart server (cell covering the position)" || bad "ENC row not derived from the chart server"
+    grep -q 'check=enc evidence="selected:US5LA31M"' "$LINES" \
+      && ok "console ENC_STATUS still wins once published" || bad "ENC_STATUS no longer takes the row"
     grep -q 'check=course evidence="R-17 · 5 waypoints · 1.5 nm · region 4 vertices · ROUTE OUTSIDE REGION"' "$LINES" \
       && ok "course planning check sees route, waypoints, length, region and the outside-region fault" || bad "course check evidence wrong"
     grep -q 'check=comms evidence="Signal K UP · Internet UP · 38 ms"' "$LINES" \

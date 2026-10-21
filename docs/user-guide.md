@@ -95,6 +95,10 @@ Port Clearance". N/A means the sensor is not fitted or not reporting; on
 a real vessel the bridge is configured to treat that as a FAIL (see
 docs/deployment.md, readiness_profile). CONSOLE means the operator
 console has not yet published the ENC selection or the checklist. The
+Chart / ENC row does not wait for the console when the boat's chart
+server lists ENC cells: it names the cell covering the boat's position
+("ENC US3LA1CB · covers position · 10 cells loaded") and fails when the
+loaded cells do not cover where the boat is. The
 manual items themselves (life jackets, VHF check, port clearance ...) are
 ticked in Swiftships-UI as before; Grafana mirrors the count and the pending
 items and adds the automatic verification on top.

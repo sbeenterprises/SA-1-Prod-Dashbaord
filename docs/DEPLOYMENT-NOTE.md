@@ -168,6 +168,7 @@ Dev\-side regeneration (workstation, Python 3):
 | 10 | MOOS feed | launch mission with grafana\_bridge; watch Autopilot dashboard | desired/actual heading move |
 | 10a | Readiness evaluation | Readiness dashboard within 15 s of the community start | 17 rows with evidence; Vessel particulars card filled; "Apps N / N running"; `readiness_profile = vessel` in the ProcessConfig on a real vessel (missing sensors FAIL) |
 | 10b | Console mirrors | tick items in the console, select a chart; or `/usr/local/bin/moos_poke 'CHECKLIST_STATUS=done=11,total=11,pending=,by=ops' ENC_STATUS=selected:test` | Console tile 0, checklist table lists every item, ENC row PASS |
+| 10b' | ENC from the chart server | ENC cells uploaded to Signal K, console not publishing ENC_STATUS | ENC row "ENC <cell> · covers position · N cells loaded"; bridge log "chart server lists N ENC cells" |
 | 10c | Route plausibility | start a mission with a route and region | Course planning shows route, waypoints, length, region, "route inside region"; Endurance shows the litres (VESSEL_FUEL_L) and fuel / battery hours when the vessel constants are set; Speed cap compares SPEED_CAP with VESSEL_MAX_SPEED_KN |
 | 11 | Signal K feed | Navigation \+ Vessel Health dashboards | position, engine, battery live |
 | 12 | CAN feed | `candump <CAN_INTERFACE>` shows frames; CAN Bus dashboard | msg rate \> 0, interface UP |

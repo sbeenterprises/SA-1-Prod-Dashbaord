@@ -3,6 +3,28 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.42] - 2026-10-21 (Chart / ENC readiness from the chart server)
+
+grafana_bridge and documents. Update with `bash deploy/update.sh v1.2.42`
+and restart the mission (grafana_bridge) with the boat stopped.
+
+### Added
+- Readiness row 3 (Chart / ENC selected) reads the ENC cells the boat's
+  chart server lists: grafana_bridge fetches Signal K's chart listing
+  (`/signalk/v1/api/resources/charts`, the server it already asks for
+  route names) every `enc_poll_s` seconds (default 60, 0 off), counts the
+  S-57 cells and picks the most detailed one whose bounds contain the
+  boat's position. The row passes with "ENC US3LA1CB · covers position ·
+  10 cells loaded", fails with "NO CELL COVERS POSITION" when the loaded
+  cells do not cover where the boat is, and reads "position unknown"
+  without a fix. The console's ENC_STATUS still decides the row whenever
+  it is published; a route named "(safe)", `enc_fitted = false` and
+  CONSOLE remain the fallbacks when the chart server lists no ENC. On
+  usv-722 (ten NOAA cells uploaded, console not publishing ENC_STATUS)
+  the row read N/A from `enc_fitted = false` although the ENC was in
+  use. New `chart` measurement (enc_cells, enc_cell, enc_covers) and
+  bridge log line "chart server lists N ENC cells".
+
 ## [1.2.41] - 2026-10-21 (Heavy pages refresh every 2 s, popup tidy-up)
 
 Dashboards, grafana_bridge and branding. Update with

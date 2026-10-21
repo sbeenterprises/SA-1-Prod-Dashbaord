@@ -121,10 +121,20 @@ when none), profile ("sim" | "vessel"). checklist, tag `seq`: item,
 description and state (strings; one row per item, TICKED | PENDING, then
 a footer "Console checklist d / t · ticked by X" with state COMPLETE |
 OPEN), erased and rewritten when the console's list changes. Decided by usv::EvaluateReadiness
-(mission_logic.hpp) from the latest value of the bridge's own fields plus
-comms.signalk_ws_up, ping.*, canbus.*, camera.connected and the Telegraf
-cpu/mem/disk fields polled from InfluxDB. A change of verdict raises an
-event of type `readiness`.
+(mission_logic.hpp) from the latest value of the bridge's own fields (the
+chart.enc_* coverage among them) plus comms.signalk_ws_up, ping.*,
+canbus.*, camera.connected and the Telegraf cpu/mem/disk fields polled
+from InfluxDB. A change of verdict raises an event of type `readiness`;
+a check turning FAIL or PASS raises one of type `readiness_check`.
+
+### chart — source: MOOS bridge, on change
+What the onboard chart server lists (Signal K `/signalk/v1/api/resources/charts`,
+polled every enc_poll_s, default 60 s): enc_cells (number of cells of
+type S-57; base maps and raster charts are not counted), enc_cell
+(string: the most detailed ENC cell whose bounds contain the boat's
+position, "-" when none), enc_covers (1 a cell covers the position, 0
+none does, -1 no position or no cells to check). Feeds the Chart / ENC
+readiness row when the console publishes no ENC_STATUS.
 
 ### geometry (map overlays) — source: MOOS bridge, on change
 Vertex sets for the Navigation / Replay maps, tags `kind` (route |

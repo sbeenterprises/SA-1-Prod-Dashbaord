@@ -638,3 +638,43 @@ a warning on the first NOT READY. Unit tests 457.
 
 To verify on the target: Navigation with its default refresh (2 s) fills
 every panel within a few seconds of opening; one popup per check failure.
+
+## 18. Release v1.2.42 (2026-10-21)
+
+Scope: Chart / ENC readiness row read from the boat's chart server.
+
+Reason: on USV-722 the console was drawing the uploaded NOAA ENC cells
+while the Readiness row read "no ENC chart system on this vessel" (N/A):
+the console publishes no ENC_STATUS, the running route was not named
+"(safe)" and the mission file carries `enc_fitted = false` from before
+the ENC upload. The chart server itself lists what it serves: Signal K
+on USV-722 answered `/signalk/v1/api/resources/charts` with ten S-57
+cells, each with name, description and bounds (US1GLBCF, US3FL1EH,
+US3LA1CB, US3LA1CC, US3MS1AA, US5LMOBB, US5LMOBC, US5LMOFF, US5LMOHF,
+US5LMOIF).
+
+Evidence:
+- Unit tests (mission_logic_test, 490 checks): the listing parser on the
+  USV-722 response shape (identifier, name, description, bounds; v1
+  `tilemapUrl`/`chartLayers` and v2 `url`/`layers` members; a base map of
+  type tilelayer not counted as an ENC), the coverage pick (Berwick
+  29.7241 / -91.2179 -> US3LA1CB, east of -91.2 -> US3LA1CC, inside a
+  harbour cell -> the US5 cell, Lumut -> no cell, no position -> count
+  only), malformed and non-JSON bodies, and the readiness row for every
+  source (covers / not covered / position unknown / one cell wording /
+  console ENC_STATUS winning / stale listing and no cells falling back
+  to N/A).
+- Smoke test: the InfluxDB stub also answers the chart listing (two
+  S-57 cells, the smaller covering the mission origin, plus a base map);
+  the bridge polled it, wrote `chart enc_cells=2`, `enc_cell="US5SMOKE"`,
+  the row read "ENC US5SMOKE · covers position · 2 cells loaded" until
+  the console's ENC_STATUS was poked, after which "selected:US5LA31M"
+  took the row.
+
+Environment: as section 11. `tools/smoke_test.sh` in full: 177 PASS,
+0 FAIL, 1 SKIP (vcan replay). Unit tests 490.
+
+To verify on the target: after the mission restart, Readiness row 3
+reads "ENC US3LA1CB · covers position · 10 cells loaded" at Berwick
+(the US5 harbour cells lie south of 29.25 N) and the bridge log shows
+"chart server lists 10 ENC cells".

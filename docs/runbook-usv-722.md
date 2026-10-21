@@ -65,7 +65,8 @@ ProcessConfig = grafana_bridge
   readiness_profile  = vessel
   readiness_period_s = 5
   optional_apps = pMarineViewer,pContactSpawn
-  enc_fitted = false          // no ENC yet: row reads N/A
+  enc_fitted = false          // console does not publish ENC_STATUS; the ENC
+                              // row reads the chart server (Signal K) instead
   console_checklist = false   // UI keeps its checklist local
 }
 ```
@@ -79,7 +80,7 @@ What each non-default line does:
 | `ignore_vars = NAV_YAW` | `iDivisorNMEA` publishes the rudder angle as NAV_YAW on this hull; without this the heading tiles would show rudder angle. |
 | `readiness_profile = vessel` | A check with no sensor data FAILS (on the simulation host it reads N/A). |
 | `optional_apps` | GUI viewer and the test-contact injector: reported if absent, never a readiness fault. |
-| `enc_fitted = false` | The console does not publish `ENC_STATUS`. With no route the Chart / ENC row reads N/A; with a route planned safe on the ENC (name ends in "(safe)") it passes. Delete this line once the console publishes `ENC_STATUS`. |
+| `enc_fitted = false` | The console does not publish `ENC_STATUS`. Since v1.2.42 the Chart / ENC row reads the ENC cells Signal K serves (ten NOAA cells uploaded 2026-10-19: US1GLBCF, US3LA1CB, US3LA1CC, US3MS1AA, US5LMO**) and passes on the cell covering the boat, for example `ENC US3LA1CB · covers position · 10 cells loaded`; it fails when no loaded cell covers the position. This line only matters when the chart server is unreachable and the route is not named "(safe)": the row then reads N/A instead of CONSOLE. Delete it once the console publishes `ENC_STATUS`. |
 | `console_checklist = false` | The Swiftships UI keeps its pre-departure checklist local (not published). Delete when the UI publishes `CHECKLIST_STATUS`. |
 
 Optional lines to add once the numbers are known (turn the Endurance row
@@ -136,7 +137,7 @@ changes a service or the network, start the pasted block with
 Tags only. One command, from the repo checkout:
 
 ```bash
-cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.41
+cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.42
 ```
 
 It fetches the tag, re-runs the installer (rebuilds and restarts the
@@ -277,7 +278,10 @@ retention (`du -sh /var/lib/influxdb`).
   before 2026-10-13 ~23:35 boat time keep the old sign in the trends.
 - State of charge and charging mode: the VE.Direct shunt publishes
   voltage and current only.
-- ENC: none fitted; `enc_fitted = false`.
+- ENC: NOAA cells served by Signal K (ENC upload, converted to tiles,
+  listed under `/signalk/v1/api/resources/charts`); the Readiness row
+  reads that listing. The console's layer selection is not published
+  (`enc_fitted = false` only covers the chart server being unreachable).
 - Console checklist: not published by the UI; `console_checklist = false`.
 - VPN: Twingate connector on the OBC; the tile shows its service state,
   not whether an operator is connected.

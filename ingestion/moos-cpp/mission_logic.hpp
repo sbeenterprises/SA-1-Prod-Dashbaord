@@ -927,6 +927,126 @@ inline std::string RouteDisplayName(const std::string& id,
     return dash != std::string::npos && dash >= 4 ? id.substr(0, dash) : id;
 }
 
+// ------------------------------------------------ ENC cells (chart server)
+
+// One chart the onboard chart server lists (Signal K,
+// GET /signalk/v1/api/resources/charts). ENC cells converted from S-57
+// carry type "S-57"; raster charts and base maps carry other types and do
+// not count as an ENC.
+struct ChartCell {
+    std::string id;            // identifier (the object key when absent)
+    std::string name;
+    std::string description;
+    std::string type;          // "S-57" for ENC cells
+    bool has_bounds = false;
+    double min_lon = 0.0, min_lat = 0.0, max_lon = 0.0, max_lat = 0.0;   // [W, S, E, N]
+
+    bool is_enc() const {
+        const std::string t = lower(type);
+        return t.find("s-57") != std::string::npos || t.find("s57") != std::string::npos ||
+               t.find("enc") != std::string::npos;
+    }
+    bool contains(double lat, double lon) const {
+        return has_bounds && lon >= min_lon && lon <= max_lon &&
+               lat >= min_lat && lat <= max_lat;
+    }
+    // Smaller bounds = larger scale = the more detailed cell.
+    double area() const { return (max_lon - min_lon) * (max_lat - min_lat); }
+};
+
+// Parses the chart listing: a JSON object keyed by chart id whose members
+// are flat objects ("name", "description", "bounds": [W, S, E, N], "type",
+// "identifier", ...). Depth-aware scan, no JSON library (like
+// JsonStringMember). Malformed or empty input gives an empty list.
+inline std::vector<ChartCell> ParseSignalKCharts(const std::string& body) {
+    std::vector<ChartCell> out;
+    int depth = 0;
+    bool in_str = false;
+    std::string last_key;      // last string seen at depth 1 (the chart id)
+    std::string cur;           // text of the chart object being read
+    size_t obj_start = std::string::npos;
+    for (size_t i = 0; i < body.size(); ++i) {
+        const char c = body[i];
+        if (in_str) {
+            if (c == '\\') { ++i; continue; }
+            if (c == '"') in_str = false;
+            continue;
+        }
+        if (c == '"') {
+            if (depth == 1) {
+                size_t e = i + 1;
+                while (e < body.size() && body[e] != '"') { if (body[e] == '\\') ++e; ++e; }
+                last_key = body.substr(i + 1, e - i - 1);
+            }
+            in_str = true;
+            continue;
+        }
+        if (c == '{') {
+            ++depth;
+            if (depth == 2) obj_start = i;
+        } else if (c == '}') {
+            if (depth == 2 && obj_start != std::string::npos) {
+                const std::string obj = body.substr(obj_start, i - obj_start + 1);
+                ChartCell cell;
+                cell.id = JsonStringMember(obj, "identifier");
+                cell.name = JsonStringMember(obj, "name");
+                if (cell.id.empty()) cell.id = cell.name.empty() ? last_key : cell.name;
+                if (cell.name.empty()) cell.name = cell.id;
+                cell.description = JsonStringMember(obj, "description");
+                cell.type = JsonStringMember(obj, "type");
+                const size_t b = obj.find("\"bounds\"");
+                if (b != std::string::npos) {
+                    const size_t lb = obj.find('[', b);
+                    if (lb != std::string::npos) {
+                        double v[4];
+                        const char* p = obj.c_str() + lb + 1;
+                        int n = 0;
+                        for (; n < 4; ++n) {
+                            char* end = nullptr;
+                            v[n] = std::strtod(p, &end);
+                            if (end == p) break;
+                            p = end;
+                            while (*p == ' ' || *p == ',') ++p;
+                        }
+                        if (n == 4 && v[0] <= v[2] && v[1] <= v[3]) {
+                            cell.has_bounds = true;
+                            cell.min_lon = v[0]; cell.min_lat = v[1];
+                            cell.max_lon = v[2]; cell.max_lat = v[3];
+                        }
+                    }
+                }
+                if (!cell.id.empty()) out.push_back(cell);
+                obj_start = std::string::npos;
+            }
+            if (depth > 0) --depth;
+        }
+    }
+    return out;
+}
+
+// What the Readiness Chart / ENC row needs: how many ENC cells the chart
+// server lists and, when the boat's position is known, the most detailed
+// cell covering it ("" when none does).
+struct EncCoverage {
+    int cells = 0;
+    std::string cell;
+};
+
+inline EncCoverage EncCoverageAt(const std::vector<ChartCell>& charts, bool have_pos,
+                                 double lat, double lon) {
+    EncCoverage out;
+    double best = 1e18;
+    for (const auto& c : charts) {
+        if (!c.is_enc()) continue;
+        ++out.cells;
+        if (have_pos && c.contains(lat, lon)) {
+            const double a = c.area();
+            if (a < best || (a == best && c.id < out.cell)) { best = a; out.cell = c.id; }
+        }
+    }
+    return out;
+}
+
 // ------------------------------------------------- geometry (map overlays)
 
 struct XY { double x = 0.0, y = 0.0; };
@@ -1365,16 +1485,33 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         if (route_enc_unsafe) { ev += " · ROUTE NOT SAFE ON ENC"; ok = false; }
         add("course", "Course planning", ev, ok ? READY_PASS : READY_FAIL);
     }
-    // 3 Chart / ENC selected (console publishes ENC_STATUS; a route checked
-    // safe on the ENC also shows a chart is in use)
+    // 3 Chart / ENC selected. Sources in order: the console's ENC_STATUS
+    // when it publishes one ("selected:<chart>" / "none"); the ENC cells
+    // the onboard chart server lists (chart.enc_* from the bridge's Signal
+    // K poll), checked against the boat's position; a route checked safe
+    // on the ENC; otherwise N/A on a vessel without an ENC (enc_fitted =
+    // false) or CONSOLE.
     {
         const Sample* enc = num("mission_state", "enc_status", 1e9);
-        if (!enc && route_enc_safe)
+        const Sample* cells = num("chart", "enc_cells", 300.0);
+        const Sample* covers = num("chart", "enc_covers", 300.0);
+        const Sample* cell = num("chart", "enc_cell", 300.0);
+        if (enc)
+            add("enc", "Chart / ENC selected", enc->str,
+                enc->str.rfind("selected", 0) == 0 ? READY_PASS : READY_FAIL);
+        else if (cells && cells->num >= 1.0) {
+            const std::string n = fmt0(cells->num) + (cells->num == 1.0 ? " cell" : " cells") + " loaded";
+            if (covers && covers->num == 1.0 && cell && cell->is_str && !cell->str.empty())
+                add("enc", "Chart / ENC selected", "ENC " + cell->str + " · covers position · " + n, READY_PASS);
+            else if (covers && covers->num == 0.0)
+                add("enc", "Chart / ENC selected", "ENC " + n + " · NO CELL COVERS POSITION", READY_FAIL);
+            else
+                add("enc", "Chart / ENC selected", "ENC " + n + " · position unknown", READY_PASS);
+        }
+        else if (route_enc_safe)
             add("enc", "Chart / ENC selected", "ENC in use · route checked safe on chart", READY_PASS);
         else if (!cfg.enc_fitted) add("enc", "Chart / ENC selected", "no ENC chart system on this vessel", READY_NA);
-        else if (!enc) add("enc", "Chart / ENC selected", "console not publishing ENC_STATUS", READY_CONSOLE);
-        else add("enc", "Chart / ENC selected", enc->str,
-                 enc->str.rfind("selected", 0) == 0 ? READY_PASS : READY_FAIL);
+        else add("enc", "Chart / ENC selected", "console not publishing ENC_STATUS", READY_CONSOLE);
     }
     // 4 Autonomy stack
     {

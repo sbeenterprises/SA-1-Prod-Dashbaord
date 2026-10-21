@@ -116,7 +116,7 @@ From the repo checkout on the onboard computer, as the normal user:
 
 ```bash
 bash deploy/update.sh            # latest release tag
-bash deploy/update.sh v1.2.41    # or a given tag; prints the rollback command
+bash deploy/update.sh v1.2.42    # or a given tag; prints the rollback command
 ```
 
 It refuses to run over local edits, re-runs the installer (rebuilds and
@@ -177,7 +177,7 @@ See `docs/deployment.md` for operations, `docs/user-guide.md` for
 operators, `docs/schema.md` for the InfluxDB schema,
 `docs/traceability.md` for requirement coverage,
 `docs/validation-report.md` for what was verified and how, and
-`CHANGELOG.md` for release history (current release: v1.2.41, for usv-725
+`CHANGELOG.md` for release history (current release: v1.2.42, for usv-725
 and usv-722; do not install v1.2.33; simulation baseline v1.0.0),
 `docs/release-1.2.20-usv-725.md` for the first installation on usv-725
 (engine profile, vessel particulars),

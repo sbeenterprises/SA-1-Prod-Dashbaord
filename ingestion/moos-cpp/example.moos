@@ -69,6 +69,9 @@ ProcessConfig = grafana_bridge
   // fuel_tank_l = 200  cruise_fuel_lph = 12  cruise_speed_kn = 6   // Endurance check
   // battery_kwh = 10   cruise_power_kw = 1.5  endurance_margin = 1.5
   // checklist_items = Chart Navigation System:Verify charts are loaded and current|Weather Conditions:Current and forecast weather acceptable
-  // enc_fitted = false          // no ENC chart system: the Chart/ENC row reads N/A
+  // enc_poll_s = 60             // Chart/ENC row from the chart server's ENC cells
+  //                             // (signalk_http /signalk/v1/api/resources/charts); 0 = off
+  // enc_fitted = false          // no ENC chart system and no console ENC_STATUS:
+  //                             // the Chart/ENC row reads N/A instead of CONSOLE
   // console_checklist = false   // console does not publish CHECKLIST_STATUS: row reads N/A
 }
