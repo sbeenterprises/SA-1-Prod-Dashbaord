@@ -257,8 +257,8 @@ cat >> "$CSS_FILE" <<'ALERTS'
 /* Operator popups (v1.2.40): every warning and critical event the boat
    records (a readiness check turning FAIL such as "GPS position fix: INS
    aligning", a geofence breach, an all-stop, a comms loss, a collision
-   warning) is shown as a card in the top-right corner of whatever page is
-   open, with the time it happened. Critical cards stay until clicked and
+   warning) is shown as a card in the bottom-right corner of whatever page
+   is open, newest nearest the corner, with the time it happened. Critical cards stay until clicked and
    play a short tone; warnings fade after 30 s. The script asks Grafana for
    new events every 5 s through the same data source the dashboards use,
    so it needs no extra service. Off with ?alerts=0 in the URL. */
@@ -266,7 +266,7 @@ cat >> "$CSS_FILE" <<'ALERTS'
 if(/[?&]alerts=0(&|$)/.test(location.search))return;
 var SEEN={},box=null,uid=null,started=Date.now(),failed=0;
 function el(){if(box&&document.body.contains(box))return box;box=document.createElement('div');box.id='sw-alerts';
-  box.setAttribute('style','position:fixed;top:56px;right:16px;z-index:100000;display:flex;flex-direction:column;gap:8px;width:min(420px,calc(100vw - 32px));font:14px/1.4 Inter,Helvetica,Arial,sans-serif;pointer-events:none');
+  box.setAttribute('style','position:fixed;bottom:16px;right:16px;z-index:100000;display:flex;flex-direction:column-reverse;gap:8px;width:min(420px,calc(100vw - 32px));font:14px/1.4 Inter,Helvetica,Arial,sans-serif;pointer-events:none');
   document.body.appendChild(box);return box;}
 function beep(){try{var C=window.AudioContext||window.webkitAudioContext;if(!C)return;var a=new C(),o=a.createOscillator(),g=a.createGain();
   o.frequency.value=880;g.gain.value=0.12;o.connect(g);g.connect(a.destination);o.start();setTimeout(function(){o.stop();a.close();},350);}catch(e){}}

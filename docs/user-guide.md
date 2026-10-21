@@ -195,17 +195,28 @@ bucket.
 
 ## Popups
 Anything the boat records as a warning or critical event pops up in the
-top-right corner of whatever page is open, with the time it happened: a
+bottom-right corner of whatever page is open, newest nearest the corner,
+with the time it happened: a
 readiness check turning FAIL during a mission ("Check FAIL: GPS position
 fix: INS aligning", "Check FAIL: CAN bus: no CAN data"), a geofence
 breach, an unexpected all-stop, a lost operator link, a collision
 warning. Critical cards (GPS, autonomy, steering, CAN bus, apps, safety
 flags) stay until clicked and play a short tone; warnings fade after
 30 s. When a check recovers, "Check OK" goes to the Mission Events list
-without a popup. The popups need the browser to be logged in and read
+without a popup. The Readiness verdict pops up when it flips between
+READY and NOT READY; a change in which checks are blocking goes to the
+Mission Events list only, since the check's own popup already said it. The popups need the browser to be logged in and read
 the same data as the dashboards every 5 s; add `?alerts=0` to the page
 address to switch them off on one screen. A check that keeps flapping on
 its limit raises a popup at most once a minute.
+
+## Page refresh
+The lighter pages refresh every second; Navigation, Traffic, Autopilot,
+Mission, Vessel Health, System and Alarms every 2 s, because a browser
+runs only six queries at a time and at 1 s those pages' lower panels never
+finished loading. The time picker's refresh menu changes it for the
+session (1 s is still offered); a page whose lower panels stay blank is
+refreshing faster than it can load.
 
 ## Tips
 - `?kiosk` in the URL gives a clean wall-display view.

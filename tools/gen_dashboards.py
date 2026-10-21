@@ -3396,6 +3396,13 @@ for _d in DASHBOARDS:
 
 LIVE_REFRESH_INTERVALS = ["1s", "2s", "5s", "10s", "30s", "1m", "5m",
                           "15m", "30m", "1h"]
+# A page refreshes every 1 s only while the browser can finish all its
+# queries in that second: it runs six at a time and each refresh cancels
+# whatever is still in flight, so on a page with many queries the lower
+# panels never complete and stay blank (usv-722 Navigation, 2026-10-21:
+# 26 queries, blank until the refresh was turned off). Pages with more
+# queries than this refresh every 2 s; the picker still offers 1 s.
+MAX_QUERIES_AT_1S = 18
 
 
 def main():
@@ -3407,6 +3414,8 @@ def main():
             # this, "1s" is dropped and auto-refresh is off (usv-722,
             # 2026-10-12). Needs min_refresh_interval <= 1s (install.sh).
             d["timepicker"] = {"refresh_intervals": LIVE_REFRESH_INTERVALS}
+            if sum(len(p.get("targets", [])) for p in d["panels"]) > MAX_QUERIES_AT_1S:
+                d["refresh"] = "2s"
         add_header_band(d)
         fit_to_screen(d)
         pad_to_screen(d)

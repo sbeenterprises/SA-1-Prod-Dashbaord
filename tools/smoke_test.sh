@@ -742,7 +742,7 @@ EOF
     grep -q 'check=obc evidence="CPU 4 % · RAM 11 % · disk 63 %"' "$LINES" && ok "host metrics check from Telegraf data" || bad "OBC check missing"
     grep -q 'check=engine status=2' "$LINES"            && ok "sim profile: no engine data reads N/A"    || bad "engine N/A missing"
     grep -q 'check=safety status=1' "$LINES"            && ok "crash stop / breach fails the safety check" || bad "safety check not failing"
-    grep -q 'Readiness NOT READY' "$LINES"              && ok "readiness change event emitted"           || bad "readiness event missing"
+    grep -q 'severity=warning.*Readiness NOT READY' "$LINES" && ok "readiness verdict event emitted (warning on the flip)" || bad "readiness event missing"
     grep -q 'r.cpu == "cpu-total"' "$TMP/queries.txt" 2>/dev/null \
       && ok "poller query restricts cpu to cpu-total" || bad "poller query not issued / wrong"
   else

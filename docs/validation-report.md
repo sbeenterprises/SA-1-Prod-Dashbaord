@@ -618,3 +618,23 @@ outline; Mission State reads Autonomous during the survey; a popup
 appears within 5 s of a check turning FAIL (test with the GPS antenna
 covered or the radar server stopped) and the Mission Events list shows
 the same line.
+
+## 17. Release v1.2.41 (2026-10-21)
+
+Scope: 2 s refresh on pages with more than 18 queries, popup cards moved
+to the bottom-right corner, readiness verdict popups only on a flip.
+
+Reason: on USV-722 at v1.2.40 the Navigation page showed blank lower
+tiles and trend panels while the top row was live; with the refresh
+turned off every panel filled (COG 144, WP bearing 166, roll/pitch, the
+heading / SOG / attitude trends). The page issues 26 queries per refresh;
+a browser runs six at a time and each 1 s refresh cancelled the rest.
+The two readiness popups five seconds apart at 14:51 were the verdict
+event repeating for a change in its blocking list.
+
+Environment: as section 11. `tools/smoke_test.sh` in full: 173 PASS,
+0 FAIL, 1 SKIP; the readiness check now requires the verdict event to be
+a warning on the first NOT READY. Unit tests 457.
+
+To verify on the target: Navigation with its default refresh (2 s) fills
+every panel within a few seconds of opening; one popup per check failure.

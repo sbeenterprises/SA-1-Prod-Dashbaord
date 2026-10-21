@@ -1534,13 +1534,19 @@ private:
         telemetry_->str_field("readiness_summary", "", "profile",
                               readiness_strict_ ? "vessel" : "sim");
         // Change-only event so the Mission Events list shows when the boat
-        // became ready and what blocked it.
+        // became ready and what blocked it. The verdict flipping (READY <->
+        // NOT READY) is a warning (operator popup); a change in the list of
+        // blocking checks while still NOT READY is recorded as info, since
+        // the per-check events below already name the check that changed.
         const std::string state = sum.ready ? "READY" : "NOT READY: " +
             (sum.blocking.empty() ? std::string("console checklist / ENC not published")
                                   : sum.blocking);
         if (state != last_readiness_state_) {
+            const bool flipped = last_readiness_state_.empty() ||
+                                 (last_readiness_state_ == "READY") != sum.ready;
             last_readiness_state_ = state;
-            Event("readiness", sum.ready ? "info" : "warning", "Readiness " + state);
+            Event("readiness", sum.ready ? "info" : (flipped ? "warning" : "info"),
+                  "Readiness " + state);
         }
         // One event per check when it turns FAIL (and when it recovers), so
         // a sensor that drops out during a mission (INS not aligned, GPS

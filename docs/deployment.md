@@ -591,7 +591,7 @@ emails while it runs; always stop it before real operations.
 | Fleet instances | VESSELS in usv.env |
 | Firewall sources for Grafana | GRAFANA_ALLOW_FROM in usv.env (CIDR list; unset = LAN subnet + 100.64.0.0/10; `none` = leave ufw alone) |
 | Alert recipients | grafana/provisioning/alerting/contact-points.yml |
-| Dashboard refresh | 1 s on every live page (Replay: none); the time picker changes it per page for the session. Grafana floor `GRAFANA_MIN_REFRESH` in usv.env, default 1 s (`500ms` allows faster at double the query load; `2s` eases a slow computer) |
+| Dashboard refresh | 1 s on the lighter live pages, 2 s on pages with more than 18 queries (Navigation, Traffic, Autopilot, Mission, Vessel Health, System, Alarms): the browser runs six queries at a time and each refresh cancels what is still in flight, so at 1 s the lower panels of a heavy page never fill (Replay: none); the time picker changes it per page for the session. Grafana floor `GRAFANA_MIN_REFRESH` in usv.env, default 1 s (`500ms` allows faster at double the query load; `2s` eases a slow computer) |
 
 ## Roles (Operator / Engineer / Administrator)
 Grafana OSS: Administrator -> Grafana Admin, Engineer -> Editor,

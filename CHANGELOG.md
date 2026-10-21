@@ -3,6 +3,27 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.41] - 2026-10-21 (Heavy pages refresh every 2 s, popup tidy-up)
+
+Dashboards, grafana_bridge and branding. Update with
+`bash deploy/update.sh v1.2.41`, restart the mission, then Ctrl+F5.
+
+### Fixed
+- Navigation (and other query-heavy pages) left the lower panels blank at
+  the 1 s refresh: the browser runs six queries at a time and each
+  refresh cancelled what was still in flight, so the trends and the
+  lower tiles never finished (usv-722, 2026-10-21; fine with the refresh
+  off). Pages with more than 18 queries now refresh every 2 s:
+  Navigation, Traffic, Autopilot, Mission, Vessel Health, System and
+  Alarms. The lighter pages stay at 1 s and the picker still offers 1 s.
+
+### Changed
+- Popups: the cards sit in the bottom-right corner (newest nearest the
+  corner) instead of over the page links; the Readiness verdict pops up
+  only when it flips between READY and NOT READY, and a change in the
+  blocking list while still NOT READY goes to the Mission Events list as
+  info, since the check's own "Check FAIL" popup already named it.
+
 ## [1.2.40] - 2026-10-21 (Region from the route-corridor missions, operator popups)
 
 grafana_bridge, dashboards, branding and documents. Update with
