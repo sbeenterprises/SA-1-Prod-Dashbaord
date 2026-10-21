@@ -568,3 +568,23 @@ To verify on the target: with no mission started, throttle or rudder from
 Swiftships-UI reads Remote; releasing both while the boat still moves
 reads Moving after about 10 s, then Idle once it is below 0.5 kn; starting
 a mission reads Autonomous and ending it does not flash Remote.
+
+## 15. Release v1.2.39 (2026-10-21)
+
+Scope: the login page footer (Documentation, Support, Community, Open
+Source, platform version) replaced by the export-control notice
+(`BRAND_DISCLAIMER`) through the brand CSS; `hide_version = true` and
+`feedback_links_enabled = false` written to grafana.ini by the installer
+in a marked block.
+
+Reason: the login page on USV-725 (dashboard v1.2.38) still showed the
+platform's footer links and version under the Swiftships login card; the
+console carries no tool names.
+
+Environment: as section 11. `tools/smoke_test.sh` in full: 170 PASS,
+0 FAIL, 1 SKIP; the brand.sh stand-in check now also requires the footer
+rule and the notice text in the injected CSS.
+
+To verify on the target: Ctrl+F5 on the login page, the notice below the
+card in place of the product links; after login, the help menu (?) shows
+no version line.

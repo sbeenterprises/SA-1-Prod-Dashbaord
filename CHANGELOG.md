@@ -3,6 +3,22 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.39] - 2026-10-21 (Export-control notice on the login page)
+
+Installer and branding only. Update with `bash deploy/update.sh v1.2.39`,
+then Ctrl+F5 on the login page (no mission restart needed).
+
+### Changed
+- Login page: the footer with the Documentation, Support, Community and
+  Open Source links and the platform version is replaced by the
+  export-control notice: "Disclaimer: Swiftships Autonomy (SA-1) technical
+  data, source code, and algorithms are non-releasable and protected under
+  U.S. Export Administration Regulations (EAR, ECCN 9D515), DoDI 5200.39,
+  and NDP-1." The wording is `BRAND_DISCLAIMER` in usv.env.
+- grafana.ini: `hide_version = true` and `feedback_links_enabled = false`
+  in a marked block, so the help menu shows no version or feedback links
+  either. Both are re-applied by every install and update.
+
 ## [1.2.38] - 2026-10-19 (Remote on commands, Moving when drifting)
 
 grafana_bridge, dashboards and documents. Update with

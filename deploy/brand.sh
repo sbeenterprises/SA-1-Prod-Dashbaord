@@ -17,6 +17,8 @@
 #   BRAND_SUBTITLE="Autonomous Dashboard"   (under the heading)
 #   BRAND_APP_TITLE="SA-1 Dashboard"        (replaces "Grafana" next to the
 #                                            logo in the navigation menu)
+#   BRAND_DISCLAIMER="Disclaimer: ..."       (login page footer, in place of
+#                                            the product links and version)
 set -euo pipefail
 
 GPUB=${GPUB:-/usr/share/grafana/public}
@@ -119,6 +121,8 @@ done || true   # no match (already branded) must not abort under pipefail
 #     > div > div.login-content-box > div > img(logo) + div > h1(heading)
 SUBTITLE=${BRAND_SUBTITLE:-Autonomous Dashboard}
 APP_TITLE=${BRAND_APP_TITLE:-SA-1 Dashboard}
+DISCLAIMER=${BRAND_DISCLAIMER:-Disclaimer: Swiftships Autonomy (SA-1) technical data, source code, and algorithms are non-releasable and protected under U.S. Export Administration Regulations (EAR, ECCN 9D515), DoDI 5200.39, and NDP-1.}
+DISCLAIMER_CSS=$(printf '%s' "$DISCLAIMER" | sed 's/[\\"]/\\&/g')
 cp "$BR/swiftships_logo_light.svg" "$GPUB/img/swiftships_login_logo.svg"
 mk_bg "$GPUB/img/swiftships_login_bg.svg"
 LOGO_V=$(md5sum "$GPUB/img/swiftships_login_logo.svg" | cut -c1-8)
@@ -140,6 +144,10 @@ body.login-page button[type="submit"]{background:#1e6692!important;border-color:
 body.login-page button[type="submit"]:hover{background:#00bcd4!important;border-color:#00bcd4!important;color:#04121f!important}
 body.login-page input:focus,body.login-page input:focus-visible{box-shadow:0 0 0 2px #00bcd4!important;outline:none!important}
 body.login-page a{color:#5fc9dd!important}
+/* The login footer (Documentation, Support, Community, Open Source and the
+   product version) is replaced by the export-control notice. */
+body.login-page footer>*,body.login-page [data-testid="footer"]>*{display:none!important}
+body.login-page footer::after,body.login-page [data-testid="footer"]::after{content:"$DISCLAIMER_CSS";display:block;max-width:780px;margin:0 auto;padding:0 16px;text-align:center;font-size:12px;line-height:1.5;color:#8fa3b8;white-space:normal}
 /* Navy theme: page background before Grafana has drawn (swiftships-theme-js) */
 html.sw-navy,html.sw-navy body{background:#13203B!important}
 </style>

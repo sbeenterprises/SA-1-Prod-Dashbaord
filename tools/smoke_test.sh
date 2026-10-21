@@ -260,6 +260,8 @@ for bid in ("swiftships-brand", "swiftships-brand-js", "swiftships-fit-js", "swi
             n = body.count(d); print(f"    {bid}: contains {d!r} x{n}"); bad = 1
 sys.exit(bad)
 PY
+    grep -q 'body.login-page footer>\*' "$BT/views/index.html" && grep -q 'ECCN 9D515' "$BT/views/index.html" \
+      && ok "login footer replaced by the export-control notice" || bad "login footer rule or disclaimer missing from the brand CSS"
     if command -v go >/dev/null 2>&1; then
       mkdir -p "$TMP/tplchk" && cat > "$TMP/tplchk/main.go" <<'GO'
 package main

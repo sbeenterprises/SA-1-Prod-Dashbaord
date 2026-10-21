@@ -73,9 +73,18 @@ menu (`BRAND_APP_TITLE`, default "SA-1 Dashboard"; Grafana's own name is a
 constant in the OSS build, so `brand.sh` injects a small script into
 `index.html` that rewrites that text node), and every dashboard carries a header band with the
 wordmark, the dashboard name and the selected vessel (visible in `?kiosk`
-mode too). Grafana OSS has no white-label setting, so these are file
-overwrites under `/usr/share/grafana/public`; originals are kept as
-`*.grafana-orig` and `sudo bash deploy/brand.sh --restore` puts them back.
+mode too). The login page's footer (Documentation, Support, Community,
+Open Source and the platform version) is replaced by the export-control
+notice (`BRAND_DISCLAIMER`, default "Disclaimer: Swiftships Autonomy
+(SA-1) technical data, source code, and algorithms are non-releasable and
+protected under U.S. Export Administration Regulations (EAR, ECCN 9D515),
+DoDI 5200.39, and NDP-1."), and the installer sets `hide_version = true`
+and `feedback_links_enabled = false` in grafana.ini (a marked
+`usv-noversion` block), so the help menu names no version or feedback
+links either. Grafana OSS has no white-label setting,
+so these are file overwrites under `/usr/share/grafana/public`; originals
+are kept as `*.grafana-orig` and `sudo bash deploy/brand.sh --restore`
+puts them back.
 
 The same `index.html` script fits every dashboard to the screen: the pages
 are laid out to 19 grid rows (`SCREEN_ROWS` in tools/gen_dashboards.py; a
@@ -568,7 +577,7 @@ emails while it runs; always stop it before real operations.
 | Signal K path map | ingestion/signalk-cpp/signalk_bridge.cpp kPaths |
 | PGN decoders | ingestion/can-cpp/main.cpp decode_pgn() |
 | Alert thresholds | tools/gen_alerts.py --profile sim\|vessel -> regenerate -> re-run install.sh (vessel profile: GPS Signal Loss and CAN Bus Failure also alert on missing data; engine and battery rules never do, the Readiness dashboard reports silent sensors) |
-| Branding text | BRAND_TITLE / BRAND_WELCOME / BRAND_SUBTITLE / BRAND_APP_TITLE in usv.env |
+| Branding text | BRAND_TITLE / BRAND_WELCOME / BRAND_SUBTITLE / BRAND_APP_TITLE / BRAND_DISCLAIMER in usv.env |
 | Home dashboard | GRAFANA_HOME_DASHBOARD in usv.env (default usv-readiness.json) |
 | Readiness profile, vessel constants, app list, checklist items | grafana_bridge ProcessConfig in the mission file: readiness_profile, readiness_period_s, fuel_tank_l, cruise_fuel_lph, cruise_speed_kn, battery_kwh, cruise_power_kw, endurance_margin, required_apps, optional_apps, checklist_items, enc_fitted, console_checklist (see example.moos) |
 | Console mirrors | CHECKLIST_STATUS and ENC_STATUS published by the operator console (spec above) |

@@ -406,6 +406,21 @@ else
   printf '\n[dashboards]\nmin_refresh_interval = %s\n' "$MIN_REFRESH" >> /etc/grafana/grafana.ini
 fi
 
+# ------------------------------------------------------- no product footer
+# The help menu and the login page name the product and its version. Hide
+# the version and the feedback links (a marked block at the end of the
+# file; later keys win). brand.sh hides the login footer itself.
+GINI=/etc/grafana/grafana.ini
+sed -i '/^# >>> usv-noversion >>>$/,/^# <<< usv-noversion <<<$/d' "$GINI"
+{
+  echo '# >>> usv-noversion >>>'
+  echo '[security]'
+  echo 'hide_version = true'
+  echo '[analytics]'
+  echo 'feedback_links_enabled = false'
+  echo '# <<< usv-noversion <<<'
+} >> "$GINI"
+
 # ---------------------------------------------------------------- email (SMTP)
 # Alert emails leave the vessel only when Grafana has an SMTP relay. The
 # settings come from SMTP_* in /etc/usv/usv.env and are written as a marked
