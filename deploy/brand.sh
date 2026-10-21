@@ -252,8 +252,55 @@ setInterval(function(){var v=new URL(location.href).searchParams.get('var-theme'
 })();
 </script>
 THEME
+cat >> "$CSS_FILE" <<'ALERTS'
+<script id="swiftships-alerts-js">
+/* Operator popups (v1.2.40): every warning and critical event the boat
+   records (a readiness check turning FAIL such as "GPS position fix: INS
+   aligning", a geofence breach, an all-stop, a comms loss, a collision
+   warning) is shown as a card in the top-right corner of whatever page is
+   open, with the time it happened. Critical cards stay until clicked and
+   play a short tone; warnings fade after 30 s. The script asks Grafana for
+   new events every 5 s through the same data source the dashboards use,
+   so it needs no extra service. Off with ?alerts=0 in the URL. */
+(function(){
+if(/[?&]alerts=0(&|$)/.test(location.search))return;
+var SEEN={},box=null,uid=null,started=Date.now(),failed=0;
+function el(){if(box&&document.body.contains(box))return box;box=document.createElement('div');box.id='sw-alerts';
+  box.setAttribute('style','position:fixed;top:56px;right:16px;z-index:100000;display:flex;flex-direction:column;gap:8px;width:min(420px,calc(100vw - 32px));font:14px/1.4 Inter,Helvetica,Arial,sans-serif;pointer-events:none');
+  document.body.appendChild(box);return box;}
+function beep(){try{var C=window.AudioContext||window.webkitAudioContext;if(!C)return;var a=new C(),o=a.createOscillator(),g=a.createGain();
+  o.frequency.value=880;g.gain.value=0.12;o.connect(g);g.connect(a.destination);o.start();setTimeout(function(){o.stop();a.close();},350);}catch(e){}}
+function hms(t){var d=new Date(t);function p(n){return (n<10?'0':'')+n;}return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());}
+function toast(sev,msg,t){var d=document.createElement('div'),col=sev==='critical'?'#e53935':sev==='warning'?'#fb8c00':'#1e6692';
+  d.setAttribute('style','pointer-events:auto;background:#0f1b2d;color:#e8f1f8;border-left:6px solid '+col+';border-radius:8px;padding:10px 34px 10px 12px;box-shadow:0 8px 24px rgba(0,0,0,.5);position:relative;cursor:pointer');
+  var h=document.createElement('div');h.setAttribute('style','font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:'+col);h.textContent=(sev==='critical'?'Critical':sev==='warning'?'Warning':'Info')+' · '+hms(t);
+  var b=document.createElement('div');b.textContent=msg;
+  var x=document.createElement('span');x.setAttribute('style','position:absolute;top:4px;right:10px;font-size:20px;opacity:.7');x.textContent='×';
+  d.appendChild(h);d.appendChild(b);d.appendChild(x);d.onclick=function(){d.remove();};el().insertBefore(d,el().firstChild);
+  if(sev==='critical')beep();else setTimeout(function(){d.remove();},30000);}
+function ds(cb){if(uid)return cb(uid);
+  fetch('/api/frontend/settings',{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(s){
+    var m=s.datasources||{};for(var k in m){if(m[k].type==='influxdb'){uid=m[k].uid;break;}}if(uid)cb(uid);}).catch(function(){});}
+var Q='from(bucket: "events") |> range(start: -2m) |> filter(fn: (r) => r._measurement == "events" and r._field == "message") |> filter(fn: (r) => r.severity == "warning" or r.severity == "critical") |> keep(columns: ["_time", "_value", "severity", "vessel"]) |> group()';
+function poll(){if(document.body&&document.body.classList.contains('login-page'))return;ds(function(u){
+  fetch('/api/ds/query',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({from:'now-2m',to:'now',queries:[{refId:'A',datasource:{type:'influxdb',uid:u},query:Q}]})})
+  .then(function(r){return r.json();}).then(function(j){failed=0;
+    var fr=(j.results&&j.results.A&&j.results.A.frames)||[];
+    fr.forEach(function(f){var names=f.schema.fields.map(function(x){return x.name;}),v=f.data.values;
+      var ti=names.indexOf('_time'),mi=names.indexOf('_value'),si=names.indexOf('severity'),vi=names.indexOf('vessel');
+      if(ti<0||mi<0)return;var n=v[ti].length;
+      for(var i=0;i<n;i++){var t=v[ti][i],m=v[mi][i],s=si>=0?v[si][i]:'warning',ve=vi>=0?v[vi][i]:'';
+        var key=t+'|'+m;if(SEEN[key])continue;SEEN[key]=1;
+        if(new Date(t).getTime()<started-60000)continue;
+        toast(s,(ve?ve+': ':'')+m,t);}});
+  }).catch(function(){failed++;});});}
+setTimeout(poll,3000);setInterval(poll,5000);
+})();
+</script>
+ALERTS
 # Replace any previous block, then insert before </head>.
-perl -0pi -e 's|<style id="swiftships-brand">.*?</style>\n?||s; s|<script id="swiftships-brand-js">.*?</script>\n?||s; s|<script id="swiftships-fit-js">.*?</script>\n?||s; s|<script id="swiftships-theme-js">.*?</script>\n?||s' "$IDX"
+perl -0pi -e 's|<style id="swiftships-brand">.*?</style>\n?||s; s|<script id="swiftships-brand-js">.*?</script>\n?||s; s|<script id="swiftships-fit-js">.*?</script>\n?||s; s|<script id="swiftships-theme-js">.*?</script>\n?||s; s|<script id="swiftships-alerts-js">.*?</script>\n?||s' "$IDX"
 CSS_FILE="$CSS_FILE" perl -0pi -e 'BEGIN{local $/; open(F, "<", $ENV{CSS_FILE}) or die; $css=<F>; close F} s|</head>|$css</head>|' "$IDX"
 rm -f "$CSS_FILE"
 

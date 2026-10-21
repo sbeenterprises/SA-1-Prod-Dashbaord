@@ -588,3 +588,33 @@ rule and the notice text in the injected CSS.
 To verify on the target: Ctrl+F5 on the login page, the notice below the
 card in place of the product links; after login, the help menu (?) shows
 no version line.
+
+## 16. Release v1.2.40 (2026-10-21)
+
+Scope: the operating region read from REGION_POLY (route-corridor
+missions), REGION as a fence flag instead of a "Region Hold" state,
+per-check readiness events, and the operator popup script in the branded
+page.
+
+Reason: on USV-722 (mission "insidenewregion", region drawn and active in
+Swiftships-UI) the Readiness course row read "no operating region": the
+bus carried the polygon in REGION_POLY while REGION_UPDATES held only
+"reset=true # breach_dist=15 # recover_speed=4". The operator also asked
+for a popup when the INS is not aligned or any sensor fails.
+
+Environment: as section 11. `tools/smoke_test.sh` in full: 173 PASS,
+0 FAIL, 1 SKIP. New checks: REGION_POLY gives an 8-vertex region that a
+parameter-only REGION_UPDATES leaves alone; REGION=true writes
+region_active and changes no state; the state sequence outside autonomy
+with the region enforced is Idle, Remote, Moving, Idle; the geofence
+breach turns the Safety flags check FAIL and records the critical event;
+the popup script is injected once with no template delimiters. Unit tests
+457. The popup script was syntax-checked but not run against a live
+Grafana here.
+
+To verify on the target: with the region drawn in Swiftships-UI, Course
+planning reads "... region N vertices" and the Navigation map draws the
+outline; Mission State reads Autonomous during the survey; a popup
+appears within 5 s of a check turning FAIL (test with the GPS antenna
+covered or the radar server stopped) and the Mission Events list shows
+the same line.

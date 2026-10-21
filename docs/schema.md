@@ -31,7 +31,8 @@ fleet expansion.
 
 ### mission (FR-1) — source: MOOS bridge
 progress_pct (%), waypoint_index, waypoints_total, waypoints_remaining,
-region_vertices (vertex count of the current operating region, written
+region_vertices (vertex count of the current operating region from
+REGION_POLY, OPR_POLY_ACTUAL or a REGION_UPDATES with a pts block, written
 with the geometry set), route_length_m, route_in_region (0/1, every
 waypoint inside the region; the readiness course check reads them back),
 dist_to_waypoint (m), dist_to_station (m, planchaPID DIST_TO_STATION),
@@ -47,7 +48,7 @@ and yield automatically to any external publisher of the legacy
 ### mission_state (FR-1/FR-3) — source: MOOS bridge (strings)
 mission_name, mission_id, route_name, state (derived: Idle | Autonomous |
 Remote | Paused | HoldingAtBase | StationKeeping | ReturnToBase | Following |
-RegionHold | EnteringRegion | AwaitingRearm | CommsLost | Parked |
+EnteringRegion | AwaitingRearm | CommsLost | Parked |
 Completed | Moving; outside autonomy Remote while throttle or rudder is
 commanded, Moving while drifting with no command), state_external (a
 MISSION_STATE published by another app, if any), active_behavior (parsed
@@ -147,7 +148,8 @@ comms_phase (0 link ok | 1 grace, mission continues | 2 failsafe hold |
 3 return to base; the simulation iWebSocket's COMMS_LOST phases),
 remote_control (1 with REMOTE_CONTROL or while the derived state is Remote),
 operator_cmd (1 while a throttle or rudder command is in force outside
-autonomy), drifting (1 while the derived state is Moving), crash_stop (CRASH_STOP), comms_loss
+autonomy), drifting (1 while the derived state is Moving), region_active
+(REGION: the operating-region fence is enforced), crash_stop (CRASH_STOP), comms_loss
 (COMMS_LOSS from the boats' iWebSocket: no frame from any Swiftships-UI for
 comms_loss_timeout s), return_hold (RETURN_HOLD: holding station on the
 base), comms_return (1 while the link is lost and the boat returns to or

@@ -111,7 +111,6 @@ used by alerts and queries:
 | Remote | Operator driving the boat from Swiftships-UI; autonomy is not in charge. Shown while a throttle or rudder command is in force and no autonomous mode has been started (a mission loaded but not started counts as not started), and for 10 s after the last command. The Remote Control tile on the Mission page reads MANUAL at the same time |
 | Moving | The boat is moving (0.5 kn or more) with no command from the system or the operator: drifting on current or wind. Check the boat |
 | Following (shown "Following") | Following an AIS contact at the range and angle chosen in Swiftships-UI |
-| RegionHold (shown "Region Hold") | Holding inside the operating region chosen in Swiftships-UI |
 | Paused | Operator pause — boat holds at zero speed |
 | StationKeeping | Holding a station point (operator request or station waypoint) |
 | ReturnToBase (shown "Return to Base") | Driving back to the base/return point (operator command, or the comms-loss failsafe: the events say which) |
@@ -125,6 +124,11 @@ used by alerts and queries:
 
 `AwaitingRearm` and `CommsLost` are the two states that need operator
 action — both also raise alerts.
+
+The operating region chosen in Swiftships-UI is a fence, not a state: it
+stays enforced through a survey and after it, so the state reads
+Autonomous, Remote, Moving or Idle as usual while it is on. The
+Navigation map draws it, and the Readiness course check uses it.
 
 **Operator link on the boats.** The boats' iWebSocket returns the boat to
 its base when nothing is heard from any Swiftships-UI for 30 s, with the
@@ -188,6 +192,20 @@ the boat. Collision Avoidance IN EXTREMIS is critical while the helm
 reports a stand-on encounter in extremis. Severity `critical` repeats every 10 min until
 resolved; `warning` hourly. Alarm history is kept 1 year in the events
 bucket.
+
+## Popups
+Anything the boat records as a warning or critical event pops up in the
+top-right corner of whatever page is open, with the time it happened: a
+readiness check turning FAIL during a mission ("Check FAIL: GPS position
+fix: INS aligning", "Check FAIL: CAN bus: no CAN data"), a geofence
+breach, an unexpected all-stop, a lost operator link, a collision
+warning. Critical cards (GPS, autonomy, steering, CAN bus, apps, safety
+flags) stay until clicked and play a short tone; warnings fade after
+30 s. When a check recovers, "Check OK" goes to the Mission Events list
+without a popup. The popups need the browser to be logged in and read
+the same data as the dashboards every 5 s; add `?alerts=0` to the page
+address to switch them off on one screen. A check that keeps flapping on
+its limit raises a popup at most once a minute.
 
 ## Tips
 - `?kiosk` in the URL gives a clean wall-display view.

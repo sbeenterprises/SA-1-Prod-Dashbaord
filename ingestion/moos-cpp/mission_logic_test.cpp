@@ -158,8 +158,17 @@ static void test_remote_and_moving() {
     f.returning = true; CHECK_EQ_STR(DeriveMissionState(f), "ReturnToBase"); f.returning = false;
     f.stationing = true; CHECK_EQ_STR(DeriveMissionState(f), "StationKeeping"); f.stationing = false;
     f.trailing = true;  CHECK_EQ_STR(DeriveMissionState(f), "Following");   f.trailing = false;
-    f.region = true;    CHECK_EQ_STR(DeriveMissionState(f), "RegionHold");  f.region = false;
     f.pause = true;     CHECK_EQ_STR(DeriveMissionState(f), "Paused");      f.pause = false;
+    // The operating-region fence (REGION) is not a mode: with it enforced
+    // and nothing else, the operator's commands still read Remote, drift
+    // reads Moving, and a survey inside it reads Autonomous.
+    f.region = true;
+    CHECK(!autonomy_mode(f));
+    CHECK_EQ_STR(DeriveMissionState(f), "Remote");
+    f.commanded = false; CHECK_EQ_STR(DeriveMissionState(f), "Moving");
+    f.moving = false;    CHECK_EQ_STR(DeriveMissionState(f), "Idle");
+    f.waypoint = true;   CHECK_EQ_STR(DeriveMissionState(f), "Autonomous"); f.waypoint = false;
+    f.region = false; f.commanded = true; f.moving = true;
     f.return_hold = true; CHECK_EQ_STR(DeriveMissionState(f), "HoldingAtBase"); f.return_hold = false;
     // Comms loss and REMOTE_CONTROL keep their places.
     f.comms_lost = "loiter"; CHECK_EQ_STR(DeriveMissionState(f), "CommsLost"); f.comms_lost = "false";

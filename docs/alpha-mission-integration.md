@@ -75,7 +75,7 @@ Priority order (first match wins), mirroring the semantics documented in
 |---|---|---|---|
 | 1 | `COMMS_LOST` in its hold phase | `CommsLost` | Failsafe dominates; planchaPID station-keeps at the loss position, but shore must see *why* |
 | 2 | `REMOTE_CONTROL` | `Remote` | Operator driving through the passthrough; it parks the helm underneath, so it must outrank Parked |
-| 3 | Autonomy not driving and a throttle or rudder command in force | `Remote` | Operator driving from Swiftships-UI: the production iWebSocket posts DESIRED_THRUST / DESIRED_RUDDER straight from the console and no REMOTE_CONTROL. Command = \|DESIRED_THRUST\| at or above `remote_thrust_pct` (1 %) or \|DESIRED_RUDDER\| at or above `remote_rudder` (1), held `remote_hold_s` (10 s). Autonomy driving = an autonomy mode (WAYPOINT, RETURN, STATIONING, TRAILING, REGION, RETURN_HOLD, PAUSE) without `MOOS_MANUAL_OVERRIDE`; when it stops, the autopilot's last outputs are dropped so only a new console command counts |
+| 3 | Autonomy not driving and a throttle or rudder command in force | `Remote` | Operator driving from Swiftships-UI: the production iWebSocket posts DESIRED_THRUST / DESIRED_RUDDER straight from the console and no REMOTE_CONTROL. Command = \|DESIRED_THRUST\| at or above `remote_thrust_pct` (1 %) or \|DESIRED_RUDDER\| at or above `remote_rudder` (1), held `remote_hold_s` (10 s). Autonomy driving = an autonomy mode (WAYPOINT, RETURN, STATIONING, TRAILING, RETURN_HOLD, PAUSE; not REGION) without `MOOS_MANUAL_OVERRIDE`; when it stops, the autopilot's last outputs are dropped so only a new console command counts |
 | 3b | Autonomy not driving, no command, SOG at or above `moving_speed_kn` (0.5 kn) | `Moving` | Drifting on current or wind with nothing driving the boat; held `remote_hold_s`; `moving_speed_kn = 0` turns it off |
 | 4 | `MOOS_MANUAL_OVERRIDE` and `SURVEY_COMPLETE` | `Completed` | Post-survey park (iWebSocket parks once inside the region) |
 | 5 | `MOOS_MANUAL_OVERRIDE` | `Parked` | Helm parked; thrust actively zeroed |
@@ -84,12 +84,19 @@ Priority order (first match wins), mirroring the semantics documented in
 | 8 | `STATIONING` | `StationKeeping` | Operator station-keep or mid-route station waypoint |
 | 9 | `RETURN` | `ReturnToBase` | `waypt_return` driving to base |
 | 10 | `TRAILING` | `Following` | Following an AIS contact (BHV_Trail, started from Swiftships-UI) |
-| 11 | `REGION` | `RegionHold` | Operator region hold (BHV_OpRegionV24, started from Swiftships-UI) |
-| 12 | `WAYPOINT` and gate `closed` | `EnteringRegion` | Start-outside latch: opr24 recovers the boat inside before the survey may run |
-| 13 | `WAYPOINT` and not `MISSION_ARMED` | `AwaitingRearm` | Link back but no operator re-arm — the explicit no-silent-resume hold |
-| 14 | `WAYPOINT` | `Autonomous` | Survey running |
-| 15 | `SURVEY_COMPLETE` | `Completed` | Completed but not yet parked (e.g. recovering inside first) |
-| 16 | otherwise | `Idle` | Boat at rest, no mission requested |
+| 11 | `WAYPOINT` and gate `closed` | `EnteringRegion` | Start-outside latch: opr24 recovers the boat inside before the survey may run |
+| 12 | `WAYPOINT` and not `MISSION_ARMED` | `AwaitingRearm` | Link back but no operator re-arm — the explicit no-silent-resume hold |
+| 13 | `WAYPOINT` | `Autonomous` | Survey running |
+| 14 | `SURVEY_COMPLETE` | `Completed` | Completed but not yet parked (e.g. recovering inside first) |
+| 15 | otherwise | `Idle` | Boat at rest, no mission requested |
+
+`REGION` (the operating-region fence, BHV_OpRegionV24) is not a state:
+it is enforced through a survey and after it, and on its own only
+recovers the boat after a breach. It is written as `autonomy.region_active`
+and its polygon is read from `REGION_POLY` (route-corridor missions:
+`border={...} # pts={...}`), `OPR_POLY_ACTUAL` or a `REGION_UPDATES` that
+carries a `pts={}` block; a `REGION_UPDATES` of parameters only (reset,
+breach_dist, recover_speed) leaves the region as it is.
 
 Helm health (`IVPHELM_STATE`, `IVPHELM_ALLSTOP`) is deliberately **not**
 folded into the mission state: a frozen helm while `Paused` must show as

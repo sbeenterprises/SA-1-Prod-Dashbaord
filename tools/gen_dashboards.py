@@ -461,7 +461,6 @@ STATE_LABELS = {
     "StationKeeping": "Station Keeping", "ReturnToBase": "Return to Base",
     "EnteringRegion": "Entering Region", "AwaitingRearm": "Awaiting Re-arm",
     "CommsLost": "Comms Lost", "HoldingAtBase": "Holding at Base",
-    "RegionHold": "Region Hold",
     # value written by bridges before v1.0.1 (historical data / replay)
     "ReturnToHome": "Return to Base",
 }
@@ -1064,7 +1063,7 @@ mission_state_mappings = state_map([
     ("EnteringRegion", "super-light-blue"), ("AwaitingRearm", "orange"),
     ("CommsLost", "red"), ("Parked", "#6e7680"), ("Completed", "purple"),
     ("HoldingAtBase", "orange"),
-    ("Following", ACCENT), ("RegionHold", "super-light-blue"),
+    ("Following", ACCENT),
     ("Moving", "light-yellow"),
 ])
 helm_state_mappings = state_map([

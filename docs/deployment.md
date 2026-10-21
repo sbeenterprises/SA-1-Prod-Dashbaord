@@ -81,7 +81,12 @@ protected under U.S. Export Administration Regulations (EAR, ECCN 9D515),
 DoDI 5200.39, and NDP-1."), and the installer sets `hide_version = true`
 and `feedback_links_enabled = false` in grafana.ini (a marked
 `usv-noversion` block), so the help menu names no version or feedback
-links either. Grafana OSS has no white-label setting,
+links either. The same page script shows the operator popups: every
+warning or critical event in the events bucket (readiness checks turning
+FAIL, geofence, all-stop, comms loss, collision) appears as a card in the
+top-right corner of any page within 5 s, read through the dashboards'
+own data source; `?alerts=0` turns them off for one screen. Grafana OSS
+has no white-label setting,
 so these are file overwrites under `/usr/share/grafana/public`; originals
 are kept as `*.grafana-orig` and `sudo bash deploy/brand.sh --restore`
 puts them back.
@@ -154,7 +159,7 @@ litre tiles and the Speed cap row; nothing else changes.
 The Navigation and Replay maps draw the operating region (cyan outline),
 the planned route with numbered waypoints (green), the vessel's track
 (red) and the vessel itself (red heading arrow). Route
-and region come from the helm (VIEW_SEGLIST, OPR_POLY_ACTUAL or the console's REGION_UPDATES) converted
+and region come from the helm (VIEW_SEGLIST; REGION_POLY on the route-corridor missions, OPR_POLY_ACTUAL, or a REGION_UPDATES carrying a pts block) converted
 with the mission file's `LatOrigin` / `LongOrigin`; without that datum
 the overlays stay empty and nothing else is affected.
 

@@ -250,7 +250,7 @@ HTML
 import re, sys
 h = open(sys.argv[1]).read()
 bad = 0
-for bid in ("swiftships-brand", "swiftships-brand-js", "swiftships-fit-js", "swiftships-theme-js"):
+for bid in ("swiftships-brand", "swiftships-brand-js", "swiftships-fit-js", "swiftships-theme-js", "swiftships-alerts-js"):
     blocks = re.findall(r'<(style|script) id="%s">(.*?)</\1>' % bid, h, re.S)
     if len(blocks) != 1:
         print(f"    {bid}: found {len(blocks)} times (expected 1)"); bad = 1; continue
@@ -596,6 +596,13 @@ EOF
     sleep 4
     P NAV_SPEED=0
     sleep 4
+    # Route-corridor missions: the region polygon arrives in REGION_POLY
+    # (border + pts) while REGION_UPDATES carries only parameters, which
+    # must not wipe the region.
+    P 'REGION_POLY=border={-6571.3,-77.1:-5976.3,396.9:-6007.0,437.4:-6603.7,-38.1} # pts={-6574.0,-79.2:-5976.3,396.9:-5975.3,399.9:-6004.0,435.6:-6007.0,437.4:-6603.7,-38.1:-6605.6,-41.1:-6577.0,-76.7}'
+    sleep 2
+    P 'REGION_UPDATES=reset=true # breach_dist=15 # recover_speed=4'
+    sleep 3
   fi
   kill $DB 2>/dev/null; pkill -f moos_bridge 2>/dev/null; stop_stub
 
@@ -660,9 +667,13 @@ EOF
     grep -q "autonomy,.* operator_link=5" "$LINES"     && ok "operator_link 5 holding at base after comms loss" || bad "operator_link hold code missing"
     grep -q 'state="HoldingAtBase"' "$LINES"           && ok "RETURN_HOLD -> state HoldingAtBase"      || bad "HoldingAtBase state missing"
     grep -q 'state="Following"' "$LINES"               && ok "TRAILING -> state Following"             || bad "Following state missing"
-    grep -q 'state="RegionHold"' "$LINES"              && ok "REGION -> state RegionHold"              || bad "RegionHold state missing"
-    [ "$(grep -o 'Mission state: [A-Za-z]*' "$LINES" | tail -4 | cut -d' ' -f3 | tr '\n' ' ')" = "RegionHold Remote Moving Idle " ] \
-      && ok "outside autonomy: throttle -> Remote, drift -> Moving, at rest -> Idle" || bad "Remote / Moving / Idle sequence wrong"
+    grep -q "autonomy,.* region_active=1" "$LINES"     && ok "REGION -> autonomy.region_active (a fence, not a state)" || bad "region_active missing"
+    ! grep -q 'state="RegionHold"' "$LINES"            && ok "REGION alone does not change the mission state" || bad "REGION produced a RegionHold state"
+    [ "$(grep -o 'Mission state: [A-Za-z]*' "$LINES" | tail -4 | cut -d' ' -f3 | tr '\n' ' ')" = "Idle Remote Moving Idle " ] \
+      && ok "outside autonomy (region enforced): throttle -> Remote, drift -> Moving, at rest -> Idle" || bad "Remote / Moving / Idle sequence wrong"
+    [ "$(grep -o 'region_vertices=[0-9]*' "$LINES" | tail -1)" = "region_vertices=8" ] \
+      && ok "REGION_POLY -> operating region (8 vertices); parameter-only REGION_UPDATES leaves it" || bad "REGION_POLY region missing or wiped by REGION_UPDATES"
+    grep -q "Check FAIL: Safety flags: GEOFENCE BREACH" "$LINES" && ok "readiness check turning FAIL -> critical event (popup)" || bad "readiness check FAIL event missing"
     grep -q "autonomy,.* remote_control=1" "$LINES"    && ok "Remote Control tile on while the operator drives" || bad "remote_control not derived"
     grep -q 'colav,vessel=usv-moos,contact=contato_7.*situation="Give-way, crossing astern"' "$LINES" \
       && ok "COLAV_ALERTS -> colav row with the COLREGS situation" || bad "colav situation missing"

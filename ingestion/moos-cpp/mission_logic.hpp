@@ -138,7 +138,7 @@ struct MissionFlags {
     bool comms_loss = false;           // COMMS_LOSS (production iWebSocket)
     bool return_hold = false;          // RETURN_HOLD: holding station on the base
     bool trailing = false;             // TRAILING: following an AIS contact (BHV_Trail)
-    bool region = false;               // REGION: operator region hold (BHV_OpRegionV24)
+    bool region = false;               // REGION: operating region enforced (BHV_OpRegionV24); a fence, not a mode
     bool commanded = false;            // throttle or rudder command in force (MotionLatch, set by the bridge)
     bool moving = false;               // speed over ground at or above the drift threshold (MotionLatch)
     std::string helm_state;            // IVPHELM_STATE (informational)
@@ -146,10 +146,12 @@ struct MissionFlags {
 };
 
 // An autonomy mode that drives the boat (or deliberately holds it) is
-// requested: survey, return, station keeping, contact following, region
-// hold, the comms-loss hold on the base, or a pause.
+// requested: survey, return, station keeping, contact following, the
+// comms-loss hold on the base, or a pause. REGION is not one: the
+// operating-region fence stays enforced through a survey and after it, and
+// on its own it only recovers the boat after a breach.
 inline bool autonomy_mode(const MissionFlags& f) {
-    return f.waypoint || f.returning || f.stationing || f.trailing || f.region ||
+    return f.waypoint || f.returning || f.stationing || f.trailing ||
            f.return_hold || f.pause;
 }
 
@@ -183,7 +185,6 @@ inline const char* DeriveMissionState(const MissionFlags& f) {
     if (f.stationing)                            return "StationKeeping";
     if (f.returning)                             return "ReturnToBase";
     if (f.trailing)                              return "Following";
-    if (f.region)                                return "RegionHold";
     if (f.waypoint && !gate_open(f.entry_gate))  return "EnteringRegion";
     if (f.waypoint && !f.armed)                  return "AwaitingRearm";
     if (f.waypoint)                              return "Autonomous";

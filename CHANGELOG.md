@@ -3,6 +3,38 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.40] - 2026-10-21 (Region from the route-corridor missions, operator popups)
+
+grafana_bridge, dashboards, branding and documents. Update with
+`bash deploy/update.sh v1.2.40`, restart the mission (grafana_bridge),
+then Ctrl+F5.
+
+### Fixed
+- Readiness Course planning read "no operating region" and the Navigation
+  map drew no region on the route-corridor missions: there the polygon
+  arrives in `REGION_POLY` (`border={...} # pts={...}`) and
+  `REGION_UPDATES` carries only parameters. The bridge now reads the
+  region from REGION_POLY as well, and a REGION_UPDATES without a pts
+  block no longer clears it.
+- Mission state read "Region Hold" whenever the operating region was
+  enforced, including during a survey. REGION is a fence, not a mode: the
+  state is gone, the region no longer counts as autonomy (so the
+  operator's commands inside it read Remote, drift reads Moving), and the
+  flag is written as `autonomy.region_active`.
+
+### Added
+- Operator popups on every page: each warning or critical event the boat
+  records appears as a card in the top-right corner within 5 s, with its
+  time; critical cards stay until clicked and play a short tone, warnings
+  fade after 30 s. `?alerts=0` turns them off for one screen.
+- Readiness check events: when a check turns FAIL during a mission the
+  bridge records "Check FAIL: <check>: <evidence>" (critical for GPS,
+  autonomy, steering, CAN bus, apps and safety flags; warning otherwise),
+  and "Check OK" when it recovers, so an INS that drops alignment or a
+  sensor that fails reaches the operator even while the verdict is
+  already NOT READY for another reason. At most one FAIL event per check
+  per minute.
+
 ## [1.2.39] - 2026-10-21 (Export-control notice on the login page)
 
 Installer and branding only. Update with `bash deploy/update.sh v1.2.39`,

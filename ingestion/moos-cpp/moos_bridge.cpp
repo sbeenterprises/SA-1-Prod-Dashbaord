@@ -11,11 +11,12 @@
 // What it does beyond 1:1 passthrough:
 //  - Derives the operational mission state (Idle / Autonomous / Remote /
 //    Paused / StationKeeping / ReturnToBase / HoldingAtBase / Following /
-//    RegionHold / EnteringRegion / AwaitingRearm / CommsLost / Parked /
+//    EnteringRegion / AwaitingRearm / CommsLost / Parked /
 //    Completed / Moving) from the mode flags the Alpha mission actually
 //    publishes (nothing on the vessel publishes MISSION_STATE). Outside
 //    autonomy: Remote while throttle or rudder is commanded, Moving while the
-//    boat drifts with no command.
+//    boat drifts with no command. REGION is the operating-region fence, not
+//    a mode (autonomy.region_active).
 //  - Parses the active behavior set out of IVPHELM_SUMMARY.
 //  - Computes progress / waypoint total (VIEW_SEGLIST), ETA and distance
 //    traveled — yielding to any external publisher of the legacy variables.
@@ -199,7 +200,7 @@ const std::set<std::string> kSpecialVars = {
     // COLREGS situation (JSON, rebuilt once a second while any is listed).
     "COLAV_ALERTS",
     "IVPHELM_STATE", "IVPHELM_ALLSTOP", "IVPHELM_SUMMARY",
-    "OPR_BREACHED", "VIEW_SEGLIST", "OPR_POLY_ACTUAL", "REGION_UPDATES", "OBSTACLE_ALERT",
+    "OPR_BREACHED", "VIEW_SEGLIST", "OPR_POLY_ACTUAL", "REGION_UPDATES", "REGION_POLY", "OBSTACLE_ALERT",
     "CHECKLIST_STATUS", "DB_CLIENTS",
     "DIST_TO_NEXT_WPT", "WPT_INDEX",
     "ACTIVE_BEHAVIOR", "STATION_KEEP_STATUS",
@@ -783,13 +784,19 @@ private:
             HandleGeofence(msg.GetString(), now);
         } else if (key == "VIEW_SEGLIST" && msg.IsString()) {
             HandleSeglist(msg.GetString());
-        } else if ((key == "OPR_POLY_ACTUAL" || key == "REGION_UPDATES") && msg.IsString()) {
+        } else if ((key == "OPR_POLY_ACTUAL" || key == "REGION_UPDATES" || key == "REGION_POLY") &&
+                   msg.IsString()) {
             // OPR_POLY_ACTUAL: polygon posted by the OpRegion behaviour.
             // REGION_UPDATES: "core_poly=pts={x,y:...}" sent by the operator
             // console (iWebSocket) to BHV_OpRegionV24 when a region is
-            // selected, already in the local grid. Either one is the
-            // operating region; ParsePts reads the pts={} block of both.
-            WriteGeometry("region", msg.GetString(), /*close=*/true);
+            // selected, already in the local grid. REGION_POLY (the
+            // route-corridor missions): "border={...} # pts={...}", the
+            // region itself in pts; there REGION_UPDATES carries only
+            // parameters (reset, breach_dist, recover_speed) and must not
+            // clear the region. Any of them is the operating region when it
+            // has a pts={} block; ParsePts reads that block.
+            if (key == "OPR_POLY_ACTUAL" || msg.GetString().find("pts={") != std::string::npos)
+                WriteGeometry("region", msg.GetString(), /*close=*/true);
         } else if (key == "CHECKLIST_STATUS" && msg.IsString()) {
             HandleChecklist(msg.GetString());
         } else if (key == "DB_CLIENTS" && msg.IsString()) {
@@ -1535,6 +1542,29 @@ private:
             last_readiness_state_ = state;
             Event("readiness", sum.ready ? "info" : "warning", "Readiness " + state);
         }
+        // One event per check when it turns FAIL (and when it recovers), so
+        // a sensor that drops out during a mission (INS not aligned, GPS
+        // lost, CAN bus down ...) reaches the operator as a popup even while
+        // the verdict is already NOT READY for another reason. The first
+        // evaluation only records the statuses; a check may not raise FAIL
+        // more often than once a minute (a value flapping on its limit).
+        for (const auto& c : checks) {
+            auto it = last_check_status_.find(c.id);
+            if (it == last_check_status_.end()) { last_check_status_[c.id] = c.status; continue; }
+            const int prev = it->second;
+            it->second = c.status;
+            if (c.status == usv::READY_FAIL && prev != usv::READY_FAIL) {
+                double& last = last_check_fail_event_[c.id];
+                if (now - last < 60.0) continue;
+                last = now;
+                static const std::set<std::string> critical = {
+                    "gps", "autonomy", "steering", "can", "safety", "apps"};
+                Event("readiness_check", critical.count(c.id) ? "critical" : "warning",
+                      "Check FAIL: " + c.name + ": " + c.evidence);
+            } else if (prev == usv::READY_FAIL && c.status == usv::READY_PASS) {
+                Event("readiness_check", "info", "Check OK: " + c.name + ": " + c.evidence);
+            }
+        }
     }
 
     void HandleSeglist(const std::string& spec) {
@@ -1626,6 +1656,8 @@ private:
         telemetry_->field("autonomy", "", "operator_cmd",
                           b(flags_.commanded && !usv::autonomy_driving(flags_)));
         telemetry_->field("autonomy", "", "drifting", b(last_state_ == "Moving"));
+        // The operating region is enforced (REGION): a fence, not a mode.
+        telemetry_->field("autonomy", "", "region_active", b(flags_.region));
         telemetry_->field("autonomy", "", "crash_stop", b(flags_.crash_stop));
         // Operator link for both iWebSocket variants (usv::operator_link):
         // the tiles read this; comms_phase / comms_lost keep their meaning.
@@ -1822,6 +1854,8 @@ private:
     double readiness_period_s_ = 5.0;
     double last_readiness_ = 0.0;
     std::string last_readiness_state_;
+    std::map<std::string, int> last_check_status_;        // per-check transitions -> events
+    std::map<std::string, double> last_check_fail_event_;
     std::vector<usv::XY> route_pts_;       // planned route (local grid) for the planned course
 
     // Change-only string cache: field -> last written value.

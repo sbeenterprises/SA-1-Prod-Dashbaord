@@ -1388,15 +1388,10 @@
                   "color": "#00bcd4",
                   "index": 13
                 },
-                "RegionHold": {
-                  "text": "Region Hold",
-                  "color": "super-light-blue",
-                  "index": 14
-                },
                 "Moving": {
                   "text": "Moving",
                   "color": "light-yellow",
-                  "index": 15
+                  "index": 14
                 }
               }
             }
