@@ -1756,7 +1756,7 @@ _ENGINE = dashboard("usv-engine", "Engine", [
     stat("Active Faults", flux("engine", "active_dtcs", last=True), 21, 8, 3, 2,
          mappings=FAULTS_MAPPINGS, text_mode="value", color_mode="background"),
     # Every active fault (engine.dtc_text, "NONE" when clear) across the width.
-    stat("Fault Codes", last_str("engine", "dtc_text"), 0, 10, 24, 2,
+    stat("Fault Codes", last_str("engine", "dtc_text"), 4, 10, 20, 2,
          string_value=True, mappings=DTC_TEXT_MAPPINGS,
          text_mode="value", color_mode="background"),
     ts("Engine RPM", [target(flux("engine", "rpm"), "RPM")], 0, 12, 8, 5,
@@ -1770,6 +1770,13 @@ _ENGINE = dashboard("usv-engine", "Engine", [
         target(flux("engine", "intake_manifold_pressure"), "boost kPa",
                ref="B")],
        16, 12, 8, 5, unit="pressurekpa"),
+    # Drive trim position (NMEA 2000 PGN 127488 trim, Signal K
+    # propulsion.<id>.drive.trimState as a ratio; Yamaha gateway on usv-722).
+    # Mercury on usv-725 sends no trim position: "not reported". Last in the
+    # list so the other panel ids stay as they were.
+    stat("Drive Trim", flux("engine", "trim_position", last=True), 0, 10, 4, 2,
+         unit="percent", decimals=0, graph_mode="area", no_value="not reported",
+         thresholds=[(None, ACCENT)]),
 ], ["health"], time_from="now-15m")
 for _i, _p in enumerate(_ENGINE["panels"]):
     _p["id"] = 9401 + _i

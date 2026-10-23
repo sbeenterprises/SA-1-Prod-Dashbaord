@@ -3,6 +3,19 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.47] - 2026-10-23 (Drive Trim on the Engine page)
+
+Dashboards only. Update with `bash deploy/update.sh v1.2.47`; no mission
+restart.
+
+### Added
+- Engine page: Drive Trim tile (%, with its trend), from the drive trim
+  position in NMEA 2000 PGN 127488 (Signal K
+  `propulsion.<id>.drive.trimState`, already written by signalk_bridge as
+  `engine.trim_position`). usv-722's Yamaha gateway reports it; an engine
+  that sends no trim position (the Mercury on usv-725) reads "not
+  reported". The Fault Codes strip beside it is 20 columns wide.
+
 ## [1.2.46] - 2026-10-23 (Audit page: logged-out logins, right column fit)
 
 grafana_bridge and the Audit page. Update with

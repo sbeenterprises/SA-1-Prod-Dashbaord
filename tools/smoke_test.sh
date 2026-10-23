@@ -194,7 +194,10 @@ src += open(f"{repo}/ingestion/can-cpp/usv722_can.hpp").read()
 # Fields only the CAN and Signal K bridges write (engine.fuel_remaining_l).
 src += open(f"{repo}/ingestion/can-cpp/main.cpp").read()
 src += open(f"{repo}/ingestion/signalk-cpp/signalk_bridge.cpp").read()
+# Signal K engine paths: {"drive.trimState", "engine", "trim_position", ...}
+sk = open(f"{repo}/ingestion/signalk-cpp/signalk_engine.hpp").read()
 moos = set(re.findall(r'\{"(\w+)",\s*"(\w+)"(?:,|\})', src))
+moos |= set(re.findall(r'\{"[\w.]+",\s*"(\w+)",\s*"(\w+)",', sk))
 moos |= set(re.findall(r'(?:str_)?field\("(\w+)",\s*[^,]+,\s*"(\w+)"', src))
 external = {"cpu","mem","disk","diskio","net","temp","system","gpu","ping","net_response","systemd_units","canbus_pgn"}
 missing = sorted((m,f) for m,f in want if m not in external and (m,f) not in have and (m,f) not in moos)

@@ -783,3 +783,20 @@ Verified on usv-722 with v1.2.45 (17:39): an operator account (level
 readwrite) opens the Audit page; Open sessions lists its login with role
 and IP.
 
+## 23. Release v1.2.47 (2026-10-23)
+
+Scope: Drive Trim tile on the Engine page. Source on usv-722 (Signal K
+data browser, 2026-10-23): `propulsion.port.drive.trimState` 0.31 from the
+Yamaha gateway (PGN 127488, source 3.0), alongside revolutions,
+temperature, engine load and torque, fuel rate, run time, alternator
+voltage and 22 engine status notifications (all normal).
+
+Evidence: signalk_engine_test maps drive.trimState 0.25 to trim_position
+25 %; the smoke test's stand-in Signal K server sends the same path and
+the bridge writes `trim_position=25`; the dashboard-to-writer check now
+reads the Signal K engine path table (signalk_engine.hpp), so
+engine.trim_position counts as written; 274 Flux queries type-checked.
+`tools/smoke_test.sh` in full: 209 PASS, 0 FAIL, 1 SKIP.
+
+To verify on the target: the Engine page shows Drive Trim near 31 % with
+the drive as on 2026-10-23, and it follows the trim switch.

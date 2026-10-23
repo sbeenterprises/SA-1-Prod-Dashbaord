@@ -8,7 +8,7 @@
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
-  "refresh": "1s",
+  "refresh": "2s",
   "editable": true,
   "style": "dark",
   "time": {
@@ -1280,9 +1280,9 @@
         "uid": "influxdb-usv"
       },
       "gridPos": {
-        "x": 0,
+        "x": 4,
         "y": 12,
-        "w": 24,
+        "w": 20,
         "h": 2
       },
       "targets": [
@@ -1612,6 +1612,66 @@
         },
         "tooltip": {
           "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 9417,
+      "type": "stat",
+      "title": "Drive Trim",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 4,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"engine\" and (r._field == \"trim_position\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "not reported",
+          "unit": "percent",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 20,
+          "titleSize": 12
         }
       }
     }
