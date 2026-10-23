@@ -1737,19 +1737,19 @@ _ENGINE = dashboard("usv-engine", "Engine", [
                          fallback_thresholds=[(None, OK), (250, "yellow"),
                                               (280, "red")])),
     stat("Oil Temp", flux("engine", "oil_temp", last=True), 0, 8, 3, 2,
-         unit="celsius", decimals=0,
+         unit="celsius", decimals=0, no_value="N/A",
          thresholds=[(None, OK), (110, "yellow"), (125, "red")]),
     stat("Fuel Rate", flux("engine", "fuel_rate", last=True), 3, 8, 3, 2,
-         unit="litreh", decimals=1, graph_mode="area"),
+         unit="litreh", decimals=1, graph_mode="area", no_value="N/A"),
     stat("Engine Load", flux("engine", "percent_load", last=True), 6, 8, 3, 2,
-         unit="percent", decimals=0, graph_mode="area"),
+         unit="percent", decimals=0, graph_mode="area", no_value="N/A"),
     stat("Torque", flux("engine", "percent_torque", last=True), 9, 8, 3, 2,
-         unit="percent", decimals=0),
+         unit="percent", decimals=0, no_value="N/A"),
     # "suffix: h", not Grafana's "h" unit, which rescales 30.75 h to "1.3 days".
     stat("Engine Hours", flux("engine", "runtime_h", last=True), 12, 8, 3, 2,
-         unit="suffix: h", decimals=1),
+         unit="suffix: h", decimals=1, no_value="N/A"),
     stat("Fuel Level", flux("engine", "fuel_level", last=True), 15, 8, 3, 2,
-         unit="percent", decimals=0,
+         unit="percent", decimals=0, no_value="N/A",
          thresholds=[(None, "red"), (15, "yellow"), (30, OK)]),
     stat("Fault Lamps", LAMPS_QUERY, 18, 8, 3, 2, string_value=True,
          mappings=LAMPS_MAPPINGS, text_mode="value", color_mode="background"),
@@ -1772,10 +1772,10 @@ _ENGINE = dashboard("usv-engine", "Engine", [
        16, 12, 8, 5, unit="pressurekpa"),
     # Drive trim position (NMEA 2000 PGN 127488 trim, Signal K
     # propulsion.<id>.drive.trimState as a ratio; Yamaha gateway on usv-722).
-    # Mercury on usv-725 sends no trim position: "not reported". Last in the
+    # Mercury on usv-725 sends no trim position: N/A. Last in the
     # list so the other panel ids stay as they were.
     stat("Drive Trim", flux("engine", "trim_position", last=True), 0, 10, 4, 2,
-         unit="percent", decimals=0, graph_mode="area", no_value="not reported",
+         unit="percent", decimals=0, graph_mode="area", no_value="N/A",
          thresholds=[(None, ACCENT)]),
 ], ["health"], time_from="now-15m")
 for _i, _p in enumerate(_ENGINE["panels"]):
@@ -2212,7 +2212,7 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
     # A — verdict and counts (right column, x 16..24)
     stat("Readiness", flux("readiness_summary", "ready", last=True), 16, 0, 8, 3,
          mappings=ready_mappings, text_mode="value", color_mode="background",
-         no_value="NO BRIDGE"),
+         no_value="MISSION OFF"),
     # Passed / Failed / N/A / Console in one panel, side by side, each with
     # its own colour: four 2-column tiles would cut their titles, and two
     # rows of 4-column tiles leave no room for the particulars card.
@@ -2229,7 +2229,8 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
     status_table("",
                  readiness_query(), 0, 0, 16, 18, "status", status_mappings, "name",
                  ["seq", "name", "evidence", "status"], show_header=False,
-                 no_value="grafana_bridge not writing readiness (bridge older than v1.1 or not restarted)",
+                 # grafana_bridge runs under pAntler: no rows while the mission is off.
+                 no_value="Mission not running: grafana_bridge starts with the mission (pAntler). Start the mission and the checks appear within 5 s",
                  description=(
                      "Automatic checks, verified onboard from live telemetry. "
                      "Decided by grafana_bridge every 5 s from the latest telemetry "

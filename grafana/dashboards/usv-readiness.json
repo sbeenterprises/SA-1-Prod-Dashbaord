@@ -338,7 +338,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "noValue": "NO BRIDGE",
+          "noValue": "MISSION OFF",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1017,7 +1017,7 @@
           "color": {
             "mode": "palette-classic"
           },
-          "noValue": "grafana_bridge not writing readiness (bridge older than v1.1 or not restarted)"
+          "noValue": "Mission not running: grafana_bridge starts with the mission (pAntler). Start the mission and the checks appear within 5 s"
         },
         "overrides": [
           {

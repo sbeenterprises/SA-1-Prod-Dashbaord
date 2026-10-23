@@ -41,6 +41,8 @@ int main() {
         {"runTime", 7200.0, "engine", "runtime_h", 2.0, 0.001},
         {"engineLoad", 0.64, "engine", "percent_load", 64.0, 0.01},
         {"engineTorque", 0.5, "engine", "percent_torque", 50.0, 0.01},
+        {"engineLoad", -0.01, "engine", "percent_load", 0.0, 1e-9},          // stopped engine
+        {"engineTorque", -0.01, "engine", "percent_torque", 0.0, 1e-9},
         {"drive.trimState", 0.25, "engine", "trim_position", 25.0, 0.01},
         {"alternatorVoltage", 14.2, "electrical", "alternator_voltage", 14.2, 0.001},
     };

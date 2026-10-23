@@ -753,6 +753,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "unit": "celsius",
           "decimals": 0,
           "thresholds": {
@@ -820,6 +821,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "unit": "litreh",
           "decimals": 1,
           "thresholds": {
@@ -879,6 +881,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "unit": "percent",
           "decimals": 0,
           "thresholds": {
@@ -938,6 +941,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "unit": "percent",
           "decimals": 0,
           "thresholds": {
@@ -997,6 +1001,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "unit": "suffix: h",
           "decimals": 1,
           "thresholds": {
@@ -1056,6 +1061,7 @@
           "color": {
             "mode": "thresholds"
           },
+          "noValue": "N/A",
           "unit": "percent",
           "decimals": 0,
           "thresholds": {
@@ -1644,7 +1650,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "noValue": "not reported",
+          "noValue": "N/A",
           "unit": "percent",
           "decimals": 0,
           "thresholds": {

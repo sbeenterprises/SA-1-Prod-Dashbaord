@@ -49,8 +49,9 @@ inline bool MapPropulsion(const std::string& rest, double v, EngineField* out) {
         {"fuel.rate", "engine", "fuel_rate", [](double x) { return x * 3.6e6; }},       // m3/s -> L/h
         {"fuel.level", "engine", "fuel_level", [](double x) { return x * 100.0; }},     // a source that puts the tank under the engine
         {"runTime", "engine", "runtime_h", [](double x) { return x / 3600.0; }},
-        {"engineLoad", "engine", "percent_load", [](double x) { return x * 100.0; }},
-        {"engineTorque", "engine", "percent_torque", [](double x) { return x * 100.0; }},
+        // A stopped engine reports -0.01 (usv-722 Yamaha gateway): 0 %, not -1 %.
+        {"engineLoad", "engine", "percent_load", [](double x) { return x < 0.0 ? 0.0 : x * 100.0; }},
+        {"engineTorque", "engine", "percent_torque", [](double x) { return x < 0.0 ? 0.0 : x * 100.0; }},
         {"drive.trimState", "engine", "trim_position", [](double x) { return x * 100.0; }},
         {"alternatorVoltage", "electrical", "alternator_voltage", [](double x) { return x; }},
     };

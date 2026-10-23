@@ -816,3 +816,19 @@ full: 210 PASS, 0 FAIL, 1 SKIP.
 To verify on the target: Ctrl+F5, then switch Theme between Dark, Navy
 and Light on any page.
 
+## 25. Release v1.2.49 (2026-10-23)
+
+Scope: items seen on usv-722 on 2026-10-23 with the engine stopped and the
+mission off: Engine Load and Torque at -1 % (gateway value -0.01), engine
+tiles reading "No data" beside dials reading "N/A", and Readiness "NO
+BRIDGE" with a hint about bridges older than v1.1 when the mission was
+simply not started.
+
+Evidence: signalk_engine_test 103 checks (engineLoad and engineTorque
+-0.01 written as 0 %); 274 Flux queries type-checked. `tools/smoke_test.sh`
+in full: 210 PASS, 0 FAIL, 1 SKIP.
+
+To verify on the target: with the engine stopped, Engine Load and Torque
+read 0 %; Oil Temp and Fuel Level read N/A; with the mission off,
+Readiness reads MISSION OFF.
+

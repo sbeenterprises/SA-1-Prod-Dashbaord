@@ -3,6 +3,23 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.49] - 2026-10-23 (Engine tiles N/A, Load and Torque at 0 % stopped, MISSION OFF)
+
+signalk_bridge (rebuilt and restarted by the update) and dashboards.
+Update with `bash deploy/update.sh v1.2.49`; no mission restart.
+
+### Changed
+- Engine page: the number tiles (Oil Temp, Fuel Rate, Engine Load,
+  Torque, Engine Hours, Fuel Level, Drive Trim) read "N/A" when the engine
+  does not report the value, as the dials do (was "No data" / "not
+  reported").
+- signalk_bridge: Engine Load and Torque below zero are written as 0 %.
+  A stopped engine on the Yamaha gateway reports -0.01, shown as -1 %.
+- Readiness: with the mission off the verdict reads "MISSION OFF" (was "NO
+  BRIDGE") and the check list says the mission is not running
+  (grafana_bridge starts with the mission under pAntler), in place of the
+  old "bridge older than v1.1 or not restarted" hint.
+
 ## [1.2.48] - 2026-10-23 (white header logo on Dark and Navy)
 
 Branding only. Update with `bash deploy/update.sh v1.2.48`, then Ctrl+F5
