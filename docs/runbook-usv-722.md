@@ -156,7 +156,7 @@ changes a service or the network, start the pasted block with
 Tags only. One command, from the repo checkout:
 
 ```bash
-cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.49
+cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.50
 ```
 
 It fetches the tag, re-runs the installer (rebuilds and restarts the

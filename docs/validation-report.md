@@ -832,3 +832,17 @@ To verify on the target: with the engine stopped, Engine Load and Torque
 read 0 %; Oil Temp and Fuel Level read N/A; with the mission off,
 Readiness reads MISSION OFF.
 
+## 26. Release v1.2.50 (2026-10-23)
+
+Scope: usv-722 Audit page with the mission off (2026-10-23 19:36): Control,
+ALL STOP and Navigation Guard read N/A. They and the Mission State tiles
+now read MISSION OFF when grafana_bridge has written nothing, matching
+Readiness.
+
+Evidence: generated dashboards carry noValue "MISSION OFF" on the six
+tiles; 274 Flux queries type-checked. `tools/smoke_test.sh` in full: 210
+PASS, 0 FAIL, 1 SKIP.
+
+To verify on the target: with the mission off, Audit and Mission show
+MISSION OFF on those tiles; with it running, the live states as before.
+

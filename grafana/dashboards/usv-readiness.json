@@ -626,7 +626,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "noValue": "N/A",
+          "noValue": "MISSION OFF",
           "thresholds": {
             "mode": "absolute",
             "steps": [

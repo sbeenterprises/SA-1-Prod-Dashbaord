@@ -1166,7 +1166,7 @@ DASHBOARDS.append(dashboard("usv-mission", "Mission", [
     # A — the operational picture: 8 equal status tiles (3 x 3).
     stat("Mission State", last_str("mission_state", "state"), 0, 0, 3, 2,
          mappings=mission_state_mappings, text_mode="value",
-         color_mode="background"),
+         color_mode="background", no_value="MISSION OFF"),
     stat("Helm", last_str("mission_state", "helm_state"), 3, 0, 3, 2,
          mappings=helm_state_mappings, text_mode="value",
          color_mode="background"),
@@ -2218,7 +2218,8 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
     # rows of 4-column tiles leave no room for the particulars card.
     readiness_counts_panel(16, 3, 8, 2),
     stat("Mission State", last_str("mission_state", "state"), 16, 5, 3, 2,
-         mappings=mission_state_mappings, text_mode="value", color_mode="background"),
+         mappings=mission_state_mappings, text_mode="value", color_mode="background",
+         no_value="MISSION OFF"),
     stat("Operator Link", flux("autonomy", "operator_link", last=True), 19, 5, 3, 2,
          mappings=operator_link_mappings, text_mode="value", color_mode="background"),
     # Narrow tile: smaller text so "10-19-2026 (safe)" reads on two lines.
@@ -3233,7 +3234,8 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms", [
          thresholds=[(None, TILE_OK), (2, "yellow"), (10, "red")], color_mode="background"),
     # Autonomy / mission safety row (Alpha mission).
     stat("Mission State", last_str("mission_state", "state"), 0, 18, 4, 4,
-         mappings=mission_state_mappings, text_mode="value", color_mode="background"),
+         mappings=mission_state_mappings, text_mode="value", color_mode="background",
+         no_value="MISSION OFF"),
     stat("Operator Link", flux("autonomy", "operator_link", last=True),
          4, 18, 4, 4, mappings=operator_link_mappings,
          text_mode="value", color_mode="background"),
@@ -3599,12 +3601,15 @@ open_sessions_query = (
 
 _count_tile = dict(decimals=0, no_value="0", text_mode="value_and_name")
 DASHBOARDS.append(dashboard("usv-audit", "Audit", [
+    # The three state tiles read what grafana_bridge wrote in the last
+    # seconds: nothing while the mission (pAntler) is off.
     detail_tile("Control", control_tile_query, 0, 0, 4, 3,
-                mappings=HOLDER_MAP, color_mode="background", string_value=False),
+                mappings=HOLDER_MAP, color_mode="background", string_value=False,
+                no_value="MISSION OFF"),
     detail_tile("ALL STOP", allstop_tile_query, 4, 0, 4, 3,
-                mappings=ALL_STOP_MAP, color_mode="background"),
+                mappings=ALL_STOP_MAP, color_mode="background", no_value="MISSION OFF"),
     detail_tile("Navigation Guard", navguard_tile_query, 8, 0, 4, 3,
-                mappings=NAV_GUARD_MAP, color_mode="background"),
+                mappings=NAV_GUARD_MAP, color_mode="background", no_value="MISSION OFF"),
     detail_tile("Logins", logins_tile_query, 12, 0, 4, 3, **_count_tile),
     detail_tile("Commands Refused", refused_tile_query, 16, 0, 4, 3,
                 thresholds=[(None, OK), (1, "orange")], **_count_tile),

@@ -3,6 +3,18 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.50] - 2026-10-23 (MISSION OFF on the state tiles)
+
+Dashboards only. Update with `bash deploy/update.sh v1.2.50`; no mission
+restart.
+
+### Changed
+- With the mission off (grafana_bridge runs under pAntler and writes
+  nothing), the state tiles read "MISSION OFF" instead of "N/A", as
+  Readiness does from v1.2.49: Audit Control, ALL STOP and Navigation
+  Guard, and Mission State on the Mission, Readiness and Alarms pages.
+  Operator Link and the other tiles keep "N/A".
+
 ## [1.2.49] - 2026-10-23 (Engine tiles N/A, Load and Torque at 0 % stopped, MISSION OFF)
 
 signalk_bridge (rebuilt and restarted by the update) and dashboards.
