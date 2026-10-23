@@ -3453,10 +3453,11 @@ refused_tile_query = (
     'ro = ' + audit_n(_ref + ' and strings.containsStr(v: r._value, substr: "read-only")', "details") +
     'st = ' + audit_n(_ref + ' and strings.containsStr(v: r._value, substr: "ALL STOP")', "details") +
     'nc = ' + audit_n(_ref + ' and strings.containsStr(v: r._value, substr: "not in control")', "details") +
-    'other = n - ro - st - nc\n'
+    'lo = ' + audit_n(_ref + ' and strings.containsStr(v: r._value, substr: "logged-out")', "details") +
+    'other = n - ro - st - nc - lo\n'
     'part = (c, t) => if c > 0 then string(v: c) + " " + t else ""\n'
     'parts = [part(c: ro, t: "read-only"), part(c: st, t: "ALL STOP"), '
-    'part(c: nc, t: "not in control"), part(c: other, t: "other")]\n'
+    'part(c: nc, t: "not in control"), part(c: lo, t: "logged-out login"), part(c: other, t: "other")]\n'
     'd = strings.joinStr(arr: array.filter(arr: parts, fn: (x) => x != ""), v: " · ")\n' +
     detail_rows("n", 'if d == "" then "none in this range" else d'))
 
@@ -3555,16 +3556,9 @@ _reason_expr = "".join(
     f'if strings.containsStr(v: r._value, substr: "{k}") then "{t}" else '
     for k, t in REFUSED_REASONS) + '"other"'
 refused_by_reason_query = (
-    'import "array"\nimport "strings"\n'
-    'counts = ' + AUDIT_BASE +
+    'import "strings"\n' + AUDIT_BASE +
     '  |> filter(fn: (r) => r._field == "details" and r.category == "refused")\n'
     f'  |> map(fn: (r) => ({{reason: {_reason_expr}, _value: 1}}))\n'
-    '  |> group(columns: ["reason"])\n'
-    '  |> sum()\n'
-    '  |> group()\n'
-    'zero = array.from(rows: [' +
-    ", ".join(f'{{reason: "{t}", _value: 0}}' for _, t in REFUSED_REASONS[:4]) + '])\n'
-    'union(tables: [counts, zero])\n'
     '  |> group(columns: ["reason"])\n'
     '  |> sum()\n'
     '  |> group()\n'
@@ -3623,18 +3617,25 @@ DASHBOARDS.append(dashboard("usv-audit", "Audit", [
          links=[{"title": "Download CSV (Inspect > Data)", "url": "?inspect=${__panel.id}&inspectTab=data",
                  "targetBlank": False}]),
     panel("table", "Refused commands by reason", [target(refused_by_reason_query)],
-          16, 7, 8, 4, options={"showHeader": True, "cellHeight": "sm"},
+          16, 7, 8, 3, options={"showHeader": True, "cellHeight": "sm"},
+          no_value="none in this range", custom={"minWidth": 50},
           overrides=[{"matcher": {"id": "byName", "options": "Refused"},
                       "properties": [{"id": "custom.cellOptions",
                                       "value": {"type": "gauge", "mode": "basic"}},
                                      {"id": "color", "value": {"mode": "fixed",
                                                                "fixedColor": "orange"}},
                                      {"id": "min", "value": 0}]}]),
+    # Narrow number columns: four columns fit the 8-wide panel without a
+    # horizontal scroll bar (Grafana's default minimum is 150 px a column).
     panel("table", "Events by user", [target(events_by_user_query)],
-          16, 11, 8, 3, options={"showHeader": True, "cellHeight": "sm"}),
+          16, 10, 8, 3, options={"showHeader": True, "cellHeight": "sm"},
+          no_value="none in this range", custom={"minWidth": 50},
+          overrides=[{"matcher": {"id": "byName", "options": n},
+                      "properties": [{"id": "custom.width", "value": 70}]}
+                     for n in ("Control", "Logins", "Refused")]),
     dict(panel("table", "Open sessions", [target(open_sessions_query)],
-               16, 14, 8, 3, options={"showHeader": True, "cellHeight": "sm"},
-               no_value="none"),
+               16, 13, 8, 4, options={"showHeader": True, "cellHeight": "sm"},
+               no_value="none", custom={"minWidth": 50}),
          description="Logged in to Swiftships-UI and not yet logged out or disconnected."),
 ], ["audit"], refresh="10s", time_from="now-24h"))
 # Own id range so the header-band ids of the other pages stay as they were.

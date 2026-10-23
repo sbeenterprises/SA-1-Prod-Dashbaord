@@ -765,3 +765,21 @@ Not run here: the tile queries against a live InfluxDB (none reachable
 from the build host). To verify on the target: every Audit tile shows a
 value and its second line; on usv-725 (no audit data yet) the tiles read
 0 / "none in this range" rather than an error.
+
+## 22. Release v1.2.46 (2026-10-23)
+
+Scope: findings from usv-722's first run of v1.2.45 (17:35 to 17:40 boat
+time): seven logins with a logged-out token counted as "other" in
+Commands Refused, Events by user hidden behind a horizontal scroll bar,
+Refused commands by reason filled with zero rows.
+
+Evidence: unit tests 611 (the logged-out-token refusal carries "why
+logged-out session" ahead of ip and session); smoke test: the poke
+`UI_AUTH_EVENT=rejected login=logged-out-token ...` writes a refused row
+with that reason; 273 Flux queries type-checked. `tools/smoke_test.sh` in
+full: 209 PASS, 0 FAIL, 1 SKIP.
+
+Verified on usv-722 with v1.2.45 (17:39): an operator account (level
+readwrite) opens the Audit page; Open sessions lists its login with role
+and IP.
+

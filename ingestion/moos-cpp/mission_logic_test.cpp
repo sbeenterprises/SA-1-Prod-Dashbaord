@@ -1416,6 +1416,8 @@ static void test_audit_trail() {
     CHECK_EQ_STR(e[0].details, "why control changed hands before it arrived");
     e = t.feed("auth", "rejected login=logged-out-token ip=10.0.0.4 session=abc", 14.0);
     CHECK_EQ_STR(e[0].message, "Login refused: token of a logged-out session");
+    CHECK(e[0].category == "refused");
+    CHECK_EQ_STR(e[0].details, "why logged-out session · ip 10.0.0.4 · session abc");
     e = t.feed("control", "refused action=take user=bob reason=controlled by alice", 14.5);
     CHECK(e[0].category == "refused");
     CHECK_EQ_STR(e[0].message, "Control take refused for bob");

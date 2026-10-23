@@ -3,6 +3,22 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.46] - 2026-10-23 (Audit page: logged-out logins, right column fit)
+
+grafana_bridge and the Audit page. Update with
+`bash deploy/update.sh v1.2.46`, restart the mission with the boat stopped.
+
+### Fixed
+- A login with the token of a logged-out session (Swiftships-UI
+  reconnecting with the old token after a logout) now carries its reason
+  ("why logged-out session"): Commands Refused shows it as "logged-out
+  login" and Refused commands by reason as "logged-out session" instead
+  of "other". Rows written before this release keep "other".
+- Audit page right column: Events by user fits its panel (narrow number
+  columns, no horizontal scroll bar); Refused commands by reason lists
+  only the reasons seen in the range ("none in this range" otherwise);
+  Open sessions is one row taller.
+
 ## [1.2.45] - 2026-10-23 (Audit page as the mockup; Signal K admin name)
 
 grafana_bridge, Audit page, usv-auth and documents. Update with

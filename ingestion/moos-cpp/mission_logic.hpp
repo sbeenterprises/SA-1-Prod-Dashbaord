@@ -1140,6 +1140,7 @@ inline AuditEvent DescribeAudit(const std::string& kind, const AuditFields& f) {
             ev.message = "Login refused: token of a logged-out session";
             ev.severity = "warning";
             ev.popup = true;
+            add("why", "logged-out session");
         } else if (a == "rejected") {
             ev.category = "refused";
             ev.message = "Command refused: " + (get("key").empty() ? std::string("command") : get("key")) +

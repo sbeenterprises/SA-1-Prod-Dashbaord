@@ -654,6 +654,7 @@ EOF
     P 'CONTROL_EVENT=force reason=operator not answering'
     P 'UI_AUTH_EVENT=rejected key=DESIRED_THRUST user=bob level=readonly why=level'
     P 'UI_AUTH_EVENT=rejected key=DESIRED_THRUST user=bob level=readonly why=level'
+    P 'UI_AUTH_EVENT=rejected login=logged-out-token ip=192.168.22.11 session=z9'
     sleep 1
     P 'UI_AUTH_EVENT=disconnect user=alice role=operator ip=192.168.22.5 session=k3f9a1x0'
     sleep 6
@@ -766,6 +767,8 @@ EOF
     grep -q 'details="generation 2 · reason operator not answering"' "$LINES" \
       && grep -q 'message="carol forced a takeover from alice (generation 2 · reason operator not answering)"' "$LINES" \
       && ok "forced takeover: two lines joined, reason kept, warning popup" || bad "forced takeover not joined"
+    grep -q 'details="why logged-out session · ip 192.168.22.11 · session z9"' "$LINES" \
+      && ok "login with a logged-out token: refused row with its reason" || bad "logged-out token refusal has no reason"
     grep -q 'control_holder="carol"' "$LINES" && grep -q 'c2_sessions="carol (supervisor, 192.168.22.9)"' "$LINES" \
       && ok "control holder and open logins tracked" || bad "control holder / sessions missing"
     grep -q 'c2_session,vessel=usv-moos,session=q81mz2c4 user="carol"' "$LINES" \

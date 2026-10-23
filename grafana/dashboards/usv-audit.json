@@ -704,7 +704,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "import \"array\"\nimport \"strings\"\nspan = (t) => {\n    m = (int(v: now()) - int(v: t)) / 60000000000\n    return if m < 1 then \"under a minute\" else if m < 120 then string(v: m) + \" min\" else string(v: m / 60) + \" h\"\n}\nplural = (n, one) => string(v: n) + \" \" + one + (if n == 1 then \"\" else \"s\")\nn = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"value\" and (r.category == \"refused\"))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nro = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"details\" and (r.category == \"refused\" and strings.containsStr(v: r._value, substr: \"read-only\")))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nst = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"details\" and (r.category == \"refused\" and strings.containsStr(v: r._value, substr: \"ALL STOP\")))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nnc = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"details\" and (r.category == \"refused\" and strings.containsStr(v: r._value, substr: \"not in control\")))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nother = n - ro - st - nc\npart = (c, t) => if c > 0 then string(v: c) + \" \" + t else \"\"\nparts = [part(c: ro, t: \"read-only\"), part(c: st, t: \"ALL STOP\"), part(c: nc, t: \"not in control\"), part(c: other, t: \"other\")]\nd = strings.joinStr(arr: array.filter(arr: parts, fn: (x) => x != \"\"), v: \" \u00b7 \")\narray.from(rows: [{_value: n, detail: if d == \"\" then \"none in this range\" else d, ok: true}])\n  |> filter(fn: (r) => r.ok)\n  |> drop(columns: [\"ok\"])\n  |> group(columns: [\"detail\"])\n",
+          "query": "import \"array\"\nimport \"strings\"\nspan = (t) => {\n    m = (int(v: now()) - int(v: t)) / 60000000000\n    return if m < 1 then \"under a minute\" else if m < 120 then string(v: m) + \" min\" else string(v: m / 60) + \" h\"\n}\nplural = (n, one) => string(v: n) + \" \" + one + (if n == 1 then \"\" else \"s\")\nn = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"value\" and (r.category == \"refused\"))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nro = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"details\" and (r.category == \"refused\" and strings.containsStr(v: r._value, substr: \"read-only\")))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nst = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"details\" and (r.category == \"refused\" and strings.containsStr(v: r._value, substr: \"ALL STOP\")))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nnc = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"details\" and (r.category == \"refused\" and strings.containsStr(v: r._value, substr: \"not in control\")))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nlo = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"details\" and (r.category == \"refused\" and strings.containsStr(v: r._value, substr: \"logged-out\")))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nother = n - ro - st - nc - lo\npart = (c, t) => if c > 0 then string(v: c) + \" \" + t else \"\"\nparts = [part(c: ro, t: \"read-only\"), part(c: st, t: \"ALL STOP\"), part(c: nc, t: \"not in control\"), part(c: lo, t: \"logged-out login\"), part(c: other, t: \"other\")]\nd = strings.joinStr(arr: array.filter(arr: parts, fn: (x) => x != \"\"), v: \" \u00b7 \")\narray.from(rows: [{_value: n, detail: if d == \"\" then \"none in this range\" else d, ok: true}])\n  |> filter(fn: (r) => r.ok)\n  |> drop(columns: [\"ok\"])\n  |> group(columns: [\"detail\"])\n",
           "refId": "A"
         }
       ],
@@ -1220,7 +1220,7 @@
         "x": 16,
         "y": 9,
         "w": 8,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -1228,7 +1228,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "import \"array\"\nimport \"strings\"\ncounts = from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"details\" and r.category == \"refused\")\n  |> map(fn: (r) => ({reason: if strings.containsStr(v: r._value, substr: \"read-only\") then \"read-only account\" else if strings.containsStr(v: r._value, substr: \"ALL STOP\") then \"ALL STOP latched\" else if strings.containsStr(v: r._value, substr: \"not in control\") then \"not in control\" else if strings.containsStr(v: r._value, substr: \"changed hands\") then \"stale (control changed)\" else if strings.containsStr(v: r._value, substr: \"may not command\") then \"role may not command\" else if strings.containsStr(v: r._value, substr: \"logged-out\") then \"logged-out session\" else if strings.containsStr(v: r._value, substr: \"boat link\") then \"boat link down\" else \"other\", _value: 1}))\n  |> group(columns: [\"reason\"])\n  |> sum()\n  |> group()\nzero = array.from(rows: [{reason: \"read-only account\", _value: 0}, {reason: \"ALL STOP latched\", _value: 0}, {reason: \"not in control\", _value: 0}, {reason: \"stale (control changed)\", _value: 0}])\nunion(tables: [counts, zero])\n  |> group(columns: [\"reason\"])\n  |> sum()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)\n  |> rename(columns: {reason: \"Reason\", _value: \"Refused\"})\n",
+          "query": "import \"strings\"\nfrom(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"details\" and r.category == \"refused\")\n  |> map(fn: (r) => ({reason: if strings.containsStr(v: r._value, substr: \"read-only\") then \"read-only account\" else if strings.containsStr(v: r._value, substr: \"ALL STOP\") then \"ALL STOP latched\" else if strings.containsStr(v: r._value, substr: \"not in control\") then \"not in control\" else if strings.containsStr(v: r._value, substr: \"changed hands\") then \"stale (control changed)\" else if strings.containsStr(v: r._value, substr: \"may not command\") then \"role may not command\" else if strings.containsStr(v: r._value, substr: \"logged-out\") then \"logged-out session\" else if strings.containsStr(v: r._value, substr: \"boat link\") then \"boat link down\" else \"other\", _value: 1}))\n  |> group(columns: [\"reason\"])\n  |> sum()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)\n  |> rename(columns: {reason: \"Reason\", _value: \"Refused\"})\n",
           "refId": "A"
         }
       ],
@@ -1236,6 +1236,10 @@
         "defaults": {
           "color": {
             "mode": "palette-classic"
+          },
+          "noValue": "none in this range",
+          "custom": {
+            "minWidth": 50
           }
         },
         "overrides": [
@@ -1282,7 +1286,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 13,
+        "y": 12,
         "w": 8,
         "h": 3
       },
@@ -1300,9 +1304,50 @@
         "defaults": {
           "color": {
             "mode": "palette-classic"
+          },
+          "noValue": "none in this range",
+          "custom": {
+            "minWidth": 50
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Control"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Logins"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Refused"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "showHeader": true,
@@ -1319,9 +1364,9 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 16,
+        "y": 15,
         "w": 8,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -1338,7 +1383,10 @@
           "color": {
             "mode": "palette-classic"
           },
-          "noValue": "none"
+          "noValue": "none",
+          "custom": {
+            "minWidth": 50
+          }
         },
         "overrides": []
       },
