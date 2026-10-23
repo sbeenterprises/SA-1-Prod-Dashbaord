@@ -678,3 +678,60 @@ To verify on the target: after the mission restart, Readiness row 3
 reads "ENC US3LA1CB · covers position · 10 cells loaded" at Berwick
 (the US5 harbour cells lie south of 29.25 N) and the bridge log shows
 "chart server lists 10 ENC cells".
+
+## 19. Release v1.2.43 (2026-10-23)
+
+Scope: the dashboard side of the mission and Swiftships-UI
+`feature/command-auth` builds (22 Oct): boat control audit trail and Audit
+page, navigation integrity, ALL STOP, drive interface, region state,
+service mode and gains, safe route from the planner note, and the Signal
+K login for the dashboard.
+
+Source: the formats were read from the mission branch itself
+(iWebSocket audit lines without their timestamp on CONTROL_EVENT /
+UI_AUTH_EVENT, a forced takeover as two lines; pNavGuard NAV_STATUS once a
+second and NAV_GUARD_STOP every 2 s in a fault; iCAN status once a second;
+planchaPID PID_GAINS every tick; Swiftships-UI's planner note "Planned in
+water >= X m with Y m clearance (cells)").
+
+Evidence:
+- Unit tests (mission_logic_test, 598 checks): the planner note parser and
+  the Course row on a re-planned route; Navigation integrity for ok,
+  warning, fault, a silent guard (expected or not), stale level; ALL STOP
+  above every state and in Safety flags; region breach; service mode
+  evidence; drive status, conflict and missing profile on the CAN row; a
+  rudder mismatch on the Steering row with and without rudder values; the
+  audit line parser and AuditTrail (every control and login action, the
+  forced takeover joined or reported alone after 2 s, holder and open
+  logins, a link restart clearing both, empty lines).
+- Smoke test, MOOS bridge against a real MOOSDB: the route planner note
+  read from a stand-in Signal K route; nav_guard 2 with the reason, one stop
+  event for two NAV_GUARD_STOP posts, recovery event, the row N/A without
+  pNavGuard; AllStop state, Safety flags and reset; audit rows with
+  category, action, user and role; the forced takeover joined with its
+  reason; holder and open logins; two refused commands audited with one
+  popup; region refusal and breach; can_drive fields, conflict event and
+  CAN row FAIL, Steering FAIL on a mismatch; gains and service mode.
+- Smoke test, Signal K login: usv_auth logic (token from the Signal K
+  cookie, the Swiftships-UI cookie or a bearer header; boat role from the
+  roles file or the level, a read-only account always a viewer; role map;
+  cache; Signal K unreachable), then the real nginx template in front of a
+  stand-in Grafana with a stand-in Signal K: no login gives no user
+  header, operator and supervisor become Editor, read-only and planner
+  Viewer, an unknown token no user, and user / role headers sent by the
+  browser are dropped. The Audit folder wiring in the provisioning and
+  the installer is checked.
+- Dashboards: 270 distinct Flux queries type-checked, every queried field
+  produced by a bridge, generators in sync, panel titles fit.
+
+Environment: as section 11, plus nginx 1.24 for the gateway chain.
+`tools/smoke_test.sh` in full: 205 PASS, 0 FAIL, 1 SKIP (vcan replay).
+
+Not verifiable here: Grafana's own handling of the role header (the
+gateway also sets the role through Grafana's API, see deployment.md) and
+the boats' new mission and Swiftships-UI builds. To verify on the target,
+after the boat runs the 22 Oct builds: Readiness row 2 reads PASS at
+speed; a take / force / ALL STOP from Swiftships-UI appears on the Audit
+page within seconds with the right user; with SK_LOGIN=1 the dashboard
+opens logged in as the Swiftships-UI user, an operator sees the Audit page
+and a viewer does not.

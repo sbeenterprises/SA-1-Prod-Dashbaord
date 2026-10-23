@@ -3,6 +3,61 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.43] - 2026-10-23 (Boat control, audit trail, navigation guard, Signal K login)
+
+grafana_bridge, dashboards, installer and documents. Matches the mission
+and Swiftships-UI `feature/command-auth` builds (22 Oct); every new tile
+reads N/A until the boat posts its variable, so it installs ahead of the
+boats. Update with `bash deploy/update.sh v1.2.43`, restart the mission
+(grafana_bridge) with the boat stopped, then Ctrl+F5.
+
+### Added
+- **Audit page** (tab row, after Alarms): who holds control, ALL STOP,
+  navigation guard, logins, refused commands and forced takeovers; a
+  who-had-control timeline with ALL STOP and the navigation guard; the
+  audit log (column filters, Search, CSV); refused commands per user,
+  events per user, open logins. In its own folder (Swift Autonomous
+  Audit), open to Editors and Admins only.
+- **Audit trail**: iWebSocket's CONTROL_EVENT / UI_AUTH_EVENT lines (and
+  the navigation guard's and region's events) as one row each in the
+  events bucket, measurement `audit` (category, action, severity, user,
+  role, message, details); a forced takeover's grant and reason joined;
+  the control holder and open logins tracked. The installer keeps the
+  events bucket at least 365 days.
+- **Navigation integrity** readiness row (row 2) from pNavGuard
+  (NAV_STATUS / NAV_STATUS_MSG / NAV_GUARD_STOP): fault FAIL, silent guard
+  FAIL when the mission runs it, N/A without it; events for warning,
+  fault, the stop (once per fault), recovery and silence.
+- **ALL STOP** (ALL_STOP from iWebSocket): Mission State "ALL STOP" above
+  every other state, Safety flags FAIL, critical popup, reset event.
+- **Drive interface** (iCAN): status, owner, gear / thrust / rudder / trim
+  actually sent, CAN switch, bus conflict, rudder mismatch, lost link
+  (measurement `can_drive`); CAN Bus page row; CAN readiness row fails on
+  a conflict, no bus or no drive profile; Steering fails on a rudder
+  mismatch; the drive's thrust and rudder under MANUAL count for Remote.
+- Region refusals (REGION_MSG) and the region behaviour's state
+  (V26_STATE; breached fails Safety flags), autopilot service mode
+  (SERVICE_MODE, warning, Autonomy stack evidence) and applied gains
+  (PID_GAINS, Autopilot page).
+- Alarms page row: navigation integrity, ALL STOP, control, drive
+  interface, rudder against the drive, service mode.
+- **Signal K login** (SK_LOGIN=1 in usv.env, off by default): nginx on
+  GRAFANA_PORT, usv-auth checks the browser's Signal K login and passes
+  the user and a Grafana role from the boat role (roles file, else the
+  Signal K level: viewer / planner Viewer, operator / supervisor Editor);
+  Grafana on 127.0.0.1:GRAFANA_INTERNAL_PORT with auth.proxy; Grafana's own
+  login stays as the fallback. Services usv-auth and nginx.
+
+### Changed
+- Course planning: a route re-planned in place by Plan Safe Route (note
+  "Planned in water >= X m with Y m clearance (cells)" in its
+  description) counts as checked safe on the ENC, with depth, clearance
+  and cells in the evidence; the "(safe)" name still counts. The same
+  route started again after 30 s is looked up again.
+- Readiness page: the checks table takes the full height without a title
+  bar (title in the hover description) and the page is one grid row
+  taller, so all 18 checks show without scrolling.
+
 ## [1.2.42] - 2026-10-21 (Chart / ENC readiness from the chart server)
 
 grafana_bridge and documents. Update with `bash deploy/update.sh v1.2.42`

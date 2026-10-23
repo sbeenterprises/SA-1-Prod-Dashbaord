@@ -216,8 +216,16 @@ also reports the route length and fails when any waypoint lies outside
 the operating region; the engine row fails on any active J1939 DTC.
 
 A route planned with the Swiftships-UI safe-route tool is checked against
-the ENC (depth, land, hazards) and saved with "(safe)" in its name, for
-example `10-19-2026 (safe)`. Such a route counts as the operating region:
+the ENC (depth, land, hazards). Current Swiftships-UI builds update the
+selected route in place and record the check in the route's description:
+"Planned in water >= 3 m with 10 m clearance (US3LA1CB, US5LMOBB)."
+grafana_bridge reads that note with the route name (the same Signal K
+lookup, once per ID_ROUTE and again when the same route is started after
+30 s) and writes it as `mission_state.route_plan`; the course row then
+reads "checked safe on ENC (water >= 3 m, 10 m clearance, US3LA1CB,
+US5LMOBB)". Earlier builds saved a copy with "(safe)" in its name, for
+example `10-19-2026 (safe)`; that name still counts. Such a route counts
+as the operating region:
 the course row passes with "checked safe on ENC" when the route has
 waypoints, even without an operating region polygon. When both exist the
 region rules apply as well (route inside the region). A route whose name
@@ -256,6 +264,34 @@ The bridge writes what it found to the `chart` measurement (`enc_cells`,
 logs "chart server lists N ENC cells" when the count changes. Check the
 listing by hand on the vessel: `curl -s http://localhost:3000/signalk/v1/api/resources/charts | head -c 600`.
 
+### Navigation integrity (row 2)
+The boats' navigation guard (pNavGuard in the mission) compares heading,
+speed and course with what the GPS positions show and watches for frozen,
+stale or jumping data. It posts `NAV_STATUS` (ok / warn / fault) once a
+second with the reason in `NAV_STATUS_MSG`; in a fault while autonomy
+drives it asks iWebSocket to stop (`NAV_GUARD_STOP`) and the boat refuses
+mission, return, station-keep and follow starts until it is clean again.
+grafana_bridge writes the level as `autonomy.nav_guard` (0 ok, 1 warning,
+2 fault) while the guard reports, and the row reads:
+
+| Row | When |
+|---|---|
+| heading, speed and track consistent with GPS, PASS | ok |
+| warning: <reason>, PASS | warn (a check is out of tolerance, not yet for its fault time) |
+| FAULT: <reason> · autonomy starts refused, FAIL | fault |
+| navigation guard not reporting · autonomy starts refused, FAIL | pNavGuard is in the mission's app list but silent for 10 s |
+| no navigation guard on this vessel, N/A | the mission does not run pNavGuard |
+
+Events (and popups): "Navigation warning: ..." (warning), "Navigation
+FAULT: ... (autonomy starts refused)" (critical), "Autonomy stopped by the
+navigation guard: ..." (critical, once per fault although the stop is
+repeated every 2 s), "Navigation consistent again", "Navigation guard not
+reporting" and "... reporting again". The row raises no "Check FAIL" popup
+of its own, so a fault pops up once. The guard's thresholds are
+provisional until water-tested: for the first runs on a boat set
+`stop_on_fault = false` in its pNavGuard block (warnings only) and compare
+them with what the boat did.
+
 ### Console checklist and ENC selection
 The manual pre-departure checklist lives in the operator console
 (Swiftships-UI). For Grafana to mirror it, the console publishes two MOOS
@@ -282,6 +318,111 @@ curl -s -XPOST "$INFLUX_URL/api/v2/query?org=$INFLUX_ORG" -H "Authorization: Tok
   -H 'Content-Type: application/vnd.flux' \
   -d 'from(bucket:"telemetry") |> range(start:-1m) |> filter(fn:(r) => r._measurement == "readiness_summary") |> last()'
 ```
+
+## Boat control, ALL STOP and the Audit page
+With login and exclusive control on the boat (iWebSocket `command_auth =
+signalk`, `exclusive_control = true`; USV-722 since the 22 Oct mission
+build), one Swiftships-UI tab at a time holds control; viewers watch,
+operators take, release and request control, a supervisor may force a
+takeover with a reason, and any operator may press ALL STOP. iWebSocket
+writes every login, logout, control change, ALL STOP and refused command
+to a daily file on the boat (`audit_dir`, `c2_audit_YYYY-MM-DD.log`) and
+posts the same lines to MOOS as `CONTROL_EVENT` / `UI_AUTH_EVENT`.
+
+grafana_bridge reads them and:
+
+- writes one row per line to the events bucket, measurement `audit` (tags
+  category control / login / refused / all_stop / nav_guard / region,
+  action, severity, user, role; fields message, details). The events
+  bucket keeps a year: the installer creates it with 365 days and raises
+  an existing bucket with a shorter retention to 365 days;
+- joins a forced takeover's two lines (the grant, then the reason) into
+  one event;
+- tracks who holds control and the open logins
+  (`mission_state.control_holder`, `control_role`, `control_since_ms`,
+  `c2_sessions`, `c2_session_count`), re-written every 5 s;
+- raises popups for a forced takeover, control lost (holder not heard),
+  control revoked, a refused command (at most one a minute per user and
+  command) and a login with a logged-out token; control changes also go
+  to Mission Events as info.
+
+`ALL_STOP=true` is the latch itself: Mission State reads ALL STOP (above
+every other state), Safety flags fails with "ALL STOP LATCHED", a critical
+popup says so, and `ALL_STOP=false` (reset) brings an info event. The
+audit line names who pressed and who reset it.
+
+Also read from the boat: `REGION_MSG` (a refused region, warning; other
+notes, info), `V26_STATE` (the region behaviour's state as
+`mission_state.region_state`; "breached" fails Safety flags and raises a
+critical event, "lapsed" a warning), the drive interface (iCAN:
+`CAN_STATUS`, `CAN_CONTROL_OWNER`, `CAN_TX_GEAR`, `CAN_TX_THRUST_PCT`,
+`CAN_TX_RUDDER_PCT`, `CAN_TRIM_STATE`, `CAN_PROFILE`, `CAN_CONFLICT`,
+`CAN_SEND`, `CAN_LOST_LINK`, `CAN_RUDDER_MISMATCH` into measurement
+`can_drive`; a conflict or a missing bus or profile fails the CAN row and
+raises a critical event, a rudder mismatch fails the Steering row), and
+the autopilot's `SERVICE_MODE` and `PID_GAINS` (autopilot.service_mode,
+gain_heading_kp ... gain_speed_kd; service mode shows in the Autonomy
+stack row and raises a warning). While the operator drives (drive owner
+MANUAL) the thrust and rudder the drive interface sends also count as
+console commands for the Remote state.
+
+The **Audit** page (tab row, after Alarms) shows who holds control, ALL
+STOP, the navigation guard, logins, refused commands and forced takeovers
+in the selected range (default 24 h); a timeline of who had control with
+ALL STOP and the navigation guard beneath it; the audit log (newest
+first, filter per column, Search box over event, details and user, CSV
+download from the panel menu: Inspect > Data); refused commands per user;
+events per user and category; open logins. It lives in its own folder,
+**Swift Autonomous Audit**, which the installer opens to Grafana Editors
+and Admins only (with the Signal K login below: operators and
+supervisors). Grafana cannot take away access a folder grants, hence the
+separate folder.
+
+## Signal K login (SK_LOGIN)
+`SK_LOGIN=1` in /etc/usv/usv.env gives Swiftships-UI and the dashboard
+one login: an operator logged in to Swiftships-UI (or the Signal K admin
+page) on the boat opens the dashboard without logging in again, with a
+Grafana role from their boat role.
+
+How it works: nginx answers on GRAFANA_PORT and asks usv-auth
+(127.0.0.1:USV_AUTH_PORT, default 3102) about every request. usv-auth
+takes the browser's Signal K login (the JAUTHENTICATION cookie Signal K
+sets, or the sktoken cookie Swiftships-UI keeps; a browser sends cookies
+to every port of the same host), asks the Signal K server who it is
+(`/skServer/loginStatus`, as iWebSocket does) and returns the user and a
+Grafana role. Grafana moves to 127.0.0.1:GRAFANA_INTERNAL_PORT (default
+3099) and trusts the user and role headers from nginx only (`[auth.proxy]`,
+whitelist 127.0.0.1); headers a browser sends itself are dropped.
+
+| Boat role (Swiftships-UI roles file, else Signal K level) | Grafana role | Audit page |
+|---|---|---|
+| viewer (read-only account: always) | Viewer | no |
+| planner | Viewer | no |
+| operator (readwrite) | Editor | yes |
+| supervisor (admin) | Editor | yes |
+
+The roles file is the one the Swiftships-UI plugin writes for iWebSocket
+(`/var/lib/swiftships-c2/roles.json`, `SK_ROLES_FILE`); `SK_ROLE_MAP`
+changes the mapping (for example `supervisor=Admin`). Results are cached
+10 s per login. usv-auth also sets a user's Grafana role through the
+Grafana API when it changes (using GRAFANA_ADMIN_PASSWORD), in case the
+Grafana build ignores the role header.
+
+Not logged in to Signal K, Signal K unreachable, or its security off:
+Grafana shows its own login form, so the admin account always works.
+Turn SK_LOGIN on only once Signal K security is set up on the boat
+(users with read-only / read-write / admin levels). Enable:
+
+```bash
+sudo sed -i 's/^SK_LOGIN=.*/SK_LOGIN=1/' /etc/usv/usv.env   # or add the line
+cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh <tag>
+systemctl is-active nginx usv-auth grafana-server            # three "active"
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:${GRAFANA_PORT:-3001}/login   # 200
+```
+
+Then log in to Swiftships-UI in the browser and open the dashboard: the
+user menu shows the Signal K user. `SK_LOGIN=0` and the same update turn
+it off again (nginx gives the port back to Grafana).
 
 ## Traffic end-to-end test (simulation)
 `tools/traffic_scenario.sh <mission.moos> [crossing|headon|overtaking|radar|opening|all|clean]`
@@ -585,6 +726,8 @@ publish yet simply leave their tiles at N/A.
 | usv-can-bridge.service | CAN/N2K frames -> Influx (CAP_NET_RAW) |
 | usv-mayara-bridge.service | mayara radar targets -> MOOSDB RADAR_TARGET (only when MAYARA_URL is set) |
 | usv-frigate-bridge.service | camera status from the Frigate NVR -> Influx (only when FRIGATE_URL is set) |
+| usv-auth.service | Signal K login for the dashboard (only with SK_LOGIN=1) |
+| nginx.service | answers on GRAFANA_PORT in front of Grafana (only with SK_LOGIN=1) |
 | usv-simulator.service | bench-test data (installed, NOT enabled) |
 | grafana_bridge (pAntler) | MOOS -> Influx, managed by your mission |
 
@@ -619,13 +762,19 @@ emails while it runs; always stop it before real operations.
 | Readiness rules | usv::EvaluateReadiness in ingestion/moos-cpp/mission_logic.hpp (unit-tested in mission_logic_test.cpp) |
 | Fleet instances | VESSELS in usv.env |
 | Firewall sources for Grafana | GRAFANA_ALLOW_FROM in usv.env (CIDR list; unset = LAN subnet + 100.64.0.0/10; `none` = leave ufw alone) |
+| Signal K login | SK_LOGIN, GRAFANA_INTERNAL_PORT, USV_AUTH_PORT, SK_LOGIN_SIGNALK, SK_ROLES_FILE, SK_ROLE_MAP in usv.env (section above); nginx template deploy/nginx/usv-dashboard.conf.in |
+| Audit page access | folder Swift Autonomous Audit, Editor and Admin (deploy/install.sh); audit rows kept 365 days (events bucket) |
 | Alert recipients | grafana/provisioning/alerting/contact-points.yml |
 | Dashboard refresh | 1 s on the lighter live pages, 2 s on pages with more than 18 queries (Navigation, Traffic, Autopilot, Mission, Vessel Health, System, Alarms): the browser runs six queries at a time and each refresh cancels what is still in flight, so at 1 s the lower panels of a heavy page never fill (Replay: none); the time picker changes it per page for the session. Grafana floor `GRAFANA_MIN_REFRESH` in usv.env, default 1 s (`500ms` allows faster at double the query load; `2s` eases a slow computer) |
 
 ## Roles (Operator / Engineer / Administrator)
-Grafana OSS: Administrator -> Grafana Admin, Engineer -> Editor,
-Operator -> Viewer (`?kiosk` URL for wall displays). Create users under
-Administration -> Users.
+With the Signal K login (SK_LOGIN=1) the role follows the boat role
+(table above): viewers and planners are Grafana Viewers, operators and
+supervisors Editors (the Audit page needs Editor). Without it, Grafana's
+own users: Administrator -> Grafana Admin, Engineer -> Editor, Operator ->
+Viewer (`?kiosk` URL for wall displays); create users under
+Administration -> Users and make whoever must read the Audit page an
+Editor.
 
 ## Maintenance
 - **Backups**: /var/lib/influxdb (data) and /var/lib/grafana (dashboards
@@ -643,6 +792,10 @@ Administration -> Users.
 | Empty dashboards | `systemctl status usv-*` ; Influx Data Explorer at :8086 |
 | Readiness "no radar data" with the radar on | `journalctl -a -u usv-mayara-bridge -n 10`: "mayara unreachable" every few seconds = old mayara build (see Radar targets, radar server version); "using radar ..." + "power: standby" = switch it to transmit; nothing from the radar on `tcpdump -i <port> 236.6.7.0/24` = cabling or the wrong port in mayara.service (`-i`) |
 | Every page "didn't send any data" (ERR_EMPTY_RESPONSE), `/api/health` fine | Grafana cannot parse `views/index.html` (a block brand.sh injected contains two square brackets in a row): `sudo bash deploy/brand.sh --restore && sudo systemctl restart grafana-server` brings the stock page back (header logo missing until brand.sh runs again); then update to a fixed release |
+| Dashboard asks for a Grafana login although Swiftships-UI is logged in (SK_LOGIN=1) | `journalctl -u usv-auth -n 20`; `curl -s http://127.0.0.1:3000/skServer/loginStatus` (Signal K security on?); the browser must open the dashboard on the same host name as Swiftships-UI (cookies follow the host name, not the port) |
+| Signal K login user lands as Viewer though an operator | the roles file (`sudo cat /var/lib/swiftships-c2/roles.json`) and `SK_ROLE_MAP`; a read-only Signal K account is always a viewer; Grafana > Administration > Users shows the role usv-auth set |
+| Audit page "permission denied" | expected for Viewers; an operator needs the Editor role (Signal K login, or a Grafana user made Editor). Installer warning "could not restrict the Audit folder": set it by hand under Dashboards > Swift Autonomous Audit > Permissions |
+| Navigation integrity "not reporting" | pNavGuard is in the mission's app list but not posting: Apps row (missing: pNavGuard) and the pAntler output |
 | Readiness "NO BRIDGE", Mission State and Operator Link N/A | grafana_bridge is not writing: it runs under pAntler, so restart the mission after an update and read its start line in the pAntler output |
 | Dashboard hangs on a dark screen from another PC, but `curl http://localhost:<GRAFANA_PORT>/api/health` returns 200 on the OBC | ufw is dropping the port: `sudo ufw status \| grep <GRAFANA_PORT>`. Re-run install.sh (opens it to the LAN and the tailnet, see GRAFANA_ALLOW_FROM in usv.env) or `sudo ufw allow from <lan-cidr> to any port <GRAFANA_PORT> proto tcp` |
 | Stock Grafana logo / "Welcome to Grafana" | Browser cache of Grafana's immutable assets: Ctrl+F5 once; `sudo bash deploy/brand.sh` re-applies after an upgrade |

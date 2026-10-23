@@ -116,7 +116,24 @@ correct. GPS reads FAIL while the VectorNav reports "INS aligning" (it
 re-aligns after a long stop or a power cycle; it tracks once under way).
 Cameras reads "N / M cameras streaming" for the cameras enabled in Frigate.
 
-**Services.** `systemctl status influxdb grafana-server telegraf usv-signalk-bridge usv-can-bridge usv-mayara-bridge usv-frigate-bridge`.
+**Boat control.** This boat's mission (22 Oct build) runs with login and
+exclusive control (`command_auth = signalk`, `exclusive_control = true`):
+log in to Swiftships-UI (`http://<boat>:3000/c2/` with the new UI build)
+and take control before commanding; others see your work read-only. ALL
+STOP latches until the operator in control resets it; while latched the
+dashboard's Mission State reads ALL STOP and Readiness fails Safety flags.
+Every login, control change, ALL STOP and refused command is on the Audit
+page (and in `/home/douglas/c2_audit/c2_audit_<date>.log` on the boat).
+If control cannot be taken at all, check Signal K first: with
+`command_auth = signalk` nobody can command while Signal K is unreachable.
+
+**Navigation guard.** With pNavGuard in the mission, Readiness row 2
+(Navigation integrity) must read PASS before a start; a FAULT means the
+boat refuses autonomy starts (manual control still works). For the first
+runs set `stop_on_fault = false` in the pNavGuard block (warnings only).
+
+**Services.** `systemctl status influxdb grafana-server telegraf usv-signalk-bridge usv-can-bridge usv-mayara-bridge usv-frigate-bridge`
+(and `usv-auth nginx` once the Signal K login is on).
 All are enabled at boot. `usv-simulator` must stay disabled on the vessel
 (`systemctl is-enabled usv-simulator` -> `disabled`).
 
@@ -137,7 +154,7 @@ changes a service or the network, start the pasted block with
 Tags only. One command, from the repo checkout:
 
 ```bash
-cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.42
+cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.43
 ```
 
 It fetches the tag, re-runs the installer (rebuilds and restarts the
@@ -164,6 +181,28 @@ installer is idempotent; it re-provisions dashboards and alert rules,
 rebuilds the bridges, re-applies branding and the GPU sudoers rule.
 
 Rollback: `git checkout <previous tag>` and the same install command.
+
+## Signal K login for the dashboard (SK_LOGIN)
+
+One login for Swiftships-UI and the dashboard. Do this once Signal K
+security is set up (Signal K admin > Security: users as read-only,
+read/write or admin; roles in Swiftships-UI's plugin settings, Boat
+control roles):
+
+```bash
+[ "$(hostname)" = usv-722 ] || { echo "WRONG BOAT: $(hostname)"; exit 1; }
+grep -q '^SK_LOGIN=' /etc/usv/usv.env && sudo sed -i 's/^SK_LOGIN=.*/SK_LOGIN=1/' /etc/usv/usv.env \
+  || echo 'SK_LOGIN=1' | sudo tee -a /etc/usv/usv.env
+cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.43
+systemctl is-active nginx usv-auth grafana-server
+```
+
+Check: log in to Swiftships-UI, open the dashboard at the same address on
+its usual port (`http://<obc-ip>:3100`): no login form, the user menu shows
+your Signal K user. An operator or supervisor sees the Audit tab's page; a
+viewer gets "permission denied" there. Log out of Swiftships-UI and reload:
+the Grafana login form returns (the Grafana admin account still works).
+Off again: `SK_LOGIN=0` and the same update command.
 
 ## Changing configuration
 

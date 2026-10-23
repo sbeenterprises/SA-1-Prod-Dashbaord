@@ -1,0 +1,16 @@
+[Unit]
+Description=USV dashboard Signal K login (nginx auth_request for Grafana, SK_LOGIN=1)
+After=network-online.target signalk.service grafana-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/usv/usv.env
+ExecStart=/usr/bin/python3 -I /usr/local/lib/usv/usv_auth.py
+Restart=always
+RestartSec=3
+User=usv
+Group=usv
+
+[Install]
+WantedBy=multi-user.target

@@ -148,6 +148,16 @@
     },
     {
       "type": "link",
+      "title": "Audit",
+      "url": "/d/usv-audit",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Audit"
+    },
+    {
+      "type": "link",
       "title": "Fleet",
       "url": "/d/usv-fleet",
       "keepTime": true,
@@ -2460,7 +2470,7 @@
       "gridPos": {
         "x": 0,
         "y": 17,
-        "w": 24,
+        "w": 4,
         "h": 2
       },
       "targets": [
@@ -2522,6 +2532,140 @@
         "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 20,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9211,
+      "type": "stat",
+      "title": "Service Mode",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 17,
+        "w": 4,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"service_mode\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OFF",
+                  "color": "#175d8d",
+                  "index": 0
+                },
+                "1": {
+                  "text": "ON (TUNING)",
+                  "color": "orange",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 20,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9212,
+      "type": "stat",
+      "title": "Applied Gains",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 17,
+        "w": 16,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"gain_heading_kp\" or r._field == \"gain_heading_ki\" or r._field == \"gain_heading_kd\" or r._field == \"gain_speed_kp\" or r._field == \"gain_speed_ki\" or r._field == \"gain_speed_kd\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "not reported",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value_and_name",
+        "graphMode": "none",
+        "colorMode": "value",
         "justifyMode": "auto",
         "text": {
           "valueSize": 20,

@@ -461,6 +461,7 @@ STATE_LABELS = {
     "StationKeeping": "Station Keeping", "ReturnToBase": "Return to Base",
     "EnteringRegion": "Entering Region", "AwaitingRearm": "Awaiting Re-arm",
     "CommsLost": "Comms Lost", "HoldingAtBase": "Holding at Base",
+    "AllStop": "ALL STOP",
     # value written by bridges before v1.0.1 (historical data / replay)
     "ReturnToHome": "Return to Base",
 }
@@ -898,7 +899,7 @@ TAB_ORDER = [
     ("usv-canbus", "CAN Bus"), ("usv-traffic", "Traffic"),
     ("usv-camera", "Cameras"), ("usv-comms", "Comms"),
     ("usv-system", "System"), ("usv-replay", "Replay"),
-    ("usv-alarms", "Alarms"), ("usv-fleet", "Fleet"),
+    ("usv-alarms", "Alarms"), ("usv-audit", "Audit"), ("usv-fleet", "Fleet"),
 ]
 
 
@@ -1065,6 +1066,7 @@ mission_state_mappings = state_map([
     ("HoldingAtBase", "orange"),
     ("Following", ACCENT),
     ("Moving", "light-yellow"),
+    ("AllStop", "red"),
 ])
 helm_state_mappings = state_map([
     ("DRIVE", TILE_OK), ("PARK", "#6e7680"), ("STANDBY", "yellow"),
@@ -1572,8 +1574,10 @@ DASHBOARDS.append(dashboard("usv-autopilot", "Autopilot", [
              "0": {"text": "NONE", "color": TILE_OK, "index": 0}}},
                    {"type": "range", "options": {"from": 1, "to": 999, "result": {
                        "text": "ACTIVE", "color": "red", "index": 1}}}]),
-    # G — helm trim switch (fault lamps and codes are on the CAN Bus page).
-    trim_tile(0, 17, 24),
+    # G — helm trim switch (fault lamps and codes are on the CAN Bus page),
+    # the autopilot's service mode and the gains it applies (planchaPID
+    # PID_GAINS: the manual values in service mode, the schedule otherwise).
+    trim_tile(0, 17, 4),
 ], ["autopilot"]))
 # The trim tile gets its own id and the shared counter is put back, so
 # adding it does not renumber panels on other pages.
@@ -1581,6 +1585,21 @@ _ap = DASHBOARDS[-1]["panels"][-1:]
 for _i, _p in enumerate(_ap):
     _p["id"] = 9201 + _i
 _id[0] -= len(_ap)
+_ap_new = [
+    stat("Service Mode", flux("autopilot", "service_mode", last=True), 4, 17, 4, 2,
+         mappings=[{"type": "value", "options": {
+             "0": {"text": "OFF", "color": TILE_OK, "index": 0},
+             "1": {"text": "ON (TUNING)", "color": "orange", "index": 1}}}],
+         text_mode="value", color_mode="background"),
+    stat("Applied Gains", flux("autopilot", ["gain_heading_kp", "gain_heading_ki", "gain_heading_kd",
+                                             "gain_speed_kp", "gain_speed_ki", "gain_speed_kd"],
+                               last=True), 8, 17, 16, 2,
+         decimals=3, text_mode="value_and_name", no_value="not reported"),
+]
+for _i, _p in enumerate(_ap_new):
+    _p["id"] = 9211 + _i
+_id[0] -= len(_ap_new)
+DASHBOARDS[-1]["panels"].extend(_ap_new)
 
 # ------------------------------------------- Autopilot Live (troubleshooting)
 # The same helm instruments as the Autopilot page, drawn large for sea trials
@@ -1927,12 +1946,12 @@ DASHBOARDS.append(dashboard("usv-canbus", "CAN Bus", [
          mappings=DTC_TEXT_MAPPINGS,
          text_mode="value", color_mode="background"),
     ts("Message Rate", [target(flux("canbus", "msg_rate"), "msgs/s")],
-       0, 5, 12, 7),
+       0, 7, 12, 6),
     ts("Bus Utilization", [target(flux("canbus", "utilization_pct"), "util %")],
-       12, 5, 12, 7, unit="percent", min_=0, max_=100),
+       12, 7, 12, 6, unit="percent", min_=0, max_=100),
     ts("Error / Dropped Frames",
        [target(flux("canbus", ["error_frames", "dropped_frames"]))],
-       0, 12, 12, 7),
+       0, 13, 12, 6),
     panel("table", "PGN Frequency (msgs/s)",
           [target('from(bucket: "telemetry")\n'
                   '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
@@ -1943,7 +1962,7 @@ DASHBOARDS.append(dashboard("usv-canbus", "CAN Bus", [
                   '  |> keep(columns: ["pgn", "_value"])\n'
                   '  |> sort(columns: ["_value"], desc: true)\n'
                   '  |> rename(columns: {pgn: "PGN / CAN id", _value: "msgs/s"})\n')],
-          12, 12, 12, 7,
+          12, 13, 12, 6,
           options={"showHeader": True}),
 ], ["canbus"]))
 # The four helm / fault tiles get their own id range and the shared counter
@@ -1958,6 +1977,53 @@ for _p in _can:
     if _p not in _new and _p["id"] > _first:
         _p["id"] -= len(_new)
 _id[0] -= len(_new)
+# Drive interface (iCAN, v1.2.43): what is really sent on the bus, who
+# drives, the CAN switch and IDs blocked by another node. Own id range.
+ON_OFF_MAP = [{"type": "value", "options": {
+    "0": {"text": "OFF", "color": NEUTRAL, "index": 0},
+    "1": {"text": "ON", "color": TILE_OK, "index": 1}}}]
+_drive = [
+    stat("Drive Interface", flux("can_drive", "status", last=True), 0, 5, 3, 2, string_value=True,
+         mappings=[{"type": "value", "options": {
+             "ACTIVE": {"text": "ACTIVE", "color": TILE_OK, "index": 0},
+             "STANDBY": {"text": "STANDBY", "color": NEUTRAL, "index": 1},
+             "NO_BUS": {"text": "NO BUS", "color": "red", "index": 2},
+             "INHIBITED": {"text": "NO PROFILE", "color": "red", "index": 3}}}],
+         text_mode="value", color_mode="background"),
+    stat("Driven By", flux("can_drive", "owner", last=True), 3, 5, 3, 2, string_value=True,
+         mappings=[{"type": "value", "options": {
+             "AUTONOMY": {"text": "AUTONOMY", "color": TILE_OK, "index": 0},
+             "MANUAL": {"text": "MANUAL", "color": "orange", "index": 1}}}],
+         text_mode="value", color_mode="background"),
+    stat("CAN Control", flux("can_drive", "send", last=True), 6, 5, 3, 2,
+         mappings=ON_OFF_MAP, text_mode="value", color_mode="background"),
+    stat("Gear Sent", flux("can_drive", "tx_gear", last=True), 9, 5, 3, 2, string_value=True,
+         mappings=[{"type": "value", "options": {
+             "fwd": {"text": "FORWARD", "color": TILE_OK, "index": 0},
+             "neutral": {"text": "NEUTRAL", "color": NEUTRAL, "index": 1},
+             "rev": {"text": "REVERSE", "color": "orange", "index": 2}}}],
+         text_mode="value", color_mode="background"),
+    stat("Thrust Sent", flux("can_drive", "tx_thrust_pct", last=True), 12, 5, 3, 2,
+         unit="percent", decimals=0, no_value="N/A"),
+    stat("Rudder Sent", flux("can_drive", "tx_rudder_pct", last=True), 15, 5, 3, 2,
+         unit="percent", decimals=0, no_value="N/A"),
+    stat("Trim Sent", flux("can_drive", "trim_state", last=True), 18, 5, 3, 2, string_value=True,
+         mappings=[{"type": "value", "options": {
+             "idle": {"text": "IDLE", "color": NEUTRAL, "index": 0},
+             "up": {"text": "UP", "color": ACCENT, "index": 1},
+             "down": {"text": "DOWN", "color": ACCENT, "index": 2}}}],
+         text_mode="value", color_mode="background"),
+    stat("Bus Conflict", flux("can_drive", "conflict", last=True), 21, 5, 3, 2, string_value=True,
+         mappings=[{"type": "value", "options": {
+             "none": {"text": "NONE", "color": TILE_OK, "index": 0}}},
+             {"type": "regex", "options": {"pattern": "(.+)", "result": {
+                 "text": "BLOCKED: $1", "color": "red", "index": 1}}}],
+         text_mode="value", color_mode="background"),
+]
+for _i, _p in enumerate(_drive):
+    _p["id"] = 9501 + _i
+_id[0] -= len(_drive)
+_can.extend(_drive)
 
 # ------------------------------------------------ FR-12 Pre-Departure Readiness
 # Every check is decided onboard by grafana_bridge (usv::EvaluateReadiness in
@@ -2126,10 +2192,12 @@ def particulars_panel(x, y, w, h):
     return p
 
 
-# One screen, no scrolling: the 17 automatic checks need the full page
-# height (36 px rows, no column header), so the verdict, the four counts,
-# mission state / operator link / route and the vessel particulars card
-# stack in a column on the right, above the console checklist.
+# One screen, no scrolling: the 18 automatic checks (v1.2.43: Navigation
+# integrity) need the full page height (36 px rows, no column header, no
+# title bar; the title is the hover description), so the verdict, the four
+# counts, mission state / operator link / route and the vessel particulars
+# card stack in a column on the right, above the console checklist. This
+# page is one grid row taller than the others (READINESS_ROWS).
 DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
     # A — verdict and counts (right column, x 16..24)
     stat("Readiness", flux("readiness_summary", "ready", last=True), 16, 0, 8, 3,
@@ -2148,11 +2216,12 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
          no_value="no route", value_size=14),
     particulars_panel(16, 7, 8, 6),
     # B — the two lists
-    status_table("Automatic checks — verified onboard from live telemetry",
-                 readiness_query(), 0, 0, 16, 17, "status", status_mappings, "name",
+    status_table("",
+                 readiness_query(), 0, 0, 16, 18, "status", status_mappings, "name",
                  ["seq", "name", "evidence", "status"], show_header=False,
                  no_value="grafana_bridge not writing readiness (bridge older than v1.1 or not restarted)",
                  description=(
+                     "Automatic checks, verified onboard from live telemetry. "
                      "Decided by grafana_bridge every 5 s from the latest telemetry "
                      "(GPS ≥ 6 satellites and HDOP ≤ 2.5, route inside the region, every "
                      "Antler app connected, rudder within ±35° and following the command, "
@@ -2164,7 +2233,7 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
                      "operator console has not published it (ENC selection, checklist). "
                      "READY needs no FAIL and no CONSOLE item.")),
     status_table("Console checklist — manual items ticked in Swiftships-UI",
-                 checklist_query(), 16, 13, 8, 4, "state", checklist_state_mappings, "item",
+                 checklist_query(), 16, 13, 8, 5, "state", checklist_state_mappings, "item",
                  ["item", "description", "state"],
                  no_value="console not publishing CHECKLIST_STATUS (docs/deployment.md, Console checklist)",
                  description=(
@@ -3171,6 +3240,210 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms", [
          thresholds=[(None, TILE_OK), (1, "yellow"), (3, "orange")], color_mode="background"),
 ], ["alarms"]))
 
+# Navigation guard, ALL STOP and boat control (v1.2.43). The guard writes
+# its level once a second while it reports, so a window of 15 s tells a
+# silent guard (N/A) from a healthy one.
+NAV_GUARD_MAP = [{"type": "value", "options": {
+    "0": {"text": "OK", "color": TILE_OK, "index": 0},
+    "1": {"text": "WARNING", "color": "yellow", "index": 1},
+    "2": {"text": "FAULT", "color": "red", "index": 2}}}]
+ALL_STOP_MAP = [{"type": "value", "options": {
+    "0": {"text": "CLEAR", "color": TILE_OK, "index": 0},
+    "1": {"text": "LATCHED", "color": "red", "index": 1}}}]
+HOLDER_MAP = [{"type": "value", "options": {
+    "-": {"text": "NOBODY", "color": NEUTRAL, "index": 0}}},
+    {"type": "regex", "options": {"pattern": "(.+)", "result": {
+        "text": "$1", "color": TILE_OK, "index": 1}}}]
+
+
+def recent(measurement, field, window="-15s"):
+    return ('from(bucket: "telemetry")\n'
+            f'  |> range(start: {window})\n'
+            f'  |> filter(fn: (r) => r._measurement == "{measurement}" and r._field == "{field}")\n'
+            '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+            '  |> last()\n')
+
+
+_alarm_row = [
+    stat("Nav Integrity", recent("autonomy", "nav_guard"), 0, 22, 4, 4,
+         mappings=NAV_GUARD_MAP, text_mode="value", color_mode="background"),
+    stat("ALL STOP", flux("autonomy", "all_stop", last=True), 4, 22, 4, 4,
+         mappings=ALL_STOP_MAP, text_mode="value", color_mode="background"),
+    stat("Control", flux("mission_state", "control_holder", last=True), 8, 22, 4, 4,
+         string_value=True, mappings=HOLDER_MAP, text_mode="value", color_mode="background"),
+    stat("Drive Interface", flux("can_drive", "status", last=True), 12, 22, 4, 4, string_value=True,
+         mappings=[{"type": "value", "options": {
+             "ACTIVE": {"text": "ACTIVE", "color": TILE_OK, "index": 0},
+             "STANDBY": {"text": "STANDBY", "color": NEUTRAL, "index": 1},
+             "NO_BUS": {"text": "NO BUS", "color": "red", "index": 2},
+             "INHIBITED": {"text": "NO PROFILE", "color": "red", "index": 3}}}],
+         text_mode="value", color_mode="background"),
+    stat("Rudder vs Drive", flux("can_drive", "rudder_mismatch", last=True), 16, 22, 4, 4,
+         mappings=[{"type": "value", "options": {
+             "0": {"text": "FOLLOWING", "color": TILE_OK, "index": 0},
+             "1": {"text": "NOT FOLLOWING", "color": "red", "index": 1}}}],
+         text_mode="value", color_mode="background"),
+    stat("Service Mode", flux("autopilot", "service_mode", last=True), 20, 22, 4, 4,
+         mappings=[{"type": "value", "options": {
+             "0": {"text": "OFF", "color": TILE_OK, "index": 0},
+             "1": {"text": "ON (TUNING)", "color": "orange", "index": 1}}}],
+         text_mode="value", color_mode="background"),
+]
+for _i, _p in enumerate(_alarm_row):
+    _p["id"] = 9601 + _i
+_id[0] -= len(_alarm_row)
+DASHBOARDS[-1]["panels"].extend(_alarm_row)
+
+# ------------------------------------------------------------- Audit (v1.2.43)
+# The boat's control audit trail: logins, control changes (take, hand-over,
+# forced takeover with its reason, lost), ALL STOP, refused commands, and
+# the navigation guard's and the region's events. grafana_bridge writes one
+# row per line (events bucket, measurement "audit", kept a year; tags
+# category, action, severity, user, role; fields message, details). Open to
+# operators and supervisors only (deploy/install.sh sets the permission).
+AUDIT_BASE = ('from(bucket: "events")\n'
+              '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+              '  |> filter(fn: (r) => r._measurement == "audit" and r.vessel == "${vessel}")\n')
+AUDIT_CATEGORY_MAP = [{"type": "value", "options": {
+    "control": {"text": "Control", "color": "blue", "index": 0},
+    "login": {"text": "Login", "color": "#3a4a66", "index": 1},
+    "refused": {"text": "Refused", "color": "orange", "index": 2},
+    "all_stop": {"text": "ALL STOP", "color": "red", "index": 3},
+    "nav_guard": {"text": "Nav guard", "color": "purple", "index": 4},
+    "region": {"text": "Region", "color": "#0f6f6a", "index": 5}}}]
+AUDIT_SEARCH_VAR = {
+    "name": "search", "label": "Search", "type": "textbox",
+    "query": "", "current": {"text": "", "value": ""}, "hide": 0,
+}
+
+
+def audit_count(pred):
+    return (AUDIT_BASE +
+            '  |> filter(fn: (r) => r._field == "value")\n'
+            f'  |> filter(fn: (r) => {pred})\n'
+            '  |> group()\n'
+            '  |> count()\n')
+
+
+audit_table_query = (
+    'import "strings"\n' + AUDIT_BASE +
+    '  |> filter(fn: (r) => r._field == "message" or r._field == "details")\n'
+    '  |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")\n'
+    '  |> group()\n'
+    '  |> filter(fn: (r) => "${search}" == "" or strings.containsStr(v: strings.toLower(v: '
+    'r.message + " " + r.details + " " + r.user), substr: strings.toLower(v: "${search}")))\n'
+    '  |> keep(columns: ["_time", "severity", "category", "message", "user", "role", "details"])\n'
+    '  |> sort(columns: ["_time"], desc: true)\n'
+    '  |> limit(n: 1000)\n'
+    '  |> rename(columns: {_time: "Time", severity: "Severity", category: "Category", '
+    'message: "Event", user: "User", role: "Role", details: "Details"})\n')
+
+audit_timeline = panel("state-timeline", "Who had control", [
+    target('from(bucket: "telemetry")\n'
+           '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+           '  |> filter(fn: (r) => r._measurement == "mission_state" and r._field == "control_holder")\n'
+           '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+           '  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n'
+           '  |> keep(columns: ["_time", "_value"])\n'
+           '  |> rename(columns: {_value: "Control"})\n', ref="A"),
+    target('from(bucket: "telemetry")\n'
+           '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+           '  |> filter(fn: (r) => r._measurement == "autonomy" and r._field == "all_stop")\n'
+           '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+           '  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n'
+           '  |> keep(columns: ["_time", "_value"])\n'
+           '  |> rename(columns: {_value: "ALL STOP"})\n', ref="B"),
+    target('from(bucket: "telemetry")\n'
+           '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+           '  |> filter(fn: (r) => r._measurement == "autonomy" and r._field == "nav_guard")\n'
+           '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+           '  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n'
+           '  |> keep(columns: ["_time", "_value"])\n'
+           '  |> rename(columns: {_value: "Navigation guard"})\n', ref="C"),
+], 0, 3, 24, 4,
+    overrides=[
+        {"matcher": {"id": "byName", "options": "ALL STOP"},
+         "properties": [{"id": "mappings", "value": ALL_STOP_MAP}]},
+        {"matcher": {"id": "byName", "options": "Navigation guard"},
+         "properties": [{"id": "mappings", "value": NAV_GUARD_MAP}]},
+        {"matcher": {"id": "byName", "options": "Control"},
+         "properties": [{"id": "mappings", "value": [{"type": "value", "options": {
+             "-": {"text": "nobody", "color": NEUTRAL, "index": 0}}}]},
+             {"id": "color", "value": {"mode": "palette-classic"}}]}],
+    options={"showValue": "auto", "mergeValues": True, "rowHeight": 0.8,
+             "alignValue": "left", "legend": {"showLegend": False}})
+
+AUDIT_TABLE_OVERRIDES = [
+    {"matcher": {"id": "byName", "options": "Time"},
+     "properties": [{"id": "custom.width", "value": 160},
+                    {"id": "unit", "value": "dateTimeAsIso"}]},
+    {"matcher": {"id": "byName", "options": "Severity"},
+     "properties": [{"id": "custom.width", "value": 90},
+                    {"id": "mappings", "value": [{"type": "value", "options": {
+                        "info": {"text": "Info", "color": TILE_OK, "index": 0},
+                        "warning": {"text": "Warning", "color": "orange", "index": 1},
+                        "critical": {"text": "Critical", "color": "red", "index": 2}}}]},
+                    {"id": "custom.cellOptions", "value": {"type": "color-background"}}]},
+    {"matcher": {"id": "byName", "options": "Category"},
+     "properties": [{"id": "custom.width", "value": 100},
+                    {"id": "mappings", "value": AUDIT_CATEGORY_MAP},
+                    {"id": "custom.cellOptions", "value": {"type": "color-background"}}]},
+    {"matcher": {"id": "byName", "options": "User"},
+     "properties": [{"id": "custom.width", "value": 100}]},
+    {"matcher": {"id": "byName", "options": "Role"},
+     "properties": [{"id": "custom.width", "value": 95}]},
+]
+
+DASHBOARDS.append(dashboard("usv-audit", "Audit", [
+    stat("Control", flux("mission_state", "control_holder", last=True), 0, 0, 4, 3,
+         string_value=True, mappings=HOLDER_MAP, text_mode="value", color_mode="background"),
+    stat("ALL STOP", flux("autonomy", "all_stop", last=True), 4, 0, 4, 3,
+         mappings=ALL_STOP_MAP, text_mode="value", color_mode="background"),
+    stat("Navigation Guard", recent("autonomy", "nav_guard"), 8, 0, 4, 3,
+         mappings=NAV_GUARD_MAP, text_mode="value", color_mode="background"),
+    stat("Logins", audit_count('r.category == "login" and r.action == "login"'), 12, 0, 4, 3,
+         decimals=0, no_value="0"),
+    stat("Commands Refused", audit_count('r.category == "refused"'), 16, 0, 4, 3,
+         decimals=0, no_value="0",
+         thresholds=[(None, OK), (1, "orange")]),
+    stat("Forced Takeovers", audit_count('r.action == "force"'), 20, 0, 4, 3,
+         decimals=0, no_value="0",
+         thresholds=[(None, OK), (1, "orange")]),
+    audit_timeline,
+    panel("table", "Audit log", [target(audit_table_query)], 0, 7, 16, 10,
+          overrides=AUDIT_TABLE_OVERRIDES, custom={"filterable": True, "align": "auto"},
+          options={"showHeader": True, "cellHeight": "sm",
+                   "footer": {"show": False}}),
+    panel("table", "Refused commands by user",
+          [target(AUDIT_BASE +
+                  '  |> filter(fn: (r) => r._field == "value" and r.category == "refused")\n'
+                  '  |> group(columns: ["user"])\n'
+                  '  |> count()\n'
+                  '  |> group()\n'
+                  '  |> keep(columns: ["user", "_value"])\n'
+                  '  |> sort(columns: ["_value"], desc: true)\n'
+                  '  |> rename(columns: {user: "User", _value: "Refused"})\n')],
+          16, 7, 8, 3, options={"showHeader": True, "cellHeight": "sm"}),
+    panel("table", "Events by user",
+          [target(AUDIT_BASE +
+                  '  |> filter(fn: (r) => r._field == "value" and r.user != "-")\n'
+                  '  |> group(columns: ["user", "category"])\n'
+                  '  |> count()\n'
+                  '  |> group()\n'
+                  '  |> pivot(rowKey: ["user"], columnKey: ["category"], valueColumn: "_value")\n'
+                  '  |> rename(columns: {user: "User"})\n')],
+          16, 10, 8, 4, options={"showHeader": True, "cellHeight": "sm"}),
+    stat("Open Sessions", recent("mission_state", "c2_sessions", "-30s"), 16, 14, 8, 3,
+         string_value=True, text_mode="value", no_value="none reported",
+         mappings=[{"type": "value", "options": {
+             "-": {"text": "none", "color": NEUTRAL, "index": 0}}}]),
+], ["audit"], refresh="10s", time_from="now-24h"))
+# Own id range so the header-band ids of the other pages stay as they were.
+_audit = DASHBOARDS[-1]["panels"]
+for _i, _p in enumerate(_audit):
+    _p["id"] = 9701 + _i
+_id[0] -= len(_audit)
+
 
 # ------------------------------------------------------------- header band
 # Swiftships wordmark + dashboard name + selected vessel across the top of
@@ -3250,6 +3523,8 @@ def use_fleet_variable(d):
 # browser chrome + Grafana header + link bar leave ~19 grid rows; the Comms
 # page at 19 rows was the reference that just fits).
 SCREEN_ROWS = 19
+# Pages allowed one more row (their auto-fit zoom is a little smaller).
+SCREEN_ROWS_FOR = {"usv-readiness": 20}
 MIN_PANEL_ROWS = 2
 MIN_GAUGE_ROWS = 5   # dials (ECharts) stay legible: value + sub-label
 
@@ -3417,12 +3692,14 @@ def main():
             if sum(len(p.get("targets", [])) for p in d["panels"]) > MAX_QUERIES_AT_1S:
                 d["refresh"] = "2s"
         add_header_band(d)
-        fit_to_screen(d)
-        pad_to_screen(d)
+        fit_to_screen(d, SCREEN_ROWS_FOR.get(d["uid"], SCREEN_ROWS))
+        pad_to_screen(d, SCREEN_ROWS_FOR.get(d["uid"], SCREEN_ROWS))
         size_compact_tiles(d)
         check_titles(d)
         if d["uid"] == "usv-traffic":
             d["templating"]["list"].append(TRAFFIC_RANGE_VAR)
+        if d["uid"] == "usv-audit":
+            d["templating"]["list"].append(AUDIT_SEARCH_VAR)
         if d["uid"] == "usv-fleet":
             use_fleet_variable(d)
         path = os.path.join(OUT, f"{d['uid']}.json")

@@ -3,9 +3,15 @@
 ## Getting in
 Browse to http://<host>:<port> (GRAFANA_PORT in /etc/usv/usv.env: 3001 on
 a vessel, 3300 on the simulation host), log in on the Swiftships login
-page, open folder **Swift Autonomous Dashboard**. The chips across the top
-of every dashboard switch between the fourteen dashboards in the tab row and
-keep the time range and vessel selection (Autopilot Live is the fifteenth,
+page, open folder **Swift Autonomous Dashboard**. On a boat with the
+Signal K login switched on, log in to Swiftships-UI first (same boat
+address, port 3000, `/c2/`): the dashboard then opens already logged in as
+the same user, with the rights of your boat role (viewers and planners
+see every page except Audit; operators and supervisors see Audit too).
+Not logged in to Swiftships-UI, the dashboard shows its own login form.
+The chips across the top
+of every dashboard switch between the fifteen dashboards in the tab row and
+keep the time range and vessel selection (Autopilot Live is the sixteenth,
 opened from the dials of the Autopilot page). Every live page refreshes
 once a second (Replay does not auto-refresh) and fits the screen without
 scrolling on a laptop, a monitor or a large display: the page is zoomed to
@@ -13,7 +19,7 @@ the window (add `?fit=0` to the URL to turn that off for one tab). The **Vessel*
 dropdown selects the vessel; the **Fleet** dashboard shows all of them. The
 tab row keeps the same order on every dashboard: Readiness, Mission,
 Navigation, Autopilot, Vessel Health, Engine, CAN Bus, Traffic, Cameras,
-Comms, System, Replay, Alarms, Fleet.
+Comms, System, Replay, Alarms, Audit, Fleet.
 
 Units are nautical throughout: knots, nautical miles for long distances,
 fixed metres for short ranges (approach distance, cross-track error).
@@ -39,19 +45,20 @@ navigation, cameras and communications, ride control. They come from the
 | Dashboard | What you watch |
 |---|---|
 | Mission | Status wall (mission state, helm, armed, operator link, geofence, all-stop, arrival, obstacles), readouts (mission, route name, elapsed, ETA, waypoint n of m, remaining, distance to waypoint, distance traveled in nm), progress bar, approach profile, autonomy flags, state timeline, mission events |
-| Readiness | Pre-departure verdict (READY / NOT READY) with the passed / failed / N/A / console counts, mission state, operator link and route; the 17 automatic checks (GPS fix, course planning incl. route inside the region or a route planned safe on the ENC, chart/ENC, autonomy stack, apps running, steering, operator link and comms, CAN bus, engine incl. DTCs, electrical, endurance against the route in litres and hours, speed cap against the hull's maximum speed, AIS/radar, cameras, onboard computer, safety flags, console checklist) with the evidence behind each verdict; the vessel particulars card; the console checklist mirror (every item with its description, ticked or pending, who ticked, count). Decided onboard every 5 s; the Mission Events list records when the boat became ready and what blocked it |
+| Readiness | Pre-departure verdict (READY / NOT READY) with the passed / failed / N/A / console counts, mission state, operator link and route; the 18 automatic checks (GPS fix, navigation integrity, course planning incl. route inside the region or a route planned safe on the ENC, chart/ENC, autonomy stack, apps running, steering, operator link and comms, CAN bus, engine incl. DTCs, electrical, endurance against the route in litres and hours, speed cap against the hull's maximum speed, AIS/radar, cameras, onboard computer, safety flags, console checklist) with the evidence behind each verdict; the vessel particulars card; the console checklist mirror (every item with its description, ticked or pending, who ticked, count). Decided onboard every 5 s; the Mission Events list records when the boat became ready and what blocked it |
 | Navigation | Live map (operating region in cyan, planned route with numbered waypoints in green, track in red, vessel as a red heading arrow with a lime 6-minute speed vector along its course), compass (HDG/COG needles), speed meter, GPS fix and satellites, lat/lon, KPI strip (SOG, COG, heading, XTE, distance to WP, HDOP, depth, roll/pitch), trends |
-| Autopilot | Helm state, all-stop, station keeping, entry gate, re-arm hold, remote control, corridor, crash stop; active behaviors, heading/speed error, rudder/throttle commands, speed cap, next turn; rudder (actual angle from the steering actuator, or the command labelled COMMAND when there is no CAN feedback) / throttle / heading-error instruments; rudder trend (actuator command and actual in degrees, PID output in % on the right axis); CAN row (rudder actual, helm wheel, steering drive, helm / autopilot control, gear, thrust to engine, key switch, engine faults); trim switch (UP / DOWN / IDLE: the helm button, not the trim position); desired vs actual heading; speed governor (desired / cap / commanded / actual) |
+| Autopilot | Helm state, all-stop, station keeping, entry gate, re-arm hold, remote control, corridor, crash stop; active behaviors, heading/speed error, rudder/throttle commands, speed cap, next turn; rudder (actual angle from the steering actuator, or the command labelled COMMAND when there is no CAN feedback) / throttle / heading-error instruments; rudder trend (actuator command and actual in degrees, PID output in % on the right axis); CAN row (rudder actual, helm wheel, steering drive, helm / autopilot control, gear, thrust to engine, key switch, engine faults); trim switch (UP / DOWN / IDLE: the helm button, not the trim position); autopilot service mode (ON while manual tuning gains are in use) and the gains it applies; desired vs actual heading; speed governor (desired / cap / commanded / actual) |
 | Autopilot Live | Large rudder / throttle / heading-error dials for sea trials and troubleshooting, helm state, steering mode, gear, engine thrust, trim switch, engine faults, speed error and XTE tiles, heading / rudder / speed trends over 5 min; 1 s refresh. Open it from the link icon on any dial of the Autopilot page |
 | Vessel Health | Whole-vessel summary: instrument cluster (tachometer, coolant, oil pressure, fuel, battery volts, SOC), Engine Faults, battery current, charging state, Fuel Remaining (litres), Range Left (nm at the current fuel burn and speed; N/A when stopped), Time Left (hours at the current burn), system voltage and ECU supply tiles; battery voltage / alternator / current, power / system voltage, SOC and fuel remaining / consumption (litres, L/h) trends. The engine dial scales follow the vessel's engine type; the three engine dials and the Engine Faults tile open the Engine page, where all engine detail lives |
 | Engine | Large machinery dials at 1 s for sea trials and troubleshooting: tachometer, coolant, oil pressure, boost (intake manifold pressure); oil temp, fuel rate, engine load, torque, engine hours, fuel level, fault lamps and active fault count; every active fault code across the width; RPM, coolant / oil temperature and oil pressure / boost trends over 15 min. A value the hull's engine does not report reads N/A |
-| CAN Bus | Utilization, msgs/s, error/dropped frames, PGN table; trim switch, active fault count, fault lamps (OFF, or the lamps on, most severe first: RED STOP, MIL, AMBER, PROTECT) and fault codes (first active fault as SPN / FMI with its meaning and occurrence count, "+N more" when several) |
+| CAN Bus | Utilization, msgs/s, error/dropped frames, PGN table; drive interface row (ACTIVE / STANDBY / NO BUS / NO PROFILE, driven by AUTONOMY or MANUAL, CAN control ON / OFF, and the gear, thrust, rudder and trim actually sent on the bus; Bus Conflict names IDs blocked because another node sends them); trim switch, active fault count, fault lamps (OFF, or the lamps on, most severe first: RED STOP, MIL, AMBER, PROTECT) and fault codes (first active fault as SPN / FMI with its meaning and occurrence count, "+N more" when several) |
 | Traffic | Collision avoidance picture: risk level, avoidance state, contact counts by source, closest range and CPA; heading-up polar traffic view with range rings, own ship as a red pin at the centre, contacts as hulls turned to their heading (green report / AIS, amber radar, red HIGH risk) with 6-minute speed vectors, and a CPA line to the riskiest contact (zoom with the **+ / − / A** buttons in its top-right corner or the **Traffic range** selector: 0.25 to 24 nm, A = auto; contacts outside a zoomed range are counted as "+N beyond"); highest-risk contact card (CPA, TCPA, range, bearings, relative speed, type, encounter); MOOS action (planned vs commanded course, actual heading, speed command vs SOG, avoidance behavior, reason); contact table, Helm Avoiding (COLREGS) table and CPA/TCPA trend |
 | Cameras | Frigate NVR up/down; cameras enabled, streaming and network-connected; one row per camera (Network, Stream, Frame rate, Recording); frame-rate trend. Bitrate, PTZ and temperature charts are reserved for a camera-API source |
 | Comms | Internet / Starlink / VPN (Twingate) / Signal K status, latency, loss, bandwidth of the three busiest links, telemetry message rates |
 | System | CPU, GPU, RAM, disk, CPU temperature, load, Signal K and MOOS reachability, trends, systemd services |
 | Replay | Historical playback: GPS track, mission state, events, heading/speed/actuator history |
-| Alarms | Active alerts, alarm history, at-a-glance status wall |
+| Alarms | Active alerts, alarm history, at-a-glance status wall; boat control row: navigation integrity, ALL STOP, who has control, drive interface, rudder against the drive command, autopilot service mode |
+| Audit | Who has control, ALL STOP, navigation guard, logins, refused commands and forced takeovers over the selected range (default 24 h); who-had-control timeline with ALL STOP and the navigation guard beneath; the audit log (filter each column, Search box, CSV download from the panel menu); refused commands per user, events per user, open logins. Operators and supervisors only |
 | Fleet | Last known positions on one map and a status row per vessel (mission state, helm, armed, operator link, geofence, SOG; mission progress, Signal K, MOOS, engine type with the last RPM), each tile opening that vessel's Mission dashboard |
 
 ## Engine type
@@ -98,7 +105,12 @@ console has not yet published the ENC selection or the checklist. The
 Chart / ENC row does not wait for the console when the boat's chart
 server lists ENC cells: it names the cell covering the boat's position
 ("ENC US3LA1CB · covers position · 10 cells loaded") and fails when the
-loaded cells do not cover where the boat is. The
+loaded cells do not cover where the boat is. Navigation integrity (row
+2) is the boat's own check that heading, speed and course agree with the
+GPS positions: a FAULT there means the boat will not start autonomy until
+the navigation is good again (manual control is not affected). A route
+planned with Plan Safe Route passes Course planning with the depth,
+clearance and charts it was planned against. The
 manual items themselves (life jackets, VHF check, port clearance ...) are
 ticked in Swiftships-UI as before; Grafana mirrors the count and the pending
 items and adds the automatic verification on top.
@@ -125,6 +137,7 @@ used by alerts and queries:
 | Parked | Helm parked (manual override) — thrust actively zeroed. All-Stop shows PARKED / IDLE in grey for these benign causes; only unexpected all-stops are red |
 | Completed | Survey finished; boat stopped at the final waypoint / parked |
 | Idle | Boat at rest, no mission requested |
+| AllStop (shown "ALL STOP") | An operator pressed ALL STOP in Swiftships-UI: autonomy ended, rudder and thrust held at 0, every start refused until the operator in control resets it. Outranks every other state |
 
 `AwaitingRearm` and `CommsLost` are the two states that need operator
 action — both also raise alerts.
@@ -197,6 +210,23 @@ reports a stand-on encounter in extremis. Severity `critical` repeats every 10 m
 resolved; `warning` hourly. Alarm history is kept 1 year in the events
 bucket.
 
+## Boat control and the audit trail
+When the boat runs with login and exclusive control, one Swiftships-UI
+tab at a time holds control. The Audit page and the Alarms page show who
+it is; Mission Events and the popups record what changes:
+
+- "alice took control", "Control handed to alice by carol" (info);
+- "carol forced a takeover from alice (... reason operator not
+  answering)", "Control lost: alice not heard", "Control revoked"
+  (warning popups);
+- "Command refused: DESIRED_THRUST from bob (why read-only account)"
+  (one popup a minute per user and command; every refusal is in the
+  audit log);
+- "ALL STOP latched: ..." (critical popup) and "ALL STOP reset"; the audit
+  log names who pressed and who reset it.
+
+Logins and logouts go to the audit log only. The audit log keeps a year.
+
 ## Popups
 Anything the boat records as a warning or critical event pops up in the
 bottom-right corner of whatever page is open, newest nearest the corner,
@@ -204,8 +234,10 @@ with the time it happened: a
 readiness check turning FAIL during a mission ("Check FAIL: GPS position
 fix: INS aligning", "Check FAIL: CAN bus: no CAN data"), a geofence
 breach, an unexpected all-stop, a lost operator link, a collision
-warning. Critical cards (GPS, autonomy, steering, CAN bus, apps, safety
-flags) stay until clicked and play a short tone; warnings fade after
+warning, a navigation guard fault, ALL STOP, a forced takeover, a refused
+command. Critical cards (GPS, navigation fault, ALL STOP, autonomy,
+steering, CAN bus, apps, safety flags) stay until clicked and play a short
+tone; warnings fade after
 30 s. When a check recovers, "Check OK" goes to the Mission Events list
 without a popup. The Readiness verdict pops up when it flips between
 READY and NOT READY; a change in which checks are blocking goes to the

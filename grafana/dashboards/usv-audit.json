@@ -1,0 +1,1242 @@
+{
+  "uid": "usv-audit",
+  "title": "Audit",
+  "tags": [
+    "usv",
+    "audit"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "editable": true,
+  "style": "dark",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "type": "link",
+      "title": "Readiness",
+      "url": "/d/usv-readiness",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Readiness"
+    },
+    {
+      "type": "link",
+      "title": "Mission",
+      "url": "/d/usv-mission",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Mission"
+    },
+    {
+      "type": "link",
+      "title": "Navigation",
+      "url": "/d/usv-navigation",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Navigation"
+    },
+    {
+      "type": "link",
+      "title": "Autopilot",
+      "url": "/d/usv-autopilot",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Autopilot"
+    },
+    {
+      "type": "link",
+      "title": "Vessel Health",
+      "url": "/d/usv-health",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Vessel Health"
+    },
+    {
+      "type": "link",
+      "title": "Engine",
+      "url": "/d/usv-engine",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Engine"
+    },
+    {
+      "type": "link",
+      "title": "CAN Bus",
+      "url": "/d/usv-canbus",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open CAN Bus"
+    },
+    {
+      "type": "link",
+      "title": "Traffic",
+      "url": "/d/usv-traffic",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Traffic"
+    },
+    {
+      "type": "link",
+      "title": "Cameras",
+      "url": "/d/usv-camera",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Cameras"
+    },
+    {
+      "type": "link",
+      "title": "Comms",
+      "url": "/d/usv-comms",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Comms"
+    },
+    {
+      "type": "link",
+      "title": "System",
+      "url": "/d/usv-system",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open System"
+    },
+    {
+      "type": "link",
+      "title": "Replay",
+      "url": "/d/usv-replay",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Replay"
+    },
+    {
+      "type": "link",
+      "title": "Alarms",
+      "url": "/d/usv-alarms",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Alarms"
+    },
+    {
+      "type": "link",
+      "title": "Audit",
+      "url": "/d/usv-audit",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Audit"
+    },
+    {
+      "type": "link",
+      "title": "Fleet",
+      "url": "/d/usv-fleet",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Fleet"
+    },
+    {
+      "type": "link",
+      "title": "\u2600 Light",
+      "url": "/d/usv-audit?theme=light",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": true,
+      "icon": "external link",
+      "tooltip": "Open in a new tab in the light theme (or press c, t)"
+    },
+    {
+      "type": "link",
+      "title": "\u263e Dark",
+      "url": "/d/usv-audit?theme=dark",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": true,
+      "icon": "external link",
+      "tooltip": "Open in a new tab in the dark theme (or press c, t)"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "vessel",
+        "label": "Vessel",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "influxdb-usv"
+        },
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"telemetry\", tag: \"vessel\")",
+        "refresh": 2,
+        "current": {
+          "text": "usv-01",
+          "value": "usv-01"
+        },
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "theme",
+        "label": "Theme",
+        "type": "custom",
+        "query": "Dark : dark,Navy : navy,Light : light",
+        "current": {
+          "text": "Dark",
+          "value": "dark"
+        },
+        "options": [
+          {
+            "text": "Dark",
+            "value": "dark",
+            "selected": true
+          },
+          {
+            "text": "Navy",
+            "value": "navy",
+            "selected": false
+          },
+          {
+            "text": "Light",
+            "value": "light",
+            "selected": false
+          }
+        ],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "engine_type",
+        "label": "Engine",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "influxdb-usv"
+        },
+        "hide": 2,
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"telemetry\", tag: \"engine_type\", predicate: (r) => r.vessel == \"${vessel}\", start: -30d)",
+        "refresh": 2,
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "engine_model",
+        "label": "Engine model",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "influxdb-usv"
+        },
+        "hide": 2,
+        "query": "import \"array\"\nnamed = from(bucket: \"telemetry\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"engine\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => exists r.engine_model or exists r.engine_type)\n  |> last()\n  |> map(fn: (r) => ({_time: r._time, _value: if exists r.engine_model then r.engine_model else r.engine_type}))\n  |> group()\nnone = array.from(rows: [{_time: 1970-01-01T00:00:00Z, _value: \"not reported\"}])\nunion(tables: [named, none])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)\n  |> keep(columns: [\"_value\"])\n",
+        "refresh": 2,
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "vessel_class",
+        "label": "Vessel class",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "influxdb-usv"
+        },
+        "hide": 2,
+        "query": "import \"array\"\nnamed = from(bucket: \"telemetry\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"vessel\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"class_name\" and exists r.vessel_class)\n  |> last()\n  |> map(fn: (r) => ({_time: r._time, _value: r.vessel_class}))\n  |> group()\nnone = array.from(rows: [{_time: 1970-01-01T00:00:00Z, _value: \"Swiftships USV\"}])\nunion(tables: [named, none])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)\n  |> keep(columns: [\"_value\"])\n",
+        "refresh": 2,
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "search",
+        "label": "Search",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 222,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 2
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "![Swiftships](/public/img/swiftships_wordmark_chip_sm.png) &nbsp;&nbsp; **AUDIT** &nbsp;&nbsp;&middot;&nbsp;&nbsp; ${vessel_class} &nbsp;&nbsp;&middot;&nbsp;&nbsp; Vessel **$vessel** &nbsp;&nbsp;&middot;&nbsp;&nbsp; Engine **${engine_model}**"
+      }
+    },
+    {
+      "id": 9701,
+      "type": "stat",
+      "title": "Control",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 2,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"control_holder\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-": {
+                  "text": "NOBODY",
+                  "color": "#3d434b",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "regex",
+              "options": {
+                "pattern": "(.+)",
+                "result": {
+                  "text": "$1",
+                  "color": "#175d8d",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 22,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9702,
+      "type": "stat",
+      "title": "ALL STOP",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 2,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"all_stop\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "CLEAR",
+                  "color": "#175d8d",
+                  "index": 0
+                },
+                "1": {
+                  "text": "LATCHED",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9703,
+      "type": "stat",
+      "title": "Navigation Guard",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 2,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: -15s)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and r._field == \"nav_guard\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OK",
+                  "color": "#175d8d",
+                  "index": 0
+                },
+                "1": {
+                  "text": "WARNING",
+                  "color": "yellow",
+                  "index": 1
+                },
+                "2": {
+                  "text": "FAULT",
+                  "color": "red",
+                  "index": 2
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9704,
+      "type": "stat",
+      "title": "Logins",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 2,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> filter(fn: (r) => r.category == \"login\" and r.action == \"login\")\n  |> group()\n  |> count()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9705,
+      "type": "stat",
+      "title": "Commands Refused",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 2,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> filter(fn: (r) => r.category == \"refused\")\n  |> group()\n  |> count()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9706,
+      "type": "stat",
+      "title": "Forced Takeovers",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 2,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> filter(fn: (r) => r.action == \"force\")\n  |> group()\n  |> count()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 26,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9707,
+      "type": "state-timeline",
+      "title": "Who had control",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and r._field == \"control_holder\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> rename(columns: {_value: \"Control\"})\n",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and r._field == \"all_stop\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> rename(columns: {_value: \"ALL STOP\"})\n",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and r._field == \"nav_guard\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> rename(columns: {_value: \"Navigation guard\"})\n",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ALL STOP"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "CLEAR",
+                        "color": "#175d8d",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "LATCHED",
+                        "color": "red",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Navigation guard"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "OK",
+                        "color": "#175d8d",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "WARNING",
+                        "color": "yellow",
+                        "index": 1
+                      },
+                      "2": {
+                        "text": "FAULT",
+                        "color": "red",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Control"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-": {
+                        "text": "nobody",
+                        "color": "#3d434b",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "palette-classic"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showValue": "auto",
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "alignValue": "left",
+        "legend": {
+          "showLegend": false
+        }
+      }
+    },
+    {
+      "id": 9708,
+      "type": "table",
+      "title": "Audit log",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 9,
+        "w": 16,
+        "h": 10
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "import \"strings\"\nfrom(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"message\" or r._field == \"details\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group()\n  |> filter(fn: (r) => \"${search}\" == \"\" or strings.containsStr(v: strings.toLower(v: r.message + \" \" + r.details + \" \" + r.user), substr: strings.toLower(v: \"${search}\")))\n  |> keep(columns: [\"_time\", \"severity\", \"category\", \"message\", \"user\", \"role\", \"details\"])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1000)\n  |> rename(columns: {_time: \"Time\", severity: \"Severity\", category: \"Category\", message: \"Event\", user: \"User\", role: \"Role\", details: \"Details\"})\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "filterable": true,
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Severity"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "info": {
+                        "text": "Info",
+                        "color": "#175d8d",
+                        "index": 0
+                      },
+                      "warning": {
+                        "text": "Warning",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "critical": {
+                        "text": "Critical",
+                        "color": "red",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Category"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "control": {
+                        "text": "Control",
+                        "color": "blue",
+                        "index": 0
+                      },
+                      "login": {
+                        "text": "Login",
+                        "color": "#3a4a66",
+                        "index": 1
+                      },
+                      "refused": {
+                        "text": "Refused",
+                        "color": "orange",
+                        "index": 2
+                      },
+                      "all_stop": {
+                        "text": "ALL STOP",
+                        "color": "red",
+                        "index": 3
+                      },
+                      "nav_guard": {
+                        "text": "Nav guard",
+                        "color": "purple",
+                        "index": 4
+                      },
+                      "region": {
+                        "text": "Region",
+                        "color": "#0f6f6a",
+                        "index": 5
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "User"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Role"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 95
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      }
+    },
+    {
+      "id": 9709,
+      "type": "table",
+      "title": "Refused commands by user",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 9,
+        "w": 8,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"value\" and r.category == \"refused\")\n  |> group(columns: [\"user\"])\n  |> count()\n  |> group()\n  |> keep(columns: [\"user\", \"_value\"])\n  |> sort(columns: [\"_value\"], desc: true)\n  |> rename(columns: {user: \"User\", _value: \"Refused\"})\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 9710,
+      "type": "table",
+      "title": "Events by user",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 12,
+        "w": 8,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"value\" and r.user != \"-\")\n  |> group(columns: [\"user\", \"category\"])\n  |> count()\n  |> group()\n  |> pivot(rowKey: [\"user\"], columnKey: [\"category\"], valueColumn: \"_value\")\n  |> rename(columns: {user: \"User\"})\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 9711,
+      "type": "stat",
+      "title": "Open Sessions",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 16,
+        "w": 8,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and r._field == \"c2_sessions\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "none reported",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-": {
+                  "text": "none",
+                  "color": "#3d434b",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 22,
+          "titleSize": 12
+        }
+      }
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "name": "Mission events",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "influxdb-usv"
+        },
+        "enable": true,
+        "iconColor": "yellow",
+        "target": {
+          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"events\" and r._field == \"message\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n"
+        }
+      }
+    ]
+  }
+}

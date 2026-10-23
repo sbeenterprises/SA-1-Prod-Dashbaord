@@ -69,7 +69,15 @@ Signal K server (`signalk_http` in the ProcessConfig; v2 and v1 resource
 paths are both tried, `signalk_token` when security denies anonymous reads), "Return to base" for
 the built-in return route, or the id's first block when the lookup fails;
 mission_name comes from the grafana_bridge ProcessConfig (default: the MOOS
-Community name).
+Community name). route_plan: the safe-route planner note read from the same
+route's description ("water >= 3 m, 10 m clearance, US3LA1CB", "-" when the
+route has none). nav_status_msg: the navigation guard's reason
+(NAV_STATUS_MSG, "-" when empty). region_state: the region behaviour's state
+(V26_STATE: contained, lapsed, breached ...). control_holder and
+control_role: who holds control of the boat ("-" nobody), control_since_ms
+(numeric, epoch ms of the last change), c2_sessions (open logins as
+"alice (operator, 192.168.22.5); ...", "-" none) and c2_session_count
+(numeric), from iWebSocket's audit lines, re-written every 5 s.
 See docs/alpha-mission-integration.md for the state derivation rules.
 
 ### contacts / traffic (FR-6) — source: MOOS bridge, 1 Hz while active
@@ -146,11 +154,22 @@ and writes all vertices with one timestamp, so `last()` per idx is
 exactly the current geometry. The region outline is closed (first vertex
 repeated). "NONE" clears the set. Written only when the datum is present.
 
+### can_drive: source MOOS bridge (iCAN drive interface), on change and 1 Hz
+status (string: ACTIVE | STANDBY | NO_BUS | INHIBITED), owner (AUTONOMY |
+MANUAL), tx_gear (fwd | neutral | rev), trim_state (up | down | idle),
+profile (drive profile name), conflict ("none" or the IDs another node
+sends), tx_thrust_pct (negative in reverse), tx_rudder_pct,
+rudder_limit_pct (while the speed-scaled limit is active), send (CAN_SEND
+0/1), lost_link (0/1), rudder_mismatch (0/1).
+
 ### autonomy (FR-1/FR-3/FR-11) — source: MOOS bridge, 1 Hz snapshot
 Numeric mirrors of the Alpha mission flags so they can be graphed and
 alerted on (0/1 unless noted): deploy, waypoint, returning, stationing,
 pause, armed, comms_lost, entry_gate_open, manual_override,
-survey_complete, awaiting_rearm, helm_drive, allstop (1 only for
+survey_complete, awaiting_rearm, helm_drive, all_stop (the operator ALL
+STOP latch from iWebSocket, once it has been posted), nav_guard (0 ok |
+1 warning | 2 fault, written only while the navigation guard reports, so
+missing = silent or not fitted), allstop (1 only for
 unexpected all-stop reasons; ManualOverride/NothingToDo are benign),
 geofence_breached (0 ok | 1 breach | 2 recovering; decays to 0 after 30 s
 without an OPR_BREACHED post), obstacle_alerts (count, 120 s TTL),
@@ -176,7 +195,10 @@ rudder_cmd (deg in simulation; PERCENT on the vessel's iCAN), rudder_actual
 heading_error (deg, derived by the bridge as wrap(desired - actual), 2 Hz),
 speed_error (kn, derived), speed_cap, cmd_speed (kn, planchaPID governor),
 next_turn_angle (deg), pid_heading_out, pid_speed_out (legacy pMarinePID
-names; planchaPID does not publish them)
+names; planchaPID does not publish them), service_mode (0/1, SERVICE_MODE:
+manual tuning gains in use), gain_heading_kp / gain_heading_ki /
+gain_heading_kd / gain_speed_kp / gain_speed_ki / gain_speed_kd (the gains
+planchaPID applies, from PID_GAINS, on change)
 
 usv-722 CAN (can_bridge, usv722_can.hpp, steering actuator id 0x210 and the
 Glendinning helm 18FF11D0): rudder_actual (deg, actuator feedback),
@@ -336,6 +358,18 @@ power_w, rc6_pct; NVIDIA (nvidia_smi with name_override) temperature_gpu,
 memory_used and the rest of that input's fields.
 
 ## Measurements (bucket: events)
+
+### audit (v1.2.43): the boat control audit trail, kept a year
+One row per iWebSocket audit line (CONTROL_EVENT / UI_AUTH_EVENT) and per
+navigation-guard and region event. Tags: `vessel`, `category` (control |
+login | refused | all_stop | nav_guard | region), `action` (take, handover,
+force, release, request, deny, cancel, lost, revoke, refused, all_stop,
+all_stop_reset, start, login, logout, anonymous, disconnect, rejected,
+fault, warn, ok, stop, note), `severity` (info | warning | critical),
+`user` and `role` ("-" when none), `source`. Fields: message (operator
+wording), details (generation, from, reason, ip, session, level, why ...;
+"-" when none), value (1). A forced takeover's grant and reason lines are
+one row. The events bucket's retention is at least 365 days (installer).
 
 ### events (FR-1/FR-11)
 Tags: `vessel`, `type` (state_change | waypoint | mission | alarm |

@@ -142,6 +142,22 @@ if ! influx auth list --token "$INFLUX_TOKEN" &>/dev/null; then
 fi
 influx bucket create --name events --org "$INFLUX_ORG" \
   --retention 365d --token "$INFLUX_TOKEN" 2>/dev/null || true
+# The events bucket also holds the control audit trail (measurement audit,
+# v1.2.43): kept at least a year. An existing bucket with a shorter (non
+# infinite) retention is raised to 365 d; a longer one is left alone.
+EV_JSON=$(influx bucket list --name events --org "$INFLUX_ORG" --token "$INFLUX_TOKEN" --json 2>/dev/null || true)
+EV_ID=$(printf '%s' "$EV_JSON" | python3 -c 'import json,sys
+try:
+    b = json.load(sys.stdin)[0]
+    rules = b.get("retentionRules") or []
+    secs = rules[0].get("everySeconds", 0) if rules else 0
+    print(b["id"] if 0 < secs < 365 * 86400 else "")
+except Exception:
+    print("")' 2>/dev/null)
+if [[ -n $EV_ID ]]; then
+  influx bucket update --id "$EV_ID" --retention 365d --token "$INFLUX_TOKEN" >/dev/null \
+    && say "events bucket retention raised to 365 days (audit trail)"
+fi
 influx bucket create --name telemetry_1m --org "$INFLUX_ORG" \
   --retention 365d --token "$INFLUX_TOKEN" 2>/dev/null || true
 influx task create --org "$INFLUX_ORG" --token "$INFLUX_TOKEN" --file - <<'EOF' 2>/dev/null || true
@@ -358,8 +374,11 @@ else
 fi
 
 say "Provisioning Grafana"
-mkdir -p /var/lib/grafana/dashboards
+mkdir -p /var/lib/grafana/dashboards /var/lib/grafana/dashboards-audit
 cp "$REPO"/grafana/dashboards/*.json /var/lib/grafana/dashboards/
+# The Audit page lives in its own, restricted folder (provisioning
+# provider usv-audit; permissions set at the end of this section).
+mv -f /var/lib/grafana/dashboards/usv-audit.json /var/lib/grafana/dashboards-audit/
 cp -r "$REPO"/grafana/provisioning/dashboards /etc/grafana/provisioning/
 cp -r "$REPO"/grafana/provisioning/alerting /etc/grafana/provisioning/
 sed -e "s|__INFLUX_TOKEN__|$INFLUX_TOKEN|" \
@@ -368,7 +387,7 @@ sed -e "s|__INFLUX_TOKEN__|$INFLUX_TOKEN|" \
     > /etc/grafana/provisioning/datasources/influxdb.yml
 chown -R root:grafana /etc/grafana/provisioning
 chmod 640 /etc/grafana/provisioning/datasources/influxdb.yml
-chown -R grafana:grafana /var/lib/grafana/dashboards
+chown -R grafana:grafana /var/lib/grafana/dashboards /var/lib/grafana/dashboards-audit
 
 # Set the admin password from usv.env. Do NOT swallow failures silently —
 # a failed reset leaves the operator locked out with no hint why.
@@ -453,14 +472,93 @@ if grep -q 'ops@example.com' "$REPO/grafana/provisioning/alerting/contact-points
   echo "         placeholder address ops@example.com. Alerts will go nowhere."
 fi
 
+# ------------------------------------------------- Signal K login (SK_LOGIN)
+# SK_LOGIN=1: one login for Swiftships-UI and the dashboard. nginx takes
+# GRAFANA_PORT and asks usv-auth about every request; usv-auth checks the
+# browser's Signal K login and passes the user and a Grafana role (from the
+# boat role: viewer / planner Viewer, operator / supervisor Editor). Grafana
+# moves to 127.0.0.1:GRAFANA_INTERNAL_PORT and trusts the headers from
+# nginx only (auth.proxy). Not logged in to Signal K: Grafana's own login
+# form, so the admin account keeps working. SK_LOGIN=0 (default) removes
+# all of it again. Turn it on only after Signal K security is set up.
+GINT=${GRAFANA_INTERNAL_PORT:-3099}
+sed -i '/^# >>> usv-sklogin >>>$/,/^# <<< usv-sklogin <<<$/d' "$GINI"
+if [[ ${SK_LOGIN:-0} == 1 ]]; then
+  say "Signal K login: Grafana on 127.0.0.1:$GINT behind nginx on ${GRAFANA_PORT:-3001}"
+  {
+    echo '# >>> usv-sklogin >>>'
+    echo '[server]'
+    echo 'http_addr = 127.0.0.1'
+    echo "http_port = $GINT"
+    echo '[auth.proxy]'
+    echo 'enabled = true'
+    echo 'header_name = X-WEBAUTH-USER'
+    echo 'header_property = username'
+    echo 'auto_sign_up = true'
+    echo 'sync_ttl = 1'
+    echo 'whitelist = 127.0.0.1, ::1'
+    echo 'headers = Role:X-WEBAUTH-ROLE'
+    echo 'enable_login_token = false'
+    echo '# <<< usv-sklogin <<<'
+  } >> "$GINI"
+  chmod 640 "$GINI"; chown root:grafana "$GINI"
+fi
+
 # Branding (logo, favicon, login page, title): deploy/brand.sh. Grafana OSS
 # has no white-label config, so it overwrites shipped assets; an apt
 # upgrade of grafana restores them until this installer is re-run.
 say "Applying Swiftships branding"
 bash "$REPO/deploy/brand.sh"
 
+# nginx gives GRAFANA_PORT back before Grafana takes it again (SK_LOGIN=0).
+if [[ ${SK_LOGIN:-0} != 1 && -f /etc/nginx/conf.d/usv-dashboard.conf ]]; then
+  rm -f /etc/nginx/conf.d/usv-dashboard.conf
+  systemctl reload nginx 2>/dev/null || systemctl restart nginx 2>/dev/null || true
+  systemctl disable --now usv-auth 2>/dev/null || true
+fi
 systemctl enable --now grafana-server
 systemctl restart grafana-server
+
+if [[ ${SK_LOGIN:-0} == 1 ]]; then
+  command -v nginx >/dev/null 2>&1 || apt-get install -y nginx
+  install -d /usr/local/lib/usv
+  install -m 755 "$REPO/deploy/usv_auth.py" /usr/local/lib/usv/usv_auth.py
+  install -m 644 "$REPO/deploy/systemd/usv-auth.service" /etc/systemd/system/usv-auth.service
+  # The stock site listens on 80; this host serves only the dashboard.
+  rm -f /etc/nginx/sites-enabled/default
+  sed -e "s|__LISTEN__|${GRAFANA_PORT:-3001}|g" \
+      -e "s|__GRAFANA__|127.0.0.1:$GINT|g" \
+      -e "s|__AUTH__|127.0.0.1:${USV_AUTH_PORT:-3102}|g" \
+      "$REPO/deploy/nginx/usv-dashboard.conf.in" > /etc/nginx/conf.d/usv-dashboard.conf
+  systemctl daemon-reload
+  systemctl enable --now usv-auth
+  systemctl restart usv-auth
+  if nginx -t 2>/dev/null; then
+    systemctl enable nginx >/dev/null 2>&1
+    systemctl restart nginx
+  else
+    echo "WARNING: nginx configuration rejected (nginx -t); the dashboard is not reachable on ${GRAFANA_PORT:-3001}."
+    nginx -t || true
+  fi
+fi
+
+# ------------------------------------------------- Audit folder permissions
+# Only Editors and Admins (operators and supervisors under SK_LOGIN) may
+# open the Audit page; Viewers keep every other page.
+GAPI=http://127.0.0.1:${GRAFANA_PORT:-3001}
+[[ ${SK_LOGIN:-0} == 1 ]] && GAPI=http://127.0.0.1:$GINT
+for _ in $(seq 1 30); do
+  curl -sf -u "admin:$GRAFANA_ADMIN_PASSWORD" "$GAPI/api/folders/usv-audit-folder" >/dev/null 2>&1 && break
+  sleep 1
+done
+if curl -sf -u "admin:$GRAFANA_ADMIN_PASSWORD" -H 'Content-Type: application/json' \
+     -X POST "$GAPI/api/folders/usv-audit-folder/permissions" \
+     -d '{"items":[{"role":"Editor","permission":1}]}' >/dev/null 2>&1; then
+  say "Audit page: open to Editors and Admins only"
+else
+  echo "WARNING: could not restrict the Audit folder (Grafana API on $GAPI). Set it by hand:"
+  echo "         Dashboards -> Swift Autonomous Audit -> Permissions: remove Viewer, keep Editor (View)."
+fi
 
 # ---------------------------------------------------------------- firewall
 # An active ufw with a default-deny policy silently drops operator browsers

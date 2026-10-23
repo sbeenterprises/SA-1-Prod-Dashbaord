@@ -38,7 +38,7 @@ sudo ${MOOS_DIR:+MOOS_DIR="$MOOS_DIR"} bash deploy/install.sh
 
 say "Service status"
 for u in influxdb grafana-server telegraf usv-signalk-bridge usv-can-bridge \
-         usv-mayara-bridge usv-frigate-bridge; do
+         usv-mayara-bridge usv-frigate-bridge usv-auth nginx; do
   systemctl cat "$u" &>/dev/null || continue
   printf '  %-22s %s\n' "$u" "$(systemctl is-active "$u")"
 done

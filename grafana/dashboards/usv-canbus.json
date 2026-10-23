@@ -8,7 +8,7 @@
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
-  "refresh": "1s",
+  "refresh": "2s",
   "editable": true,
   "style": "dark",
   "time": {
@@ -145,6 +145,16 @@
       "targetBlank": false,
       "icon": "dashboard",
       "tooltip": "Open Alarms"
+    },
+    {
+      "type": "link",
+      "title": "Audit",
+      "url": "/d/usv-audit",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Audit"
     },
     {
       "type": "link",
@@ -1028,9 +1038,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 7,
+        "y": 9,
         "w": 12,
-        "h": 6
+        "h": 5
       },
       "targets": [
         {
@@ -1097,9 +1107,9 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 7,
+        "y": 9,
         "w": 12,
-        "h": 6
+        "h": 5
       },
       "targets": [
         {
@@ -1169,9 +1179,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 13,
+        "y": 14,
         "w": 12,
-        "h": 6
+        "h": 5
       },
       "targets": [
         {
@@ -1252,9 +1262,9 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 13,
+        "y": 14,
         "w": 12,
-        "h": 6
+        "h": 5
       },
       "targets": [
         {
@@ -1276,6 +1286,607 @@
       },
       "options": {
         "showHeader": true
+      }
+    },
+    {
+      "id": 9501,
+      "type": "stat",
+      "title": "Drive Interface",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 3,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"can_drive\" and (r._field == \"status\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "ACTIVE": {
+                  "text": "ACTIVE",
+                  "color": "#175d8d",
+                  "index": 0
+                },
+                "STANDBY": {
+                  "text": "STANDBY",
+                  "color": "#3d434b",
+                  "index": 1
+                },
+                "NO_BUS": {
+                  "text": "NO BUS",
+                  "color": "red",
+                  "index": 2
+                },
+                "INHIBITED": {
+                  "text": "NO PROFILE",
+                  "color": "red",
+                  "index": 3
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 18,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9502,
+      "type": "stat",
+      "title": "Driven By",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 3,
+        "y": 7,
+        "w": 3,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"can_drive\" and (r._field == \"owner\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "AUTONOMY": {
+                  "text": "AUTONOMY",
+                  "color": "#175d8d",
+                  "index": 0
+                },
+                "MANUAL": {
+                  "text": "MANUAL",
+                  "color": "orange",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 18,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9503,
+      "type": "stat",
+      "title": "CAN Control",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 7,
+        "w": 3,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"can_drive\" and (r._field == \"send\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OFF",
+                  "color": "#3d434b",
+                  "index": 0
+                },
+                "1": {
+                  "text": "ON",
+                  "color": "#175d8d",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 20,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9504,
+      "type": "stat",
+      "title": "Gear Sent",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 7,
+        "w": 3,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"can_drive\" and (r._field == \"tx_gear\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "fwd": {
+                  "text": "FORWARD",
+                  "color": "#175d8d",
+                  "index": 0
+                },
+                "neutral": {
+                  "text": "NEUTRAL",
+                  "color": "#3d434b",
+                  "index": 1
+                },
+                "rev": {
+                  "text": "REVERSE",
+                  "color": "orange",
+                  "index": 2
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 18,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9505,
+      "type": "stat",
+      "title": "Thrust Sent",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 3,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"can_drive\" and (r._field == \"tx_thrust_pct\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "unit": "percent",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 20,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9506,
+      "type": "stat",
+      "title": "Rudder Sent",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 15,
+        "y": 7,
+        "w": 3,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"can_drive\" and (r._field == \"tx_rudder_pct\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "unit": "percent",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#00bcd4",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 20,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9507,
+      "type": "stat",
+      "title": "Trim Sent",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 7,
+        "w": 3,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"can_drive\" and (r._field == \"trim_state\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "idle": {
+                  "text": "IDLE",
+                  "color": "#3d434b",
+                  "index": 0
+                },
+                "up": {
+                  "text": "UP",
+                  "color": "#00bcd4",
+                  "index": 1
+                },
+                "down": {
+                  "text": "DOWN",
+                  "color": "#00bcd4",
+                  "index": 2
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 18,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9508,
+      "type": "stat",
+      "title": "Bus Conflict",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 7,
+        "w": 3,
+        "h": 2
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"can_drive\" and (r._field == \"conflict\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "none": {
+                  "text": "NONE",
+                  "color": "#175d8d",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "regex",
+              "options": {
+                "pattern": "(.+)",
+                "result": {
+                  "text": "BLOCKED: $1",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 18,
+          "titleSize": 12
+        }
       }
     }
   ],

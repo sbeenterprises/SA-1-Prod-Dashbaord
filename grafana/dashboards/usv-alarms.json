@@ -148,6 +148,16 @@
     },
     {
       "type": "link",
+      "title": "Audit",
+      "url": "/d/usv-audit",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Audit"
+    },
+    {
+      "type": "link",
       "title": "Fleet",
       "url": "/d/usv-fleet",
       "keepTime": true,
@@ -311,7 +321,7 @@
         "x": 0,
         "y": 2,
         "w": 12,
-        "h": 7
+        "h": 6
       },
       "targets": [],
       "fieldConfig": {
@@ -350,7 +360,7 @@
         "x": 12,
         "y": 2,
         "w": 12,
-        "h": 7
+        "h": 6
       },
       "targets": [
         {
@@ -384,9 +394,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 9,
+        "y": 8,
         "w": 4,
-        "h": 3
+        "h": 2
       },
       "targets": [
         {
@@ -441,7 +451,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -456,9 +466,9 @@
       },
       "gridPos": {
         "x": 4,
-        "y": 9,
+        "y": 8,
         "w": 4,
-        "h": 3
+        "h": 2
       },
       "targets": [
         {
@@ -532,7 +542,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 18,
           "titleSize": 12
         }
       }
@@ -547,9 +557,9 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 9,
+        "y": 8,
         "w": 4,
-        "h": 3
+        "h": 2
       },
       "targets": [
         {
@@ -607,7 +617,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -622,9 +632,9 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 9,
+        "y": 8,
         "w": 4,
-        "h": 3
+        "h": 2
       },
       "targets": [
         {
@@ -679,7 +689,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -694,9 +704,9 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 9,
+        "y": 8,
         "w": 4,
-        "h": 3
+        "h": 2
       },
       "targets": [
         {
@@ -751,7 +761,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -766,9 +776,9 @@
       },
       "gridPos": {
         "x": 20,
-        "y": 9,
+        "y": 8,
         "w": 4,
-        "h": 3
+        "h": 2
       },
       "targets": [
         {
@@ -826,7 +836,7 @@
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 34,
+          "valueSize": 20,
           "titleSize": 12
         }
       }
@@ -841,7 +851,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 10,
         "w": 4,
         "h": 3
       },
@@ -921,7 +931,7 @@
       },
       "gridPos": {
         "x": 4,
-        "y": 12,
+        "y": 10,
         "w": 4,
         "h": 3
       },
@@ -996,7 +1006,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 12,
+        "y": 10,
         "w": 4,
         "h": 3
       },
@@ -1067,7 +1077,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 12,
+        "y": 10,
         "w": 4,
         "h": 3
       },
@@ -1149,7 +1159,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 12,
+        "y": 10,
         "w": 4,
         "h": 3
       },
@@ -1217,7 +1227,7 @@
       },
       "gridPos": {
         "x": 20,
-        "y": 12,
+        "y": 10,
         "w": 4,
         "h": 3
       },
@@ -1285,9 +1295,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 15,
+        "y": 13,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -1392,6 +1402,11 @@
                   "text": "Moving",
                   "color": "light-yellow",
                   "index": 14
+                },
+                "AllStop": {
+                  "text": "ALL STOP",
+                  "color": "red",
+                  "index": 15
                 }
               }
             }
@@ -1426,9 +1441,9 @@
       },
       "gridPos": {
         "x": 4,
-        "y": 15,
+        "y": 13,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -1521,9 +1536,9 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 15,
+        "y": 13,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -1596,9 +1611,9 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 15,
+        "y": 13,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -1676,9 +1691,9 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 15,
+        "y": 13,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -1751,9 +1766,9 @@
       },
       "gridPos": {
         "x": 20,
-        "y": 15,
+        "y": 13,
         "w": 4,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -1799,6 +1814,479 @@
           ]
         },
         "textMode": "auto",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9601,
+      "type": "stat",
+      "title": "Nav Integrity",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: -15s)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and r._field == \"nav_guard\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OK",
+                  "color": "#175d8d",
+                  "index": 0
+                },
+                "1": {
+                  "text": "WARNING",
+                  "color": "yellow",
+                  "index": 1
+                },
+                "2": {
+                  "text": "FAULT",
+                  "color": "red",
+                  "index": 2
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9602,
+      "type": "stat",
+      "title": "ALL STOP",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 16,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"all_stop\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "CLEAR",
+                  "color": "#175d8d",
+                  "index": 0
+                },
+                "1": {
+                  "text": "LATCHED",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9603,
+      "type": "stat",
+      "title": "Control",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 16,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"control_holder\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-": {
+                  "text": "NOBODY",
+                  "color": "#3d434b",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "regex",
+              "options": {
+                "pattern": "(.+)",
+                "result": {
+                  "text": "$1",
+                  "color": "#175d8d",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9604,
+      "type": "stat",
+      "title": "Drive Interface",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"can_drive\" and (r._field == \"status\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "ACTIVE": {
+                  "text": "ACTIVE",
+                  "color": "#175d8d",
+                  "index": 0
+                },
+                "STANDBY": {
+                  "text": "STANDBY",
+                  "color": "#3d434b",
+                  "index": 1
+                },
+                "NO_BUS": {
+                  "text": "NO BUS",
+                  "color": "red",
+                  "index": 2
+                },
+                "INHIBITED": {
+                  "text": "NO PROFILE",
+                  "color": "red",
+                  "index": 3
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 34,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9605,
+      "type": "stat",
+      "title": "Rudder vs Drive",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 16,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"can_drive\" and (r._field == \"rudder_mismatch\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "FOLLOWING",
+                  "color": "#175d8d",
+                  "index": 0
+                },
+                "1": {
+                  "text": "NOT FOLLOWING",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 29,
+          "titleSize": 12
+        }
+      }
+    },
+    {
+      "id": 9606,
+      "type": "stat",
+      "title": "Service Mode",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-usv"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 16,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-usv"
+          },
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autopilot\" and (r._field == \"service_mode\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3d434b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OFF",
+                  "color": "#175d8d",
+                  "index": 0
+                },
+                "1": {
+                  "text": "ON (TUNING)",
+                  "color": "orange",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value",
         "graphMode": "none",
         "colorMode": "background",
         "justifyMode": "auto",

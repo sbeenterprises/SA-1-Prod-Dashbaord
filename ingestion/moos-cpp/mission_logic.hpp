@@ -141,6 +141,7 @@ struct MissionFlags {
     bool region = false;               // REGION: operating region enforced (BHV_OpRegionV24); a fence, not a mode
     bool commanded = false;            // throttle or rudder command in force (MotionLatch, set by the bridge)
     bool moving = false;               // speed over ground at or above the drift threshold (MotionLatch)
+    bool all_stop = false;             // ALL_STOP: operator ALL STOP latched (iWebSocket) until ALL_STOP_RESET
     std::string helm_state;            // IVPHELM_STATE (informational)
     std::string allstop = "clear";     // IVPHELM_ALLSTOP (informational)
 };
@@ -173,7 +174,11 @@ inline bool autonomy_driving(const MissionFlags& f) {
 //   - at rest: Parked / Completed / Idle as before.
 // Helm health is intentionally NOT folded in: a frozen helm while Paused
 // must show as Paused + an all-stop alert, not mask one with the other.
+// The operator's ALL STOP (ALL_STOP=true from iWebSocket) outranks
+// everything: autonomy is ended, rudder and thrust are held at 0 and every
+// start is refused until it is reset.
 inline const char* DeriveMissionState(const MissionFlags& f) {
+    if (f.all_stop)                              return "AllStop";
     if (comms_lost_active(f.comms_lost))         return "CommsLost";
     if (f.remote_control)                        return "Remote";
     if (!autonomy_driving(f) && f.commanded)     return "Remote";
@@ -927,6 +932,325 @@ inline std::string RouteDisplayName(const std::string& id,
     return dash != std::string::npos && dash >= 4 ? id.substr(0, dash) : id;
 }
 
+// Swiftships-UI's Plan Safe Route writes the planned path into the selected
+// route and adds a note to its description:
+//   "Planned in water >= 3 m with 10 m clearance (US3LA1CB, US5LMOBB)."
+// A route carrying the note was checked against the ENC (depth, land,
+// hazards). Returns "water >= 3 m, 10 m clearance, US3LA1CB, US5LMOBB" (the
+// cells when listed), "" when the description has no such note.
+inline std::string ParsePlannerNote(const std::string& description) {
+    const std::string tag = "Planned in water >=";
+    const size_t at = description.find(tag);
+    if (at == std::string::npos) return "";
+    const char* p = description.c_str() + at + tag.size();
+    char* end = nullptr;
+    const double depth = std::strtod(p, &end);
+    if (end == p) return "";
+    std::string out = "water >= ";
+    {
+        char b[32];
+        std::snprintf(b, sizeof b, "%g", depth);
+        out += b;
+        out += " m";
+    }
+    const std::string rest(end);
+    const size_t with = rest.find("with ");
+    if (with != std::string::npos) {
+        const char* q = rest.c_str() + with + 5;
+        char* qe = nullptr;
+        const double clear = std::strtod(q, &qe);
+        if (qe != q && std::string(qe).find("clearance") != std::string::npos) {
+            char b[32];
+            std::snprintf(b, sizeof b, "%g", clear);
+            out += ", " + std::string(b) + " m clearance";
+        }
+    }
+    const size_t lp = rest.find('(');
+    const size_t rp = lp == std::string::npos ? std::string::npos : rest.find(')', lp);
+    if (lp != std::string::npos && rp != std::string::npos && rp > lp + 1)
+        out += ", " + trim(rest.substr(lp + 1, rp - lp - 1));
+    return out;
+}
+
+// ------------------------------------------------ boat control audit trail
+//
+// iWebSocket's audit trail, one line per event, posted to MOOS as
+// CONTROL_EVENT (control lease, ALL STOP) and UI_AUTH_EVENT (logins,
+// refused commands), without the timestamp its daily file carries:
+//   CONTROL_EVENT = take user=alice role=operator gen=1
+//   CONTROL_EVENT = force user=carol role=supervisor gen=5 from=alice
+//   CONTROL_EVENT = force reason=operator not answering
+//   CONTROL_EVENT = lost user=alice (not heard)
+//   UI_AUTH_EVENT = login user=alice level=readwrite role=operator ip=192.168.22.5 session=k3f9a1x0
+//   UI_AUTH_EVENT = rejected key=DESIRED_THRUST user=bob level=readonly why=level
+// A forced takeover is two lines (the grant, then the reason); they are
+// joined into one event.
+
+struct AuditFields {
+    std::string action;
+    std::map<std::string, std::string> kv;
+    std::string note;   // a trailing "(not heard)" / "(logout)" etc.
+};
+
+inline AuditFields ParseAuditFields(const std::string& text) {
+    AuditFields a;
+    const std::string t = trim(text);
+    size_t i = 0;
+    auto next_token = [&](size_t from) {
+        size_t e = t.find(' ', from);
+        return e == std::string::npos ? t.size() : e;
+    };
+    bool first = true;
+    while (i < t.size()) {
+        while (i < t.size() && t[i] == ' ') ++i;
+        if (i >= t.size()) break;
+        if (t[i] == '(') {
+            a.note = trim(t.substr(i));
+            if (!a.note.empty() && a.note.front() == '(') a.note.erase(0, 1);
+            if (!a.note.empty() && a.note.back() == ')') a.note.pop_back();
+            break;
+        }
+        const size_t e = next_token(i);
+        const std::string tok = t.substr(i, e - i);
+        const size_t eq = tok.find('=');
+        if (first && eq == std::string::npos) {
+            a.action = tok;
+        } else if (eq != std::string::npos) {
+            const std::string key = tok.substr(0, eq);
+            if (key == "reason") {          // free text to the end of the line
+                a.kv[key] = trim(t.substr(i + eq + 1));
+                break;
+            }
+            a.kv[key] = tok.substr(eq + 1);
+        } else {
+            a.note += (a.note.empty() ? "" : " ") + tok;
+        }
+        first = false;
+        i = e;
+    }
+    return a;
+}
+
+struct AuditEvent {
+    std::string category;   // control | login | refused | all_stop
+    std::string action;     // take, force, login, rejected ...
+    std::string severity;   // info | warning | critical
+    std::string user;       // "" when none
+    std::string role;
+    std::string message;    // operator wording
+    std::string details;    // the remaining fields (ip, session, generation ...)
+    bool popup = false;     // also an operator popup (Mission Events, severity)
+};
+
+inline std::string AuditRefusedWhy(const std::string& why) {
+    if (why == "level") return "read-only account";
+    if (why == "role") return "role may not command";
+    if (why == "control") return "not in control";
+    if (why == "moos") return "boat link down";
+    if (why == "stale") return "control changed hands before it arrived";
+    if (why == "all_stop") return "ALL STOP latched";
+    return why.empty() ? "refused" : why;
+}
+
+inline AuditEvent DescribeAudit(const std::string& kind, const AuditFields& f) {
+    AuditEvent ev;
+    ev.action = f.action;
+    ev.severity = "info";
+    ev.category = kind == "control" ? "control" : "login";
+    auto get = [&f](const char* k) {
+        auto it = f.kv.find(k);
+        return it == f.kv.end() ? std::string() : it->second;
+    };
+    const std::string user = get("user") == "-" ? "" : get("user");
+    ev.user = user;
+    ev.role = get("role");
+    const std::string who = user.empty() ? "(no login)" : user;
+    std::string det;
+    auto add = [&det](const std::string& k, const std::string& v) {
+        if (!v.empty() && v != "-") det += (det.empty() ? "" : " · ") + k + " " + v;
+    };
+    const std::string& a = f.action;
+    if (kind == "control") {
+        if (a == "take") {
+            ev.message = who + " took control";
+            add("generation", get("gen"));
+            add("from", get("from"));
+        } else if (a == "handover" || a == "handover-timeout") {
+            ev.message = "Control handed to " + who +
+                         (get("from").empty() ? "" : " by " + get("from")) +
+                         (a == "handover-timeout" ? " (request not answered)" : "");
+            add("generation", get("gen"));
+        } else if (a == "force") {
+            ev.message = who + " forced a takeover" +
+                         (get("from").empty() ? "" : " from " + get("from"));
+            ev.severity = "warning";
+            ev.popup = true;
+            add("generation", get("gen"));
+            add("reason", get("reason"));
+        } else if (a == "release") {
+            ev.message = who + " released control";
+        } else if (a == "request") {
+            ev.message = who + " asked " + (get("holder").empty() ? "the operator" : get("holder")) + " for control";
+        } else if (a == "deny") {
+            ev.message = (get("holder").empty() ? "The operator" : get("holder")) + " kept control (" + who + " refused)";
+        } else if (a == "cancel") {
+            ev.message = who + "'s request for control cancelled" + (f.note.empty() ? "" : " (" + f.note + ")");
+        } else if (a == "logout") {
+            ev.message = who + " logged out holding control: control released";
+        } else if (a == "lost") {
+            ev.message = "Control lost: " + who + " not heard";
+            ev.severity = "warning";
+            ev.popup = true;
+        } else if (a == "revoke") {
+            ev.message = "Control revoked" + (get("why").empty() ? "" : " (" + get("why") + ")");
+            ev.severity = "warning";
+            ev.popup = true;
+        } else if (a == "refused") {
+            ev.category = "refused";
+            ev.message = "Control " + (get("action").empty() ? "action" : get("action")) + " refused for " + who;
+            ev.severity = "warning";
+            add("reason", get("reason"));
+        } else if (a == "all_stop") {
+            ev.category = "all_stop";
+            ev.message = "ALL STOP pressed by " + who;
+            ev.severity = "critical";
+        } else if (a == "all_stop_reset") {
+            ev.category = "all_stop";
+            ev.message = "ALL STOP reset by " + who;
+        } else if (a == "start") {
+            ev.message = "Boat link started, nobody in control";
+            add("login check", get("command_auth"));
+            add("exclusive control", get("exclusive_control"));
+        } else {
+            ev.message = "Control " + a + (user.empty() ? "" : " " + user);
+        }
+    } else {
+        if (a == "login") {
+            ev.message = who + " logged in";
+            add("level", get("level"));
+        } else if (a == "logout") {
+            ev.message = who + " logged out";
+        } else if (a == "anonymous") {
+            ev.message = "Connection without a login";
+            add("level", get("level"));
+        } else if (a == "disconnect") {
+            ev.message = who + " disconnected";
+        } else if (a == "rejected" && !get("login").empty()) {
+            ev.category = "refused";
+            ev.message = "Login refused: token of a logged-out session";
+            ev.severity = "warning";
+            ev.popup = true;
+        } else if (a == "rejected") {
+            ev.category = "refused";
+            ev.message = "Command refused: " + (get("key").empty() ? std::string("command") : get("key")) +
+                         " from " + who;
+            ev.severity = "warning";
+            ev.popup = true;
+            add("why", AuditRefusedWhy(get("why")));
+            add("level", get("level"));
+        } else {
+            ev.message = "Login " + a + (user.empty() ? "" : " " + user);
+        }
+        add("ip", get("ip"));
+        add("session", get("session"));
+    }
+    if (!f.note.empty() && a != "cancel" && a != "start") add("note", f.note);
+    ev.details = det;
+    return ev;
+}
+
+// Joins the two-line forced takeover, keeps who holds control and which
+// logins are open. Feed every CONTROL_EVENT / UI_AUTH_EVENT line; take the
+// finished events from feed() and flush().
+class AuditTrail {
+public:
+    std::vector<AuditEvent> feed(const std::string& kind, const std::string& text, double now) {
+        std::vector<AuditEvent> out;
+        const AuditFields f = ParseAuditFields(text);
+        if (f.action.empty()) return out;
+        if (kind == "control" && f.action == "force" && f.kv.count("reason") && !f.kv.count("user")) {
+            if (have_pending_) {
+                AuditFields joined = pending_;
+                joined.kv["reason"] = f.kv.at("reason");
+                out.push_back(DescribeAudit("control", joined));
+                have_pending_ = false;
+            } else {
+                AuditFields solo = f;
+                out.push_back(DescribeAudit("control", solo));
+            }
+            return out;
+        }
+        flush_into(out, now, true);
+        Track(kind, f);
+        if (kind == "control" && f.action == "force") {
+            pending_ = f;
+            pending_t_ = now;
+            have_pending_ = true;
+            return out;
+        }
+        out.push_back(DescribeAudit(kind, f));
+        return out;
+    }
+    // A forced takeover whose reason line never came (after 2 s).
+    std::vector<AuditEvent> flush(double now) {
+        std::vector<AuditEvent> out;
+        flush_into(out, now, false);
+        return out;
+    }
+    const std::string& holder() const { return holder_; }
+    const std::string& holder_role() const { return holder_role_; }
+    // "alice (operator, 192.168.22.5); bob (viewer, 192.168.22.7)", "" when none.
+    std::string sessions() const {
+        std::string s;
+        for (const auto& kv : sessions_) {
+            const Session& x = kv.second;
+            s += (s.empty() ? "" : "; ") + (x.user.empty() ? std::string("(no login)") : x.user) +
+                 " (" + (x.role.empty() ? std::string("viewer") : x.role) +
+                 (x.ip.empty() ? "" : ", " + x.ip) + ")";
+        }
+        return s;
+    }
+    size_t session_count() const { return sessions_.size(); }
+
+private:
+    struct Session { std::string user, role, ip; };
+    void flush_into(std::vector<AuditEvent>& out, double now, bool force_out) {
+        if (have_pending_ && (force_out || now - pending_t_ >= 2.0)) {
+            out.push_back(DescribeAudit("control", pending_));
+            have_pending_ = false;
+        }
+    }
+    void Track(const std::string& kind, const AuditFields& f) {
+        auto get = [&f](const char* k) {
+            auto it = f.kv.find(k);
+            return it == f.kv.end() ? std::string() : it->second;
+        };
+        const std::string& a = f.action;
+        if (kind == "control") {
+            if (a == "take" || a == "handover" || a == "handover-timeout" || a == "force") {
+                holder_ = get("user") == "-" ? "" : get("user");
+                holder_role_ = get("role");
+            } else if (a == "release" || a == "logout" || a == "lost" || a == "revoke" || a == "start") {
+                holder_.clear();
+                holder_role_.clear();
+            }
+            if (a == "start") sessions_.clear();
+        } else {
+            const std::string sess = get("session");
+            if (sess.empty() || sess == "-") return;
+            if (a == "login" || a == "anonymous")
+                sessions_[sess] = Session{get("user") == "-" ? "" : get("user"), get("role"), get("ip")};
+            else if (a == "logout" || a == "disconnect")
+                sessions_.erase(sess);
+        }
+    }
+    AuditFields pending_;
+    double pending_t_ = 0.0;
+    bool have_pending_ = false;
+    std::string holder_, holder_role_;
+    std::map<std::string, Session> sessions_;
+};
+
 // ------------------------------------------------ ENC cells (chart server)
 
 // One chart the onboard chart server lists (Signal K,
@@ -1401,6 +1725,10 @@ struct ReadinessConfig {
     // those rows instead of waiting for the console (CONSOLE blocks READY).
     bool enc_fitted = true;
     bool console_checklist = true;
+    // The mission runs the navigation guard (pNavGuard in the app list):
+    // its silence then fails the Navigation integrity row, since the boat
+    // refuses autonomy starts without it (nav_guard_required).
+    bool nav_guard_expected = false;
 };
 
 // strict (vessel profile): a check whose sensor data is missing FAILS
@@ -1449,6 +1777,29 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         }
         add("gps", "GPS position fix", ev, st);
     }
+    // 1b Navigation integrity: the boat's navigation guard compares heading,
+    // speed and course with what the GPS positions show (autonomy.nav_guard
+    // 0 ok, 1 warning, 2 fault, written once a second while it reports). In
+    // a fault the boat ends autonomy and refuses starts.
+    {
+        const Sample* g = num("autonomy", "nav_guard", 10.0);
+        const Sample* m = num("mission_state", "nav_status_msg", 1e9);
+        const std::string why = (m && m->is_str && !m->str.empty() && m->str != "-") ? m->str : "";
+        if (!g) {
+            if (cfg.nav_guard_expected)
+                add("nav", "Navigation integrity", "navigation guard not reporting · autonomy starts refused", READY_FAIL);
+            else
+                add("nav", "Navigation integrity", "no navigation guard on this vessel", READY_NA);
+        } else if (g->num >= 2.0) {
+            add("nav", "Navigation integrity",
+                "FAULT" + (why.empty() ? std::string() : ": " + why) + " · autonomy starts refused", READY_FAIL);
+        } else if (g->num >= 1.0) {
+            add("nav", "Navigation integrity",
+                "warning" + (why.empty() ? std::string() : ": " + why), READY_PASS);
+        } else {
+            add("nav", "Navigation integrity", "heading, speed and track consistent with GPS", READY_PASS);
+        }
+    }
     // A route planned with Swiftships-UI's safe-route tool is checked
     // against the ENC (depth, land, hazards) and saved with "(safe)" in its
     // name; "(unsafe)" marks one that failed the check. A safe route stands
@@ -1457,7 +1808,13 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
     const Sample* route = num("mission_state", "route_name", 1e9);
     const bool have_route = route && !route->str.empty() && route->str != "-";
     const std::string route_lc = have_route ? lower(route->str) : "";
-    const bool route_enc_safe = route_lc.find("(safe)") != std::string::npos;
+    // Since Swiftships-UI updates the selected route in place, the check
+    // is recorded in the route's description instead of its name; the
+    // bridge reads that note with the route (mission_state.route_plan).
+    const Sample* plan = num("mission_state", "route_plan", 1e9);
+    const bool route_planned = have_route && plan && plan->is_str &&
+                               !plan->str.empty() && plan->str != "-";
+    const bool route_enc_safe = route_lc.find("(safe)") != std::string::npos || route_planned;
     const bool route_enc_unsafe = route_lc.find("(unsafe)") != std::string::npos;
     // 2 Course planning: route, waypoints, operating region (or a route
     // checked safe on the ENC)
@@ -1475,6 +1832,7 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         ev += have_wpts ? " · " + fmt0(wpts->num) + " waypoints" : " · no waypoints";
         if (len && len->num > 0.0) ev += " · " + fmt1(len->num / 1852.0) + " nm";
         if (have_region) ev += " · region " + fmt0(region->num) + " vertices";
+        else if (route_planned) ev += " · checked safe on ENC (" + plan->str + ")";
         else if (route_enc_safe) ev += " · checked safe on ENC";
         else ev += " · no operating region or ENC safe route";
         bool ok = have_route && have_wpts && (have_region || route_enc_safe);
@@ -1524,6 +1882,9 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         if (helm) { ev += " · helm " + helm->str; ok = ok && helm->str != "MALCONFIG"; }
         else { ev += " · helm state unknown"; ok = false; }
         if (allstop && allstop->num != 0.0) { ev += " · ALL-STOP"; ok = false; }
+        // Autopilot service mode: manual tuning gains replace the schedule.
+        const Sample* svc = num("autopilot", "service_mode", 1e9);
+        if (svc && svc->num != 0.0) ev += " · SERVICE MODE (tuning gains)";
         add("autonomy", "Autonomy stack", ev, ok ? READY_PASS : READY_FAIL);
     }
     // 5 MOOS community complete: every app the Antler block starts (or
@@ -1560,7 +1921,14 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
     {
         const Sample* act = num("autopilot", "rudder_actual", 15.0);
         const Sample* cmd = num("autopilot", "rudder_cmd", 15.0);
-        if (!act && !cmd) add("steering", "Steering / actuators", "no rudder feedback or command", missing);
+        // The drive interface's own check: rudder feedback differs from
+        // what it sends for longer than its alarm time.
+        const Sample* mis = num("can_drive", "rudder_mismatch", 1e9);
+        const bool mismatch = mis && mis->num != 0.0;
+        if (!act && !cmd)
+            add("steering", "Steering / actuators",
+                mismatch ? "RUDDER NOT FOLLOWING DRIVE COMMAND" : "no rudder feedback or command",
+                mismatch ? READY_FAIL : missing);
         else {
             bool ok = true;
             std::string ev;
@@ -1568,6 +1936,7 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             if (cmd) { ev += std::string(ev.empty() ? "" : " · ") + "cmd " + fmt1(cmd->num) + "°"; ok = ok && std::fabs(cmd->num) <= 35.0; }
             if (act && cmd && std::fabs(act->num - cmd->num) > 10.0) { ev += " · NOT FOLLOWING"; ok = false; }
             if (!act) { ev += " · no rudder feedback"; if (strict) ok = false; }
+            if (mismatch) { ev += " · RUDDER NOT FOLLOWING DRIVE COMMAND"; ok = false; }
             add("steering", "Steering / actuators", ev, ok ? READY_PASS : READY_FAIL);
         }
     }
@@ -1588,11 +1957,31 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
     {
         const Sample* up = num("canbus", "interface_up", 60.0);
         const Sample* rate = num("canbus", "msg_rate", 60.0);
-        if (!up) add("can", "CAN bus", "no CAN bridge data", missing);
-        else if (up->num == 1.0)
-            add("can", "CAN bus", "interface UP" + (rate ? " · " + fmt0(rate->num) + " msg/s" : std::string()),
-                READY_PASS);
-        else   // simulation host: can_bridge runs with no CAN hardware
+        // The drive interface (what sends rudder, thrust and gear on the
+        // bus): its status, and IDs it is not sending because another node
+        // transmits them.
+        const Sample* dst = num("can_drive", "status", 1e9);
+        const Sample* dcf = num("can_drive", "conflict", 1e9);
+        std::string drive;
+        bool drive_ok = true;
+        if (dst && dst->is_str && !dst->str.empty()) {
+            const std::string st = dst->str;
+            if (st == "INHIBITED") { drive = "DRIVE PROFILE NOT LOADED"; drive_ok = false; }
+            else if (st == "NO_BUS") { drive = "DRIVE INTERFACE: NO BUS"; drive_ok = false; }
+            else drive = "drive " + lower(st);
+            if (dcf && dcf->is_str && !dcf->str.empty() && dcf->str != "none" && dcf->str != "-") {
+                drive += " · BLOCKED, ANOTHER NODE SENDS " + dcf->str;
+                drive_ok = false;
+            }
+        }
+        if (!up) {
+            if (drive.empty()) add("can", "CAN bus", "no CAN bridge data", missing);
+            else add("can", "CAN bus", "no CAN bridge data · " + drive, strict || !drive_ok ? READY_FAIL : READY_NA);
+        } else if (up->num == 1.0) {
+            std::string ev = "interface UP" + (rate ? " · " + fmt0(rate->num) + " msg/s" : std::string());
+            if (!drive.empty()) ev += " · " + drive;
+            add("can", "CAN bus", ev, drive_ok ? READY_PASS : READY_FAIL);
+        } else   // simulation host: can_bridge runs with no CAN hardware
             add("can", "CAN bus", strict ? "interface DOWN" : "interface DOWN (no CAN hardware in simulation)",
                 strict ? READY_FAIL : READY_NA);
     }
@@ -1776,8 +2165,15 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
         if (geo && geo->num != 0.0) ev += "GEOFENCE BREACH";
         if (risk && risk->num >= 2.0) ev += std::string(ev.empty() ? "" : " · ") + "COLLISION RISK HIGH";
         if (crash && crash->num != 0.0) ev += std::string(ev.empty() ? "" : " · ") + "CRASH STOP";
+        // Operator ALL STOP latched (starts refused until reset) and the
+        // operating region's own breach state.
+        const Sample* astop = num("autonomy", "all_stop", 10.0);
+        if (astop && astop->num != 0.0) ev += std::string(ev.empty() ? "" : " · ") + "ALL STOP LATCHED";
+        const Sample* rst = num("mission_state", "region_state", 1e9);
+        if (rst && rst->is_str && lower(rst->str).find("breach") != std::string::npos)
+            ev += std::string(ev.empty() ? "" : " · ") + "REGION BREACHED";
         add("safety", "Safety flags",
-            ev.empty() ? "no geofence breach, no HIGH collision risk, no crash stop" : ev,
+            ev.empty() ? "no geofence breach, no HIGH collision risk, no crash stop, no ALL STOP" : ev,
             ev.empty() ? READY_PASS : READY_FAIL);
     }
     // 17 Console checklist (manual items ticked in Swiftships-UI)

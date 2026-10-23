@@ -621,7 +621,10 @@ static void test_readiness() {
     s.put("radar", "online", 1, now - 2);
 
     auto v = EvaluateReadiness(s, now, false);
-    CHECK(v.size() == 17);
+    CHECK(v.size() == 18);
+    CHECK(find_check(v, "nav").status == READY_NA);           // no navigation guard
+    CHECK_EQ_STR(find_check(v, "nav").evidence, "no navigation guard on this vessel");
+    CHECK(find_check(v, "nav").seq == 2);
     CHECK(find_check(v, "speed_cap").status == READY_NA);     // no VESSEL_MAX_SPEED_KN
     CHECK_EQ_STR(find_check(v, "speed_cap").evidence, "no VESSEL_MAX_SPEED_KN in usv.env");
     CHECK(find_check(v, "apps").status == READY_NA);          // no app list configured
@@ -648,7 +651,7 @@ static void test_readiness() {
     CHECK(find_check(v, "safety").status == READY_PASS);
     CHECK(find_check(v, "checklist").status == READY_CONSOLE);
     ReadinessSummary r = SummarizeReadiness(v);
-    CHECK(!r.ready && r.failed == 0 && r.console == 2 && r.na == 8 && r.passed == 7);   // N/A 8: speed cap (v1.2.33)
+    CHECK(!r.ready && r.failed == 0 && r.console == 2 && r.na == 9 && r.passed == 7);   // N/A 9: speed cap (v1.2.33), nav guard (v1.2.43)
     CHECK(r.blocking.empty());
 
     // Strict (vessel) profile: missing sensors fail and GPS quality is required.
@@ -1201,6 +1204,242 @@ static void test_enc_charts() {
     CHECK(ParseSignalKCharts("<html>502 Bad Gateway</html>").empty());
 }
 
+// v1.2.43: safe route from the planner note, navigation integrity, ALL STOP,
+// drive interface, service mode, region breach.
+static void test_v1243_readiness() {
+    const double now = 1000.0;
+    // Planner note in the route description (Plan Safe Route updates the
+    // route in place; no "(safe)" in the name any more).
+    CHECK_EQ_STR(ParsePlannerNote("Planned in water >= 3 m with 10 m clearance (US3LA1CB, US5LMOBB)."),
+                 "water >= 3 m, 10 m clearance, US3LA1CB, US5LMOBB");
+    CHECK_EQ_STR(ParsePlannerNote("Survey leg. Planned in water >= 2.5 m with 8 m clearance ()."),
+                 "water >= 2.5 m, 8 m clearance");
+    CHECK_EQ_STR(ParsePlannerNote("Planned in water >= 4 m"), "water >= 4 m");
+    CHECK_EQ_STR(ParsePlannerNote("Survey leg"), "");
+    CHECK_EQ_STR(ParsePlannerNote(""), "");
+    CHECK_EQ_STR(ParsePlannerNote("Planned in water >= m"), "");
+    {
+        ReadinessConfig nc;
+        nc.enc_fitted = false;
+        LatestStore r;
+        r.put_str("mission_state", "route_name", "L2-2026", now - 5);
+        r.put("mission", "waypoints_total", 11, now - 5);
+        r.put("mission", "route_length_m", 0.9 * 1852.0, now - 5);
+        r.put_str("mission_state", "route_plan", "water >= 3 m, 10 m clearance, US3LA1CB", now - 5);
+        auto a = EvaluateReadiness(r, now, true, nc);
+        CHECK(find_check(a, "course").status == READY_PASS);
+        CHECK_EQ_STR(find_check(a, "course").evidence,
+                     "L2-2026 · 11 waypoints · 0.9 nm · checked safe on ENC (water >= 3 m, 10 m clearance, US3LA1CB)");
+        CHECK(find_check(a, "enc").status == READY_PASS);
+        // "-" (route has no note) is not a plan.
+        r.put_str("mission_state", "route_plan", "-", now - 5);
+        CHECK(find_check(EvaluateReadiness(r, now, true, nc), "course").status == READY_FAIL);
+        // A region still applies its own rule; the plan is not repeated.
+        r.put_str("mission_state", "route_plan", "water >= 3 m", now - 5);
+        r.put("mission", "region_vertices", 8, now - 5);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(r, now, true, nc), "course").evidence,
+                     "L2-2026 · 11 waypoints · 0.9 nm · region 8 vertices");
+    }
+    // Navigation integrity.
+    {
+        ReadinessConfig cfg;
+        LatestStore n;
+        CHECK(find_check(EvaluateReadiness(n, now, true, cfg), "nav").status == READY_NA);
+        cfg.nav_guard_expected = true;
+        CHECK(find_check(EvaluateReadiness(n, now, true, cfg), "nav").status == READY_FAIL);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(n, now, true, cfg), "nav").evidence,
+                     "navigation guard not reporting · autonomy starts refused");
+        n.put("autonomy", "nav_guard", 0, now - 1);
+        CHECK(find_check(EvaluateReadiness(n, now, true, cfg), "nav").status == READY_PASS);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(n, now, true, cfg), "nav").evidence,
+                     "heading, speed and track consistent with GPS");
+        n.put("autonomy", "nav_guard", 1, now - 1);
+        n.put_str("mission_state", "nav_status_msg", "heading vs GPS track 48 deg", now - 1);
+        CHECK(find_check(EvaluateReadiness(n, now, true, cfg), "nav").status == READY_PASS);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(n, now, true, cfg), "nav").evidence,
+                     "warning: heading vs GPS track 48 deg");
+        n.put("autonomy", "nav_guard", 2, now - 1);
+        CHECK(find_check(EvaluateReadiness(n, now, true, cfg), "nav").status == READY_FAIL);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(n, now, true, cfg), "nav").evidence,
+                     "FAULT: heading vs GPS track 48 deg · autonomy starts refused");
+        // Stale (guard went silent 20 s ago): not reporting.
+        n.put("autonomy", "nav_guard", 0, now - 20);
+        CHECK(find_check(EvaluateReadiness(n, now, true, cfg), "nav").status == READY_FAIL);
+    }
+    // ALL STOP and region breach in Safety flags; service mode evidence;
+    // drive interface on the CAN and steering rows.
+    {
+        LatestStore k;
+        k.put("autonomy", "all_stop", 1, now - 1);
+        CHECK(find_check(EvaluateReadiness(k, now, true), "safety").status == READY_FAIL);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(k, now, true), "safety").evidence, "ALL STOP LATCHED");
+        k.put("autonomy", "all_stop", 0, now - 1);
+        k.put_str("mission_state", "region_state", "breached", now - 1);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(k, now, true), "safety").evidence, "REGION BREACHED");
+        k.put_str("mission_state", "region_state", "contained", now - 1);
+        CHECK(find_check(EvaluateReadiness(k, now, true), "safety").status == READY_PASS);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(k, now, true), "safety").evidence,
+                     "no geofence breach, no HIGH collision risk, no crash stop, no ALL STOP");
+
+        k.put("comms", "moos_msg_rate", 60, now - 1);
+        k.put_str("mission_state", "helm_state", "DRIVE", now - 1);
+        k.put("autopilot", "service_mode", 1, now - 1);
+        CHECK(find_check(EvaluateReadiness(k, now, true), "autonomy").status == READY_PASS);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(k, now, true), "autonomy").evidence,
+                     "60 msg/s · helm DRIVE · SERVICE MODE (tuning gains)");
+
+        k.put("canbus", "interface_up", 1, now - 1);
+        k.put("canbus", "msg_rate", 121, now - 1);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(k, now, true), "can").evidence, "interface UP · 121 msg/s");
+        k.put_str("can_drive", "status", "ACTIVE", now - 1);
+        k.put_str("can_drive", "conflict", "none", now - 1);
+        CHECK(find_check(EvaluateReadiness(k, now, true), "can").status == READY_PASS);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(k, now, true), "can").evidence,
+                     "interface UP · 121 msg/s · drive active");
+        k.put_str("can_drive", "conflict", "rudder,thrust", now - 1);
+        CHECK(find_check(EvaluateReadiness(k, now, true), "can").status == READY_FAIL);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(k, now, true), "can").evidence,
+                     "interface UP · 121 msg/s · drive active · BLOCKED, ANOTHER NODE SENDS rudder,thrust");
+        k.put_str("can_drive", "conflict", "none", now - 1);
+        k.put_str("can_drive", "status", "INHIBITED", now - 1);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(k, now, true), "can").evidence,
+                     "interface UP · 121 msg/s · DRIVE PROFILE NOT LOADED");
+        CHECK(find_check(EvaluateReadiness(k, now, true), "can").status == READY_FAIL);
+        k.put_str("can_drive", "status", "STANDBY", now - 1);
+        CHECK(find_check(EvaluateReadiness(k, now, true), "can").status == READY_PASS);
+
+        k.put("autopilot", "rudder_actual", 2.0, now - 1);
+        k.put("autopilot", "rudder_cmd", 1.5, now - 1);
+        CHECK(find_check(EvaluateReadiness(k, now, true), "steering").status == READY_PASS);
+        k.put("can_drive", "rudder_mismatch", 1, now - 1);
+        CHECK(find_check(EvaluateReadiness(k, now, true), "steering").status == READY_FAIL);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(k, now, true), "steering").evidence,
+                     "rudder 2.0° · cmd 1.5° · RUDDER NOT FOLLOWING DRIVE COMMAND");
+    }
+    // Drive rudder mismatch with no recent rudder values: still a FAIL.
+    {
+        LatestStore m;
+        m.put("can_drive", "rudder_mismatch", 1, now - 1);
+        CHECK(find_check(EvaluateReadiness(m, now, false), "steering").status == READY_FAIL);
+        CHECK_EQ_STR(find_check(EvaluateReadiness(m, now, false), "steering").evidence,
+                     "RUDDER NOT FOLLOWING DRIVE COMMAND");
+        m.put("can_drive", "rudder_mismatch", 0, now - 1);
+        CHECK(find_check(EvaluateReadiness(m, now, false), "steering").status == READY_NA);
+    }
+    // ALL STOP outranks every other state.
+    {
+        MissionFlags f;
+        f.waypoint = true;
+        f.all_stop = true;
+        f.comms_lost = "loiter";
+        CHECK_EQ_STR(DeriveMissionState(f), "AllStop");
+        f.all_stop = false;
+        CHECK_EQ_STR(DeriveMissionState(f), "CommsLost");
+    }
+}
+
+// The boat's audit trail lines (iWebSocket CONTROL_EVENT / UI_AUTH_EVENT).
+static void test_audit_trail() {
+    AuditFields f = ParseAuditFields("take user=alice role=operator gen=1");
+    CHECK_EQ_STR(f.action, "take");
+    CHECK_EQ_STR(f.kv["user"], "alice");
+    CHECK_EQ_STR(f.kv["gen"], "1");
+    f = ParseAuditFields("lost user=alice (not heard)");
+    CHECK_EQ_STR(f.note, "not heard");
+    f = ParseAuditFields("refused action=release user=bob reason=the boat is running a mission, manual control");
+    CHECK_EQ_STR(f.kv["reason"], "the boat is running a mission, manual control");
+    CHECK_EQ_STR(f.kv["action"], "release");
+
+    AuditTrail t;
+    auto e = t.feed("control", "start command_auth=signalk exclusive_control=true (nobody in control)", 1.0);
+    CHECK(e.size() == 1);
+    CHECK_EQ_STR(e[0].message, "Boat link started, nobody in control");
+    CHECK_EQ_STR(e[0].details, "login check signalk · exclusive control true");
+    e = t.feed("auth", "login user=alice level=readwrite role=operator ip=192.168.22.5 session=k3f9a1x0", 2.0);
+    CHECK(e.size() == 1 && e[0].category == "login" && e[0].user == "alice" && e[0].role == "operator");
+    CHECK_EQ_STR(e[0].message, "alice logged in");
+    CHECK_EQ_STR(e[0].details, "level readwrite · ip 192.168.22.5 · session k3f9a1x0");
+    CHECK(!e[0].popup);
+    e = t.feed("control", "take user=alice role=operator gen=1", 3.0);
+    CHECK_EQ_STR(e[0].message, "alice took control");
+    CHECK_EQ_STR(t.holder(), "alice");
+    CHECK_EQ_STR(t.holder_role(), "operator");
+    e = t.feed("auth", "login user=carol level=admin role=supervisor ip=192.168.22.9 session=q81mz2c4", 4.0);
+    CHECK(t.session_count() == 2);
+    CHECK_EQ_STR(t.sessions(), "alice (operator, 192.168.22.5); carol (supervisor, 192.168.22.9)");
+    // Forced takeover: two lines, one event with the reason.
+    e = t.feed("control", "force user=carol role=supervisor gen=5 from=alice", 5.0);
+    CHECK(e.empty());
+    CHECK_EQ_STR(t.holder(), "carol");
+    e = t.feed("control", "force reason=operator not answering", 5.1);
+    CHECK(e.size() == 1);
+    CHECK_EQ_STR(e[0].message, "carol forced a takeover from alice");
+    CHECK_EQ_STR(e[0].details, "generation 5 · reason operator not answering");
+    CHECK(e[0].severity == "warning" && e[0].popup && e[0].category == "control");
+    // Without its reason line the grant is still reported (after 2 s, or
+    // at the next line).
+    t.feed("control", "force user=alice role=supervisor gen=6 from=carol", 6.0);
+    CHECK(t.flush(7.0).empty());
+    e = t.flush(8.5);
+    CHECK(e.size() == 1);
+    CHECK_EQ_STR(e[0].message, "alice forced a takeover from carol");
+    t.feed("control", "force user=carol role=supervisor gen=7 from=alice", 9.0);
+    e = t.feed("control", "all_stop user=carol", 9.2);
+    CHECK(e.size() == 2);
+    CHECK_EQ_STR(e[0].message, "carol forced a takeover from alice");
+    CHECK_EQ_STR(e[1].message, "ALL STOP pressed by carol");
+    CHECK(e[1].category == "all_stop" && e[1].severity == "critical");
+    e = t.feed("control", "all_stop_reset user=carol", 9.5);
+    CHECK_EQ_STR(e[0].message, "ALL STOP reset by carol");
+    e = t.feed("control", "lost user=carol (not heard)", 10.0);
+    CHECK_EQ_STR(e[0].message, "Control lost: carol not heard");
+    CHECK(e[0].popup && e[0].severity == "warning");
+    CHECK_EQ_STR(t.holder(), "");
+    e = t.feed("control", "handover user=alice role=operator gen=9 from=carol", 11.0);
+    CHECK_EQ_STR(e[0].message, "Control handed to alice by carol");
+    CHECK_EQ_STR(t.holder(), "alice");
+    e = t.feed("control", "request user=bob holder=alice", 12.0);
+    CHECK_EQ_STR(e[0].message, "bob asked alice for control");
+    e = t.feed("control", "deny user=bob holder=alice", 12.5);
+    CHECK_EQ_STR(e[0].message, "alice kept control (bob refused)");
+    e = t.feed("control", "cancel user=bob (disconnected)", 12.7);
+    CHECK_EQ_STR(e[0].message, "bob's request for control cancelled (disconnected)");
+    e = t.feed("auth", "rejected key=DESIRED_THRUST user=bob level=readonly why=level", 13.0);
+    CHECK(e[0].category == "refused" && e[0].popup);
+    CHECK_EQ_STR(e[0].message, "Command refused: DESIRED_THRUST from bob");
+    CHECK_EQ_STR(e[0].details, "why read-only account · level readonly");
+    e = t.feed("auth", "rejected key=AUTONOMOUS_START user=- why=stale", 13.5);
+    CHECK_EQ_STR(e[0].message, "Command refused: AUTONOMOUS_START from (no login)");
+    CHECK_EQ_STR(e[0].details, "why control changed hands before it arrived");
+    e = t.feed("auth", "rejected login=logged-out-token ip=10.0.0.4 session=abc", 14.0);
+    CHECK_EQ_STR(e[0].message, "Login refused: token of a logged-out session");
+    e = t.feed("control", "refused action=take user=bob reason=controlled by alice", 14.5);
+    CHECK(e[0].category == "refused");
+    CHECK_EQ_STR(e[0].message, "Control take refused for bob");
+    CHECK_EQ_STR(e[0].details, "reason controlled by alice");
+    e = t.feed("auth", "logout user=carol ip=192.168.22.9 session=q81mz2c4", 15.0);
+    CHECK_EQ_STR(e[0].message, "carol logged out");
+    CHECK(t.session_count() == 1);
+    e = t.feed("auth", "disconnect user=alice role=operator ip=192.168.22.5 session=k3f9a1x0", 16.0);
+    CHECK(t.session_count() == 0);
+    CHECK_EQ_STR(t.sessions(), "");
+    e = t.feed("control", "release user=alice", 17.0);
+    CHECK_EQ_STR(e[0].message, "alice released control");
+    CHECK_EQ_STR(t.holder(), "");
+    e = t.feed("control", "revoke why=moos-reconnect user=alice", 18.0);
+    CHECK_EQ_STR(e[0].message, "Control revoked (moos-reconnect)");
+    // A restart of the boat link forgets the holder and the logins.
+    t.feed("control", "take user=alice role=operator gen=1", 19.0);
+    t.feed("auth", "anonymous level=readonly role=viewer ip=10.0.0.7 session=zz", 19.5);
+    CHECK(t.session_count() == 1);
+    t.feed("control", "start command_auth=signalk exclusive_control=true (nobody in control)", 20.0);
+    CHECK_EQ_STR(t.holder(), "");
+    CHECK(t.session_count() == 0);
+    // Empty or garbage lines produce nothing.
+    CHECK(t.feed("control", "", 21.0).empty());
+    CHECK(t.feed("auth", "   ", 21.0).empty());
+}
+
 int main() {
     test_remote_and_moving();
     test_motion_latch();
@@ -1232,6 +1471,8 @@ int main() {
     test_camera_readiness();
     test_comms_loss_return();
     test_enc_charts();
+    test_v1243_readiness();
+    test_audit_trail();
     test_colav_alerts();
     test_min_cpa_pick();
 

@@ -148,6 +148,16 @@
     },
     {
       "type": "link",
+      "title": "Audit",
+      "url": "/d/usv-audit",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Audit"
+    },
+    {
+      "type": "link",
       "title": "Fleet",
       "url": "/d/usv-fleet",
       "keepTime": true,
@@ -704,6 +714,11 @@
                   "text": "Moving",
                   "color": "light-yellow",
                   "index": 14
+                },
+                "AllStop": {
+                  "text": "ALL STOP",
+                  "color": "red",
+                  "index": 15
                 }
               }
             }
@@ -976,7 +991,7 @@
     {
       "id": 104,
       "type": "table",
-      "title": "Automatic checks \u2014 verified onboard from live telemetry",
+      "title": "",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -985,7 +1000,7 @@
         "x": 0,
         "y": 2,
         "w": 16,
-        "h": 17
+        "h": 18
       },
       "targets": [
         {
@@ -1174,7 +1189,7 @@
           }
         }
       ],
-      "description": "Decided by grafana_bridge every 5 s from the latest telemetry (GPS \u2265 6 satellites and HDOP \u2264 2.5, route inside the region, every Antler app connected, rudder within \u00b135\u00b0 and following the command, coolant < 105 \u00b0C, fuel > 15 %, no active DTC, SOC \u2265 30 %, fuel and battery hours \u2265 route time x margin, helm speed cap within the hull maximum, host load < 90 %). N/A = sensor not fitted or no data; under readiness_profile = vessel it counts as FAIL. CONSOLE = the operator console has not published it (ENC selection, checklist). READY needs no FAIL and no CONSOLE item."
+      "description": "Automatic checks, verified onboard from live telemetry. Decided by grafana_bridge every 5 s from the latest telemetry (GPS \u2265 6 satellites and HDOP \u2264 2.5, route inside the region, every Antler app connected, rudder within \u00b135\u00b0 and following the command, coolant < 105 \u00b0C, fuel > 15 %, no active DTC, SOC \u2265 30 %, fuel and battery hours \u2265 route time x margin, helm speed cap within the hull maximum, host load < 90 %). N/A = sensor not fitted or no data; under readiness_profile = vessel it counts as FAIL. CONSOLE = the operator console has not published it (ENC selection, checklist). READY needs no FAIL and no CONSOLE item."
     },
     {
       "id": 105,
@@ -1188,7 +1203,7 @@
         "x": 16,
         "y": 15,
         "w": 8,
-        "h": 4
+        "h": 5
       },
       "targets": [
         {

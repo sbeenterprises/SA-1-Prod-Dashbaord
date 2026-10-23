@@ -137,12 +137,30 @@ const std::multimap<std::string, FieldMap> kNumericVars = {
     // The ECM's own supply (J1939 VEP1 SPN 168). The house battery and the
     // system voltage come from the Victron shunt through signalk_bridge.
     {"ENGINE_BATTERY_VOLTAGE",            {"engine", "ecu_voltage"}},
+    // iCAN (drive interface): what it actually sends on the bus, once a
+    // second and on change (thrust negative in reverse), and the rudder
+    // limit while the speed-scaled limit is active.
+    {"CAN_TX_RUDDER_PCT",                 {"can_drive", "tx_rudder_pct"}},
+    {"CAN_TX_THRUST_PCT",                 {"can_drive", "tx_thrust_pct"}},
+    {"CAN_RUDDER_LIMIT_PCT",              {"can_drive", "rudder_limit_pct"}},
 };
 // ENGINE_LAMPS (J1939 DM1 byte 1): bit pairs protect (0), amber (2), red
 // stop (4), MIL (6); 01 = lamp on. Written as the raw byte and one 0/1
 // field per lamp, the fields the Fault Lamps tiles read.
 const struct { int shift; const char* field; } kLampBits[] = {
     {0, "lamp_protect"}, {2, "lamp_amber"}, {4, "lamp_red"}, {6, "lamp_mil"}};
+
+// planchaPID PID_GAINS ("service_mode=..,heading_kp=..,..."): the gains it
+// applies this cycle (the manual values in service mode, the schedule
+// otherwise).
+const std::map<std::string, FieldMap> kGainVars = {
+    {"heading_kp", {"autopilot", "gain_heading_kp"}},
+    {"heading_ki", {"autopilot", "gain_heading_ki"}},
+    {"heading_kd", {"autopilot", "gain_heading_kd"}},
+    {"speed_kp",   {"autopilot", "gain_speed_kp"}},
+    {"speed_ki",   {"autopilot", "gain_speed_ki"}},
+    {"speed_kd",   {"autopilot", "gain_speed_kd"}},
+};
 
 // Legacy generic mission variables. Kept for compatibility: if some app
 // publishes one, the bridge yields that field to the external producer and
@@ -175,6 +193,19 @@ const std::map<std::string, FieldMap> kStringPassthrough = {
     // Operator console (Swiftships-UI) state for the Readiness dashboard:
     // ENC_STATUS = "selected:<chart name>" | "none"
     {"ENC_STATUS",         {"mission_state", "enc_status"}},
+    // iCAN drive interface (once a second; written on change, re-emitted
+    // by the snapshot): ACTIVE | STANDBY | NO_BUS | INHIBITED, who drives
+    // (AUTONOMY | MANUAL), gear and trim actually sent, the drive profile,
+    // and IDs it is not sending because another node transmits them.
+    {"CAN_STATUS",         {"can_drive", "status"}},
+    {"CAN_CONTROL_OWNER",  {"can_drive", "owner"}},
+    {"CAN_TX_GEAR",        {"can_drive", "tx_gear"}},
+    {"CAN_TRIM_STATE",     {"can_drive", "trim_state"}},
+    {"CAN_PROFILE",        {"can_drive", "profile"}},
+    {"CAN_CONFLICT",       {"can_drive", "conflict"}},
+    // Operating region state from BHV_OpRegionV26 (contained / lapsed /
+    // breached ...), and the region's last refusal or note (iWebSocket).
+    {"V26_STATE",          {"mission_state", "region_state"}},
 };
 
 // Alpha mission mode flags (posted as strings "true"/"false"; some tools
@@ -209,6 +240,16 @@ const std::set<std::string> kSpecialVars = {
     // pContactSpawn in simulation), RADAR_TARGET / RADAR_TTM_RATE (proposed
     // iRadarTargets additions with CPA/TCPA and a liveness rate).
     "NODE_REPORT", "RADAR_TARGET", "RADAR_TTM_RATE",
+    // Navigation guard (pNavGuard): ok | warn | fault once a second, why,
+    // and the stop it asks for while autonomy drives in a fault.
+    "NAV_STATUS", "NAV_STATUS_MSG", "NAV_GUARD_STOP",
+    // Boat control (iWebSocket with command_auth / exclusive_control): the
+    // operator ALL STOP latch and the audit trail lines.
+    "ALL_STOP", "CONTROL_EVENT", "UI_AUTH_EVENT",
+    "REGION_MSG",
+    // Drive interface booleans (iCAN) and the autopilot's tuning state.
+    "CAN_LOST_LINK", "CAN_RUDDER_MISMATCH", "CAN_SEND",
+    "SERVICE_MODE", "PID_GAINS",
 };
 
 // Variables whose every sample feeds a derived quantity (odometry, heading
@@ -395,6 +436,8 @@ protected:
                 readiness_cfg_.required_apps =
                     usv::ParseAntlerApps(std::vector<std::string>(antler.begin(), antler.end()));
         }
+        for (const auto& a : readiness_cfg_.required_apps)
+            if (a == "pNavGuard") readiness_cfg_.nav_guard_expected = true;
         v = "pMarineViewer,uMACView,uPlotViewer";   // GUI viewers: never a departure fault
         m_MissionReader.GetConfigurationParam("optional_apps", v);
         for (const auto& a : usv::SplitCsv(v)) readiness_cfg_.optional_apps.push_back(usv::trim(a));
@@ -690,15 +733,45 @@ private:
         auto sp = kStringPassthrough.find(key);
         if (sp != kStringPassthrough.end() && msg.IsString()) {
             std::string& prev = last_str_[sp->second.field];
+            // The same route started again may have been re-planned in the
+            // meantime (Plan Safe Route updates the route in place): look
+            // it up again when it is re-posted after 30 s.
+            if (key == "ID_ROUTE" && prev == msg.GetString() && !prev.empty() &&
+                now - route_lookup_t_ >= 30.0) {
+                route_lookup_t_ = now;
+                last_str_["route_name"] = ResolveRouteName(prev);
+                telemetry_->str_field("mission_state", "", "route_name", last_str_["route_name"]);
+                telemetry_->str_field("mission_state", "", "route_plan",
+                                      route_plan_.empty() ? "-" : route_plan_);
+            }
             if (prev != msg.GetString()) {
                 prev = msg.GetString();
                 telemetry_->str_field(sp->second.measurement, "",
                                       sp->second.field, prev);
                 if (key == "ID_ROUTE") {
                     mission_id_ = prev;
+                    route_lookup_t_ = now;
                     last_str_["route_name"] = ResolveRouteName(prev);
                     telemetry_->str_field("mission_state", "", "route_name",
                                           last_str_["route_name"]);
+                    telemetry_->str_field("mission_state", "", "route_plan",
+                                          route_plan_.empty() ? "-" : route_plan_);
+                }
+                if (key == "CAN_STATUS" && (prev == "NO_BUS" || prev == "INHIBITED"))
+                    Event("can", "critical", prev == "NO_BUS"
+                          ? "Drive interface: no CAN bus, rudder and thrust cannot be sent"
+                          : "Drive interface inhibited: drive profile not loaded");
+                if (key == "CAN_CONFLICT" && prev != "none" && !prev.empty())
+                    Event("can", "critical",
+                          "Drive commands blocked: another node is sending " + prev);
+                if (key == "V26_STATE") {
+                    const std::string rs = usv::lower(prev);
+                    if (rs.find("breach") != std::string::npos)
+                        Event("geofence", "critical",
+                              "Operating region BREACHED: helm all-stop at the halt line");
+                    else if (rs.find("lapse") != std::string::npos)
+                        Event("geofence", "warning",
+                              "Outside the working boundary: steering back inside the region");
                 }
                 if (key == "CRASH_STOP_STATUS" && prev == "braking")
                     Event("alarm", "critical",
@@ -823,7 +896,196 @@ private:
             external_station_keep_ = true;
             telemetry_->str_field("mission_state", "", "station_keep",
                                   msg.GetString());
+        } else if (key == "NAV_STATUS" && msg.IsString()) {
+            HandleNavStatus(usv::lower(usv::trim(msg.GetString())), now);
+        } else if (key == "NAV_STATUS_MSG" && msg.IsString()) {
+            nav_msg_ = usv::trim(msg.GetString());
+        } else if (key == "NAV_GUARD_STOP" && msg.IsString()) {
+            // Repeated every 2 s while the fault and autonomy last: one event
+            // per fault episode (or after 60 s).
+            if (!nav_stop_announced_ || now - nav_stop_t_ >= 60.0) {
+                nav_stop_announced_ = true;
+                nav_stop_t_ = now;
+                const std::string why = usv::trim(msg.GetString());
+                const std::string m = "Autonomy stopped by the navigation guard" +
+                                      (why.empty() ? std::string() : ": " + why);
+                Event("nav_guard", "critical", m);
+                usv::AuditEvent a;
+                a.category = "nav_guard"; a.action = "stop"; a.severity = "critical";
+                a.message = m;
+                Audit(a);
+            }
+        } else if (key == "ALL_STOP") {
+            const bool on = usv::truthy(AsString(msg));
+            if (on != flags_.all_stop || !seen_all_stop_) {
+                const bool was = flags_.all_stop;
+                seen_all_stop_ = true;
+                flags_.all_stop = on;
+                if (on)
+                    Event("all_stop", "critical",
+                          "ALL STOP latched: autonomy ended, rudder and thrust 0, starts refused until reset");
+                else if (was)
+                    Event("all_stop", "info", "ALL STOP reset");
+                RefreshDerivedState(now);
+            }
+        } else if ((key == "CONTROL_EVENT" || key == "UI_AUTH_EVENT") && msg.IsString()) {
+            seen_control_ = true;
+            for (const auto& a : audit_.feed(key == "CONTROL_EVENT" ? "control" : "auth",
+                                             msg.GetString(), now))
+                Audit(a);
+            WriteControl();
+        } else if (key == "REGION_MSG" && msg.IsString()) {
+            const std::string m = usv::trim(msg.GetString());
+            if (m != last_region_msg_) {
+                last_region_msg_ = m;
+                if (!m.empty()) {
+                    const bool refused = usv::lower(m).find("refused") != std::string::npos;
+                    Event("region", refused ? "warning" : "info", m);
+                    usv::AuditEvent a;
+                    a.category = "region"; a.action = refused ? "refused" : "note";
+                    a.severity = refused ? "warning" : "info";
+                    a.message = m;
+                    Audit(a);
+                }
+            }
+        } else if (key == "CAN_LOST_LINK" || key == "CAN_RUDDER_MISMATCH" || key == "CAN_SEND") {
+            const bool on = usv::truthy(AsString(msg));
+            auto seen = can_bool_.find(key);
+            const int before = seen == can_bool_.end() ? -1 : seen->second;
+            if (before != (on ? 1 : 0)) {
+                can_bool_[key] = on ? 1 : 0;
+                const double v = on ? 1.0 : 0.0;
+                if (key == "CAN_LOST_LINK") telemetry_->field("can_drive", "", "lost_link", v);
+                else if (key == "CAN_RUDDER_MISMATCH") telemetry_->field("can_drive", "", "rudder_mismatch", v);
+                else telemetry_->field("can_drive", "", "send", v);
+                if (key == "CAN_RUDDER_MISMATCH" && on)
+                    Event("can", "warning", "Rudder feedback is not following the drive command");
+                else if (key == "CAN_LOST_LINK" && on)
+                    Event("can", "warning", "Drive interface: operator link lost, manual commands held at neutral");
+                else if (key == "CAN_SEND" && before != -1)
+                    Event("can", "info", on ? "CAN control switched ON" : "CAN control switched OFF");
+            }
+        } else if (key == "SERVICE_MODE") {
+            const bool on = usv::truthy(AsString(msg));
+            if (on != service_mode_ || !seen_service_mode_) {
+                const bool was = service_mode_;
+                service_mode_ = on;
+                telemetry_->field("autopilot", "", "service_mode", on ? 1 : 0);
+                if (on)
+                    Event("autopilot", "warning", "Autopilot service mode ON: manual tuning gains in use");
+                else if (seen_service_mode_ && was)
+                    Event("autopilot", "info", "Autopilot service mode OFF: scheduled gains");
+                seen_service_mode_ = true;
+            }
+        } else if (key == "PID_GAINS" && msg.IsString()) {
+            // "service_mode=false,heading_kp=1.2,..." every planchaPID tick:
+            // written on change only.
+            if (msg.GetString() != last_pid_gains_) {
+                last_pid_gains_ = msg.GetString();
+                const auto kv = usv::ParseKeyValues(last_pid_gains_);
+                for (const auto& g : kGainVars) {
+                    auto it = kv.find(g.first);
+                    if (it == kv.end()) continue;
+                    char* end = nullptr;
+                    const double v = std::strtod(it->second.c_str(), &end);
+                    if (end != it->second.c_str())
+                        telemetry_->field(g.second.measurement, "", g.second.field, v);
+                }
+            }
         }
+        // The drive interface's thrust and rudder while the operator drives
+        // (owner MANUAL) are console commands too (Remote state).
+        if (msg.IsDouble() && (key == "CAN_TX_THRUST_PCT" || key == "CAN_TX_RUDDER_PCT") &&
+            last_str_["owner"] == "MANUAL" && !usv::autonomy_driving(flags_)) {
+            if (key == "CAN_TX_THRUST_PCT") motion_.set_thrust(msg.GetDouble(), now);
+            else motion_.set_rudder(msg.GetDouble(), now);
+        }
+    }
+
+    // ------------------------------------------- navigation guard / control
+    void HandleNavStatus(const std::string& st, double now) {
+        nav_t_ = now;
+        if (nav_silent_warned_) {
+            nav_silent_warned_ = false;
+            Event("nav_guard", "info", "Navigation guard reporting again");
+        }
+        const int level = st == "fault" ? 2 : (st == "warn" ? 1 : 0);
+        if (level != nav_level_) {
+            const int was = nav_level_;
+            nav_level_ = level;
+            const std::string why = nav_msg_.empty() ? std::string() : ": " + nav_msg_;
+            if (level == 2)
+                Event("nav_guard", "critical", "Navigation FAULT" + why + " (autonomy starts refused)");
+            else if (level == 1)
+                Event("nav_guard", "warning", "Navigation warning" + why);
+            else if (was >= 1)
+                Event("nav_guard", "info", "Navigation consistent again");
+            if (level != 2) nav_stop_announced_ = false;
+            if (level >= 1 || was >= 1) {
+                usv::AuditEvent a;
+                a.category = "nav_guard";
+                a.action = level == 2 ? "fault" : (level == 1 ? "warn" : "ok");
+                a.severity = level == 2 ? "critical" : (level == 1 ? "warning" : "info");
+                a.message = level == 2 ? "Navigation FAULT" : (level == 1 ? "Navigation warning" : "Navigation consistent again");
+                a.details = nav_msg_;
+                Audit(a);
+            }
+        }
+    }
+
+    // One audit row (events bucket, measurement "audit", kept a year), and
+    // an operator event (Mission Events, popups) for the ones that need
+    // attention and for control changes.
+    void Audit(const usv::AuditEvent& a) {
+        auto tag = [](std::string v) {
+            if (v.empty()) v = "-";
+            std::string o;
+            for (char c : v) {
+                if (c == ' ' || c == ',' || c == '=') o += '\\';
+                o += c;
+            }
+            return o;
+        };
+        const std::string tags = "category=" + tag(a.category) + ",action=" + tag(a.action) +
+                                 ",severity=" + tag(a.severity) + ",user=" + tag(a.user) +
+                                 ",role=" + tag(a.role) + ",source=moos";
+        events_->str_field("audit", tags, "message", a.message);
+        events_->str_field("audit", tags, "details", a.details.empty() ? "-" : a.details);
+        events_->field("audit", tags, "value", 1);
+        events_->flush();
+        if (a.category == "control" || a.category == "all_stop") {
+            // ALL STOP itself raises its critical popup from the ALL_STOP
+            // flag; the audit line names who pressed it.
+            const std::string sev = a.category == "all_stop" ? "info" : a.severity;
+            Event("control", sev, a.message + (a.details.empty() ? "" : " (" + a.details + ")"));
+        } else if (a.popup && a.category == "refused") {
+            // A viewer clicking repeatedly: one popup per command and reason a minute.
+            const std::string k = a.user + "|" + a.message;
+            double& t = refused_popup_t_[k];
+            const double now = MonoSeconds();
+            if (t == 0.0 || now - t >= 60.0) {
+                t = now;
+                Event("control", a.severity, a.message + (a.details.empty() ? "" : " (" + a.details + ")"));
+            }
+        }
+    }
+
+    // Who holds control and the open logins, for the Audit and Mission pages.
+    void WriteControl() {
+        const std::string holder = audit_.holder().empty() ? "-" : audit_.holder();
+        if (holder != last_holder_) {
+            last_holder_ = holder;
+            control_since_ms_ = EpochMs();
+        }
+        if (!seen_control_) return;
+        telemetry_->str_field("mission_state", "", "control_holder", holder);
+        telemetry_->str_field("mission_state", "", "control_role",
+                              audit_.holder_role().empty() ? "-" : audit_.holder_role());
+        telemetry_->field("mission_state", "", "control_since_ms", control_since_ms_);
+        telemetry_->str_field("mission_state", "", "c2_sessions",
+                              audit_.sessions().empty() ? "-" : audit_.sessions());
+        telemetry_->field("mission_state", "", "c2_session_count",
+                          static_cast<double>(audit_.session_count()));
     }
 
     void HandleFlag(const std::string& key, bool val) {
@@ -1624,6 +1886,9 @@ private:
         // evaluation only records the statuses; a check may not raise FAIL
         // more often than once a minute (a value flapping on its limit).
         for (const auto& c : checks) {
+            // Navigation integrity raises its own events (fault, warning,
+            // stop, silent guard): no second popup from the check.
+            if (c.id == "nav") continue;
             auto it = last_check_status_.find(c.id);
             if (it == last_check_status_.end()) { last_check_status_[c.id] = c.status; continue; }
             const int prev = it->second;
@@ -1777,6 +2042,42 @@ private:
         if (!mission_name_.empty())
             telemetry_->str_field("mission_state", "", "mission_name",
                                   mission_name_);
+        if (!mission_id_.empty())
+            telemetry_->str_field("mission_state", "", "route_plan",
+                                  route_plan_.empty() ? "-" : route_plan_);
+
+        // Navigation guard: the level while it reports (once a second), so a
+        // silent guard reads as missing; one warning when it falls silent.
+        if (now - nav_t_ <= 5.0) {
+            telemetry_->field("autonomy", "", "nav_guard", nav_level_ < 0 ? 0 : nav_level_);
+            telemetry_->str_field("mission_state", "", "nav_status_msg", nav_msg_.empty() ? "-" : nav_msg_);
+        } else if (nav_t_ > -1e17 && !nav_silent_warned_) {
+            // The last level is kept, so a guard that comes back reports
+            // only what changed while it was silent.
+            nav_silent_warned_ = true;
+            Event("nav_guard", "warning", "Navigation guard not reporting: autonomy starts refused");
+        }
+        // Operator ALL STOP latch, control holder and logins, drive
+        // interface strings: re-emitted so last() over any range finds them.
+        if (seen_all_stop_)
+            telemetry_->field("autonomy", "", "all_stop", b(flags_.all_stop));
+        if (seen_control_ && now - last_control_write_ >= 5.0) {
+            last_control_write_ = now;
+            WriteControl();
+        }
+        for (const auto& a : audit_.flush(now)) Audit(a);
+        for (const char* f : {"status", "owner", "tx_gear", "trim_state", "profile", "conflict"}) {
+            auto it = last_str_.find(f);
+            if (it != last_str_.end() && !it->second.empty())
+                telemetry_->str_field("can_drive", "", f, it->second);
+        }
+        {
+            auto it = last_str_.find("region_state");
+            if (it != last_str_.end() && !it->second.empty())
+                telemetry_->str_field("mission_state", "", "region_state", it->second);
+        }
+        if (seen_service_mode_)
+            telemetry_->field("autopilot", "", "service_mode", service_mode_ ? 1 : 0);
 
         // Traffic (FR-6): contact geometry from own-ship state, per-contact
         // rows for the Traffic dashboard, radar aggregates for the alert
@@ -1885,6 +2186,27 @@ private:
     double lat0_ = 0.0, lon0_ = 0.0;
     std::map<std::string, std::string> last_geometry_;
     std::string signalk_token_;   // optional bearer token when SK security is on
+    std::string route_plan_;      // the route's safe-route planner note ("" none)
+    double route_lookup_t_ = -1e18;
+    // Navigation guard (pNavGuard)
+    std::string nav_msg_;
+    double nav_t_ = -1e18;
+    int nav_level_ = -1;
+    bool nav_stop_announced_ = false, nav_silent_warned_ = false;
+    double nav_stop_t_ = -1e18;
+    // Boat control (iWebSocket): ALL STOP, audit trail, holder, logins
+    bool seen_all_stop_ = false;
+    usv::AuditTrail audit_;
+    bool seen_control_ = false;
+    std::string last_holder_;
+    double last_control_write_ = -1e18;
+    double control_since_ms_ = 0.0;
+    std::map<std::string, double> refused_popup_t_;
+    std::string last_region_msg_;
+    // Drive interface (iCAN) booleans, autopilot tuning
+    std::map<std::string, int> can_bool_;
+    bool service_mode_ = false, seen_service_mode_ = false;
+    std::string last_pid_gains_;
     double enc_poll_s_ = 60.0;    // chart-server poll for the ENC row (0 = off)
     double last_chart_poll_ = -1e18, charts_t_ = -1e18;
     long chart_poll_status_ = -1;
@@ -1908,10 +2230,13 @@ private:
                 signalk_http_ + "/signalk/v1/api/resources/routes/" + id,
                 signalk_http_ + "/signalk/v1/api/resources/routes/urn:mrn:signalk:uuid:" + id,
             };
+            route_plan_.clear();
             for (const auto& url : cands) {
                 long status = 0;
                 const std::string body = usv::HttpGet(url, 800, signalk_token_, &status);
                 name = usv::JsonStringMember(body, "name");
+                if (!name.empty())
+                    route_plan_ = usv::ParsePlannerNote(usv::JsonStringMember(body, "description"));
                 std::fprintf(stderr, "[grafana_bridge] route lookup %s -> HTTP %ld%s%s\n",
                              url.c_str(), status,
                              name.empty() ? "" : " name=", name.c_str());

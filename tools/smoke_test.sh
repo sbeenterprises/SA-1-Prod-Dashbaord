@@ -63,6 +63,13 @@ class H(BaseHTTPRequestHandler):
             self.send_response(200); self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(data))); self.end_headers()
             self.wfile.write(data); return
+        # A route re-planned with Plan Safe Route: same id and name, the
+        # planner note in its description.
+        if self.path.startswith("/signalk/v2/api/resources/routes/R-PLAN"):
+            data = b'{"name":"Harbour loop","description":"Survey leg. Planned in water >= 3 m with 10 m clearance (US5SMOKE).","feature":{}}'
+            self.send_response(200); self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data))); self.end_headers()
+            self.wfile.write(data); return
         self.send_response(404); self.end_headers()
     def log_message(self, *a): pass
 HTTPServer(("127.0.0.1", 8086), H).serve_forever()
@@ -622,6 +629,48 @@ EOF
     sleep 2
     P 'REGION_UPDATES=reset=true # breach_dist=15 # recover_speed=4'
     sleep 3
+    # v1.2.43: route re-planned in place (planner note in its description),
+    # navigation guard, boat control audit trail, ALL STOP, region state,
+    # drive interface, autopilot service mode.
+    P ID_ROUTE=R-PLAN
+    sleep 2
+    P NAV_STATUS=ok
+    sleep 1
+    P 'NAV_STATUS_MSG=heading vs GPS track 52 deg for 10 s' NAV_STATUS=warn
+    sleep 1
+    P NAV_STATUS=fault
+    P 'NAV_GUARD_STOP=heading vs GPS track 52 deg for 10 s'
+    sleep 1
+    P 'NAV_GUARD_STOP=heading vs GPS track 52 deg for 10 s'
+    sleep 2
+    P NAV_STATUS=ok
+    sleep 1
+    P 'CONTROL_EVENT=start command_auth=signalk exclusive_control=true (nobody in control)'
+    P 'UI_AUTH_EVENT=login user=alice level=readwrite role=operator ip=192.168.22.5 session=k3f9a1x0'
+    P 'UI_AUTH_EVENT=login user=carol level=admin role=supervisor ip=192.168.22.9 session=q81mz2c4'
+    P 'CONTROL_EVENT=take user=alice role=operator gen=1'
+    sleep 1
+    P 'CONTROL_EVENT=force user=carol role=supervisor gen=2 from=alice'
+    P 'CONTROL_EVENT=force reason=operator not answering'
+    P 'UI_AUTH_EVENT=rejected key=DESIRED_THRUST user=bob level=readonly why=level'
+    P 'UI_AUTH_EVENT=rejected key=DESIRED_THRUST user=bob level=readonly why=level'
+    sleep 1
+    P 'UI_AUTH_EVENT=disconnect user=alice role=operator ip=192.168.22.5 session=k3f9a1x0'
+    P ALL_STOP=true
+    P 'CONTROL_EVENT=all_stop user=carol'
+    sleep 3
+    P ALL_STOP=false 'CONTROL_EVENT=all_stop_reset user=carol'
+    sleep 1
+    P 'REGION_MSG=Region refused: edges cross' V26_STATE=breached
+    sleep 1
+    P V26_STATE=contained
+    P CAN_STATUS=ACTIVE CAN_CONTROL_OWNER=MANUAL CAN_TX_GEAR=fwd CAN_TRIM_STATE=idle \
+      CAN_PROFILE=usv722 CAN_CONFLICT=none CAN_SEND=true CAN_LOST_LINK=false CAN_RUDDER_MISMATCH=false \
+      CAN_TX_THRUST_PCT=30 CAN_TX_RUDDER_PCT=-5
+    sleep 2
+    P CAN_CONFLICT=rudder CAN_RUDDER_MISMATCH=true
+    P SERVICE_MODE=true 'PID_GAINS=service_mode=true,heading_kp=1.2,heading_ki=0.01,heading_kd=0.3,speed_kp=4,speed_ki=0.2,speed_kd=0'
+    sleep 3
   fi
   kill $DB 2>/dev/null; pkill -f moos_bridge 2>/dev/null; stop_stub
 
@@ -688,11 +737,53 @@ EOF
     grep -q 'state="Following"' "$LINES"               && ok "TRAILING -> state Following"             || bad "Following state missing"
     grep -q "autonomy,.* region_active=1" "$LINES"     && ok "REGION -> autonomy.region_active (a fence, not a state)" || bad "region_active missing"
     ! grep -q 'state="RegionHold"' "$LINES"            && ok "REGION alone does not change the mission state" || bad "REGION produced a RegionHold state"
-    [ "$(grep -o 'Mission state: [A-Za-z]*' "$LINES" | tail -4 | cut -d' ' -f3 | tr '\n' ' ')" = "Idle Remote Moving Idle " ] \
+    [[ "$(grep -o 'Mission state: [A-Za-z]*' "$LINES" | cut -d' ' -f3 | tr '\n' ' ')" == *"Idle Remote Moving Idle "* ]] \
       && ok "outside autonomy (region enforced): throttle -> Remote, drift -> Moving, at rest -> Idle" || bad "Remote / Moving / Idle sequence wrong"
     [ "$(grep -o 'region_vertices=[0-9]*' "$LINES" | tail -1)" = "region_vertices=8" ] \
       && ok "REGION_POLY -> operating region (8 vertices); parameter-only REGION_UPDATES leaves it" || bad "REGION_POLY region missing or wiped by REGION_UPDATES"
     grep -q "Check FAIL: Safety flags: GEOFENCE BREACH" "$LINES" && ok "readiness check turning FAIL -> critical event (popup)" || bad "readiness check FAIL event missing"
+    # v1.2.43
+    grep -q 'mission_state,vessel=usv-moos route_plan="water >= 3 m, 10 m clearance, US5SMOKE"' "$LINES" \
+      && grep -q 'route_name="Harbour loop"' "$LINES" \
+      && ok "route re-planned in place: planner note read from the route description" || bad "route_plan not read from the description"
+    grep -q "autonomy,vessel=usv-moos nav_guard=2" "$LINES" && grep -q "Navigation FAULT: heading vs GPS track 52 deg for 10 s" "$LINES" \
+      && ok "NAV_STATUS fault -> autonomy.nav_guard=2 and a critical event with the reason" || bad "navigation guard fault missing"
+    [ "$(grep -c '^events,.*message="Autonomy stopped by the navigation guard' "$LINES")" = "1" ] \
+      && grep -q '^audit,vessel=usv-moos,category=nav_guard,action=stop,severity=critical' "$LINES" \
+      && ok "NAV_GUARD_STOP repeated -> one stop event per fault, audited" || bad "navigation guard stop events: $(grep -c '^events,.*message="Autonomy stopped by the navigation guard' "$LINES")"
+    grep -q 'message="Navigation consistent again"' "$LINES" && ok "navigation guard back to ok -> info event" || bad "nav recovery event missing"
+    grep -q 'check=nav evidence="no navigation guard on this vessel"' "$LINES" \
+      && ok "Navigation integrity row N/A without pNavGuard in the app list" || bad "nav readiness row missing"
+    grep -q 'state="AllStop"' "$LINES" && grep -q 'message="ALL STOP latched' "$LINES" \
+      && ok "ALL_STOP=true -> state AllStop and a critical event" || bad "ALL STOP state / event missing"
+    grep -q 'check=safety evidence="[^"]*ALL STOP LATCHED' "$LINES" && ok "ALL STOP -> Safety flags FAIL" || bad "ALL STOP not in Safety flags"
+    grep -q 'message="ALL STOP reset"' "$LINES" && ok "ALL_STOP=false -> reset event" || bad "ALL STOP reset event missing"
+    grep -q 'audit,vessel=usv-moos,category=control,action=take,severity=info,user=alice,role=operator,source=moos message="alice took control"' "$LINES" \
+      && ok "CONTROL_EVENT -> audit row (category, action, user, role)" || bad "audit row for take missing"
+    grep -q 'details="generation 2 · reason operator not answering"' "$LINES" \
+      && grep -q 'message="carol forced a takeover from alice (generation 2 · reason operator not answering)"' "$LINES" \
+      && ok "forced takeover: two lines joined, reason kept, warning popup" || bad "forced takeover not joined"
+    grep -q 'control_holder="carol"' "$LINES" && grep -q 'c2_sessions="carol (supervisor, 192.168.22.9)"' "$LINES" \
+      && ok "control holder and open logins tracked" || bad "control holder / sessions missing"
+    [ "$(grep -c 'events,vessel=usv-moos,severity=warning,source=moos,type=control message="Command refused: DESIRED_THRUST from bob' "$LINES")" = "1" ] \
+      && [ "$(grep -c 'audit,vessel=usv-moos,category=refused.*message="Command refused: DESIRED_THRUST from bob"' "$LINES")" = "2" ] \
+      && ok "refused command: every one audited, one popup a minute" || bad "refused command audit / popup counts wrong"
+    grep -q 'audit,vessel=usv-moos,category=all_stop,action=all_stop,severity=critical,user=carol' "$LINES" \
+      && ok "ALL STOP audited with who pressed it" || bad "ALL STOP audit row missing"
+    grep -q 'message="Region refused: edges cross"' "$LINES" && grep -q 'message="Operating region BREACHED' "$LINES" \
+      && grep -q 'region_state="breached"' "$LINES" \
+      && ok "REGION_MSG refusal and V26_STATE breach -> events, region_state" || bad "region refusal / breach missing"
+    grep -q 'can_drive,vessel=usv-moos status="ACTIVE"' "$LINES" && grep -q "can_drive,vessel=usv-moos tx_thrust_pct=30" "$LINES" \
+      && grep -q 'can_drive,vessel=usv-moos tx_gear="fwd"' "$LINES" && grep -q "can_drive,vessel=usv-moos send=1" "$LINES" \
+      && ok "iCAN drive interface -> can_drive (status, thrust, gear, CAN switch)" || bad "can_drive fields missing"
+    grep -q 'message="Drive commands blocked: another node is sending rudder"' "$LINES" \
+      && grep -q 'check=can evidence="[^"]*BLOCKED, ANOTHER NODE SENDS rudder"' "$LINES" \
+      && ok "CAN_CONFLICT -> critical event and CAN row FAIL" || bad "drive conflict not reported"
+    grep -q 'check=steering evidence="[^"]*RUDDER NOT FOLLOWING DRIVE COMMAND"' "$LINES" \
+      && ok "CAN_RUDDER_MISMATCH -> Steering row FAIL" || bad "rudder mismatch not in Steering row"
+    grep -q "autopilot,vessel=usv-moos gain_heading_kp=1.2" "$LINES" && grep -q "autopilot,vessel=usv-moos service_mode=1" "$LINES" \
+      && grep -q 'SERVICE MODE (tuning gains)' "$LINES" \
+      && ok "PID_GAINS / SERVICE_MODE -> autopilot gains, service mode in Readiness" || bad "gains / service mode missing"
     grep -q "autonomy,.* remote_control=1" "$LINES"    && ok "Remote Control tile on while the operator drives" || bad "remote_control not derived"
     grep -q 'colav,vessel=usv-moos,contact=contato_7.*situation="Give-way, crossing astern"' "$LINES" \
       && ok "COLAV_ALERTS -> colav row with the COLREGS situation" || bad "colav situation missing"
@@ -881,6 +972,129 @@ if [[ -x "$REPO/ingestion/can-cpp/build/can_bridge" && -f "$FX/can-usv722.log.gz
 else
   skip "CAN replay (can_bridge or fixtures missing)"
 fi
+
+hdr "Signal K login for the dashboard (SK_LOGIN: usv-auth behind nginx)"
+# usv_auth.py logic, then the real nginx template in front of a stand-in
+# Grafana that echoes the headers it receives, with a stand-in Signal K.
+if OUT=$(python3 -I - "$REPO/deploy/usv_auth.py" <<'PYEOF' 2>&1
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("usv_auth", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+fails = []
+def check(c, what):
+    if not c: fails.append(what)
+check(m.token_from_request("a=1; JAUTHENTICATION=tok1; sktoken=tok2", "") == "tok1", "JAUTHENTICATION first")
+check(m.token_from_request("sktoken=tok2", "") == "tok2", "sktoken")
+check(m.token_from_request("", "Bearer tok3") == "tok3", "bearer header")
+check(m.token_from_request("", "") == "", "no token")
+roles = {"configuration": {"roles": [{"user": "dave", "role": "planner"}, {"user": "bob", "role": "supervisor"}]}}
+check(m.boat_role("alice", "readwrite", roles) == "operator", "readwrite -> operator")
+check(m.boat_role("carol", "admin", roles) == "supervisor", "admin -> supervisor")
+check(m.boat_role("dave", "readwrite", roles) == "planner", "roles file -> planner")
+check(m.boat_role("bob", "readonly", roles) == "viewer", "readonly stays viewer")
+check(m.boat_role("eve", "", roles) == "", "no level -> nobody")
+check(m.boat_role("eve", "readwrite", "garbage") == "operator", "bad roles doc ignored")
+rm = m.parse_role_map(m.DEFAULT_ROLE_MAP)
+check(rm == {"viewer": "Viewer", "planner": "Viewer", "operator": "Editor", "supervisor": "Editor"}, "default map")
+rm.update(m.parse_role_map("supervisor=admin,bogus=Editor,viewer=Root"))
+check(rm["supervisor"] == "Admin" and rm["viewer"] == "Viewer" and "bogus" not in rm, "map override")
+calls = []
+c = m.Checker("http://127.0.0.1:9", "/nonexistent", rm, cache_s=10)
+def fake(tok):
+    calls.append(tok)
+    return {"status": "loggedIn", "username": "alice", "userLevel": "readwrite"} if tok == "good" else {"status": "notLoggedIn"}
+c.login_status = fake
+check(c.check("good", now=0) == ("alice", "operator", "Editor"), "logged in")
+check(c.check("good", now=5) == ("alice", "operator", "Editor") and len(calls) == 1, "cached 10 s")
+c.check("good", now=11)
+check(len(calls) == 2, "cache expiry")
+check(c.check("bad", now=0) == ("", "", ""), "not logged in")
+check(c.check("", now=0) == ("", "", ""), "no token")
+c2 = m.Checker("http://127.0.0.1:9", "/nonexistent", rm, timeout=0.5)
+check(c2.check("x") == ("", "", ""), "Signal K unreachable -> no user")
+print("FAILS: " + "; ".join(fails) if fails else "all good")
+sys.exit(1 if fails else 0)
+PYEOF
+); then ok "usv_auth: tokens, boat roles (roles file, read-only stays viewer), role map, cache, Signal K down"
+else bad "usv_auth logic: $OUT"; fi
+
+if command -v nginx >/dev/null 2>&1; then
+  NG="$TMP/nginx"; mkdir -p "$NG/tmp"
+  cat > "$NG/sk.py" <<'PYEOF'
+import json
+from http.server import BaseHTTPRequestHandler, HTTPServer
+WHO = {"Bearer tok-op": ("alice", "readwrite"), "Bearer tok-sup": ("carol", "admin"),
+       "Bearer tok-ro": ("bob", "readonly"), "Bearer tok-plan": ("dave", "readwrite")}
+class H(BaseHTTPRequestHandler):
+    def do_GET(self):
+        w = WHO.get(self.headers.get("Authorization", ""))
+        body = {"status": "loggedIn", "username": w[0], "userLevel": w[1]} if w else {"status": "notLoggedIn"}
+        data = json.dumps(body).encode()
+        self.send_response(200); self.send_header("Content-Length", str(len(data))); self.end_headers()
+        self.wfile.write(data)
+    def log_message(self, *a): pass
+HTTPServer(("127.0.0.1", 18790), H).serve_forever()
+PYEOF
+  cat > "$NG/grafana.py" <<'PYEOF'
+import json
+from http.server import BaseHTTPRequestHandler, HTTPServer
+class H(BaseHTTPRequestHandler):
+    def do_GET(self):
+        data = json.dumps({"user": self.headers.get("X-WEBAUTH-USER", ""),
+                           "role": self.headers.get("X-WEBAUTH-ROLE", "")}).encode()
+        self.send_response(200); self.send_header("Content-Length", str(len(data))); self.end_headers()
+        self.wfile.write(data)
+    def log_message(self, *a): pass
+HTTPServer(("127.0.0.1", 18791), H).serve_forever()
+PYEOF
+  echo '{"configuration":{"roles":[{"user":"dave","role":"planner"},{"user":"bob","role":"supervisor"}]}}' > "$NG/roles.json"
+  sed -e "s|__LISTEN__|18793|g" -e "s|__GRAFANA__|127.0.0.1:18791|g" -e "s|__AUTH__|127.0.0.1:18792|g" \
+      "$REPO/deploy/nginx/usv-dashboard.conf.in" | grep -v 'listen \[::\]' > "$NG/usv.conf"
+  cat > "$NG/nginx.conf" <<NGEOF
+pid $NG/nginx.pid;
+error_log $NG/error.log;
+events {}
+http {
+  access_log off;
+  client_body_temp_path $NG/tmp/body; proxy_temp_path $NG/tmp/proxy;
+  fastcgi_temp_path $NG/tmp/fcgi; uwsgi_temp_path $NG/tmp/uwsgi; scgi_temp_path $NG/tmp/scgi;
+  include $NG/usv.conf;
+}
+NGEOF
+  nohup python3 -I "$NG/sk.py" >/dev/null 2>&1 &
+  nohup python3 -I "$NG/grafana.py" >/dev/null 2>&1 &
+  USV_AUTH_PORT=18792 SK_LOGIN_SIGNALK=http://127.0.0.1:18790 SK_ROLES_FILE="$NG/roles.json" AUTH_CACHE_S=0 \
+    nohup python3 -I "$REPO/deploy/usv_auth.py" >"$NG/auth.log" 2>&1 &
+  sleep 1
+  if nginx -t -c "$NG/nginx.conf" -p "$NG/" >/dev/null 2>&1 && nginx -c "$NG/nginx.conf" -p "$NG/" 2>/dev/null; then
+    ok "nginx accepts the dashboard template (auth_request)"
+    sleep 1
+    g() { curl -s "$@" http://127.0.0.1:18793/d/usv-readiness; }
+    [ "$(g)" = '{"user": "", "role": ""}' ] && ok "no Signal K login -> no user header (Grafana's own login)" || bad "anonymous request: $(g)"
+    [ "$(g -H 'Cookie: JAUTHENTICATION=tok-op')" = '{"user": "alice", "role": "Editor"}' ] \
+      && ok "Signal K cookie, readwrite -> operator -> Grafana Editor" || bad "operator: $(g -H 'Cookie: JAUTHENTICATION=tok-op')"
+    [ "$(g -H 'Cookie: theme=dark; sktoken=tok-sup')" = '{"user": "carol", "role": "Editor"}' ] \
+      && ok "Swiftships-UI sktoken cookie, admin -> supervisor -> Editor" || bad "supervisor: $(g -H 'Cookie: sktoken=tok-sup')"
+    [ "$(g -H 'Cookie: JAUTHENTICATION=tok-ro')" = '{"user": "bob", "role": "Viewer"}' ] \
+      && ok "read-only account stays a Viewer whatever the roles file says" || bad "read-only: $(g -H 'Cookie: JAUTHENTICATION=tok-ro')"
+    [ "$(g -H 'Cookie: JAUTHENTICATION=tok-plan')" = '{"user": "dave", "role": "Viewer"}' ] \
+      && ok "roles file planner -> Viewer (no Audit page)" || bad "planner: $(g -H 'Cookie: JAUTHENTICATION=tok-plan')"
+    [ "$(g -H 'X-WEBAUTH-USER: admin' -H 'X-WEBAUTH-ROLE: Admin')" = '{"user": "", "role": ""}' ] \
+      && ok "user / role headers sent by the browser are dropped" || bad "header spoof passed: $(g -H 'X-WEBAUTH-USER: admin')"
+    [ "$(g -H 'Cookie: JAUTHENTICATION=nope')" = '{"user": "", "role": ""}' ] \
+      && ok "token Signal K does not know -> no user" || bad "unknown token: $(g -H 'Cookie: JAUTHENTICATION=nope')"
+    nginx -c "$NG/nginx.conf" -p "$NG/" -s stop 2>/dev/null
+  else
+    bad "nginx rejected the dashboard template: $(nginx -t -c "$NG/nginx.conf" -p "$NG/" 2>&1 | tail -2)"
+  fi
+  pkill -f "$NG/sk.py" 2>/dev/null; pkill -f "$NG/grafana.py" 2>/dev/null; pkill -f "deploy/usv_auth.py" 2>/dev/null
+else
+  skip "nginx not installed here: gateway chain not exercised (usv_auth logic tested above)"
+fi
+grep -q 'folderUid: usv-audit-folder' "$REPO/grafana/provisioning/dashboards/dashboards.yml" \
+  && grep -q 'mv -f /var/lib/grafana/dashboards/usv-audit.json /var/lib/grafana/dashboards-audit/' "$REPO/deploy/install.sh" \
+  && grep -q 'api/folders/usv-audit-folder/permissions' "$REPO/deploy/install.sh" \
+  && ok "Audit page in its own folder, restricted to Editors and Admins by the installer" || bad "Audit folder / permission wiring missing"
 
 hdr "Resilience: InfluxDB down"
 # writer must survive a dead endpoint without crashing

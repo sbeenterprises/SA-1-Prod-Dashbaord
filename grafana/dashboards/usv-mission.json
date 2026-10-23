@@ -148,6 +148,16 @@
     },
     {
       "type": "link",
+      "title": "Audit",
+      "url": "/d/usv-audit",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "dashboard",
+      "tooltip": "Open Audit"
+    },
+    {
+      "type": "link",
       "title": "Fleet",
       "url": "/d/usv-fleet",
       "keepTime": true,
@@ -416,6 +426,11 @@
                   "text": "Moving",
                   "color": "light-yellow",
                   "index": 14
+                },
+                "AllStop": {
+                  "text": "ALL STOP",
+                  "color": "red",
+                  "index": 15
                 }
               }
             }
@@ -1866,6 +1881,11 @@
                   "text": "Moving",
                   "color": "light-yellow",
                   "index": 14
+                },
+                "AllStop": {
+                  "text": "ALL STOP",
+                  "color": "red",
+                  "index": 15
                 }
               }
             }
