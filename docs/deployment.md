@@ -73,7 +73,8 @@ menu (`BRAND_APP_TITLE`, default "SA-1 Dashboard"; Grafana's own name is a
 constant in the OSS build, so `brand.sh` injects a small script into
 `index.html` that rewrites that text node), and every dashboard carries a header band with the
 wordmark, the dashboard name and the selected vessel (visible in `?kiosk`
-mode too). The login page's footer (Documentation, Support, Community,
+mode too). The wordmark is the white knockout logo on the Dark and Navy
+themes and the navy logo on a white chip on the Light theme. The login page's footer (Documentation, Support, Community,
 Open Source and the platform version) is replaced by the export-control
 notice (`BRAND_DISCLAIMER`, default "Disclaimer: Swiftships Autonomy
 (SA-1) technical data, source code, and algorithms are non-releasable and

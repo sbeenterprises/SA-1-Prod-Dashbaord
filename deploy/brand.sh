@@ -59,7 +59,7 @@ done
 cp "$BR/swiftships_wordmark.png" "$BR/swiftships_wordmark_light.png" \
    "$BR/swiftships_mark.png" "$BR/swiftships_mark_96.png" \
    "$BR/swiftships_wordmark_chip.png" "$BR/swiftships_wordmark_chip_sm.png" \
-   "$BR/swiftships_boat.svg" "$GPUB/img/"
+   "$BR/swiftships_wordmark_light_sm.png" "$BR/swiftships_boat.svg" "$GPUB/img/"
 # Remove the custom map pin an earlier build installed: Grafana 13.2 draws
 # custom SVG map markers as black squares, so the maps use built-in shapes.
 rm -f "$GPUB/img/icons/marker/usv_pin.svg"
@@ -127,6 +127,7 @@ cp "$BR/swiftships_logo_light.svg" "$GPUB/img/swiftships_login_logo.svg"
 mk_bg "$GPUB/img/swiftships_login_bg.svg"
 LOGO_V=$(md5sum "$GPUB/img/swiftships_login_logo.svg" | cut -c1-8)
 BG_V=$(md5sum "$GPUB/img/swiftships_login_bg.svg" | cut -c1-8)
+WM_V=$(md5sum "$GPUB/img/swiftships_wordmark_light_sm.png" | cut -c1-8)
 CSS_FILE=$(mktemp)
 cat > "$CSS_FILE" <<CSS
 <style id="swiftships-brand">
@@ -148,6 +149,10 @@ body.login-page a{color:#5fc9dd!important}
    product version) is replaced by the export-control notice. */
 body.login-page footer>*,body.login-page [data-testid="footer"]>*{display:none!important}
 body.login-page footer::after,body.login-page [data-testid="footer"]::after{content:"$DISCLAIMER_CSS";display:block;max-width:780px;margin:0 auto;padding:0 16px;text-align:center;font-size:12px;line-height:1.5;color:#8fa3b8;white-space:normal}
+/* Header band wordmark: the white chip on the Light theme, the white
+   knockout wordmark straight on the page on Dark and Navy (2x image shown
+   24 px high). Without this style the chip shows on every theme. */
+body:not(.theme-light) img[src*="swiftships_wordmark_chip_sm"]{content:url("/public/img/swiftships_wordmark_light_sm.png?v=$WM_V");height:24px;width:auto}
 /* Navy theme: page background before Grafana has drawn (swiftships-theme-js) */
 html.sw-navy,html.sw-navy body{background:#13203B!important}
 </style>

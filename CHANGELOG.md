@@ -3,6 +3,19 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.48] - 2026-10-23 (white header logo on Dark and Navy)
+
+Branding only. Update with `bash deploy/update.sh v1.2.48`, then Ctrl+F5
+in the browser; no mission restart.
+
+### Changed
+- Header band logo: on the Dark and Navy themes the white knockout
+  Swiftships wordmark sits straight on the page (new
+  `deploy/branding/swiftships_wordmark_light_sm.png`, 2x, shown 24 px high)
+  in place of the white chip; the Light theme keeps the navy logo on its
+  white chip. Done in brand.sh's index.html style (cache-busted), so the
+  dashboards themselves are unchanged.
+
 ## [1.2.47] - 2026-10-23 (Drive Trim on the Engine page)
 
 Dashboards only. Update with `bash deploy/update.sh v1.2.47`; no mission

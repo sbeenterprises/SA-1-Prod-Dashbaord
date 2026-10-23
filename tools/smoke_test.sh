@@ -288,6 +288,9 @@ sys.exit(bad)
 PY
     grep -q 'body.login-page footer>\*' "$BT/views/index.html" && grep -q 'ECCN 9D515' "$BT/views/index.html" \
       && ok "login footer replaced by the export-control notice" || bad "login footer rule or disclaimer missing from the brand CSS"
+    grep -q 'body:not(.theme-light) img\[src\*="swiftships_wordmark_chip_sm"\]{content:url("/public/img/swiftships_wordmark_light_sm.png?v=[0-9a-f]\{8\}")' "$BT/views/index.html" \
+      && [ -s "$BT/img/swiftships_wordmark_light_sm.png" ] \
+      && ok "header wordmark: white knockout on Dark / Navy, chip on Light" || bad "dark-theme header wordmark rule or image missing"
     if command -v go >/dev/null 2>&1; then
       mkdir -p "$TMP/tplchk" && cat > "$TMP/tplchk/main.go" <<'GO'
 package main

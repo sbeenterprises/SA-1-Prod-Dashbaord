@@ -800,3 +800,19 @@ engine.trim_position counts as written; 274 Flux queries type-checked.
 
 To verify on the target: the Engine page shows Drive Trim near 31 % with
 the drive as on 2026-10-23, and it follows the trim switch.
+
+## 24. Release v1.2.48 (2026-10-23)
+
+Scope: header band logo per theme (white knockout wordmark on Dark and
+Navy, navy logo on the white chip on Light), as requested on 2026-10-23.
+
+Evidence: brand.sh run twice on the stand-in Grafana public directory
+injects the theme rule once, with the image's content hash, and copies
+`swiftships_wordmark_light_sm.png`; the branded index.html still parses as
+a Go template; the rule rendered in Chromium on a navy page (white
+wordmark, no chip) and a light page (chip). `tools/smoke_test.sh` in
+full: 210 PASS, 0 FAIL, 1 SKIP.
+
+To verify on the target: Ctrl+F5, then switch Theme between Dark, Navy
+and Light on any page.
+
