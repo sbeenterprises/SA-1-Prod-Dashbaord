@@ -1181,6 +1181,9 @@ public:
             return out;
         }
         flush_into(out, now, true);
+        // Release, lost and logout lines name the user but not the role:
+        // take it from whoever held control.
+        const std::string prev_holder = holder_, prev_role = holder_role_;
         Track(kind, f);
         if (kind == "control" && f.action == "force") {
             pending_ = f;
@@ -1188,7 +1191,11 @@ public:
             have_pending_ = true;
             return out;
         }
-        out.push_back(DescribeAudit(kind, f));
+        AuditEvent ev = DescribeAudit(kind, f);
+        if (kind == "control" && ev.role.empty() && !ev.user.empty() && ev.user == prev_holder &&
+            (f.action == "release" || f.action == "lost" || f.action == "logout"))
+            ev.role = prev_role;
+        out.push_back(ev);
         return out;
     }
     // A forced takeover whose reason line never came (after 2 s).
@@ -1199,12 +1206,22 @@ public:
     }
     const std::string& holder() const { return holder_; }
     const std::string& holder_role() const { return holder_role_; }
+    // The holder who went silent ("lost", not heard), until someone takes,
+    // receives or releases control; "" otherwise.
+    const std::string& lost_holder() const { return lost_user_; }
+    struct OpenSession { std::string key, user, role, ip; };
+    std::vector<OpenSession> open_sessions() const {
+        std::vector<OpenSession> v;
+        for (const auto& kv : sessions_)
+            v.push_back(OpenSession{kv.first, kv.second.user, kv.second.role, kv.second.ip});
+        return v;
+    }
     // "alice (operator, 192.168.22.5); bob (viewer, 192.168.22.7)", "" when none.
     std::string sessions() const {
         std::string s;
         for (const auto& kv : sessions_) {
             const Session& x = kv.second;
-            s += (s.empty() ? "" : "; ") + (x.user.empty() ? std::string("(no login)") : x.user) +
+            s += (s.empty() ? "" : "; ") + (x.user.empty() ? std::string("no login") : x.user) +
                  " (" + (x.role.empty() ? std::string("viewer") : x.role) +
                  (x.ip.empty() ? "" : ", " + x.ip) + ")";
         }
@@ -1230,7 +1247,9 @@ private:
             if (a == "take" || a == "handover" || a == "handover-timeout" || a == "force") {
                 holder_ = get("user") == "-" ? "" : get("user");
                 holder_role_ = get("role");
+                lost_user_.clear();
             } else if (a == "release" || a == "logout" || a == "lost" || a == "revoke" || a == "start") {
+                lost_user_ = a == "lost" ? (get("user") == "-" ? "" : get("user")) : "";
                 holder_.clear();
                 holder_role_.clear();
             }
@@ -1257,7 +1276,7 @@ private:
     AuditFields pending_;
     double pending_t_ = 0.0;
     bool have_pending_ = false;
-    std::string holder_, holder_role_;
+    std::string holder_, holder_role_, lost_user_;
     std::map<std::string, Session> sessions_;
 };
 

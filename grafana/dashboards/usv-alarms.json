@@ -150,7 +150,7 @@
       "type": "link",
       "title": "Audit",
       "url": "/d/usv-audit",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -2031,11 +2031,22 @@
             {
               "type": "regex",
               "options": {
+                "pattern": "lost:(.+)",
+                "result": {
+                  "text": "LOST ($1)",
+                  "color": "orange",
+                  "index": 1
+                }
+              }
+            },
+            {
+              "type": "regex",
+              "options": {
                 "pattern": "(.+)",
                 "result": {
                   "text": "$1",
                   "color": "#175d8d",
-                  "index": 1
+                  "index": 2
                 }
               }
             }

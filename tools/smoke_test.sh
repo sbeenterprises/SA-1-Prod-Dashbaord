@@ -656,6 +656,9 @@ EOF
     P 'UI_AUTH_EVENT=rejected key=DESIRED_THRUST user=bob level=readonly why=level'
     sleep 1
     P 'UI_AUTH_EVENT=disconnect user=alice role=operator ip=192.168.22.5 session=k3f9a1x0'
+    sleep 6
+    P 'CONTROL_EVENT=lost user=carol (not heard)'
+    sleep 6
     P ALL_STOP=true
     P 'CONTROL_EVENT=all_stop user=carol'
     sleep 3
@@ -765,6 +768,12 @@ EOF
       && ok "forced takeover: two lines joined, reason kept, warning popup" || bad "forced takeover not joined"
     grep -q 'control_holder="carol"' "$LINES" && grep -q 'c2_sessions="carol (supervisor, 192.168.22.9)"' "$LINES" \
       && ok "control holder and open logins tracked" || bad "control holder / sessions missing"
+    grep -q 'c2_session,vessel=usv-moos,session=q81mz2c4 user="carol"' "$LINES" \
+      && grep -q 'c2_session,vessel=usv-moos,session=q81mz2c4 ip="192.168.22.9"' "$LINES" \
+      && ok "one c2_session row per open login (Open sessions table)" || bad "c2_session rows missing"
+    grep -q 'control_holder="lost:carol"' "$LINES" \
+      && grep -q 'audit,vessel=usv-moos,category=control,action=lost,severity=warning,user=carol,role=supervisor' "$LINES" \
+      && ok "holder not heard -> control_holder lost:carol, audit row with the holder's role" || bad "lost holder not tracked"
     [ "$(grep -c 'events,vessel=usv-moos,severity=warning,source=moos,type=control message="Command refused: DESIRED_THRUST from bob' "$LINES")" = "1" ] \
       && [ "$(grep -c 'audit,vessel=usv-moos,category=refused.*message="Command refused: DESIRED_THRUST from bob"' "$LINES")" = "2" ] \
       && ok "refused command: every one audited, one popup a minute" || bad "refused command audit / popup counts wrong"
@@ -994,6 +1003,11 @@ check(m.boat_role("dave", "readwrite", roles) == "planner", "roles file -> plann
 check(m.boat_role("bob", "readonly", roles) == "viewer", "readonly stays viewer")
 check(m.boat_role("eve", "", roles) == "", "no level -> nobody")
 check(m.boat_role("eve", "readwrite", "garbage") == "operator", "bad roles doc ignored")
+check(m.grafana_login("admin") == "sk-admin" and m.grafana_login("Admin") == "sk-Admin", "Signal K admin never Grafana's admin")
+check(m.grafana_login("alice") == "alice" and m.grafana_login("") == "", "other names unchanged")
+s = m.RoleSync("http://127.0.0.1:9", "admin", "pw")
+s._call = lambda *a, **k: (_ for _ in ()).throw(AssertionError("API called for admin"))
+s.ensure("admin", "Editor")
 rm = m.parse_role_map(m.DEFAULT_ROLE_MAP)
 check(rm == {"viewer": "Viewer", "planner": "Viewer", "operator": "Editor", "supervisor": "Editor"}, "default map")
 rm.update(m.parse_role_map("supervisor=admin,bogus=Editor,viewer=Root"))
@@ -1024,6 +1038,7 @@ if command -v nginx >/dev/null 2>&1; then
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 WHO = {"Bearer tok-op": ("alice", "readwrite"), "Bearer tok-sup": ("carol", "admin"),
+       "Bearer tok-adm": ("admin", "admin"),
        "Bearer tok-ro": ("bob", "readonly"), "Bearer tok-plan": ("dave", "readwrite")}
 class H(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -1075,6 +1090,8 @@ NGEOF
       && ok "Signal K cookie, readwrite -> operator -> Grafana Editor" || bad "operator: $(g -H 'Cookie: JAUTHENTICATION=tok-op')"
     [ "$(g -H 'Cookie: theme=dark; sktoken=tok-sup')" = '{"user": "carol", "role": "Editor"}' ] \
       && ok "Swiftships-UI sktoken cookie, admin -> supervisor -> Editor" || bad "supervisor: $(g -H 'Cookie: sktoken=tok-sup')"
+    [ "$(g -H 'Cookie: JAUTHENTICATION=tok-adm')" = '{"user": "sk-admin", "role": "Editor"}' ] \
+      && ok "Signal K user named admin -> sk-admin (never Grafana's own admin)" || bad "admin clash: $(g -H 'Cookie: JAUTHENTICATION=tok-adm')"
     [ "$(g -H 'Cookie: JAUTHENTICATION=tok-ro')" = '{"user": "bob", "role": "Viewer"}' ] \
       && ok "read-only account stays a Viewer whatever the roles file says" || bad "read-only: $(g -H 'Cookie: JAUTHENTICATION=tok-ro')"
     [ "$(g -H 'Cookie: JAUTHENTICATION=tok-plan')" = '{"user": "dave", "role": "Viewer"}' ] \

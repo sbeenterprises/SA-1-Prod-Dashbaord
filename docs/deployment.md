@@ -366,13 +366,19 @@ stack row and raises a warning). While the operator drives (drive owner
 MANUAL) the thrust and rudder the drive interface sends also count as
 console commands for the Remote state.
 
-The **Audit** page (tab row, after Alarms) shows who holds control, ALL
-STOP, the navigation guard, logins, refused commands and forced takeovers
-in the selected range (default 24 h); a timeline of who had control with
-ALL STOP and the navigation guard beneath it; the audit log (newest
-first, filter per column, Search box over event, details and user, CSV
-download from the panel menu: Inspect > Data); refused commands per user;
-events per user and category; open logins. It lives in its own folder,
+The **Audit** page (tab row, after Alarms; it opens at the last 24 h and
+does not hand that range to the live pages) shows six tiles, each with a
+second line: who holds control (role, for how long; LOST (user) while the
+holder is not heard), ALL STOP (last pressed or reset, by whom, how long
+ago), the navigation guard (stops in the range), logins (number of users),
+refused commands (read-only / ALL STOP / not in control / other) and
+forced takeovers (who, how long ago). Below: a timeline of who had control
+("lost" in amber) with ALL STOP and the navigation guard; the audit log
+(newest first; Category and Search at the top of the page, a filter in
+each column header, CSV download from its link or the panel menu: Inspect
+> Data); refused commands by reason; events per user (Control, Logins,
+Refused); open sessions (user, role, IP; measurement `c2_session`, one row
+per login, re-written every 5 s). It lives in its own folder,
 **Swift Autonomous Audit**, which the installer opens to Grafana Editors
 and Admins only (with the Signal K login below: operators and
 supervisors). Grafana cannot take away access a folder grants, hence the
@@ -403,7 +409,10 @@ whitelist 127.0.0.1); headers a browser sends itself are dropped.
 
 The roles file is the one the Swiftships-UI plugin writes for iWebSocket
 (`/var/lib/swiftships-c2/roles.json`, `SK_ROLES_FILE`); `SK_ROLE_MAP`
-changes the mapping (for example `supervisor=Admin`). Results are cached
+changes the mapping (for example `supervisor=Admin`). A Signal K user
+with the same name as Grafana's administrator (`GRAFANA_ADMIN_USER`,
+default admin) comes in as `sk-admin`, so a Signal K login never becomes
+Grafana's administrator. Results are cached
 10 s per login. usv-auth also sets a user's Grafana role through the
 Grafana API when it changes (using GRAFANA_ADMIN_PASSWORD), in case the
 Grafana build ignores the role header.

@@ -22,6 +22,11 @@ Not logged in to Signal K (or Signal K unreachable, or its security off):
 no user header, so Grafana shows its own login form; the Grafana admin
 account keeps working as a fallback.
 
+A Signal K user with the same name as Grafana's own administrator
+(GRAFANA_ADMIN_USER, default admin) comes in as "sk-<name>", so a Signal K
+login never becomes Grafana's administrator; the role sync never touches
+that account either.
+
 Answers are cached per token for AUTH_CACHE_S (default 10 s): Grafana
 issues many requests per page refresh. A user's Grafana role is also set
 through Grafana's API when it changes (GRAFANA_ADMIN_PASSWORD), in case the
@@ -85,6 +90,11 @@ def token_from_request(cookie_header, authorization):
     return ""
 
 
+def grafana_login(user, admin_user="admin"):
+    """The Grafana login for a Signal K user: never Grafana's own admin."""
+    return "sk-" + user if user and user.lower() == (admin_user or "admin").lower() else user
+
+
 def boat_role(user, level, roles_doc):
     """Same rule as iWebSocket::roleFor."""
     level = (level or "").lower()
@@ -107,12 +117,14 @@ def boat_role(user, level, roles_doc):
 
 
 class Checker:
-    def __init__(self, signalk, roles_file, role_map, cache_s=10.0, timeout=2.0):
+    def __init__(self, signalk, roles_file, role_map, cache_s=10.0, timeout=2.0,
+                 admin_user="admin"):
         self.signalk = signalk.rstrip("/")
         self.roles_file = roles_file
         self.role_map = role_map
         self.cache_s = cache_s
         self.timeout = timeout
+        self.admin_user = admin_user
         self._cache = {}
         self._lock = threading.Lock()
 
@@ -146,7 +158,8 @@ class Checker:
                 user = str(st["username"])
                 role = boat_role(user, st.get("userLevel", ""), self.roles_doc())
                 if role:
-                    result = (user, role, self.role_map.get(role, "Viewer"))
+                    result = (grafana_login(user, self.admin_user), role,
+                              self.role_map.get(role, "Viewer"))
         except (urllib.error.URLError, OSError, ValueError):
             result = ("", "", "")
         with self._lock:
@@ -162,6 +175,7 @@ class RoleSync:
 
     def __init__(self, grafana, admin_user, admin_password):
         self.grafana = grafana.rstrip("/")
+        self.admin_user = admin_user
         self.auth = "Basic " + base64.b64encode(
             f"{admin_user}:{admin_password}".encode()).decode() if admin_password else ""
         self._done = {}
@@ -180,6 +194,8 @@ class RoleSync:
     def ensure(self, user, role):
         if not self.auth or not user or not role:
             return
+        if user.lower() == (self.admin_user or "admin").lower():
+            return   # Grafana's own administrator: never changed from here
         with self._lock:
             if self._done.get(user) == role:
                 return
@@ -234,7 +250,8 @@ def main():
     roles_file = env("SK_ROLES_FILE", "/var/lib/swiftships-c2/roles.json")
     role_map = parse_role_map(DEFAULT_ROLE_MAP)
     role_map.update(parse_role_map(env("SK_ROLE_MAP", "")))
-    checker = Checker(signalk, roles_file, role_map, float(env("AUTH_CACHE_S", "10")))
+    checker = Checker(signalk, roles_file, role_map, float(env("AUTH_CACHE_S", "10")),
+                      admin_user=env("GRAFANA_ADMIN_USER", "admin"))
     sync = None
     gport = env("GRAFANA_INTERNAL_PORT", "3099")
     if env("GRAFANA_ADMIN_PASSWORD"):

@@ -1072,7 +1072,9 @@ private:
 
     // Who holds control and the open logins, for the Audit and Mission pages.
     void WriteControl() {
-        const std::string holder = audit_.holder().empty() ? "-" : audit_.holder();
+        // "-" nobody, "lost:<user>" while the last holder is not heard.
+        const std::string holder = !audit_.holder().empty() ? audit_.holder()
+                                 : !audit_.lost_holder().empty() ? "lost:" + audit_.lost_holder() : "-";
         if (holder != last_holder_) {
             last_holder_ = holder;
             control_since_ms_ = EpochMs();
@@ -1086,6 +1088,19 @@ private:
                               audit_.sessions().empty() ? "-" : audit_.sessions());
         telemetry_->field("mission_state", "", "c2_session_count",
                           static_cast<double>(audit_.session_count()));
+        // One row per open login for the Audit page's Open Sessions table
+        // (tag session; the page reads the last 30 s).
+        for (const auto& o : audit_.open_sessions()) {
+            std::string key;
+            for (char c : o.key) {
+                if (c == ' ' || c == ',' || c == '=' || c == '\\') key += '\\';
+                key += c;
+            }
+            const std::string tags = "session=" + (key.empty() ? std::string("-") : key);
+            telemetry_->str_field("c2_session", tags, "user", o.user.empty() ? "no login" : o.user);
+            telemetry_->str_field("c2_session", tags, "role", o.role.empty() ? "viewer" : o.role);
+            telemetry_->str_field("c2_session", tags, "ip", o.ip.empty() ? "-" : o.ip);
+        }
     }
 
     void HandleFlag(const std::string& key, bool val) {

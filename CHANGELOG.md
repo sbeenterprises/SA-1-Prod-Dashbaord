@@ -3,6 +3,38 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.45] - 2026-10-23 (Audit page as the mockup; Signal K admin name)
+
+grafana_bridge, Audit page, usv-auth and documents. Update with
+`bash deploy/update.sh v1.2.45`, restart the mission with the boat stopped.
+
+### Changed
+- Audit page brought in line with the agreed mockup:
+  - every tile has its second line: Control (role, how long), ALL STOP
+    (last pressed / reset by whom, how long ago), Navigation Guard (stops
+    in the range), Logins (number of users), Commands Refused (read-only /
+    ALL STOP / not in control / other), Forced Takeovers (who, how long
+    ago);
+  - the timeline shows "lost (user)" in amber while the holder is not
+    heard (Control tiles: LOST (user));
+  - Refused commands by reason (bars) replaces "by user"; Events by user
+    has Control / Logins / Refused columns, always all three;
+  - Open sessions is a table (user, role, IP), one row per login;
+  - Category filter at the top of the page (All, Control, Login, Refused,
+    ALL STOP, Nav guard, Region) next to Search; the audit log links to
+    its CSV download;
+  - the Audit chip opens the page at 24 h, and the other chips do not
+    carry its 24 h to the live pages.
+- The role is filled on "released control", "Control lost" and a holder's
+  logout (from whoever held control); Open sessions shows "no login
+  (viewer, ip)"; the Event column is wider.
+
+### Fixed
+- Signal K login: a Signal K user named like Grafana's administrator
+  (GRAFANA_ADMIN_USER, default admin) comes in as "sk-admin" and the role
+  sync never touches Grafana's administrator (usv-722: the Signal K user
+  "admin" was signed in as Grafana's own admin).
+
 ## [1.2.44] - 2026-10-23 (Audit page fixes from usv-722)
 
 grafana_bridge, Audit page and runbook. Update with

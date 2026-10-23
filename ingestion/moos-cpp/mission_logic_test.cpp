@@ -1394,10 +1394,13 @@ static void test_audit_trail() {
     e = t.feed("control", "lost user=carol (not heard)", 10.0);
     CHECK_EQ_STR(e[0].message, "Control lost: carol not heard");
     CHECK(e[0].popup && e[0].severity == "warning");
+    CHECK_EQ_STR(e[0].role, "supervisor");          // from the holder
     CHECK_EQ_STR(t.holder(), "");
+    CHECK_EQ_STR(t.lost_holder(), "carol");
     e = t.feed("control", "handover user=alice role=operator gen=9 from=carol", 11.0);
     CHECK_EQ_STR(e[0].message, "Control handed to alice by carol");
     CHECK_EQ_STR(t.holder(), "alice");
+    CHECK_EQ_STR(t.lost_holder(), "");
     e = t.feed("control", "request user=bob holder=alice", 12.0);
     CHECK_EQ_STR(e[0].message, "bob asked alice for control");
     e = t.feed("control", "deny user=bob holder=alice", 12.5);
@@ -1425,6 +1428,7 @@ static void test_audit_trail() {
     CHECK_EQ_STR(t.sessions(), "");
     e = t.feed("control", "release user=alice", 17.0);
     CHECK_EQ_STR(e[0].message, "alice released control");
+    CHECK_EQ_STR(e[0].role, "operator");            // from the holder
     CHECK_EQ_STR(t.holder(), "");
     e = t.feed("control", "revoke why=moos-reconnect user=alice", 18.0);
     CHECK_EQ_STR(e[0].message, "Control revoked (moos-reconnect)");
@@ -1432,6 +1436,8 @@ static void test_audit_trail() {
     t.feed("control", "take user=alice role=operator gen=1", 19.0);
     t.feed("auth", "anonymous level=readonly role=viewer ip=10.0.0.7 session=zz", 19.5);
     CHECK(t.session_count() == 1);
+    CHECK_EQ_STR(t.sessions(), "no login (viewer, 10.0.0.7)");
+    CHECK(t.open_sessions().size() == 1 && t.open_sessions()[0].key == "zz" && t.open_sessions()[0].user.empty());
     t.feed("control", "start command_auth=signalk exclusive_control=true (nobody in control)", 20.0);
     CHECK_EQ_STR(t.holder(), "");
     CHECK(t.session_count() == 0);

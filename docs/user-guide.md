@@ -58,7 +58,7 @@ navigation, cameras and communications, ride control. They come from the
 | System | CPU, GPU, RAM, disk, CPU temperature, load, Signal K and MOOS reachability, trends, systemd services |
 | Replay | Historical playback: GPS track, mission state, events, heading/speed/actuator history |
 | Alarms | Active alerts, alarm history, at-a-glance status wall; boat control row: navigation integrity, ALL STOP, who has control, drive interface, rudder against the drive command, autopilot service mode |
-| Audit | Who has control, ALL STOP, navigation guard, logins, refused commands and forced takeovers over the selected range (default 24 h); who-had-control timeline with ALL STOP and the navigation guard beneath; the audit log (filter each column, Search box, CSV download from the panel menu); refused commands per user, events per user, open logins. Operators and supervisors only |
+| Audit | Who has control (and for how long; LOST while the holder is not heard), ALL STOP (last pressed or reset, by whom), navigation guard (stops), logins (users), refused commands (by reason) and forced takeovers (who, when) over the last 24 h; who-had-control timeline with ALL STOP and the navigation guard beneath; the audit log (Category and Search at the top, a filter in each column, CSV download); refused commands by reason, events per user, open sessions (user, role, IP). Operators and supervisors only |
 | Fleet | Last known positions on one map and a status row per vessel (mission state, helm, armed, operator link, geofence, SOG; mission progress, Signal K, MOOS, engine type with the last RPM), each tile opening that vessel's Mission dashboard |
 
 ## Engine type

@@ -744,3 +744,24 @@ login without a tab session, ALL STOP N/A before the first press, audit
 log column order. Unit tests 603 (cookie logins kept by user and IP,
 removed on disconnect and logout). `tools/smoke_test.sh` in full: 205
 PASS, 0 FAIL, 1 SKIP.
+
+## 21. Release v1.2.45 (2026-10-23)
+
+Scope: the Audit page aligned with the agreed mockup (tile second lines,
+"lost" holder, refused by reason, events per user with fixed columns, open
+sessions table, Category filter, 24 h on open), the role on release / lost
+/ logout rows, and the Signal K "admin" name clash in the login gateway.
+
+Evidence: unit tests 609 (lost holder kept until control is taken again,
+holder's role on release and lost rows, per-session list, "no login"
+wording); smoke test: one c2_session row per open login, control_holder
+"lost:carol" and its audit row with the holder's role, the gateway maps a
+Signal K user "admin" to sk-admin and never calls the Grafana API for the
+administrator; 273 Flux queries type-checked (each Audit tile returns one
+row also with no audit data: a placeholder row is unioned before the
+record is read). `tools/smoke_test.sh` in full: 208 PASS, 0 FAIL, 1 SKIP.
+
+Not run here: the tile queries against a live InfluxDB (none reachable
+from the build host). To verify on the target: every Audit tile shows a
+value and its second line; on usv-725 (no audit data yet) the tiles read
+0 / "none in this range" rather than an error.

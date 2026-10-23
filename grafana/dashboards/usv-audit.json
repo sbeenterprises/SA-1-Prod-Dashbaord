@@ -20,7 +20,7 @@
       "type": "link",
       "title": "Readiness",
       "url": "/d/usv-readiness",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -30,7 +30,7 @@
       "type": "link",
       "title": "Mission",
       "url": "/d/usv-mission",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -40,7 +40,7 @@
       "type": "link",
       "title": "Navigation",
       "url": "/d/usv-navigation",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -50,7 +50,7 @@
       "type": "link",
       "title": "Autopilot",
       "url": "/d/usv-autopilot",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -60,7 +60,7 @@
       "type": "link",
       "title": "Vessel Health",
       "url": "/d/usv-health",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -70,7 +70,7 @@
       "type": "link",
       "title": "Engine",
       "url": "/d/usv-engine",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -80,7 +80,7 @@
       "type": "link",
       "title": "CAN Bus",
       "url": "/d/usv-canbus",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -90,7 +90,7 @@
       "type": "link",
       "title": "Traffic",
       "url": "/d/usv-traffic",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -100,7 +100,7 @@
       "type": "link",
       "title": "Cameras",
       "url": "/d/usv-camera",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -110,7 +110,7 @@
       "type": "link",
       "title": "Comms",
       "url": "/d/usv-comms",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -120,7 +120,7 @@
       "type": "link",
       "title": "System",
       "url": "/d/usv-system",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -130,7 +130,7 @@
       "type": "link",
       "title": "Replay",
       "url": "/d/usv-replay",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -140,7 +140,7 @@
       "type": "link",
       "title": "Alarms",
       "url": "/d/usv-alarms",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -150,7 +150,7 @@
       "type": "link",
       "title": "Audit",
       "url": "/d/usv-audit",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": true,
       "targetBlank": false,
       "icon": "dashboard",
@@ -160,7 +160,7 @@
       "type": "link",
       "title": "Fleet",
       "url": "/d/usv-fleet",
-      "keepTime": true,
+      "keepTime": false,
       "includeVars": false,
       "targetBlank": false,
       "icon": "dashboard",
@@ -291,6 +291,56 @@
         "multi": false
       },
       {
+        "name": "category",
+        "label": "Category",
+        "type": "custom",
+        "query": "All : all,Control : control,Login : login,Refused : refused,ALL STOP : all_stop,Nav guard : nav_guard,Region : region",
+        "current": {
+          "text": "All",
+          "value": "all"
+        },
+        "options": [
+          {
+            "text": "All",
+            "value": "all",
+            "selected": true
+          },
+          {
+            "text": "Control",
+            "value": "control",
+            "selected": false
+          },
+          {
+            "text": "Login",
+            "value": "login",
+            "selected": false
+          },
+          {
+            "text": "Refused",
+            "value": "refused",
+            "selected": false
+          },
+          {
+            "text": "ALL STOP",
+            "value": "all_stop",
+            "selected": false
+          },
+          {
+            "text": "Nav guard",
+            "value": "nav_guard",
+            "selected": false
+          },
+          {
+            "text": "Region",
+            "value": "region",
+            "selected": false
+          }
+        ],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
         "name": "search",
         "label": "Search",
         "type": "textbox",
@@ -340,7 +390,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and (r._field == \"control_holder\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n  |> keep(columns: [\"_value\"])\n",
+          "query": "import \"array\"\nimport \"strings\"\nspan = (t) => {\n    m = (int(v: now()) - int(v: t)) / 60000000000\n    return if m < 1 then \"under a minute\" else if m < 120 then string(v: m) + \" min\" else string(v: m / 60) + \" h\"\n}\nplural = (n, one) => string(v: n) + \" \" + one + (if n == 1 then \"\" else \"s\")\nh = (union(tables: [from(bucket: \"telemetry\")\n      |> range(start: -1m)\n      |> filter(fn: (r) => r._measurement == \"mission_state\" and r._field == \"control_holder\" and r.vessel == \"${vessel}\")\n      |> last()\n      |> group()\n      |> keep(columns: [\"_time\", \"_value\"]),\n    array.from(rows: [{_time: 1970-01-01T00:00:00Z, _value: \"\"}])])\n  |> sort(columns: [\"_time\"])\n  |> last(column: \"_time\")\n  |> findRecord(fn: (key) => true, idx: 0))._value\nrole = (union(tables: [from(bucket: \"telemetry\")\n      |> range(start: -1m)\n      |> filter(fn: (r) => r._measurement == \"mission_state\" and r._field == \"control_role\" and r.vessel == \"${vessel}\")\n      |> last()\n      |> group()\n      |> keep(columns: [\"_time\", \"_value\"]),\n    array.from(rows: [{_time: 1970-01-01T00:00:00Z, _value: \"\"}])])\n  |> sort(columns: [\"_time\"])\n  |> last(column: \"_time\")\n  |> findRecord(fn: (key) => true, idx: 0))._value\nsince = (union(tables: [from(bucket: \"telemetry\")\n      |> range(start: -1m)\n      |> filter(fn: (r) => r._measurement == \"mission_state\" and r._field == \"control_since_ms\" and r.vessel == \"${vessel}\")\n      |> last()\n      |> group()\n      |> keep(columns: [\"_time\", \"_value\"]),\n    array.from(rows: [{_time: 1970-01-01T00:00:00Z, _value: 0.0}])])\n  |> sort(columns: [\"_time\"])\n  |> last(column: \"_time\")\n  |> findRecord(fn: (key) => true, idx: 0))._value\nfor = if since > 0.0 then \" \u00b7 for \" + span(t: time(v: int(v: since * 1000000.0))) else \"\"\nd = if h == \"-\" then \"nobody in control\"\n    else if strings.hasPrefix(v: h, prefix: \"lost:\") then \"holder not heard\" + for\n    else role + for\narray.from(rows: [{_value: h, detail: d, ok: h != \"\"}])\n  |> filter(fn: (r) => r.ok)\n  |> drop(columns: [\"ok\"])\n  |> group(columns: [\"detail\"])\n",
           "refId": "A"
         }
       ],
@@ -373,15 +423,27 @@
             {
               "type": "regex",
               "options": {
+                "pattern": "lost:(.+)",
+                "result": {
+                  "text": "LOST ($1)",
+                  "color": "orange",
+                  "index": 1
+                }
+              }
+            },
+            {
+              "type": "regex",
+              "options": {
                 "pattern": "(.+)",
                 "result": {
                   "text": "$1",
                   "color": "#175d8d",
-                  "index": 1
+                  "index": 2
                 }
               }
             }
-          ]
+          ],
+          "displayName": "${__field.labels.detail}"
         },
         "overrides": []
       },
@@ -392,12 +454,12 @@
           ],
           "fields": "/.*/"
         },
-        "textMode": "value",
+        "textMode": "value_and_name",
         "graphMode": "none",
         "colorMode": "background",
         "justifyMode": "auto",
         "text": {
-          "valueSize": 22,
+          "valueSize": 26,
           "titleSize": 12
         }
       }
@@ -422,7 +484,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and (r._field == \"all_stop\"))\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> drop(fn: (column) => column =~ /^(_start|_stop|_measurement|vessel|host|instance|source|engine_type|engine_model)$/)\n",
+          "query": "import \"array\"\nimport \"strings\"\nspan = (t) => {\n    m = (int(v: now()) - int(v: t)) / 60000000000\n    return if m < 1 then \"under a minute\" else if m < 120 then string(v: m) + \" min\" else string(v: m / 60) + \" h\"\n}\nplural = (n, one) => string(v: n) + \" \" + one + (if n == 1 then \"\" else \"s\")\nst = (union(tables: [from(bucket: \"telemetry\")\n      |> range(start: -1m)\n      |> filter(fn: (r) => r._measurement == \"autonomy\" and r._field == \"all_stop\" and r.vessel == \"${vessel}\")\n      |> last()\n      |> group()\n      |> keep(columns: [\"_time\", \"_value\"]),\n    array.from(rows: [{_time: 1970-01-01T00:00:00Z, _value: -1.0}])])\n  |> sort(columns: [\"_time\"])\n  |> last(column: \"_time\")\n  |> findRecord(fn: (key) => true, idx: 0))._value\na = union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"message\" and (r.category == \"all_stop\"))\n      |> group()\n      |> keep(columns: [\"_time\", \"action\", \"user\"]),\n    array.from(rows: [{_time: 1970-01-01T00:00:00Z, action: \"\", user: \"\"}])])\n  |> sort(columns: [\"_time\"])\n  |> last(column: \"_time\")\n  |> findRecord(fn: (key) => true, idx: 0)\nd = if a.action == \"\" then \"not pressed in this range\"\n    else (if a.action == \"all_stop_reset\" then \"reset by \" else \"pressed by \") + a.user + \", \" + span(t: a._time) + \" ago\"\narray.from(rows: [{_value: st, detail: d, ok: st >= 0.0}])\n  |> filter(fn: (r) => r.ok)\n  |> drop(columns: [\"ok\"])\n  |> group(columns: [\"detail\"])\n",
           "refId": "A"
         }
       ],
@@ -457,7 +519,8 @@
                 }
               }
             }
-          ]
+          ],
+          "displayName": "${__field.labels.detail}"
         },
         "overrides": []
       },
@@ -465,9 +528,10 @@
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "/.*/"
         },
-        "textMode": "value",
+        "textMode": "value_and_name",
         "graphMode": "none",
         "colorMode": "background",
         "justifyMode": "auto",
@@ -497,7 +561,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: -15s)\n  |> filter(fn: (r) => r._measurement == \"autonomy\" and r._field == \"nav_guard\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n",
+          "query": "import \"array\"\nimport \"strings\"\nspan = (t) => {\n    m = (int(v: now()) - int(v: t)) / 60000000000\n    return if m < 1 then \"under a minute\" else if m < 120 then string(v: m) + \" min\" else string(v: m / 60) + \" h\"\n}\nplural = (n, one) => string(v: n) + \" \" + one + (if n == 1 then \"\" else \"s\")\ng = (union(tables: [from(bucket: \"telemetry\")\n      |> range(start: -15s)\n      |> filter(fn: (r) => r._measurement == \"autonomy\" and r._field == \"nav_guard\" and r.vessel == \"${vessel}\")\n      |> last()\n      |> group()\n      |> keep(columns: [\"_time\", \"_value\"]),\n    array.from(rows: [{_time: 1970-01-01T00:00:00Z, _value: -1.0}])])\n  |> sort(columns: [\"_time\"])\n  |> last(column: \"_time\")\n  |> findRecord(fn: (key) => true, idx: 0))._value\nc = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"value\" and (r.category == \"nav_guard\" and r.action == \"stop\"))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nd = if c == 0 then \"no stops in this range\" else plural(n: c, one: \"stop\") + \" in this range\"\narray.from(rows: [{_value: g, detail: d, ok: g >= 0.0}])\n  |> filter(fn: (r) => r.ok)\n  |> drop(columns: [\"ok\"])\n  |> group(columns: [\"detail\"])\n",
           "refId": "A"
         }
       ],
@@ -537,7 +601,8 @@
                 }
               }
             }
-          ]
+          ],
+          "displayName": "${__field.labels.detail}"
         },
         "overrides": []
       },
@@ -545,9 +610,10 @@
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "/.*/"
         },
-        "textMode": "value",
+        "textMode": "value_and_name",
         "graphMode": "none",
         "colorMode": "background",
         "justifyMode": "auto",
@@ -577,7 +643,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> filter(fn: (r) => r.category == \"login\" and r.action == \"login\")\n  |> group()\n  |> count()\n",
+          "query": "import \"array\"\nimport \"strings\"\nspan = (t) => {\n    m = (int(v: now()) - int(v: t)) / 60000000000\n    return if m < 1 then \"under a minute\" else if m < 120 then string(v: m) + \" min\" else string(v: m / 60) + \" h\"\n}\nplural = (n, one) => string(v: n) + \" \" + one + (if n == 1 then \"\" else \"s\")\nc = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"value\" and (r.category == \"login\" and r.action == \"login\"))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nk = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"value\" and r.category == \"login\" and r.action == \"login\")\n      |> group()\n      |> distinct(column: \"user\")\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\narray.from(rows: [{_value: c, detail: plural(n: k, one: \"user\"), ok: true}])\n  |> filter(fn: (r) => r.ok)\n  |> drop(columns: [\"ok\"])\n  |> group(columns: [\"detail\"])\n",
           "refId": "A"
         }
       ],
@@ -596,7 +662,8 @@
                 "value": null
               }
             ]
-          }
+          },
+          "displayName": "${__field.labels.detail}"
         },
         "overrides": []
       },
@@ -604,9 +671,10 @@
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "/.*/"
         },
-        "textMode": "auto",
+        "textMode": "value_and_name",
         "graphMode": "none",
         "colorMode": "value",
         "justifyMode": "auto",
@@ -636,7 +704,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> filter(fn: (r) => r.category == \"refused\")\n  |> group()\n  |> count()\n",
+          "query": "import \"array\"\nimport \"strings\"\nspan = (t) => {\n    m = (int(v: now()) - int(v: t)) / 60000000000\n    return if m < 1 then \"under a minute\" else if m < 120 then string(v: m) + \" min\" else string(v: m / 60) + \" h\"\n}\nplural = (n, one) => string(v: n) + \" \" + one + (if n == 1 then \"\" else \"s\")\nn = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"value\" and (r.category == \"refused\"))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nro = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"details\" and (r.category == \"refused\" and strings.containsStr(v: r._value, substr: \"read-only\")))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nst = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"details\" and (r.category == \"refused\" and strings.containsStr(v: r._value, substr: \"ALL STOP\")))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nnc = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"details\" and (r.category == \"refused\" and strings.containsStr(v: r._value, substr: \"not in control\")))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nother = n - ro - st - nc\npart = (c, t) => if c > 0 then string(v: c) + \" \" + t else \"\"\nparts = [part(c: ro, t: \"read-only\"), part(c: st, t: \"ALL STOP\"), part(c: nc, t: \"not in control\"), part(c: other, t: \"other\")]\nd = strings.joinStr(arr: array.filter(arr: parts, fn: (x) => x != \"\"), v: \" \u00b7 \")\narray.from(rows: [{_value: n, detail: if d == \"\" then \"none in this range\" else d, ok: true}])\n  |> filter(fn: (r) => r.ok)\n  |> drop(columns: [\"ok\"])\n  |> group(columns: [\"detail\"])\n",
           "refId": "A"
         }
       ],
@@ -659,7 +727,8 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "displayName": "${__field.labels.detail}"
         },
         "overrides": []
       },
@@ -667,9 +736,10 @@
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "/.*/"
         },
-        "textMode": "auto",
+        "textMode": "value_and_name",
         "graphMode": "none",
         "colorMode": "value",
         "justifyMode": "auto",
@@ -699,7 +769,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> filter(fn: (r) => r.action == \"force\")\n  |> group()\n  |> count()\n",
+          "query": "import \"array\"\nimport \"strings\"\nspan = (t) => {\n    m = (int(v: now()) - int(v: t)) / 60000000000\n    return if m < 1 then \"under a minute\" else if m < 120 then string(v: m) + \" min\" else string(v: m / 60) + \" h\"\n}\nplural = (n, one) => string(v: n) + \" \" + one + (if n == 1 then \"\" else \"s\")\nc = (union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"value\" and (r.action == \"force\"))\n      |> group()\n      |> count()\n      |> keep(columns: [\"_value\"]),\n    array.from(rows: [{_value: 0}])])\n  |> sum()\n  |> findRecord(fn: (key) => true, idx: 0))._value\nf = union(tables: [from(bucket: \"events\")\n      |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n      |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n      |> filter(fn: (r) => r._field == \"message\" and (r.action == \"force\"))\n      |> group()\n      |> keep(columns: [\"_time\", \"action\", \"user\"]),\n    array.from(rows: [{_time: 1970-01-01T00:00:00Z, action: \"\", user: \"\"}])])\n  |> sort(columns: [\"_time\"])\n  |> last(column: \"_time\")\n  |> findRecord(fn: (key) => true, idx: 0)\nd = if f.action == \"\" then \"none in this range\" else f.user + \", \" + span(t: f._time) + \" ago\"\narray.from(rows: [{_value: c, detail: d, ok: true}])\n  |> filter(fn: (r) => r.ok)\n  |> drop(columns: [\"ok\"])\n  |> group(columns: [\"detail\"])\n",
           "refId": "A"
         }
       ],
@@ -722,7 +792,8 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "displayName": "${__field.labels.detail}"
         },
         "overrides": []
       },
@@ -730,9 +801,10 @@
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "/.*/"
         },
-        "textMode": "auto",
+        "textMode": "value_and_name",
         "graphMode": "none",
         "colorMode": "value",
         "justifyMode": "auto",
@@ -868,6 +940,17 @@
                         "index": 0
                       }
                     }
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "lost:(.+)",
+                      "result": {
+                        "text": "lost ($1)",
+                        "color": "orange",
+                        "index": 1
+                      }
+                    }
                   }
                 ]
               },
@@ -911,7 +994,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "import \"strings\"\nfrom(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"message\" or r._field == \"details\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group()\n  |> filter(fn: (r) => \"${search}\" == \"\" or strings.containsStr(v: strings.toLower(v: r.message + \" \" + r.details + \" \" + r.user), substr: strings.toLower(v: \"${search}\")))\n  |> keep(columns: [\"_time\", \"severity\", \"category\", \"message\", \"user\", \"role\", \"details\"])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1000)\n  |> rename(columns: {_time: \"Time\", severity: \"Severity\", category: \"Category\", message: \"Event\", user: \"User\", role: \"Role\", details: \"Details\"})\n",
+          "query": "import \"strings\"\nfrom(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"message\" or r._field == \"details\")\n  |> filter(fn: (r) => \"${category}\" == \"all\" or r.category == \"${category}\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group()\n  |> filter(fn: (r) => \"${search}\" == \"\" or strings.containsStr(v: strings.toLower(v: r.message + \" \" + r.details + \" \" + r.user), substr: strings.toLower(v: \"${search}\")))\n  |> keep(columns: [\"_time\", \"severity\", \"category\", \"message\", \"user\", \"role\", \"details\"])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1000)\n  |> rename(columns: {_time: \"Time\", severity: \"Severity\", category: \"Category\", message: \"Event\", user: \"User\", role: \"Role\", details: \"Details\"})\n",
           "refId": "A"
         }
       ],
@@ -950,7 +1033,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 90
+                "value": 85
               },
               {
                 "id": "mappings",
@@ -993,7 +1076,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 100
+                "value": 95
               },
               {
                 "id": "mappings",
@@ -1046,12 +1129,24 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Event"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 300
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "User"
             },
             "properties": [
               {
                 "id": "custom.width",
-                "value": 100
+                "value": 90
               }
             ]
           },
@@ -1063,7 +1158,19 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 95
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Details"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 180
               }
             ]
           }
@@ -1076,6 +1183,7 @@
           "show": false
         }
       },
+      "description": "Newest first. Category and Search at the top of the page filter it; the funnel in each column header filters that column. CSV: panel menu > Inspect > Data > Download CSV.",
       "transformations": [
         {
           "id": "organize",
@@ -1091,12 +1199,19 @@
             }
           }
         }
+      ],
+      "links": [
+        {
+          "title": "Download CSV (Inspect > Data)",
+          "url": "?inspect=${__panel.id}&inspectTab=data",
+          "targetBlank": false
+        }
       ]
     },
     {
       "id": 9709,
       "type": "table",
-      "title": "Refused commands by user",
+      "title": "Refused commands by reason",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -1105,7 +1220,7 @@
         "x": 16,
         "y": 9,
         "w": 8,
-        "h": 3
+        "h": 4
       },
       "targets": [
         {
@@ -1113,7 +1228,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"value\" and r.category == \"refused\")\n  |> group(columns: [\"user\"])\n  |> count()\n  |> group()\n  |> keep(columns: [\"user\", \"_value\"])\n  |> sort(columns: [\"_value\"], desc: true)\n  |> rename(columns: {user: \"User\", _value: \"Refused\"})\n",
+          "query": "import \"array\"\nimport \"strings\"\ncounts = from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"details\" and r.category == \"refused\")\n  |> map(fn: (r) => ({reason: if strings.containsStr(v: r._value, substr: \"read-only\") then \"read-only account\" else if strings.containsStr(v: r._value, substr: \"ALL STOP\") then \"ALL STOP latched\" else if strings.containsStr(v: r._value, substr: \"not in control\") then \"not in control\" else if strings.containsStr(v: r._value, substr: \"changed hands\") then \"stale (control changed)\" else if strings.containsStr(v: r._value, substr: \"may not command\") then \"role may not command\" else if strings.containsStr(v: r._value, substr: \"logged-out\") then \"logged-out session\" else if strings.containsStr(v: r._value, substr: \"boat link\") then \"boat link down\" else \"other\", _value: 1}))\n  |> group(columns: [\"reason\"])\n  |> sum()\n  |> group()\nzero = array.from(rows: [{reason: \"read-only account\", _value: 0}, {reason: \"ALL STOP latched\", _value: 0}, {reason: \"not in control\", _value: 0}, {reason: \"stale (control changed)\", _value: 0}])\nunion(tables: [counts, zero])\n  |> group(columns: [\"reason\"])\n  |> sum()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)\n  |> rename(columns: {reason: \"Reason\", _value: \"Refused\"})\n",
           "refId": "A"
         }
       ],
@@ -1123,7 +1238,34 @@
             "mode": "palette-classic"
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Refused"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "showHeader": true,
@@ -1140,9 +1282,9 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 12,
+        "y": 13,
         "w": 8,
-        "h": 4
+        "h": 3
       },
       "targets": [
         {
@@ -1150,7 +1292,7 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"value\" and r.user != \"-\")\n  |> group(columns: [\"user\", \"category\"])\n  |> count()\n  |> group()\n  |> pivot(rowKey: [\"user\"], columnKey: [\"category\"], valueColumn: \"_value\")\n  |> rename(columns: {user: \"User\"})\n",
+          "query": "from(bucket: \"events\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"audit\" and r.vessel == \"${vessel}\")\n  |> filter(fn: (r) => r._field == \"value\" and r.user != \"-\")\n  |> group(columns: [\"user\"])\n  |> reduce(identity: {control: 0, logins: 0, refused: 0}, fn: (r, accumulator) => ({\n      control: accumulator.control + (if r.category == \"control\" or r.category == \"all_stop\" then 1 else 0),\n      logins: accumulator.logins + (if r.category == \"login\" and r.action == \"login\" then 1 else 0),\n      refused: accumulator.refused + (if r.category == \"refused\" then 1 else 0)}))\n  |> group()\n  |> keep(columns: [\"user\", \"control\", \"logins\", \"refused\"])\n  |> sort(columns: [\"user\"])\n  |> rename(columns: {user: \"User\", control: \"Control\", logins: \"Logins\", refused: \"Refused\"})\n",
           "refId": "A"
         }
       ],
@@ -1169,8 +1311,8 @@
     },
     {
       "id": 9711,
-      "type": "stat",
-      "title": "Open Sessions",
+      "type": "table",
+      "title": "Open sessions",
       "datasource": {
         "type": "influxdb",
         "uid": "influxdb-usv"
@@ -1187,56 +1329,24 @@
             "type": "influxdb",
             "uid": "influxdb-usv"
           },
-          "query": "from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"mission_state\" and r._field == \"c2_sessions\")\n  |> filter(fn: (r) => r.vessel == \"${vessel}\")\n  |> last()\n  |> keep(columns: [\"_value\"])\n",
+          "query": "from(bucket: \"telemetry\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"c2_session\" and r.vessel == \"${vessel}\")\n  |> last()\n  |> pivot(rowKey: [\"session\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group()\n  |> keep(columns: [\"user\", \"role\", \"ip\"])\n  |> sort(columns: [\"user\"])\n  |> rename(columns: {user: \"User\", role: \"Role\", ip: \"IP\"})\n",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
           },
-          "noValue": "none reported",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#3d434b",
-                "value": null
-              }
-            ]
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "-": {
-                  "text": "none",
-                  "color": "#3d434b",
-                  "index": 0
-                }
-              }
-            }
-          ]
+          "noValue": "none"
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "/.*/"
-        },
-        "textMode": "value",
-        "graphMode": "none",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "text": {
-          "valueSize": 22,
-          "titleSize": 12
-        }
-      }
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "description": "Logged in to Swiftships-UI and not yet logged out or disconnected."
     }
   ],
   "annotations": {

@@ -1019,7 +1019,10 @@ def dashboard(uid, title, panels, tags, refresh="1s", time_from="now-30m",
         # lasting default: Profile -> Preferences -> Interface theme.
         "links": [{
             "type": "link", "title": name, "url": f"/d/{u}",
-            "keepTime": True, "includeVars": u != "usv-fleet",
+            # The Audit page opens at its own 24 h and does not hand that
+            # range to the live pages.
+            "keepTime": u != "usv-audit" and uid != "usv-audit",
+            "includeVars": u != "usv-fleet",
             "targetBlank": False, "icon": "dashboard",
             "tooltip": f"Open {name}",
         } for u, name in TAB_ORDER] + [{
@@ -3252,8 +3255,10 @@ ALL_STOP_MAP = [{"type": "value", "options": {
     "1": {"text": "LATCHED", "color": "red", "index": 1}}}]
 HOLDER_MAP = [{"type": "value", "options": {
     "-": {"text": "NOBODY", "color": NEUTRAL, "index": 0}}},
+    {"type": "regex", "options": {"pattern": "lost:(.+)", "result": {
+        "text": "LOST ($1)", "color": "orange", "index": 1}}},
     {"type": "regex", "options": {"pattern": "(.+)", "result": {
-        "text": "$1", "color": TILE_OK, "index": 1}}}]
+        "text": "$1", "color": TILE_OK, "index": 2}}}]
 
 
 def recent(measurement, field, window="-15s"):
@@ -3315,19 +3320,157 @@ AUDIT_SEARCH_VAR = {
     "name": "search", "label": "Search", "type": "textbox",
     "query": "", "current": {"text": "", "value": ""}, "hide": 0,
 }
+# Category filter (the mockup's chips): one choice for the audit log.
+_AUDIT_CATS = [("All", "all"), ("Control", "control"), ("Login", "login"),
+               ("Refused", "refused"), ("ALL STOP", "all_stop"),
+               ("Nav guard", "nav_guard"), ("Region", "region")]
+AUDIT_CATEGORY_VAR = {
+    "name": "category", "label": "Category", "type": "custom",
+    "query": ",".join(f"{t} : {v}" for t, v in _AUDIT_CATS),
+    "current": {"text": "All", "value": "all"},
+    "options": [{"text": t, "value": v, "selected": v == "all"} for t, v in _AUDIT_CATS],
+    "hide": 0, "includeAll": False, "multi": False,
+}
+
+# Flux helpers for the tiles' second line: "12 min" / "3 h" since a time.
+AUDIT_FN = (
+    'import "array"\n'
+    'import "strings"\n'
+    'span = (t) => {\n'
+    '    m = (int(v: now()) - int(v: t)) / 60000000000\n'
+    '    return if m < 1 then "under a minute" else if m < 120 then string(v: m) + " min" '
+    'else string(v: m / 60) + " h"\n'
+    '}\n'
+    'plural = (n, one) => string(v: n) + " " + one + (if n == 1 then "" else "s")\n')
 
 
-def audit_count(pred):
-    return (AUDIT_BASE +
-            '  |> filter(fn: (r) => r._field == "value")\n'
-            f'  |> filter(fn: (r) => {pred})\n'
-            '  |> group()\n'
-            '  |> count()\n')
+def audit_last(pred, field="message"):
+    """The newest audit row matching pred as a record (_time, action, user);
+    action "" when there is none (a 1970 placeholder row keeps the stream
+    from being empty)."""
+    return ('union(tables: [' + AUDIT_BASE.replace("\n", "\n    ") +
+            f'  |> filter(fn: (r) => r._field == "{field}" and ({pred}))\n'
+            '      |> group()\n'
+            '      |> keep(columns: ["_time", "action", "user"]),\n'
+            '    array.from(rows: [{_time: 1970-01-01T00:00:00Z, action: "", user: ""}])])\n'
+            '  |> sort(columns: ["_time"])\n'
+            '  |> last(column: "_time")\n'
+            '  |> findRecord(fn: (key) => true, idx: 0)\n')
 
+
+def audit_n(pred, field="value"):
+    """Number of audit rows matching pred, as an int (0 when none)."""
+    return ('(union(tables: [' + AUDIT_BASE.replace("\n", "\n    ") +
+            f'  |> filter(fn: (r) => r._field == "{field}" and ({pred}))\n'
+            '      |> group()\n'
+            '      |> count()\n'
+            '      |> keep(columns: ["_value"]),\n'
+            '    array.from(rows: [{_value: 0}])])\n'
+            '  |> sum()\n'
+            '  |> findRecord(fn: (key) => true, idx: 0))._value\n')
+
+
+def detail_rows(value, detail, ok="true"):
+    """One row {_value, detail} with detail as the series label (shown
+    above the value by the tile), none when ok is false."""
+    return (f'array.from(rows: [{{_value: {value}, detail: {detail}, ok: {ok}}}])\n'
+            '  |> filter(fn: (r) => r.ok)\n'
+            '  |> drop(columns: ["ok"])\n'
+            '  |> group(columns: ["detail"])\n')
+
+
+def detail_tile(title, query, x, y, w, h, **kw):
+    """Stat tile with a second line: the series label "detail" as the tile's
+    name line (value_and_name), the value large beneath it."""
+    p = stat(title, query, x, y, w, h, **kw)
+    p["options"]["textMode"] = "value_and_name"
+    # the row carries only _value (detail is a label): every field is it
+    p["options"]["reduceOptions"]["fields"] = "/.*/"
+    p["fieldConfig"]["defaults"]["displayName"] = "${__field.labels.detail}"
+    return p
+
+
+def _cur(measurement, field, name, default, window="-1m"):
+    """The latest value of a telemetry field as {name} (default when none)."""
+    return (f'{name} = (union(tables: [from(bucket: "telemetry")\n'
+            f'      |> range(start: {window})\n'
+            f'      |> filter(fn: (r) => r._measurement == "{measurement}" and r._field == "{field}" '
+            'and r.vessel == "${vessel}")\n'
+            '      |> last()\n'
+            '      |> group()\n'
+            '      |> keep(columns: ["_time", "_value"]),\n'
+            f'    array.from(rows: [{{_time: 1970-01-01T00:00:00Z, _value: {default}}}])])\n'
+            '  |> sort(columns: ["_time"])\n'
+            '  |> last(column: "_time")\n'
+            '  |> findRecord(fn: (key) => true, idx: 0))._value\n')
+
+
+control_tile_query = (
+    AUDIT_FN +
+    _cur("mission_state", "control_holder", "h", '""') +
+    _cur("mission_state", "control_role", "role", '""') +
+    _cur("mission_state", "control_since_ms", "since", "0.0") +
+    'for = if since > 0.0 then " · for " + span(t: time(v: int(v: since * 1000000.0))) else ""\n'
+    'd = if h == "-" then "nobody in control"\n'
+    '    else if strings.hasPrefix(v: h, prefix: "lost:") then "holder not heard" + for\n'
+    '    else role + for\n' +
+    detail_rows("h", "d", 'h != ""'))
+
+allstop_tile_query = (
+    AUDIT_FN +
+    _cur("autonomy", "all_stop", "st", "-1.0") +
+    'a = ' + audit_last('r.category == "all_stop"') +
+    'd = if a.action == "" then "not pressed in this range"\n'
+    '    else (if a.action == "all_stop_reset" then "reset by " else "pressed by ") + a.user '
+    '+ ", " + span(t: a._time) + " ago"\n' +
+    detail_rows("st", "d", "st >= 0.0"))
+
+navguard_tile_query = (
+    AUDIT_FN +
+    _cur("autonomy", "nav_guard", "g", "-1.0", "-15s") +
+    'c = ' + audit_n('r.category == "nav_guard" and r.action == "stop"') +
+    'd = if c == 0 then "no stops in this range" else plural(n: c, one: "stop") + " in this range"\n' +
+    detail_rows("g", "d", "g >= 0.0"))
+
+logins_tile_query = (
+    AUDIT_FN +
+    'c = ' + audit_n('r.category == "login" and r.action == "login"') +
+    'k = (union(tables: [' + AUDIT_BASE.replace("\n", "\n    ") +
+    '  |> filter(fn: (r) => r._field == "value" and r.category == "login" and r.action == "login")\n'
+    '      |> group()\n'
+    '      |> distinct(column: "user")\n'
+    '      |> count()\n'
+    '      |> keep(columns: ["_value"]),\n'
+    '    array.from(rows: [{_value: 0}])])\n'
+    '  |> sum()\n'
+    '  |> findRecord(fn: (key) => true, idx: 0))._value\n' +
+    detail_rows("c", 'plural(n: k, one: "user")'))
+
+_ref = 'r.category == "refused"'
+refused_tile_query = (
+    AUDIT_FN +
+    'n = ' + audit_n(_ref) +
+    'ro = ' + audit_n(_ref + ' and strings.containsStr(v: r._value, substr: "read-only")', "details") +
+    'st = ' + audit_n(_ref + ' and strings.containsStr(v: r._value, substr: "ALL STOP")', "details") +
+    'nc = ' + audit_n(_ref + ' and strings.containsStr(v: r._value, substr: "not in control")', "details") +
+    'other = n - ro - st - nc\n'
+    'part = (c, t) => if c > 0 then string(v: c) + " " + t else ""\n'
+    'parts = [part(c: ro, t: "read-only"), part(c: st, t: "ALL STOP"), '
+    'part(c: nc, t: "not in control"), part(c: other, t: "other")]\n'
+    'd = strings.joinStr(arr: array.filter(arr: parts, fn: (x) => x != ""), v: " · ")\n' +
+    detail_rows("n", 'if d == "" then "none in this range" else d'))
+
+forced_tile_query = (
+    AUDIT_FN +
+    'c = ' + audit_n('r.action == "force"') +
+    'f = ' + audit_last('r.action == "force"') +
+    'd = if f.action == "" then "none in this range" else f.user + ", " + span(t: f._time) + " ago"\n' +
+    detail_rows("c", "d"))
 
 audit_table_query = (
     'import "strings"\n' + AUDIT_BASE +
     '  |> filter(fn: (r) => r._field == "message" or r._field == "details")\n'
+    '  |> filter(fn: (r) => "${category}" == "all" or r.category == "${category}")\n'
     '  |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")\n'
     '  |> group()\n'
     '  |> filter(fn: (r) => "${search}" == "" or strings.containsStr(v: strings.toLower(v: '
@@ -3337,6 +3480,12 @@ audit_table_query = (
     '  |> limit(n: 1000)\n'
     '  |> rename(columns: {_time: "Time", severity: "Severity", category: "Category", '
     'message: "Event", user: "User", role: "Role", details: "Details"})\n')
+
+# Control: user colours, nobody grey, "lost" (holder not heard) amber.
+CONTROL_TIMELINE_MAP = [
+    {"type": "value", "options": {"-": {"text": "nobody", "color": NEUTRAL, "index": 0}}},
+    {"type": "regex", "options": {"pattern": "lost:(.+)", "result": {
+        "text": "lost ($1)", "color": "orange", "index": 1}}}]
 
 audit_timeline = panel("state-timeline", "Who had control", [
     target('from(bucket: "telemetry")\n'
@@ -3367,9 +3516,8 @@ audit_timeline = panel("state-timeline", "Who had control", [
         {"matcher": {"id": "byName", "options": "Navigation guard"},
          "properties": [{"id": "mappings", "value": NAV_GUARD_MAP}]},
         {"matcher": {"id": "byName", "options": "Control"},
-         "properties": [{"id": "mappings", "value": [{"type": "value", "options": {
-             "-": {"text": "nobody", "color": NEUTRAL, "index": 0}}}]},
-             {"id": "color", "value": {"mode": "palette-classic"}}]}],
+         "properties": [{"id": "mappings", "value": CONTROL_TIMELINE_MAP},
+                        {"id": "color", "value": {"mode": "palette-classic"}}]}],
     options={"showValue": "auto", "mergeValues": True, "rowHeight": 0.8,
              "alignValue": "left", "legend": {"showLegend": False}})
 
@@ -3378,69 +3526,116 @@ AUDIT_TABLE_OVERRIDES = [
      "properties": [{"id": "custom.width", "value": 160},
                     {"id": "unit", "value": "dateTimeAsIso"}]},
     {"matcher": {"id": "byName", "options": "Severity"},
-     "properties": [{"id": "custom.width", "value": 90},
+     "properties": [{"id": "custom.width", "value": 85},
                     {"id": "mappings", "value": [{"type": "value", "options": {
                         "info": {"text": "Info", "color": TILE_OK, "index": 0},
                         "warning": {"text": "Warning", "color": "orange", "index": 1},
                         "critical": {"text": "Critical", "color": "red", "index": 2}}}]},
                     {"id": "custom.cellOptions", "value": {"type": "color-background"}}]},
     {"matcher": {"id": "byName", "options": "Category"},
-     "properties": [{"id": "custom.width", "value": 100},
+     "properties": [{"id": "custom.width", "value": 95},
                     {"id": "mappings", "value": AUDIT_CATEGORY_MAP},
                     {"id": "custom.cellOptions", "value": {"type": "color-background"}}]},
+    {"matcher": {"id": "byName", "options": "Event"},
+     "properties": [{"id": "custom.minWidth", "value": 300}]},
     {"matcher": {"id": "byName", "options": "User"},
-     "properties": [{"id": "custom.width", "value": 100}]},
+     "properties": [{"id": "custom.width", "value": 90}]},
     {"matcher": {"id": "byName", "options": "Role"},
-     "properties": [{"id": "custom.width", "value": 95}]},
+     "properties": [{"id": "custom.width", "value": 90}]},
+    {"matcher": {"id": "byName", "options": "Details"},
+     "properties": [{"id": "custom.minWidth", "value": 180}]},
 ]
 
+REFUSED_REASONS = [("read-only", "read-only account"), ("ALL STOP", "ALL STOP latched"),
+                   ("not in control", "not in control"),
+                   ("changed hands", "stale (control changed)"),
+                   ("may not command", "role may not command"),
+                   ("logged-out", "logged-out session"), ("boat link", "boat link down")]
+_reason_expr = "".join(
+    f'if strings.containsStr(v: r._value, substr: "{k}") then "{t}" else '
+    for k, t in REFUSED_REASONS) + '"other"'
+refused_by_reason_query = (
+    'import "array"\nimport "strings"\n'
+    'counts = ' + AUDIT_BASE +
+    '  |> filter(fn: (r) => r._field == "details" and r.category == "refused")\n'
+    f'  |> map(fn: (r) => ({{reason: {_reason_expr}, _value: 1}}))\n'
+    '  |> group(columns: ["reason"])\n'
+    '  |> sum()\n'
+    '  |> group()\n'
+    'zero = array.from(rows: [' +
+    ", ".join(f'{{reason: "{t}", _value: 0}}' for _, t in REFUSED_REASONS[:4]) + '])\n'
+    'union(tables: [counts, zero])\n'
+    '  |> group(columns: ["reason"])\n'
+    '  |> sum()\n'
+    '  |> group()\n'
+    '  |> sort(columns: ["_value"], desc: true)\n'
+    '  |> rename(columns: {reason: "Reason", _value: "Refused"})\n')
+
+events_by_user_query = (
+    AUDIT_BASE +
+    '  |> filter(fn: (r) => r._field == "value" and r.user != "-")\n'
+    '  |> group(columns: ["user"])\n'
+    '  |> reduce(identity: {control: 0, logins: 0, refused: 0}, fn: (r, accumulator) => ({\n'
+    '      control: accumulator.control + (if r.category == "control" or r.category == "all_stop" then 1 else 0),\n'
+    '      logins: accumulator.logins + (if r.category == "login" and r.action == "login" then 1 else 0),\n'
+    '      refused: accumulator.refused + (if r.category == "refused" then 1 else 0)}))\n'
+    '  |> group()\n'
+    '  |> keep(columns: ["user", "control", "logins", "refused"])\n'
+    '  |> sort(columns: ["user"])\n'
+    '  |> rename(columns: {user: "User", control: "Control", logins: "Logins", refused: "Refused"})\n')
+
+open_sessions_query = (
+    'from(bucket: "telemetry")\n'
+    '  |> range(start: -30s)\n'
+    '  |> filter(fn: (r) => r._measurement == "c2_session" and r.vessel == "${vessel}")\n'
+    '  |> last()\n'
+    '  |> pivot(rowKey: ["session"], columnKey: ["_field"], valueColumn: "_value")\n'
+    '  |> group()\n'
+    '  |> keep(columns: ["user", "role", "ip"])\n'
+    '  |> sort(columns: ["user"])\n'
+    '  |> rename(columns: {user: "User", role: "Role", ip: "IP"})\n')
+
+_count_tile = dict(decimals=0, no_value="0", text_mode="value_and_name")
 DASHBOARDS.append(dashboard("usv-audit", "Audit", [
-    stat("Control", flux("mission_state", "control_holder", last=True), 0, 0, 4, 3,
-         string_value=True, mappings=HOLDER_MAP, text_mode="value", color_mode="background"),
-    stat("ALL STOP", flux("autonomy", "all_stop", last=True), 4, 0, 4, 3,
-         mappings=ALL_STOP_MAP, text_mode="value", color_mode="background"),
-    stat("Navigation Guard", recent("autonomy", "nav_guard"), 8, 0, 4, 3,
-         mappings=NAV_GUARD_MAP, text_mode="value", color_mode="background"),
-    stat("Logins", audit_count('r.category == "login" and r.action == "login"'), 12, 0, 4, 3,
-         decimals=0, no_value="0"),
-    stat("Commands Refused", audit_count('r.category == "refused"'), 16, 0, 4, 3,
-         decimals=0, no_value="0",
-         thresholds=[(None, OK), (1, "orange")]),
-    stat("Forced Takeovers", audit_count('r.action == "force"'), 20, 0, 4, 3,
-         decimals=0, no_value="0",
-         thresholds=[(None, OK), (1, "orange")]),
+    detail_tile("Control", control_tile_query, 0, 0, 4, 3,
+                mappings=HOLDER_MAP, color_mode="background", string_value=False),
+    detail_tile("ALL STOP", allstop_tile_query, 4, 0, 4, 3,
+                mappings=ALL_STOP_MAP, color_mode="background"),
+    detail_tile("Navigation Guard", navguard_tile_query, 8, 0, 4, 3,
+                mappings=NAV_GUARD_MAP, color_mode="background"),
+    detail_tile("Logins", logins_tile_query, 12, 0, 4, 3, **_count_tile),
+    detail_tile("Commands Refused", refused_tile_query, 16, 0, 4, 3,
+                thresholds=[(None, OK), (1, "orange")], **_count_tile),
+    detail_tile("Forced Takeovers", forced_tile_query, 20, 0, 4, 3,
+                thresholds=[(None, OK), (1, "orange")], **_count_tile),
     audit_timeline,
     dict(panel("table", "Audit log", [target(audit_table_query)], 0, 7, 16, 10,
                overrides=AUDIT_TABLE_OVERRIDES, custom={"filterable": True, "align": "auto"},
                options={"showHeader": True, "cellHeight": "sm",
                         "footer": {"show": False}}),
+         description=("Newest first. Category and Search at the top of the page filter it; "
+                      "the funnel in each column header filters that column. CSV: panel "
+                      "menu > Inspect > Data > Download CSV."),
          # keep() does not order the columns: fix the reading order.
          transformations=[{"id": "organize", "options": {"indexByName": {
              "Time": 0, "Severity": 1, "Category": 2, "Event": 3,
-             "User": 4, "Role": 5, "Details": 6}}}]),
-    panel("table", "Refused commands by user",
-          [target(AUDIT_BASE +
-                  '  |> filter(fn: (r) => r._field == "value" and r.category == "refused")\n'
-                  '  |> group(columns: ["user"])\n'
-                  '  |> count()\n'
-                  '  |> group()\n'
-                  '  |> keep(columns: ["user", "_value"])\n'
-                  '  |> sort(columns: ["_value"], desc: true)\n'
-                  '  |> rename(columns: {user: "User", _value: "Refused"})\n')],
-          16, 7, 8, 3, options={"showHeader": True, "cellHeight": "sm"}),
-    panel("table", "Events by user",
-          [target(AUDIT_BASE +
-                  '  |> filter(fn: (r) => r._field == "value" and r.user != "-")\n'
-                  '  |> group(columns: ["user", "category"])\n'
-                  '  |> count()\n'
-                  '  |> group()\n'
-                  '  |> pivot(rowKey: ["user"], columnKey: ["category"], valueColumn: "_value")\n'
-                  '  |> rename(columns: {user: "User"})\n')],
-          16, 10, 8, 4, options={"showHeader": True, "cellHeight": "sm"}),
-    stat("Open Sessions", recent("mission_state", "c2_sessions", "-30s"), 16, 14, 8, 3,
-         string_value=True, text_mode="value", no_value="none reported",
-         mappings=[{"type": "value", "options": {
-             "-": {"text": "none", "color": NEUTRAL, "index": 0}}}]),
+             "User": 4, "Role": 5, "Details": 6}}}],
+         links=[{"title": "Download CSV (Inspect > Data)", "url": "?inspect=${__panel.id}&inspectTab=data",
+                 "targetBlank": False}]),
+    panel("table", "Refused commands by reason", [target(refused_by_reason_query)],
+          16, 7, 8, 4, options={"showHeader": True, "cellHeight": "sm"},
+          overrides=[{"matcher": {"id": "byName", "options": "Refused"},
+                      "properties": [{"id": "custom.cellOptions",
+                                      "value": {"type": "gauge", "mode": "basic"}},
+                                     {"id": "color", "value": {"mode": "fixed",
+                                                               "fixedColor": "orange"}},
+                                     {"id": "min", "value": 0}]}]),
+    panel("table", "Events by user", [target(events_by_user_query)],
+          16, 11, 8, 3, options={"showHeader": True, "cellHeight": "sm"}),
+    dict(panel("table", "Open sessions", [target(open_sessions_query)],
+               16, 14, 8, 3, options={"showHeader": True, "cellHeight": "sm"},
+               no_value="none"),
+         description="Logged in to Swiftships-UI and not yet logged out or disconnected."),
 ], ["audit"], refresh="10s", time_from="now-24h"))
 # Own id range so the header-band ids of the other pages stay as they were.
 _audit = DASHBOARDS[-1]["panels"]
@@ -3703,7 +3898,7 @@ def main():
         if d["uid"] == "usv-traffic":
             d["templating"]["list"].append(TRAFFIC_RANGE_VAR)
         if d["uid"] == "usv-audit":
-            d["templating"]["list"].append(AUDIT_SEARCH_VAR)
+            d["templating"]["list"].extend([AUDIT_CATEGORY_VAR, AUDIT_SEARCH_VAR])
         if d["uid"] == "usv-fleet":
             use_fleet_variable(d)
         path = os.path.join(OUT, f"{d['uid']}.json")

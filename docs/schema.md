@@ -72,7 +72,9 @@ mission_name comes from the grafana_bridge ProcessConfig (default: the MOOS
 Community name). route_plan: the safe-route planner note read from the same
 route's description ("water >= 3 m, 10 m clearance, US3LA1CB", "-" when the
 route has none). nav_status_msg: the navigation guard's reason
-(NAV_STATUS_MSG, "-" when empty). region_state: the region behaviour's state
+(NAV_STATUS_MSG, "-" when empty). control_holder is "lost:<user>" while
+the last holder is not heard (until control is taken, handed over or
+released). region_state: the region behaviour's state
 (V26_STATE: contained, lapsed, breached ...). control_holder and
 control_role: who holds control of the boat ("-" nobody), control_since_ms
 (numeric, epoch ms of the last change), c2_sessions (open logins as
@@ -153,6 +155,11 @@ file's LatOrigin/LongOrigin, deletes the previous set of the same kind
 and writes all vertices with one timestamp, so `last()` per idx is
 exactly the current geometry. The region outline is closed (first vertex
 repeated). "NONE" clears the set. Written only when the datum is present.
+
+### c2_session: source MOOS bridge, every 5 s
+One row per open Swiftships-UI login, tag `session` (the tab session, or
+user@ip for a login made with the Signal K cookie): user ("no login" for a
+connection without one), role, ip. The Audit page reads the last 30 s.
 
 ### can_drive: source MOOS bridge (iCAN drive interface), on change and 1 Hz
 status (string: ACTIVE | STANDBY | NO_BUS | INHIBITED), owner (AUTONOMY |
