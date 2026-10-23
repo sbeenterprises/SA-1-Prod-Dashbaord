@@ -1075,7 +1075,23 @@
         "footer": {
           "show": false
         }
-      }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "Time": 0,
+              "Severity": 1,
+              "Category": 2,
+              "Event": 3,
+              "User": 4,
+              "Role": 5,
+              "Details": 6
+            }
+          }
+        }
+      ]
     },
     {
       "id": 9709,

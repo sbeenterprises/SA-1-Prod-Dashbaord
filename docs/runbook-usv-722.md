@@ -21,7 +21,7 @@ on the boat needs.
 | Starlink | dish at 192.168.100.1, probed by Telegraf |
 | VPN | Twingate connector on the OBC (`twingate-connector.service`); Comms tile "VPN (Twingate)" |
 | Chart UI | Swiftships-UI on port 4200, `radar-ui.service` serving `~/Documents/Swiftships-UI-navy/public`; Signal K on 3000 |
-| MOOS mission | `~/Documents/automation/moos-ivp-morgan-stern-drive-mercury/missions/s1_morgan_city_signalk/real.moos`, community `alpha`, MOOSDB on 9000, launched by hand with `pAntler real.moos` (no systemd unit yet). The repository name is historical: this hull's engine is a Yamaha outboard; the Mercury diesel sterndrive is usv-725 |
+| MOOS mission | `~/Documents/automation/moos-ivp-morgan-stern-drive-mercury-2026/missions/s1_morgan_city_signalk/real_usv722.moos` (branch feature/command-auth since 23 Oct 2026), community `alpha`, MOOSDB on 9000, launched by hand with `pAntler real_usv722.moos` (no systemd unit yet). The repository name is historical: this hull's engine is a Yamaha outboard; the Mercury diesel sterndrive is usv-725 |
 
 ## What was added to real.moos
 
@@ -96,16 +96,18 @@ its configuration at start.
 
 ```bash
 pgrep -a MOOSDB; pgrep -a pAntler          # both must print nothing
-cd ~/Documents/automation/moos-ivp-morgan-stern-drive-mercury/missions/s1_morgan_city_signalk
-pAntler real.moos
+cd ~/Documents/automation/moos-ivp-morgan-stern-drive-mercury-2026/missions/s1_morgan_city_signalk
+pAntler real_usv722.moos
 ```
 
-A second `pAntler` on the same host attaches duplicate apps to the first
+Since 23 Oct 2026 the boat runs the `-2026` checkout (branch
+feature/command-auth, local edit `stop_on_fault = false` in the pNavGuard
+block). A second `pAntler` on the same host attaches duplicate apps to the first
 MOOSDB (seen on 2026-10-01: two `grafana_bridge` instances, stale
 readiness rows). Always check before launching.
 
 **Stop the mission.** Ctrl-C in the pAntler terminal, or
-`pkill -f "pAntler real.moos"`, then confirm with `pgrep -a MOOSDB`.
+`pkill -f pAntler`, then confirm with `pgrep -a MOOSDB`.
 
 **Read the Readiness page.** PASS / FAIL rows are decided onboard from
 live data; N/A rows are not fitted on this hull; CONSOLE would mean the
@@ -154,7 +156,7 @@ changes a service or the network, start the pasted block with
 Tags only. One command, from the repo checkout:
 
 ```bash
-cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.43
+cd ~/Documents/SA-1-Prod-Dashbaord && bash deploy/update.sh v1.2.44
 ```
 
 It fetches the tag, re-runs the installer (rebuilds and restarts the
@@ -168,12 +170,12 @@ installer cannot find MOOS.
 Manual equivalent (when the mission must be stopped first):
 
 ```bash
-pkill -f "pAntler real.moos"; sleep 8; pgrep -a MOOSDB     # empty
+pkill -f pAntler; sleep 8; pgrep -a MOOSDB     # empty
 cd ~/Documents/SA-1-Prod-Dashbaord && git fetch --tags && git checkout vX.Y.Z
 sudo MOOS_DIR=/home/douglas/Documents/automation/moos-ivp/build/MOOS/MOOSCore \
   bash deploy/install.sh 2>&1 | grep -E "error|WARNING|Built target|Done"
 sudo systemctl restart usv-signalk-bridge     # if signalk_bridge changed
-cd ~/Documents/automation/moos-ivp-morgan-stern-drive-mercury/missions/s1_morgan_city_signalk && pAntler real.moos
+cd ~/Documents/automation/moos-ivp-morgan-stern-drive-mercury-2026/missions/s1_morgan_city_signalk && pAntler real_usv722.moos
 ```
 
 Then Ctrl+F5 in the browser (Grafana caches assets for a year). The

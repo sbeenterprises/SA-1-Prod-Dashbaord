@@ -1236,12 +1236,22 @@ private:
             }
             if (a == "start") sessions_.clear();
         } else {
-            const std::string sess = get("session");
-            if (sess.empty() || sess == "-") return;
+            // A login made with the Signal K cookie at connect time carries
+            // no tab session ("-"): such a login is keyed by user and IP.
+            std::string sess = get("session");
+            const std::string user = get("user") == "-" ? "" : get("user");
+            if (sess.empty() || sess == "-") {
+                if (user.empty() && get("ip").empty()) return;
+                sess = user + "@" + get("ip");
+            }
             if (a == "login" || a == "anonymous")
-                sessions_[sess] = Session{get("user") == "-" ? "" : get("user"), get("role"), get("ip")};
-            else if (a == "logout" || a == "disconnect")
+                sessions_[sess] = Session{user, get("role"), get("ip")};
+            else if (a == "logout" || a == "disconnect") {
                 sessions_.erase(sess);
+                // the logout line names no role: drop the user's cookie
+                // login on that IP too
+                sessions_.erase(user + "@" + get("ip"));
+            }
         }
     }
     AuditFields pending_;

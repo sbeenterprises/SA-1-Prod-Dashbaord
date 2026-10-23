@@ -3410,10 +3410,14 @@ DASHBOARDS.append(dashboard("usv-audit", "Audit", [
          decimals=0, no_value="0",
          thresholds=[(None, OK), (1, "orange")]),
     audit_timeline,
-    panel("table", "Audit log", [target(audit_table_query)], 0, 7, 16, 10,
-          overrides=AUDIT_TABLE_OVERRIDES, custom={"filterable": True, "align": "auto"},
-          options={"showHeader": True, "cellHeight": "sm",
-                   "footer": {"show": False}}),
+    dict(panel("table", "Audit log", [target(audit_table_query)], 0, 7, 16, 10,
+               overrides=AUDIT_TABLE_OVERRIDES, custom={"filterable": True, "align": "auto"},
+               options={"showHeader": True, "cellHeight": "sm",
+                        "footer": {"show": False}}),
+         # keep() does not order the columns: fix the reading order.
+         transformations=[{"id": "organize", "options": {"indexByName": {
+             "Time": 0, "Severity": 1, "Category": 2, "Event": 3,
+             "User": 4, "Role": 5, "Details": 6}}}]),
     panel("table", "Refused commands by user",
           [target(AUDIT_BASE +
                   '  |> filter(fn: (r) => r._field == "value" and r.category == "refused")\n'

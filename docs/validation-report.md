@@ -735,3 +735,12 @@ speed; a take / force / ALL STOP from Swiftships-UI appears on the Audit
 page within seconds with the right user; with SK_LOGIN=1 the dashboard
 opens logged in as the Swiftships-UI user, an operator sees the Audit page
 and a viewer does not.
+
+## 20. Release v1.2.44 (2026-10-23)
+
+Scope: fixes seen on usv-722's first run of the Audit page (mission
+feature/command-auth, Signal K login on): Open Sessions empty for a cookie
+login without a tab session, ALL STOP N/A before the first press, audit
+log column order. Unit tests 603 (cookie logins kept by user and IP,
+removed on disconnect and logout). `tools/smoke_test.sh` in full: 205
+PASS, 0 FAIL, 1 SKIP.

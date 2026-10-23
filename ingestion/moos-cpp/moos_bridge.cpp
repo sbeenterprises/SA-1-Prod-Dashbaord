@@ -2059,7 +2059,9 @@ private:
         }
         // Operator ALL STOP latch, control holder and logins, drive
         // interface strings: re-emitted so last() over any range finds them.
-        if (seen_all_stop_)
+        // ALL_STOP is posted only on a press or a reset: once the boat
+        // link has reported (audit lines), no post means CLEAR.
+        if (seen_all_stop_ || seen_control_)
             telemetry_->field("autonomy", "", "all_stop", b(flags_.all_stop));
         if (seen_control_ && now - last_control_write_ >= 5.0) {
             last_control_write_ = now;

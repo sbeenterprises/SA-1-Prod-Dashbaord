@@ -3,6 +3,22 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.44] - 2026-10-23 (Audit page fixes from usv-722)
+
+grafana_bridge, Audit page and runbook. Update with
+`bash deploy/update.sh v1.2.44`, restart the mission with the boat stopped.
+
+### Fixed
+- Open Sessions read "none" while users were logged in: a login made with
+  the Signal K cookie carries no tab session; such logins are now kept by
+  user and IP and dropped by their disconnect or logout.
+- ALL STOP read N/A until the first press: once the boat link reports, no
+  ALL_STOP post means CLEAR.
+- Audit log column order: Time, Severity, Category, Event, User, Role,
+  Details (the event text was last and cut off).
+- usv-722 runbook: the mission runs from the `-2026` checkout
+  (`real_usv722.moos`, branch feature/command-auth).
+
 ## [1.2.43] - 2026-10-23 (Boat control, audit trail, navigation guard, Signal K login)
 
 grafana_bridge, dashboards, installer and documents. Matches the mission

@@ -1435,6 +1435,20 @@ static void test_audit_trail() {
     t.feed("control", "start command_auth=signalk exclusive_control=true (nobody in control)", 20.0);
     CHECK_EQ_STR(t.holder(), "");
     CHECK(t.session_count() == 0);
+    // A login with the Signal K cookie carries no tab session (usv-722,
+    // 23 Oct): kept by user and IP, removed by its disconnect or logout.
+    {
+        AuditTrail u;
+        u.feed("auth", "login user=admin level=admin role=supervisor ip=192.168.22.11 session=-", 1.0);
+        CHECK(u.session_count() == 1);
+        CHECK_EQ_STR(u.sessions(), "admin (supervisor, 192.168.22.11)");
+        u.feed("auth", "login user=bob level=readonly role=viewer ip=192.168.22.12", 2.0);
+        CHECK(u.session_count() == 2);
+        u.feed("auth", "disconnect user=bob role=viewer ip=192.168.22.12 session=-", 3.0);
+        CHECK(u.session_count() == 1);
+        u.feed("auth", "logout user=admin ip=192.168.22.11 session=-", 4.0);
+        CHECK(u.session_count() == 0);
+    }
     // Empty or garbage lines produce nothing.
     CHECK(t.feed("control", "", 21.0).empty());
     CHECK(t.feed("auth", "   ", 21.0).empty());
