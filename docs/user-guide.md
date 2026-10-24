@@ -200,10 +200,18 @@ behaviours and the table stays empty.
 
 ## Alarms
 Active alerts appear on the Alarms dashboard and are emailed to the
-operations contact point. Engine rules: Engine Over Temperature (coolant
-above 105 °C), Engine Low Oil Pressure (below 150 kPa with the engine
-running above 700 rpm), Engine Fault (any active J1939 fault), Low Fuel
-Level (below 15 %); none of them fires on missing data. Operator Link
+operations contact point. Engine rules: Engine Temperature High (warning)
+and Engine Over Temperature (critical), with limits per engine type
+(Yamaha outboard from 75 °C and 85 °C, Mercury diesel and other engines
+from 95 °C and 100 °C; the coolant dials and the Alarms Coolant tile use the
+same bands: NORMAL / HIGH / OVERHEAT); Engine Shut Off During Mission
+(critical: below 300 rpm for 30 s while the helm drives); No Engine Data
+During Mission (warning: no rpm for 30 s while the helm drives, on a boat
+that sent rpm in the last hour); Engine Low Oil Pressure (below 150 kPa
+with the engine running above 700 rpm); Engine Fault (any active J1939
+fault); Low Fuel Level (warning below 20 %) and Fuel Level Critical (below
+10 %). None of them fires on missing data. The Readiness Engine pre-start
+check uses the same limits. Operator Link
 Lost (Returning to Base) is critical while the comms-loss failsafe drives
 the boat. Collision Avoidance IN EXTREMIS is critical while the helm
 reports a stand-on encounter in extremis. Severity `critical` repeats every 10 min until

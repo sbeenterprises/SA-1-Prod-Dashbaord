@@ -206,6 +206,8 @@ const std::map<std::string, FieldMap> kStringPassthrough = {
     // Operating region state from BHV_OpRegionV26 (contained / lapsed /
     // breached ...), and the region's last refusal or note (iWebSocket).
     {"V26_STATE",          {"mission_state", "region_state"}},
+    // pEngineWatch: running | stopped | unknown (no engine data)
+    {"ENGINE_RUN_STATE",   {"engine", "run_state"}},
 };
 
 // Alpha mission mode flags (posted as strings "true"/"false"; some tools
@@ -246,6 +248,8 @@ const std::set<std::string> kSpecialVars = {
     // Boat control (iWebSocket with command_auth / exclusive_control): the
     // operator ALL STOP latch and the audit trail lines.
     "ALL_STOP", "CONTROL_EVENT", "UI_AUTH_EVENT",
+    // pEngineWatch: key=<key>,level=<warn|alarm|emergency|clear>,msg=<text>
+    "ENGINE_ALERT",
     "REGION_MSG",
     // Drive interface booleans (iCAN) and the autopilot's tuning state.
     "CAN_LOST_LINK", "CAN_RUDDER_MISMATCH", "CAN_SEND",
@@ -373,6 +377,11 @@ protected:
         m_MissionReader.GetConfigurationParam("engine_passthrough", engine_passthrough_);
         if (m_MissionReader.GetConfigurationParam("engine_type", v) && !v.empty())
             engine_profile_.type = usv::trim(v);
+        {   // Readiness pre-start: the engine type's overheating limit.
+            double warn = 0.0;
+            usv::EngineProfile::CoolantLimits(engine_profile_.type, &warn,
+                                              &readiness_cfg_.coolant_max_c);
+        }
         limiter_.set_rate("autopilot.error", 2.0);
         if (m_MissionReader.GetConfigurationParam("ignore_vars", v))
             for (const auto& s : usv::SplitCsv(v)) ignore_vars_.insert(s);
@@ -611,6 +620,34 @@ private:
         events_->str_field("events", tags, "message", message);
         events_->field("events", tags, "value", 1);
         events_->flush();
+    }
+
+    // ENGINE_ALERT (pEngineWatch) -> one event per change of an alert's
+    // level: emergency / alarm -> critical, warn -> warning, clear -> info.
+    // msg= is last, so the text may hold commas.
+    void HandleEngineAlert(const std::string& s) {
+        auto value = [&](const std::string& name) {
+            const std::string tag = name + "=";
+            const size_t at = (s.rfind(tag, 0) == 0) ? 0 : s.find("," + tag);
+            if (at == std::string::npos) return std::string();
+            const size_t from = at + (at == 0 ? 0 : 1) + tag.size();
+            if (name == "msg") return usv::trim(s.substr(from));
+            const size_t end = s.find(',', from);
+            return usv::trim(s.substr(from, end == std::string::npos ? std::string::npos : end - from));
+        };
+        const std::string k = value("key");
+        const std::string level = usv::lower(value("level"));
+        if (k.empty() || level.empty()) return;
+        std::string& prev = engine_alert_level_[k];
+        if (level == prev) return;
+        const bool cleared = level == "clear";
+        if (cleared && prev.empty()) return;   // never raised in this session
+        prev = cleared ? std::string() : level;
+        const std::string text = value("msg");
+        Event("engine",
+              cleared ? "info"
+                      : (level == "emergency" || level == "alarm") ? "critical" : "warning",
+              cleared ? (text.empty() ? k : text) + " (cleared)" : (text.empty() ? k : text));
     }
 
     // ------------------------------------------------------ mail handling
@@ -915,6 +952,8 @@ private:
                 a.message = m;
                 Audit(a);
             }
+        } else if (key == "ENGINE_ALERT" && msg.IsString()) {
+            HandleEngineAlert(msg.GetString());
         } else if (key == "ALL_STOP") {
             const bool on = usv::truthy(AsString(msg));
             if (on != flags_.all_stop || !seen_all_stop_) {
@@ -2093,6 +2132,11 @@ private:
             if (it != last_str_.end() && !it->second.empty())
                 telemetry_->str_field("mission_state", "", "region_state", it->second);
         }
+        {
+            auto it = last_str_.find("run_state");
+            if (it != last_str_.end() && !it->second.empty())
+                telemetry_->str_field("engine", "", "run_state", it->second);
+        }
         if (seen_service_mode_)
             telemetry_->field("autopilot", "", "service_mode", service_mode_ ? 1 : 0);
 
@@ -2180,6 +2224,7 @@ private:
     usv::EngineProfile engine_profile_;
     bool engine_passthrough_ = true;
     std::map<int, std::pair<std::string, double>> dtc_text_;   // per instance: last text, time
+    std::map<std::string, std::string> engine_alert_level_;   // ENGINE_ALERT key -> active level
     std::set<std::string> ignore_vars_;
     std::string mission_name_;
     std::string mission_id_;

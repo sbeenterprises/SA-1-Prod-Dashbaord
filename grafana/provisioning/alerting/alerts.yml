@@ -330,6 +330,67 @@ groups:
             type: last
             params: []
           type: query
+  - uid: usv-engine-temp-high
+    title: Engine Temperature High
+    condition: C
+    for: 1m
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: warning
+      system: usv
+    annotations:
+      summary: "Engine temperature high: from 75 \xB0C on a Yamaha outboard, 95 \xB0C on a Mercury diesel,\
+        \ 95 \xB0C on other engines."
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"engine\" and r._field == \"coolant_temp\")\n  |> map(fn: (r) => ({r with _value: (if\
+          \ r._value >= (if exists r.engine_type and r.engine_type == \"yamaha_outboard\" then 85.0 else\
+          \ (if exists r.engine_type and r.engine_type == \"mercury_diesel\" then 100.0 else 100.0)) then\
+          \ 2.0 else if r._value >= (if exists r.engine_type and r.engine_type == \"yamaha_outboard\"\
+          \ then 75.0 else (if exists r.engine_type and r.engine_type == \"mercury_diesel\" then 95.0\
+          \ else 95.0)) then 1.0 else 0.0)}))\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: within_range
+            params:
+            - 0.5
+            - 1.5
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
   - uid: usv-engine-overtemp
     title: Engine Over Temperature
     condition: C
@@ -340,7 +401,8 @@ groups:
       severity: critical
       system: usv
     annotations:
-      summary: "Engine coolant temperature above 105 \xB0C."
+      summary: "Engine OVERHEATING: from 85 \xB0C on a Yamaha outboard, 100 \xB0C on a Mercury diesel,\
+        \ 100 \xB0C on other engines."
     data:
     - refId: A
       relativeTimeRange:
@@ -350,7 +412,12 @@ groups:
       model:
         refId: A
         query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
-          \ == \"engine\" and r._field == \"coolant_temp\")\n"
+          \ == \"engine\" and r._field == \"coolant_temp\")\n  |> map(fn: (r) => ({r with _value: (if\
+          \ r._value >= (if exists r.engine_type and r.engine_type == \"yamaha_outboard\" then 85.0 else\
+          \ (if exists r.engine_type and r.engine_type == \"mercury_diesel\" then 100.0 else 100.0)) then\
+          \ 2.0 else if r._value >= (if exists r.engine_type and r.engine_type == \"yamaha_outboard\"\
+          \ then 75.0 else (if exists r.engine_type and r.engine_type == \"mercury_diesel\" then 95.0\
+          \ else 95.0)) then 1.0 else 0.0)}))\n"
     - refId: B
       datasourceUid: __expr__
       model:
@@ -374,7 +441,131 @@ groups:
         - evaluator:
             type: gt
             params:
-            - 105
+            - 1.5
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-engine-off-mission
+    title: Engine Shut Off During Mission
+    condition: C
+    for: 30s
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: 'Engine SHUT OFF during a mission: below 300 rpm while the helm drives. The boat is not
+        under power.'
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "rpm = from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"engine\" and r._field == \"rpm\")\n  |> last()\n  |> group(columns: [\"vessel\", \"_field\"\
+          ])\n  |> min()\ndrive = from(bucket: \"telemetry\")\n  |> range(start: -15s)\n  |> filter(fn:\
+          \ (r) => r._measurement == \"autonomy\" and r._field == \"helm_drive\")\n  |> last()\n  |> group(columns:\
+          \ [\"vessel\", \"_field\"])\n  |> min()\nunion(tables: [rpm, drive])\n  |> group(columns: [\"\
+          vessel\"])\n  |> pivot(rowKey: [\"vessel\"], columnKey: [\"_field\"], valueColumn: \"_value\"\
+          )\n  |> filter(fn: (r) => exists r.rpm and exists r.helm_drive and r.helm_drive > 0.5)\n  |>\
+          \ map(fn: (r) => ({_time: now(), _value: r.rpm, vessel: r.vessel}))\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 300
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-engine-no-data-mission
+    title: No Engine Data During Mission
+    condition: C
+    for: 30s
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: warning
+      system: usv
+    annotations:
+      summary: 'No engine data for 30 s while the helm drives a mission: engine state unknown.'
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "drive = from(bucket: \"telemetry\")\n  |> range(start: -15s)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"autonomy\" and r._field == \"helm_drive\")\n  |> last()\n  |> group(columns: [\"vessel\"\
+          ])\n  |> keep(columns: [\"vessel\", \"_field\", \"_value\"])\nrpmCount = (start, name) => from(bucket:\
+          \ \"telemetry\")\n  |> range(start: start)\n  |> filter(fn: (r) => r._measurement == \"engine\"\
+          \ and r._field == \"rpm\")\n  |> group(columns: [\"vessel\"])\n  |> count()\n  |> map(fn: (r)\
+          \ => ({vessel: r.vessel, _field: name, _value: float(v: r._value)}))\nunion(tables: [drive,\
+          \ rpmCount(start: -30s, name: \"recent\"), rpmCount(start: -1h, name: \"hour\")])\n  |> group(columns:\
+          \ [\"vessel\"])\n  |> pivot(rowKey: [\"vessel\"], columnKey: [\"_field\"], valueColumn: \"_value\"\
+          )\n  |> filter(fn: (r) => exists r.helm_drive and r.helm_drive > 0.5 and exists r.hour)\n  |>\
+          \ map(fn: (r) => ({_time: now(), _value: if exists r.recent then r.recent else 0.0, vessel:\
+          \ r.vessel}))\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
           operator:
             type: and
           query:
@@ -506,7 +697,62 @@ groups:
       severity: warning
       system: usv
     annotations:
-      summary: Fuel level below 15%.
+      summary: Fuel level below 20%.
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: influxdb-usv
+      model:
+        refId: A
+        query: "from(bucket: \"telemetry\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement\
+          \ == \"engine\" and r._field == \"fuel_level\")\n"
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        refId: B
+        type: reduce
+        reducer: last
+        expression: A
+        datasource:
+          type: __expr__
+          uid: __expr__
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: B
+        datasource:
+          type: __expr__
+          uid: __expr__
+        conditions:
+        - evaluator:
+            type: within_range
+            params:
+            - 9.95
+            - 20.0
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            type: last
+            params: []
+          type: query
+  - uid: usv-fuel-critical
+    title: Fuel Level Critical
+    condition: C
+    for: 1m
+    noDataState: OK
+    execErrState: Alerting
+    labels:
+      severity: critical
+      system: usv
+    annotations:
+      summary: 'Fuel level below 10%: return to base.'
     data:
     - refId: A
       relativeTimeRange:
@@ -540,7 +786,7 @@ groups:
         - evaluator:
             type: lt
             params:
-            - 15
+            - 9.95
           operator:
             type: and
           query:

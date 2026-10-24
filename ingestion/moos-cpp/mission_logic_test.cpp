@@ -743,6 +743,25 @@ static void test_readiness() {
         CHECK_EQ_STR(find_check(EvaluateReadiness(k, now, true), "engine").evidence,
                      "key RUN · gear NEUTRAL · thrust 0 % · fuel 23 % · no DTC");
         CHECK(find_check(EvaluateReadiness(k, now, true), "engine").status == READY_PASS);
+        // v1.2.51 thresholds, as the alert rules: fuel below 20 % and
+        // coolant 100 °C or above fail the pre-start check.
+        k.put("engine", "fuel_level", 19.9, now);
+        CHECK(find_check(EvaluateReadiness(k, now, true), "engine").status == READY_FAIL);
+        k.put("engine", "fuel_level", 20, now);
+        CHECK(find_check(EvaluateReadiness(k, now, true), "engine").status == READY_PASS);
+        k.put("engine", "coolant_temp", 99, now);
+        CHECK(find_check(EvaluateReadiness(k, now, true), "engine").status == READY_PASS);
+        k.put("engine", "coolant_temp", 100, now);
+        CHECK(find_check(EvaluateReadiness(k, now, true), "engine").status == READY_FAIL);
+        // Yamaha outboard (50 °C thermostat): overheating from 85 °C.
+        ReadinessConfig yam;
+        yam.coolant_max_c = 85.0;
+        k.put("engine", "coolant_temp", 84, now);
+        CHECK(find_check(EvaluateReadiness(k, now, true, yam), "engine").status == READY_PASS);
+        k.put("engine", "coolant_temp", 85, now);
+        CHECK(find_check(EvaluateReadiness(k, now, true, yam), "engine").status == READY_FAIL);
+        k.put("engine", "coolant_temp", 41, now);
+        k.put("engine", "fuel_level", 23, now);
         k.put("engine", "key_state", 0, now);
         CHECK(find_check(EvaluateReadiness(k, now, true), "engine").status == READY_FAIL);
         CHECK(find_check(EvaluateReadiness(k, now, true), "engine").evidence.rfind("key OFF", 0) == 0);

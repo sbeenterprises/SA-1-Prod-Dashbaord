@@ -354,11 +354,28 @@ sys.exit(1 if bad else 0)
 PY
 [ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
 
+hdr "Engine limits (alerts, dials, Readiness agree)"
+python3 - "$REPO" <<'PY' && ok "coolant limits per engine type: tools/engine_limits.py == EngineProfile::CoolantLimits" || bad "engine coolant limits differ between Python and C++"
+import re, sys
+repo = sys.argv[1]
+sys.path.insert(0, f"{repo}/tools")
+import engine_limits as el
+src = open(f"{repo}/ingestion/cpp-common/engine_profile.hpp").read()
+cpp = {t: (float(w), float(c)) for t, w, c in re.findall(
+    r'type == "(\w+)"\) \{ \*warn = ([\d.]+); \*crit = ([\d.]+); return; \}', src)}
+dflt = re.search(r'\n\s*\*warn = ([\d.]+); \*crit = ([\d.]+);\n\s*\}', src)
+ok = cpp == el.COOLANT_LIMITS and dflt and (float(dflt.group(1)), float(dflt.group(2))) == el.COOLANT_DEFAULT
+if not ok:
+    print("    python", el.COOLANT_LIMITS, el.COOLANT_DEFAULT, "| c++", cpp, dflt and dflt.groups())
+sys.exit(0 if ok else 1)
+PY
+
 hdr "Alert rule queries vs simulator output"
 python3 - "$REPO" "$TMP/produced.txt" <<'PY'
 import yaml, re, sys
 repo, produced_file = sys.argv[1], sys.argv[2]
 pm = re.compile(r'_measurement == "(\w+)"'); pf = re.compile(r'_field == "(\w+)"')
+pmf = re.compile(r'_measurement == "(\w+)" and r\._field == "(\w+)"')
 d = yaml.safe_load(open(f"{repo}/grafana/provisioning/alerting/alerts.yml"))
 have = {tuple(l.split()) for l in open(produced_file) if l.strip()}
 # fields the MOOS bridge writes (its live run below needs MOOSDB)
@@ -374,10 +391,14 @@ for g in d["groups"]:
     for r in g["rules"]:
         for q in r["data"]:
             s = q.get("model", {}).get("query", "")
-            for m in pm.findall(s):
-                for f in pf.findall(s):
-                    if m not in external and (m, f) not in have:
-                        missing.append((r["title"], m, f))
+            # A query reading two measurements names each as
+            # `_measurement == "m" and r._field == "f"`: pair those clauses
+            # (crossing every measurement with every field reports pairs
+            # nothing writes, e.g. engine.helm_drive). Otherwise cross them.
+            pairs = set(pmf.findall(s)) or {(m, f) for m in pm.findall(s) for f in pf.findall(s)}
+            for m, f in sorted(pairs):
+                if m not in external and (m, f) not in have:
+                    missing.append((r["title"], m, f))
 n = sum(len(g["rules"]) for g in d["groups"])
 if missing:
     print("  [FAIL] alert queries with no data source:")
@@ -661,6 +682,11 @@ EOF
     P 'UI_AUTH_EVENT=rejected key=DESIRED_THRUST user=bob level=readonly why=level'
     P 'UI_AUTH_EVENT=rejected key=DESIRED_THRUST user=bob level=readonly why=level'
     P 'UI_AUTH_EVENT=rejected login=logged-out-token ip=192.168.22.11 session=z9'
+    P 'ENGINE_RUN_STATE=stopped'
+    P 'ENGINE_ALERT=key=engine_off,level=alarm,msg=Engine stopped during mission, rpm 0'
+    P 'ENGINE_ALERT=key=engine_off,level=alarm,msg=Engine stopped during mission, rpm 0'
+    P 'ENGINE_ALERT=key=coolant,level=clear,msg=Coolant normal'
+    P 'ENGINE_ALERT=key=engine_off,level=clear,msg=Engine running'
     sleep 1
     P 'UI_AUTH_EVENT=disconnect user=alice role=operator ip=192.168.22.5 session=k3f9a1x0'
     sleep 6
@@ -773,6 +799,13 @@ EOF
     grep -q 'details="generation 2 · reason operator not answering"' "$LINES" \
       && grep -q 'message="carol forced a takeover from alice (generation 2 · reason operator not answering)"' "$LINES" \
       && ok "forced takeover: two lines joined, reason kept, warning popup" || bad "forced takeover not joined"
+    [ "$(grep -c 'message="Engine stopped during mission, rpm 0"' "$LINES")" = 1 ] \
+      && grep -q 'severity=critical,source=moos,type=engine message="Engine stopped during mission, rpm 0"' "$LINES" \
+      && grep -q 'severity=info,source=moos,type=engine message="Engine running (cleared)"' "$LINES" \
+      && ! grep -q 'Coolant normal' "$LINES" \
+      && ok "ENGINE_ALERT: one critical event per level change, clear as info, unraised clear ignored" || bad "ENGINE_ALERT events wrong"
+    grep -q 'engine,vessel=usv-moos run_state="stopped"' "$LINES" \
+      && ok "ENGINE_RUN_STATE -> engine.run_state" || bad "engine.run_state missing"
     grep -q 'details="why logged-out session · ip 192.168.22.11 · session z9"' "$LINES" \
       && ok "login with a logged-out token: refused row with its reason" || bad "logged-out token refusal has no reason"
     grep -q 'control_holder="carol"' "$LINES" && grep -q 'c2_sessions="carol (supervisor, 192.168.22.9)"' "$LINES" \

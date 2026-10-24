@@ -124,7 +124,7 @@ Rules
 | CFG-3 | USV-722 values after the Yamaha gateway: `VESSEL_ID=usv-722`, `ENGINE_TYPE=yamaha_outboard`, `ENGINE_SOURCE=signalk`, `HELM_PROFILE=usv722`, `SIGNALK_ENGINE=1`, `CAN_N2K_ENGINE=0`. Until then `SIGNALK_ENGINE=0` and the gauges read N/A. |
 | CFG-4 | `install.sh` reads the keys and passes them to the services it enables. `ENGINE_SOURCE` decides which producer writes engine fields; the installer never enables two. For `moos` the installer prints the `grafana_bridge` block to add to the mission file. |
 | CFG-5 | `ENGINE_TYPE` is written as the `engine_type` tag by every bridge that writes engine fields and shown on the dashboards (UI-1). |
-| CFG-6 | The dashboard generator keeps a table of gauge ranges per `ENGINE_TYPE` (ENGINE_TYPES in `tools/gen_dashboards.py`). `mercury_diesel`: tachometer 0 to 5000, green to 4000 (wide-open throttle), yellow to 4400, red above; coolant green below 95 °C, yellow to 105 °C, red above; oil pressure 0 to 800 kPa, red below 150, yellow to 200, green to 700; boost 0 to 300 kPa, yellow above 250, red above 280. `yamaha_outboard`: tachometer 0 to 6000, green to 4500, yellow to 5500, red above; coolant as above; oil pressure 0 to 600 kPa, red below 150, yellow to 250. The dials read the hidden `engine_type` dashboard variable when they render, so one dashboard file serves both hulls. |
+| CFG-6 | The dashboard generator keeps a table of gauge ranges per `ENGINE_TYPE` (ENGINE_TYPES in `tools/gen_dashboards.py`). `mercury_diesel`: tachometer 0 to 5000, green to 4000 (wide-open throttle), yellow to 4400, red above; coolant green below 95 °C, yellow to 100 °C, red above; oil pressure 0 to 800 kPa, red below 150, yellow to 200, green to 700; boost 0 to 300 kPa, yellow above 250, red above 280. `yamaha_outboard`: tachometer 0 to 6000, green to 4500, yellow to 5500, red above; coolant as above; oil pressure 0 to 600 kPa, red below 150, yellow to 250; coolant green below 75 °C, yellow to 85 °C, red above (raw-water cooled, 50 °C thermostat). Any other `ENGINE_TYPE`: coolant green below 95 °C, yellow to 100 °C, red above. The coolant limits are one table, `tools/engine_limits.py`, used by the dials and the alert rules, with the same values in `EngineProfile::CoolantLimits` (`ingestion/cpp-common/engine_profile.hpp`) for the Readiness check. The dials read the hidden `engine_type` dashboard variable when they render, so one dashboard file serves both hulls. |
 | CFG-7 | Changing `ENGINE_TYPE` in `usv.env` and re-running the installer is the only step needed to switch a hull between range sets. No dashboard JSON is edited by hand. |
 
 ### 4.5 Dashboard pages
@@ -147,12 +147,12 @@ Rules
 
 | ID | Requirement |
 | --- | --- |
-| AL-1 | The Engine Over Temperature rule uses the coolant alarm value of the hull's `ENGINE_TYPE` (CFG-6). |
+| AL-1 | The coolant rules use the limits of each engine point's `engine_type` tag (CFG-6): Engine Temperature High (warning) from the yellow band, Engine Over Temperature (critical) from the red band. |
 | AL-2 | A Low Oil Pressure rule fires when `engine.oil_pressure` is below the red band of the hull's `ENGINE_TYPE` while `engine.rpm` is above idle (above 700 rpm), severity critical. |
 | AL-3 | An Engine Fault rule fires when `engine.active_dtcs` is above 0 or `engine.lamp_red` is 1, severity critical, with `engine.dtc_text` in the alert message. |
-| AL-4 | The Low Fuel rule stays at 15 % and applies only when `engine.fuel_level` exists. |
+| AL-4 | Low Fuel Level (warning) fires below 20 % and Fuel Level Critical (critical) below 10 %, for every engine type, only when `engine.fuel_level` exists. |
 | AL-5 | Engine rules do not fire on missing data. A boat alongside with the engine off raises no engine alert. |
-| AL-6 | The Readiness "Engine pre-start" check passes when coolant temperature, oil pressure and active faults are present and within limits. Fuel level is included only when it exists. Key switch, gear and throttle evidence is included when a helm decoder exists on the hull and omitted otherwise, without failing the check. |
+| AL-6 | The Readiness "Engine pre-start" check passes when coolant temperature, oil pressure and active faults are present and within limits: coolant below the red band of the hull's `ENGINE_TYPE` (CFG-6), fuel level 20 % or more. Fuel level is included only when it exists. Key switch, gear and throttle evidence is included when a helm decoder exists on the hull and omitted otherwise, without failing the check. |
 | AL-7 | The Readiness "Endurance" check uses `engine.fuel_rate` with the tank and consumption constants set for USV-725 in the `grafana_bridge` block (`fuel_tank_l`, `cruise_fuel_lph`, `cruise_speed_kn`), and `engine.fuel_level` when it exists. |
 
 ### 4.7 CAN bus on USV-725

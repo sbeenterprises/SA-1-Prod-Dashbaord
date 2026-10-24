@@ -846,3 +846,36 @@ PASS, 0 FAIL, 1 SKIP.
 To verify on the target: with the mission off, Audit and Mission show
 MISSION OFF on those tiles; with it running, the live states as before.
 
+## 27. Release v1.2.51 (2026-10-23)
+
+Scope: engine alerts (shut off and lost engine data during a mission,
+temperature high, fuel critical), pEngineWatch's ENGINE_ALERT and
+ENGINE_RUN_STATE in grafana_bridge, and coolant and fuel limits that agree
+across alert rules, dials, the Alarms tile and the Readiness pre-start
+check, per engine type (Yamaha outboard on usv-722, Mercury diesel on
+usv-725).
+
+Review of the change as received (base v1.2.47): the rules matched their
+generator and type-checked; the bridge built and ran. Corrected here: the
+helm_drive window (2 min to 15 s, false Engine Shut Off after a mission
+stopped), one temperature limit for both engine types, dashboard and
+Readiness limits left at 105 °C / 15 %, the release number (v1.2.48 to
+v1.2.50 were already released) and the deploy step (no moos-antler
+service on the boats: the mission is restarted by hand).
+
+Evidence: mission_logic_test 617 checks (fuel 19.9 % fails and 20 % passes;
+coolant 99 °C passes and 100 °C fails at the default limit; 84 °C passes
+and 85 °C fails at the Yamaha limit); smoke test against a real MOOSDB:
+ENGINE_ALERT writes one critical event for two identical alarm lines, a
+clear as info with "(cleared)", nothing for a clear never raised, and
+ENGINE_RUN_STATE writes engine.run_state; the coolant limit tables in
+Python and C++ agree; 28 alert rules read fields the stack writes; 277
+Flux queries type-checked. `tools/smoke_test.sh` in full: 213 PASS, 0 FAIL,
+1 SKIP.
+
+Not run here: the rules against a live InfluxDB and Grafana. To verify on
+the target: the four new rules appear under Alerting, state Normal; at
+the dock with the engine off, start a mission (helm DRIVE): Engine Shut
+Off During Mission fires within 30 to 60 s and resolves when the mission
+stops; stop the mission and switch the engine off: no alert.
+

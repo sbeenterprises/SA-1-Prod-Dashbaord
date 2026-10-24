@@ -19,6 +19,9 @@ Profiles decide what "no data" means for the sensor-backed rules:
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import engine_limits  # noqa: E402  (tools/engine_limits.py)
+
 import yaml
 
 OUT = os.path.join(os.path.dirname(__file__), "..",
@@ -112,9 +115,77 @@ RULES = [
     rule("usv-can-failure", "CAN Bus Failure",
          q("canbus", "interface_up"), "lt", 1, "critical",
          "CAN interface down or no frames received.", for_="30s"),
+    # Coolant limits per engine type (tools/engine_limits.py, the same
+    # table the dashboards and the Readiness pre-start check use): each
+    # point becomes a band from its engine_type tag, 0 normal, 1 high,
+    # 2 overheating. Yamaha outboard 75 / 85 °C, Mercury diesel 95 / 100 °C.
+    rule("usv-engine-temp-high", "Engine Temperature High",
+         q("engine", "coolant_temp",
+           extra=f"  |> map(fn: (r) => ({{r with _value: {engine_limits.flux_coolant_band()}}}))"),
+         "within_range", [0.5, 1.5], "warning",
+         f"Engine temperature high: {engine_limits.coolant_text(0)}.",
+         no_data="OK"),
     rule("usv-engine-overtemp", "Engine Over Temperature",
-         q("engine", "coolant_temp"), "gt", 105, "critical",
-         "Engine coolant temperature above 105 °C.", no_data="OK"),
+         q("engine", "coolant_temp",
+           extra=f"  |> map(fn: (r) => ({{r with _value: {engine_limits.flux_coolant_band()}}}))"),
+         "gt", 1.5, "critical",
+         f"Engine OVERHEATING: {engine_limits.coolant_text(1)}.",
+         no_data="OK"),
+    # Engine shut off while the helm drives a mission (autonomy.helm_drive,
+    # grafana_bridge). The slowest engine of the vessel counts (twin engines:
+    # one stopped is enough). No row unless the helm is in DRIVE now:
+    # helm_drive is written once a second, so only a value from the last
+    # 15 s counts (a stopped mission leaves its last "1" behind; a 2-minute
+    # window would page when the engine is switched off after the mission).
+    rule("usv-engine-off-mission", "Engine Shut Off During Mission",
+         ('rpm = from(bucket: "telemetry")\n'
+          '  |> range(start: -2m)\n'
+          '  |> filter(fn: (r) => r._measurement == "engine" and r._field == "rpm")\n'
+          '  |> last()\n'
+          '  |> group(columns: ["vessel", "_field"])\n'
+          '  |> min()\n'
+          'drive = from(bucket: "telemetry")\n'
+          '  |> range(start: -15s)\n'
+          '  |> filter(fn: (r) => r._measurement == "autonomy" and r._field == "helm_drive")\n'
+          '  |> last()\n'
+          '  |> group(columns: ["vessel", "_field"])\n'
+          '  |> min()\n'
+          'union(tables: [rpm, drive])\n'
+          '  |> group(columns: ["vessel"])\n'
+          '  |> pivot(rowKey: ["vessel"], columnKey: ["_field"], valueColumn: "_value")\n'
+          '  |> filter(fn: (r) => exists r.rpm and exists r.helm_drive and r.helm_drive > 0.5)\n'
+          '  |> map(fn: (r) => ({_time: now(), _value: r.rpm, vessel: r.vessel}))\n'),
+         "lt", 300, "critical",
+         "Engine SHUT OFF during a mission: below 300 rpm while the helm "
+         "drives. The boat is not under power.",
+         for_="30s", no_data="OK"),
+    # Engine telemetry lost mid-mission: the helm drives (last 15 s, as
+    # above), the vessel sent rpm in the last hour but none in the last
+    # 30 s. A vessel without any engine telemetry does not page.
+    rule("usv-engine-no-data-mission", "No Engine Data During Mission",
+         ('drive = from(bucket: "telemetry")\n'
+          '  |> range(start: -15s)\n'
+          '  |> filter(fn: (r) => r._measurement == "autonomy" and r._field == "helm_drive")\n'
+          '  |> last()\n'
+          '  |> group(columns: ["vessel"])\n'
+          '  |> keep(columns: ["vessel", "_field", "_value"])\n'
+          'rpmCount = (start, name) => from(bucket: "telemetry")\n'
+          '  |> range(start: start)\n'
+          '  |> filter(fn: (r) => r._measurement == "engine" and r._field == "rpm")\n'
+          '  |> group(columns: ["vessel"])\n'
+          '  |> count()\n'
+          '  |> map(fn: (r) => ({vessel: r.vessel, _field: name, _value: float(v: r._value)}))\n'
+          'union(tables: [drive, rpmCount(start: -30s, name: "recent"), '
+          'rpmCount(start: -1h, name: "hour")])\n'
+          '  |> group(columns: ["vessel"])\n'
+          '  |> pivot(rowKey: ["vessel"], columnKey: ["_field"], valueColumn: "_value")\n'
+          '  |> filter(fn: (r) => exists r.helm_drive and r.helm_drive > 0.5 and exists r.hour)\n'
+          '  |> map(fn: (r) => ({_time: now(), _value: if exists r.recent then r.recent else 0.0, '
+          'vessel: r.vessel}))\n'),
+         "lt", 1, "warning",
+         "No engine data for 30 s while the helm drives a mission: engine "
+         "state unknown.",
+         for_="30s", no_data="OK"),
     # Oil pressure is judged only with the engine running: a stopped engine
     # (key on) reports 0 kPa, which is not a fault. The query joins the last
     # oil_pressure and rpm of the vessel and keeps oil_pressure while
@@ -137,9 +208,14 @@ RULES = [
          "The engine reports an active fault (J1939 DM1); see the Engine "
          "Faults tile for the SPN / FMI and the fault name.",
          for_="10s", no_data="OK"),
+    # Fuel limits for every engine type (tools/engine_limits.py).
     rule("usv-low-fuel", "Low Fuel Level",
-         q("engine", "fuel_level"), "lt", 15, "warning",
-         "Fuel level below 15%.", no_data="OK"),
+         q("engine", "fuel_level"), "within_range",
+         [engine_limits.FUEL_CRIT_PCT - 0.05, engine_limits.FUEL_WARN_PCT], "warning",
+         f"Fuel level below {engine_limits.FUEL_WARN_PCT:g}%.", no_data="OK"),
+    rule("usv-fuel-critical", "Fuel Level Critical",
+         q("engine", "fuel_level"), "lt", engine_limits.FUEL_CRIT_PCT - 0.05, "critical",
+         f"Fuel level below {engine_limits.FUEL_CRIT_PCT:g}%: return to base.", no_data="OK"),
     rule("usv-collision-risk", "Collision Risk HIGH",
          q("traffic", "high_risk"), "gt", 0, "critical",
          "A contact is closing inside the alert CPA within the alert TCPA "

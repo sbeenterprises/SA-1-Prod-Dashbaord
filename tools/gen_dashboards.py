@@ -9,6 +9,10 @@ from files, so Grafana picks changes up within 30 s.
 """
 import json
 import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import engine_limits  # noqa: E402  (tools/engine_limits.py: coolant and fuel limits)
 
 DS = {"type": "influxdb", "uid": "influxdb-usv"}
 OUT = os.path.join(os.path.dirname(__file__), "..", "grafana", "dashboards")
@@ -813,7 +817,12 @@ def meter(title, query, x, y, w, h, min_, max_, unit, zones=None,
 # Mercury Diesel 2.0L: 4000 rpm at wide-open throttle (Mercury spec sheet),
 # oil pressure 240 to 640 kPa and coolant 77 to 83 °C in the 29 May 2026 sea
 # trials (docs/requirements-usv-725.md, section 2).
-_COOLANT = dict(min_=40, max_=120, zones=[(95, ZGREEN), (105, ZYELLOW), (120, ZRED)],
+# Coolant bands per engine type, as the alert rules (tools/engine_limits.py:
+# Engine Temperature High from the warning limit, Engine Over Temperature
+# from the overheating limit).
+def _coolant(engine_type):
+    warn, crit = engine_limits.coolant(engine_type)
+    return dict(min_=40, max_=120, zones=[(warn, ZGREEN), (crit, ZYELLOW), (120, ZRED)],
                 split=4)
 ENGINE_TYPES = {
     "yamaha_outboard": {
@@ -821,7 +830,7 @@ ENGINE_TYPES = {
         "tach": dict(min_=0, max_=6000, split=6,
                      zones=[(4500, ZGREEN), (5500, ZYELLOW), (6000, ZRED)],
                      labels={i * 1000: str(i) for i in range(7)}),
-        "coolant": dict(_COOLANT),
+        "coolant": _coolant("yamaha_outboard"),
         # Tick every 100 kPa, numeral every 200 (seven numerals crowd the
         # small Vessel Health dial).
         "oil": dict(min_=0, max_=600, split=6,
@@ -836,7 +845,7 @@ ENGINE_TYPES = {
         "tach": dict(min_=0, max_=5000, split=5,
                      zones=[(4000, ZGREEN), (4400, ZYELLOW), (5000, ZRED)],
                      labels={i * 1000: str(i) for i in range(6)}),
-        "coolant": dict(_COOLANT),
+        "coolant": _coolant("mercury_diesel"),
         "oil": dict(min_=0, max_=800, split=4,
                     zones=[(150, ZRED), (200, ZYELLOW), (700, ZGREEN), (800, ZYELLOW)]),
         # Intake manifold pressure (J1939 IC1): 102 to 286 kPa in the sea
@@ -1724,7 +1733,7 @@ _ENGINE = dashboard("usv-engine", "Engine", [
                          6, 0, 6, 8, "coolant", "°C", decimals=0, sub="TEMP °C",
                          preview=81,
                          fallback_thresholds=[(None, OK), (95, "yellow"),
-                                              (105, "red")])),
+                                              (100, "red")])),
     big_dial(typed_meter("Oil Pressure", flux("engine", "oil_pressure", last=True),
                          12, 0, 6, 8, "oil", "kPa", decimals=0, sub="OIL kPa",
                          preview=340,
@@ -1750,7 +1759,7 @@ _ENGINE = dashboard("usv-engine", "Engine", [
          unit="suffix: h", decimals=1, no_value="N/A"),
     stat("Fuel Level", flux("engine", "fuel_level", last=True), 15, 8, 3, 2,
          unit="percent", decimals=0, no_value="N/A",
-         thresholds=[(None, "red"), (15, "yellow"), (30, OK)]),
+         thresholds=[(None, "red"), (10, "yellow"), (20, OK)]),
     stat("Fault Lamps", LAMPS_QUERY, 18, 8, 3, 2, string_value=True,
          mappings=LAMPS_MAPPINGS, text_mode="value", color_mode="background"),
     stat("Active Faults", flux("engine", "active_dtcs", last=True), 21, 8, 3, 2,
@@ -1833,20 +1842,20 @@ DASHBOARDS.append(dashboard("usv-health", "Vessel Health", [
     typed_meter("Coolant", flux("engine", "coolant_temp", last=True), 4, 0, 4, 6,
                 "coolant", "°C", decimals=0, sub="TEMP °C", preview=85,
                 fallback_thresholds=[(None, OK), (95, "yellow"),
-                                     (105, "red")]),
+                                     (100, "red")]),
     typed_meter("Oil Pressure", flux("engine", "oil_pressure", last=True),
                 8, 0, 4, 6, "oil", "kPa", decimals=0, sub="OIL kPa", preview=402,
                 fallback_thresholds=[(None, "red"), (150, "yellow"),
                                      (250, OK)]),
     meter("Fuel", flux("engine", "fuel_level", last=True), 12, 0, 4, 6,
           0, 100, "%",
-          zones=[(15, ZRED), (30, ZYELLOW), (100, ZGREEN)],
+          zones=[(10, ZRED), (20, ZYELLOW), (100, ZGREEN)],
           decimals=0, split=4, sub="FUEL",
           label_js=("(x) => (x === 0 ? 'E' : (x === 50 ? '\\u00bd' : "
                     "(x === 100 ? 'F' : '')))"),
           preview=91, preview_labels={0: "E", 50: "½", 100: "F"},
-          fallback_thresholds=[(None, "red"), (15, "yellow"),
-                               (30, OK)]),
+          fallback_thresholds=[(None, "red"), (10, "yellow"),
+                               (20, OK)]),
     meter("Battery", flux("electrical", "battery_voltage", last=True),
           16, 0, 4, 6, 10, 15, "V",
           zones=[(11.8, ZRED), (12.4, ZYELLOW), (14.6, ZGREEN),
@@ -2237,7 +2246,8 @@ DASHBOARDS.append(dashboard("usv-readiness", "Readiness", [
                      "Decided by grafana_bridge every 5 s from the latest telemetry "
                      "(GPS ≥ 6 satellites and HDOP ≤ 2.5, route inside the region, every "
                      "Antler app connected, rudder within ±35° and following the command, "
-                     "coolant < 105 °C, fuel > 15 %, no active DTC, SOC ≥ 30 %, fuel and "
+                     "coolant below the engine type's overheating limit (Yamaha outboard 85 °C, "
+                     "Mercury diesel 100 °C), fuel ≥ 20 %, no active DTC, SOC ≥ 30 %, fuel and "
                      "battery hours ≥ route time x margin, helm speed cap within the hull "
                      "maximum, host load < 90 %). N/A = sensor "
                      "not fitted or no data; under "
@@ -3169,6 +3179,36 @@ DASHBOARDS.append(dashboard("usv-fleet", "Fleet", fleet_panels,
                             ["fleet"], fleet=True))
 
 # ------------------------------------------------------------- FR-11 Alarms
+# Coolant status for the Alarms wall: band 0 / 1 / 2 from the row's
+# engine_type (tools/engine_limits.py), the hottest engine of the vessel,
+# its temperature as the "detail" label (the tile's name line).
+COOLANT_BAND_QUERY = (
+    'from(bucket: "telemetry")\n'
+    '  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n'
+    '  |> filter(fn: (r) => r._measurement == "engine" and r._field == "coolant_temp")\n'
+    '  |> filter(fn: (r) => r.vessel == "${vessel}")\n'
+    '  |> last()\n'
+    f'  |> map(fn: (r) => ({{_time: r._time, t: r._value, _value: {engine_limits.flux_coolant_band()}}}))\n'
+    '  |> group()\n'
+    '  |> sort(columns: ["t"], desc: true)\n'
+    '  |> limit(n: 1)\n'
+    '  |> map(fn: (r) => ({_time: r._time, _value: r._value, '
+    'detail: string(v: int(v: r.t + 0.5)) + " °C"}))\n'
+    '  |> group(columns: ["detail"])\n')
+COOLANT_BAND_MAPPINGS = [{"type": "value", "options": {
+    "0": {"text": "NORMAL", "color": TILE_OK, "index": 0},
+    "1": {"text": "HIGH", "color": "yellow", "index": 1},
+    "2": {"text": "OVERHEAT", "color": "red", "index": 2}}}]
+
+
+def coolant_band_tile(x, y, w, h):
+    p = stat("Coolant", COOLANT_BAND_QUERY, x, y, w, h, mappings=COOLANT_BAND_MAPPINGS,
+             text_mode="value_and_name", color_mode="background")
+    p["options"]["reduceOptions"]["fields"] = "/.*/"
+    p["fieldConfig"]["defaults"]["displayName"] = "${__field.labels.detail}"
+    return p
+
+
 DASHBOARDS.append(dashboard("usv-alarms", "Alarms", [
     panel("alertlist", "Active Alerts", [], 0, 0, 12, 8,
           options={"stateFilter": {"firing": True, "pending": True,
@@ -3196,12 +3236,12 @@ DASHBOARDS.append(dashboard("usv-alarms", "Alarms", [
          text_mode="value", color_mode="background", mappings=gps_fix_mappings),
     stat("CAN Bus", flux("canbus", "interface_up", last=True), 8, 10, 4, 4,
          mappings=updown_map("FAIL", "OK"), text_mode="value", color_mode="background"),
-    stat("Coolant", flux("engine", "coolant_temp", last=True), 12, 10, 4, 4,
-         unit="celsius", decimals=0,
-         thresholds=neutral_base([(None, TILE_OK), (95, "yellow"), (105, "red")], floor=-50), color_mode="background"),
+    # Status per the engine type's limits (tools/engine_limits.py): NORMAL /
+    # HIGH / OVERHEAT, the hottest engine's temperature on the name line.
+    coolant_band_tile(12, 10, 4, 4),
     stat("Fuel", flux("engine", "fuel_level", last=True), 16, 10, 4, 4,
          unit="percent", decimals=0, no_value="N/A",
-         thresholds=neutral_base([(None, "red"), (15, "yellow"), (30, TILE_OK)]), color_mode="background"),
+         thresholds=neutral_base([(None, "red"), (10, "yellow"), (20, TILE_OK)]), color_mode="background"),
     stat("Radar", flux("radar", "online", last=True), 20, 10, 4, 4,
          mappings=updown_map(), text_mode="value", color_mode="background"),
     # One value for the whole camera set: how many ENABLED cameras are not

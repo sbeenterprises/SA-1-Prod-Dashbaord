@@ -3,6 +3,51 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.51] - 2026-10-23 (engine alerts: shut off during mission, limits per engine type)
+
+grafana_bridge, alert rules, dashboards and Readiness. Update with
+`bash deploy/update.sh v1.2.51`, then restart the mission with the boat
+stopped so pAntler loads the new grafana_bridge. Built from the
+engine-alerts change prepared for the boat's pEngineWatch and the
+Swiftships-UI engine monitor (MOOS repo `44293dd`, Swiftships-UI
+`b7bae4a`); the Grafana rules work without pEngineWatch.
+
+### Added
+- Engine Shut Off During Mission (critical): rpm below 300 for 30 s while
+  the helm is in DRIVE (`autonomy.helm_drive`); the slowest engine counts.
+- No Engine Data During Mission (warning): no rpm for 30 s while the helm
+  drives, on a vessel that sent rpm in the last hour.
+- Engine Temperature High (warning) and Fuel Level Critical (critical,
+  below 10 %).
+- grafana_bridge: `ENGINE_ALERT` (pEngineWatch) becomes one event per
+  change of an alert's level (type engine; emergency / alarm critical,
+  warn warning, clear info, "(cleared)"); `ENGINE_RUN_STATE` is written as
+  `engine.run_state` (on change and once a second).
+- One table of engine limits, `tools/engine_limits.py`, for the alert
+  rules and the dials, with the same coolant values in
+  `EngineProfile::CoolantLimits` for Readiness (the smoke test checks they
+  agree).
+
+### Changed
+- Coolant limits per engine type (warning / overheating): Yamaha outboard
+  75 / 85 °C (raw-water cooled, 50 °C thermostat), Mercury diesel and other
+  engines 95 / 100 °C (Engine Over Temperature was 105 °C for every
+  engine). The coolant dials on Engine and Vessel Health use the same
+  bands; the Alarms Coolant tile reads NORMAL / HIGH / OVERHEAT with the
+  hottest engine's temperature above it.
+- Fuel: Low Fuel Level warns below 20 % (was 15 %), Fuel Level Critical
+  below 10 %; the fuel dial and tiles are red below 10 %, yellow to 20 %.
+- Readiness Engine pre-start: coolant must be below the engine type's
+  overheating limit (was 105 °C) and fuel 20 % or more (was above 15 %).
+
+### Fixed (in the change as received)
+- The two mission rules only count a `helm_drive` written in the last 15 s
+  (written once a second): a 2-minute window kept a stopped mission's last
+  "drive" and paged Engine Shut Off when the engine was switched off after
+  the mission.
+- Smoke test: an alert query that reads two measurements is checked clause
+  by clause (it reported engine.helm_drive and autonomy.rpm as missing).
+
 ## [1.2.50] - 2026-10-23 (MISSION OFF on the state tiles)
 
 Dashboards only. Update with `bash deploy/update.sh v1.2.50`; no mission

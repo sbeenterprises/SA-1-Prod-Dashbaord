@@ -238,6 +238,8 @@ coolant_temp, oil_temp (°C), oil_pressure, intake_manifold_pressure (kPa),
 fuel_level (%), fuel_remaining_l (L, fuel_level x VESSEL_FUEL_L, only when
 usv.env sets the capacity), fuel_rate (L/h), runtime_h (h), percent_load,
 percent_torque, pedal_position, trim_position (%), active_dtcs (count),
+run_state (string: running | stopped | unknown, from pEngineWatch's
+ENGINE_RUN_STATE through grafana_bridge, on change and once a second),
 profile (1, written every 60 s by signalk_bridge on every vessel with the
 engine_type and engine_model tags of its usv.env, so the dashboards name the
 engine before or without any engine data; never charted).
@@ -380,8 +382,13 @@ one row. The events bucket's retention is at least 365 days (installer).
 
 ### events (FR-1/FR-11)
 Tags: `vessel`, `type` (state_change | waypoint | mission | alarm |
-geofence | obstacle | radar), `severity` (info | warning | critical),
+geofence | obstacle | radar | control | engine), `severity` (info | warning | critical),
 `source`, `mission_id` (type=mission only, from ID_ROUTE).
+type=engine (v1.2.51): pEngineWatch's ENGINE_ALERT
+(`key=<key>,level=<warn|alarm|emergency|clear>,msg=<text>`), one event per
+change of an alert's level: emergency and alarm critical, warn warning,
+clear info with "(cleared)" after the text; a repeat of the same level and
+a clear for an alert not raised in this bridge session write nothing.
 Fields: message (string), value (1), and for type=mission: start_ms
 (epoch ms of the survey start) plus end_ms on the closing event, so the
 Replay dashboard can index missions and jump to their time range.

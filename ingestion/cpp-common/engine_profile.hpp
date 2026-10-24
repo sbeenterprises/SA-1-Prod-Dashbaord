@@ -167,6 +167,17 @@ struct EngineProfile {
         return base.empty() ? t : base + "," + t;
     }
 
+    // Coolant limits (°C) per engine type: warning from *warn, overheating
+    // from *crit. The same table is tools/engine_limits.py (alert rules and
+    // dial bands); tools/smoke_test.sh checks that they agree.
+    //   yamaha_outboard: raw-water cooled, 50 °C thermostat, runs 50-60 °C
+    //   mercury_diesel:  closed cooling, 83 °C thermostat, runs 83-90 °C
+    static void CoolantLimits(const std::string& type, double* warn, double* crit) {
+        if (type == "yamaha_outboard") { *warn = 75.0; *crit = 85.0; return; }
+        if (type == "mercury_diesel") { *warn = 95.0; *crit = 100.0; return; }
+        *warn = 95.0; *crit = 100.0;
+    }
+
     // Name shown when ENGINE_MODEL is not set.
     static std::string DefaultModel(const std::string& type) {
         if (type == "yamaha_outboard") return "Yamaha outboard";

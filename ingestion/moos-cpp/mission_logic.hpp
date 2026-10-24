@@ -1759,6 +1759,11 @@ struct ReadinessConfig {
     // its silence then fails the Navigation integrity row, since the boat
     // refuses autonomy starts without it (nav_guard_required).
     bool nav_guard_expected = false;
+    // Engine pre-start: coolant at or above this fails (the engine type's
+    // overheating limit, EngineProfile::CoolantLimits); fuel below
+    // fuel_min_pct fails (the Low Fuel Level alert).
+    double coolant_max_c = 100.0;
+    double fuel_min_pct = 20.0;
 };
 
 // strict (vessel profile): a check whose sensor data is missing FAILS
@@ -2042,13 +2047,13 @@ inline std::vector<ReadinessCheck> EvaluateReadiness(const LatestStore& s, doubl
             if (gear) ev += sep() + "gear " + (gear->num > 0.5 ? "FORWARD" : (gear->num < -0.5 ? "REVERSE" : "NEUTRAL"));
             if (thr) ev += sep() + "thrust " + fmt0(thr->num) + " %";
             if (rpm) ev += sep() + "rpm " + fmt0(rpm->num);
-            if (cool) { ev += sep() + "coolant " + fmt0(cool->num) + " °C"; ok = ok && cool->num < 105.0; }
+            if (cool) { ev += sep() + "coolant " + fmt0(cool->num) + " °C"; ok = ok && cool->num < cfg.coolant_max_c; }
             // Oil pressure is only meaningful with the engine running: a
             // stopped engine with the key on reports 0 kPa.
             const bool running = rpm && rpm->num > 700.0;
             if (oil && running && oil->num < 150.0) { ev += sep() + "oil " + fmt0(oil->num) + " kPa LOW"; ok = false; }
             else if (oil) ev += sep() + "oil " + fmt0(oil->num) + " kPa";
-            if (fuel) { ev += sep() + "fuel " + fmt0(fuel->num) + " %"; ok = ok && fuel->num > 15.0; }
+            if (fuel) { ev += sep() + "fuel " + fmt0(fuel->num) + " %"; ok = ok && fuel->num >= cfg.fuel_min_pct; }
             if (dtcs && dtcs->num > 0.0) { ev += " · " + fmt0(dtcs->num) + " ACTIVE DTC"; ok = false; }
             else if (dtcs) ev += " · no DTC";
             add("engine", "Engine pre-start", ev, ok ? READY_PASS : READY_FAIL);
