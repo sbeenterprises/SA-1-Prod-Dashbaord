@@ -3192,7 +3192,9 @@ COOLANT_BAND_QUERY = (
     '  |> group()\n'
     '  |> sort(columns: ["t"], desc: true)\n'
     '  |> limit(n: 1)\n'
-    '  |> map(fn: (r) => ({_time: r._time, _value: r._value, '
+    # No _time in the result: the tile reads every field (/.*/) and would
+    # print the time as a second value (seen on usv-722, v1.2.51).
+    '  |> map(fn: (r) => ({_value: r._value, '
     'detail: string(v: int(v: r.t + 0.5)) + " °C"}))\n'
     '  |> group(columns: ["detail"])\n')
 COOLANT_BAND_MAPPINGS = [{"type": "value", "options": {

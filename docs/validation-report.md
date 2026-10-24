@@ -879,3 +879,17 @@ the dock with the engine off, start a mission (helm DRIVE): Engine Shut
 Off During Mission fires within 30 to 60 s and resolves when the mission
 stops; stop the mission and switch the engine off: no alert.
 
+## 28. Release v1.2.52 (2026-10-23)
+
+Scope: the Alarms Coolant tile on usv-722 with v1.2.51 (2026-10-23 21:49)
+showed "Time 2026-10-23 ..." as a second value beside "33 °C NORMAL": its
+query kept the `_time` column and the tile reads every field.
+
+Evidence: the new smoke check (no `_time` in the last map of a detail-line
+tile) fails on the v1.2.51 dashboard and passes on this one.
+`tools/smoke_test.sh` in full: 214 PASS, 0 FAIL, 1 SKIP.
+
+Verified on usv-722 with v1.2.51: Alarms Coolant reads 33 °C NORMAL for
+the Yamaha outboard (below its 75 °C warning limit); the mission running
+(Mission State Idle, Control NOBODY).
+

@@ -354,6 +354,22 @@ sys.exit(1 if bad else 0)
 PY
 [ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
 
+hdr "Detail-line tiles return one value"
+python3 - "$REPO" <<'PY' && ok "tiles with a detail line return no time column (it would show as a second value)" || bad "a detail-line tile returns _time"
+import glob, json, re, sys
+bad = []
+for f in glob.glob(f"{sys.argv[1]}/grafana/dashboards/*.json"):
+    for p in json.load(open(f))["panels"]:
+        if p.get("fieldConfig", {}).get("defaults", {}).get("displayName") != "${__field.labels.detail}":
+            continue
+        q = p["targets"][0].get("query", "")
+        maps = re.findall(r"map\(fn: \(r\) => \(\{(.*?)\}\)\)", q, re.S)
+        if maps and "_time:" in maps[-1]:
+            bad.append(f"{f.rsplit('/', 1)[1]}: {p['title']}")
+for b in bad: print("    " + b)
+sys.exit(1 if bad else 0)
+PY
+
 hdr "Engine limits (alerts, dials, Readiness agree)"
 python3 - "$REPO" <<'PY' && ok "coolant limits per engine type: tools/engine_limits.py == EngineProfile::CoolantLimits" || bad "engine coolant limits differ between Python and C++"
 import re, sys

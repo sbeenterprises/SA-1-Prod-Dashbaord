@@ -3,6 +3,17 @@
 All notable changes to the Swift Autonomous Dashboard. The format follows
 Keep a Changelog; versions are git tags on `main`.
 
+## [1.2.52] - 2026-10-23 (Alarms Coolant tile shows one value)
+
+Dashboards only. Update with `bash deploy/update.sh v1.2.52`; no mission
+restart.
+
+### Fixed
+- Alarms page Coolant tile: it showed the reading's time ("Time
+  2026-10-23 ...") beside the temperature and NORMAL (usv-722, v1.2.51).
+  The query returns the status and the temperature only; the smoke test
+  now fails any tile with a detail line whose query returns a time.
+
 ## [1.2.51] - 2026-10-23 (engine alerts: shut off during mission, limits per engine type)
 
 grafana_bridge, alert rules, dashboards and Readiness. Update with
